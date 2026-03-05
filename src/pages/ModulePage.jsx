@@ -62,6 +62,29 @@ export default function ModulePage() {
   );
 
   useEffect(() => {
+    const onKeyDown = (event) => {
+      if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
+
+      const target = event.target;
+      if (target instanceof HTMLElement) {
+        const tag = target.tagName;
+        if (target.isContentEditable || tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      }
+
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        goToModule(currentIndex - 1);
+      } else if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        goToModule(currentIndex + 1);
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [currentIndex, goToModule]);
+
+  useEffect(() => {
     if (!isPlaying) return undefined;
     const timer = setInterval(() => goToModule(currentIndex + 1), AUTOPLAY_MS);
     return () => clearInterval(timer);

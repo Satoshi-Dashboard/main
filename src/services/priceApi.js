@@ -145,15 +145,34 @@ export async function fetchBtcHistory(days) {
 export async function fetchMultiCurrencyBtc(currencyCodes) {
   const codes = currencyCodes.map(c => c.toLowerCase());
 
-  // 1) CoinGecko
+  // 1) Binance 24h ticker + jsdelivr FX rates
   try {
-    const d = await get(
-      `${CG}/simple/price?ids=bitcoin&vs_currencies=${codes.join(',')}&include_24hr_change=true`
-    );
-    if (d?.bitcoin) return d.bitcoin;
+    const [ticker24h, fx] = await Promise.all([
+      get(`${BN}/ticker/24hr?symbol=BTCUSDT`),
+      get(FXCDN),
+    ]);
+    const btcUsd = parseFloat(ticker24h?.lastPrice ?? 0);
+    const ch24   = parseFloat(ticker24h?.priceChangePercent ?? 0);
+    const rates  = fx?.usd;
+
+    if (btcUsd > 0 && rates) {
+      const result = {};
+      for (const code of codes) {
+        if (code === 'usd') {
+          result.usd = btcUsd;
+          result.usd_24h_change = ch24;
+          continue;
+        }
+        const rate = rates[code];
+        if (!rate) continue;
+        result[code] = Math.round(btcUsd * rate);
+        result[`${code}_24h_change`] = ch24;
+      }
+      return result;
+    }
   } catch { /* try next */ }
 
-  // 2) Binance USD + jsdelivr FX rates (free, no key, daily data)
+  // 2) Binance spot price + jsdelivr FX rates (without 24h changes)
   try {
     const [ticker, fx] = await Promise.all([
       get(`${BN}/ticker/price?symbol=BTCUSDT`),

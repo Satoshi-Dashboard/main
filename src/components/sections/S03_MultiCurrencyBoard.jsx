@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { fetchMultiCurrencyBtc } from '../../services/priceApi';
 
-// ─── Currency data (defaults shown until API responds) ─────────────────────────
+// ─── Currency data ──────────────────────────────────────────────────────────────
 const CURRENCY_META = [
   { code: 'USD', name: 'US Dollar'         },
   { code: 'EUR', name: 'Euro'              },
@@ -29,7 +29,7 @@ const CURRENCY_META = [
   { code: 'PLN', name: 'Polish Zloty'      },
 ];
 
-const DEFAULT_CURRENCIES = CURRENCY_META.map(m => ({ ...m, price: 0, change: 0 }));
+const EMPTY_CURRENCIES = CURRENCY_META.map(m => ({ ...m, price: null, change: null }));
 
 const BAND_CODES = ['JPY', 'INR', 'KRW', 'CNY', 'EUR', 'GBP', 'USD', 'RUB'];
 const CG_CURRENCIES = CURRENCY_META.map(c => c.code.toLowerCase()).join(',');
@@ -126,11 +126,15 @@ const FALLBACK_DOTS = buildDots(
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function fmtPrice(price) {
+  if (!Number.isFinite(price)) return '--';
   if (price >= 1_000_000) return (price / 1_000_000).toFixed(2) + 'M';
   if (price >= 1_000)     return Math.round(price).toLocaleString('en-US');
   return price.toFixed(2);
 }
-function fmtChange(ch) { return (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%'; }
+function fmtChange(ch) {
+  if (!Number.isFinite(ch)) return '--';
+  return (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%';
+}
 
 // ─── Canvas renderer ──────────────────────────────────────────────────────────
 const VIEW_TILT = 0.30;
@@ -282,7 +286,8 @@ function renderGlobe(canvas, elapsed, dots, bandData) {
 
 // ─── Ticker item ──────────────────────────────────────────────────────────────
 function TickerItem({ code, change }) {
-  const up = change >= 0;
+  const hasChange = Number.isFinite(change);
+  const up = hasChange ? change >= 0 : null;
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 5,
@@ -290,11 +295,11 @@ function TickerItem({ code, change }) {
       fontFamily: 'monospace', fontSize: 'var(--fs-caption)',
       color: '#888', whiteSpace: 'nowrap',
     }}>
-      <span style={{ color: up ? '#00D897' : '#FF4757', fontSize: '0.55rem' }}>
-        {up ? '▲' : '▼'}
+      <span style={{ color: up == null ? '#555' : (up ? '#00D897' : '#FF4757'), fontSize: '0.55rem' }}>
+        {up == null ? '•' : (up ? '▲' : '▼')}
       </span>
       <span style={{ color: '#bbb', fontWeight: 700 }}>{code}</span>
-      <span style={{ color: up ? '#00D897' : '#FF4757' }}>{fmtChange(change)}</span>
+      <span style={{ color: up == null ? '#666' : (up ? '#00D897' : '#FF4757') }}>{fmtChange(change)}</span>
     </span>
   );
 }
@@ -306,29 +311,39 @@ export default function S03_MultiCurrencyBoard() {
   const rafRef       = useRef(null);
   const startRef     = useRef(null);
   const dotsRef      = useRef(FALLBACK_DOTS);     // start with fallback immediately
-  const bandDataRef  = useRef(DEFAULT_CURRENCIES.filter(c => BAND_CODES.includes(c.code)));
-  const [loaded, setLoaded]     = useState(false);  // true once GeoJSON dots ready
+  const bandDataRef  = useRef(EMPTY_CURRENCIES.filter(c => BAND_CODES.includes(c.code)));
   const [search, setSearch]     = useState('');
-  const [currencies, setCurrencies] = useState(DEFAULT_CURRENCIES);
+  const [currencies, setCurrencies] = useState(EMPTY_CURRENCIES);
+  const [isPriceLoading, setIsPriceLoading] = useState(true);
 
   // Live multi-source multi-currency fetch (CoinGecko → Binance+FX → Kraken+FX)
   useEffect(() => {
     let active = true;
     const codes = CURRENCY_META.map(m => m.code.toLowerCase());
+
     const load = async () => {
-      const btc = await fetchMultiCurrencyBtc(codes);
-      if (!btc || !active) return;
-      const updated = CURRENCY_META.map(m => {
-        const key = m.code.toLowerCase();
-        return {
-          ...m,
-          price:  btc[key]                 ?? 0,
-          change: btc[`${key}_24h_change`] ?? 0,
-        };
-      });
-      setCurrencies(updated);
-      bandDataRef.current = updated.filter(c => BAND_CODES.includes(c.code));
+      try {
+        const btc = await fetchMultiCurrencyBtc(codes);
+        if (!active || !btc) return;
+
+        const updated = CURRENCY_META.map(m => {
+          const key = m.code.toLowerCase();
+          const price = Number(btc[key]);
+          const change = Number(btc[`${key}_24h_change`]);
+          return {
+            ...m,
+            price: Number.isFinite(price) ? price : null,
+            change: Number.isFinite(change) ? change : null,
+          };
+        });
+
+        setCurrencies(updated);
+        bandDataRef.current = updated.filter(c => BAND_CODES.includes(c.code));
+      } finally {
+        if (active) setIsPriceLoading(false);
+      }
     };
+
     load();
     const t = setInterval(load, 60_000);
     return () => { active = false; clearInterval(t); };
@@ -342,11 +357,9 @@ export default function S03_MultiCurrencyBoard() {
           (lat, lon) => sampleLand(imageData, lat, lon),
           5000
         );
-        setLoaded(true);
       })
       .catch(() => {
         // Keep fallback dots — already set
-        setLoaded(true);
       });
   }, []);
 
@@ -387,64 +400,38 @@ export default function S03_MultiCurrencyBoard() {
   const tickerItems = [...currencies, ...currencies];
 
   return (
-    <div className="flex h-full w-full flex-col bg-[#0a0a0f]">
-
-      {/* ── Header ─────────────────────────────────────────────────────── */}
-      <div className="flex-none flex items-center justify-between px-5 pt-3 pb-1">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{
-            width: 22, height: 22, borderRadius: '50%',
-            background: '#F7931A',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 12, fontWeight: 700, color: '#000',
-          }}>₿</div>
-          <span style={{
-            color: '#ddd', fontFamily: 'monospace',
-            fontSize: 'var(--fs-body)', fontWeight: 700,
-            letterSpacing: '0.05em',
-          }}>
-            World Map Price Explorer
-          </span>
-          {!loaded && (
-            <span style={{
-              color: '#444', fontFamily: 'monospace',
-              fontSize: '0.55rem', marginLeft: 6,
-            }}>loading map…</span>
-          )}
-        </div>
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 6,
-          color: '#444', fontFamily: 'monospace',
-          fontSize: 'var(--fs-caption)',
-        }}>
-          <span style={{
-            display: 'inline-block', width: 7, height: 7, borderRadius: '50%',
-            background: '#00D897', boxShadow: '0 0 6px #00D897',
-          }} />
-          LIVE
-        </div>
-      </div>
+    <div className="flex h-full w-full flex-col bg-[#111111]">
 
       {/* ── Ticker ─────────────────────────────────────────────────────── */}
       <div className="flex-none overflow-hidden" style={{
         borderTop: '1px solid #1a1a1a', borderBottom: '1px solid #1a1a1a',
-        background: '#0d0d12', padding: '3px 0',
+        background: '#111111', padding: '3px 0',
       }}>
-        <style>{`
-          @keyframes s03-ticker {
-            0%   { transform: translateX(0); }
-            100% { transform: translateX(-50%); }
-          }
-        `}</style>
-        <div style={{
-          display: 'inline-flex',
-          animation: 's03-ticker 30s linear infinite',
-          whiteSpace: 'nowrap',
-        }}>
-          {tickerItems.map((c, i) => (
-            <TickerItem key={i} code={c.code} change={c.change} />
-          ))}
-        </div>
+        {isPriceLoading ? (
+          <div className="flex items-center gap-3 px-4 py-1">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="skeleton" style={{ width: 110, height: '1em' }} />
+            ))}
+          </div>
+        ) : (
+          <>
+            <style>{`
+              @keyframes s03-ticker {
+                0%   { transform: translateX(0); }
+                100% { transform: translateX(-50%); }
+              }
+            `}</style>
+            <div style={{
+              display: 'inline-flex',
+              animation: 's03-ticker 30s linear infinite',
+              whiteSpace: 'nowrap',
+            }}>
+              {tickerItems.map((c, i) => (
+                <TickerItem key={i} code={c.code} change={c.change} />
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       {/* ── Globe + Right panel ────────────────────────────────────────── */}
@@ -462,7 +449,7 @@ export default function S03_MultiCurrencyBoard() {
         <div className="flex-none flex flex-col" style={{
           width: 'clamp(160px, 18vw, 240px)',
           borderLeft: '1px solid #1a1a1a',
-          background: '#0d0d12',
+          background: '#111111',
         }}>
           <div style={{ padding: '8px 10px', borderBottom: '1px solid #1a1a1a' }}>
             <div style={{
@@ -489,32 +476,46 @@ export default function S03_MultiCurrencyBoard() {
             scrollbarWidth: 'thin', scrollbarColor: '#2a2a2a transparent',
           }}>
             {filtered.map((c) => {
-              const up = c.change >= 0;
+              const hasChange = Number.isFinite(c.change);
+              const up = hasChange ? c.change >= 0 : null;
               return (
                 <div key={c.code} style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                   padding: '5px 10px', borderBottom: '1px solid #141418',
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <div style={{
-                      width: 6, height: 6, borderRadius: '50%',
-                      background: up ? '#00D897' : '#FF4757', flexShrink: 0,
-                    }} />
+                    {isPriceLoading ? (
+                      <div className="skeleton" style={{ width: 6, height: 6, borderRadius: '50%' }} />
+                    ) : (
+                      <div style={{
+                        width: 6, height: 6, borderRadius: '50%',
+                        background: up == null ? '#555' : (up ? '#00D897' : '#FF4757'), flexShrink: 0,
+                      }} />
+                    )}
                     <span style={{
                       color: '#bbb', fontFamily: 'monospace',
                       fontSize: 'var(--fs-micro)', fontWeight: 700,
                     }}>{c.code}</span>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{
-                      color: '#eee', fontFamily: 'monospace',
-                      fontSize: 'var(--fs-micro)', fontWeight: 600,
-                    }}>{fmtPrice(c.price)}</div>
-                    <div style={{
-                      color: up ? '#00D897' : '#FF4757',
-                      fontFamily: 'monospace',
-                      fontSize: 'var(--fs-tag)',
-                    }}>{fmtChange(c.change)}</div>
+                    {isPriceLoading ? (
+                      <>
+                        <div className="skeleton" style={{ width: 64, height: '0.9em', marginBottom: 4 }} />
+                        <div className="skeleton" style={{ width: 48, height: '0.8em' }} />
+                      </>
+                    ) : (
+                      <>
+                        <div style={{
+                          color: '#eee', fontFamily: 'monospace',
+                          fontSize: 'var(--fs-micro)', fontWeight: 600,
+                        }}>{fmtPrice(c.price)}</div>
+                        <div style={{
+                          color: up == null ? '#666' : (up ? '#00D897' : '#FF4757'),
+                          fontFamily: 'monospace',
+                          fontSize: 'var(--fs-tag)',
+                        }}>{fmtChange(c.change)}</div>
+                      </>
+                    )}
                   </div>
                 </div>
               );

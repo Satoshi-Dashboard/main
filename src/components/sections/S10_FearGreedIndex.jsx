@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react';
 
-const FALLBACK = { value: 62, yesterday: 62, sevenDaysAgo: 64, thirtyDaysAgo: 50 };
+const EMPTY_DATA = {
+  value: null,
+  yesterday: null,
+  sevenDaysAgo: null,
+  thirtyDaysAgo: null,
+  classification: null,
+};
 
 const SEGMENTS = [
   { from: 0,  to: 25,  color: '#b30000', label: 'EXTREME FEAR' },
@@ -73,6 +79,24 @@ function Label({ cx, cy, r, v, sw }) {
 
 /* Historical bubble */
 function Bubble({ label, value }) {
+  const loading = !Number.isFinite(value);
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center gap-2">
+        <div
+          className="skeleton rounded-full"
+          style={{
+            width: 'clamp(40px, 6vw, 72px)',
+            height: 'clamp(40px, 6vw, 72px)',
+          }}
+        />
+        <span className="font-mono text-white/40" style={{ fontSize: 'var(--fs-micro)' }}>
+          {label}
+        </span>
+      </div>
+    );
+  }
+
   const cls = classify(value);
   return (
     <div className="flex flex-col items-center gap-2">
@@ -95,29 +119,49 @@ function Bubble({ label, value }) {
 }
 
 export default function S10_FearGreedIndex() {
-  const [data, setData] = useState(FALLBACK);
+  const [data, setData] = useState(EMPTY_DATA);
 
   useEffect(() => {
     let active = true;
-    (async () => {
+
+    const load = async () => {
       try {
         const res = await fetch('https://api.alternative.me/fng/?limit=31');
         const json = await res.json();
         if (!active || !Array.isArray(json?.data)) return;
         const e = json.data;
-        setData({
-          value: Number(e[0]?.value) || FALLBACK.value,
-          yesterday: Number(e[1]?.value) || FALLBACK.yesterday,
-          sevenDaysAgo: Number(e[7]?.value) || FALLBACK.sevenDaysAgo,
-          thirtyDaysAgo: Number(e[30]?.value) || FALLBACK.thirtyDaysAgo,
-        });
+        const value = Number(e[0]?.value);
+        const yesterday = Number(e[1]?.value);
+        const sevenDaysAgo = Number(e[7]?.value);
+        const thirtyDaysAgo = Number(e[30]?.value);
+
+        setData((prev) => ({
+          value: Number.isFinite(value) ? value : prev.value,
+          yesterday: Number.isFinite(yesterday) ? yesterday : prev.yesterday,
+          sevenDaysAgo: Number.isFinite(sevenDaysAgo) ? sevenDaysAgo : prev.sevenDaysAgo,
+          thirtyDaysAgo: Number.isFinite(thirtyDaysAgo) ? thirtyDaysAgo : prev.thirtyDaysAgo,
+          classification: e[0]?.value_classification || prev.classification,
+        }));
       } catch { /* keep fallback */ }
-    })();
-    return () => { active = false; };
+
+    };
+
+    load();
+    const timer = setInterval(load, 60_000);
+
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
   }, []);
 
-  const { value, yesterday, sevenDaysAgo, thirtyDaysAgo } = data;
-  const cls = classify(value);
+  const { value, yesterday, sevenDaysAgo, thirtyDaysAgo, classification } = data;
+  const hasMain = Number.isFinite(value);
+  const cls = hasMain ? classify(value) : { color: '#555', label: 'LOADING' };
+  const pct = hasMain && Number.isFinite(yesterday) && yesterday !== 0
+    ? ((value - yesterday) / yesterday) * 100
+    : null;
+  const pctLabel = Number.isFinite(pct) ? `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%` : null;
 
   /* SVG gauge params */
   const VW = 700;
@@ -128,7 +172,7 @@ export default function S10_FearGreedIndex() {
   const SW = 32;
 
   /* Needle */
-  const needleRad = Math.PI - (value / 100) * Math.PI;
+  const needleRad = Math.PI - (((Number.isFinite(value) ? value : 50) / 100) * Math.PI);
   const ntx = cx + (R - 16) * Math.cos(needleRad);
   const nty = cy - (R - 16) * Math.sin(needleRad);
 
@@ -144,21 +188,34 @@ export default function S10_FearGreedIndex() {
         <span className="font-mono text-white/70" style={{ fontSize: 'var(--fs-section)' }}>
           Fear &amp; Greed:
         </span>
-        <div
-          className="flex items-center justify-center rounded-full font-mono font-bold text-white"
-          style={{
-            width: 'clamp(32px, 4vw, 52px)',
-            height: 'clamp(32px, 4vw, 52px)',
-            fontSize: 'var(--fs-heading)',
-            backgroundColor: cls.color,
-          }}
-        >
-          {value}
-        </div>
-        <span className="font-mono text-white/30" style={{ fontSize: 'var(--fs-label)' }}>
-          0.00%
-        </span>
-        <span style={{ color: cls.color, fontSize: '1.1em' }}>■</span>
+        {hasMain ? (
+          <div
+            className="flex items-center justify-center rounded-full font-mono font-bold text-white"
+            style={{
+              width: 'clamp(32px, 4vw, 52px)',
+              height: 'clamp(32px, 4vw, 52px)',
+              fontSize: 'var(--fs-heading)',
+              backgroundColor: cls.color,
+            }}
+          >
+            {value}
+          </div>
+        ) : (
+          <div
+            className="skeleton rounded-full"
+            style={{ width: 'clamp(32px, 4vw, 52px)', height: 'clamp(32px, 4vw, 52px)' }}
+          />
+        )}
+
+        {pctLabel ? (
+          <span className="font-mono text-white/30" style={{ fontSize: 'var(--fs-label)' }}>
+            {pctLabel}
+          </span>
+        ) : (
+          <div className="skeleton" style={{ width: 56, height: '0.9em' }} />
+        )}
+
+        <span style={{ color: cls.color, fontSize: '1.1em' }}>{hasMain ? '■' : '·'}</span>
       </div>
 
       {/* SVG Gauge */}
@@ -180,8 +237,14 @@ export default function S10_FearGreedIndex() {
           ))}
 
           {/* Needle */}
-          <line x1={cx} y1={cy} x2={ntx} y2={nty} stroke="#ccc" strokeWidth="3" strokeLinecap="round" />
-          <circle cx={cx} cy={cy} r="9" fill="#888" />
+          {hasMain ? (
+            <>
+              <line x1={cx} y1={cy} x2={ntx} y2={nty} stroke="#ccc" strokeWidth="3" strokeLinecap="round" />
+              <circle cx={cx} cy={cy} r="9" fill="#888" />
+            </>
+          ) : (
+            <circle cx={cx} cy={cy} r="9" fill="#555" />
+          )}
         </svg>
       </div>
 
@@ -190,7 +253,7 @@ export default function S10_FearGreedIndex() {
         className="flex-shrink-0 font-mono font-bold tracking-widest"
         style={{ color: cls.color, fontSize: 'var(--fs-section)' }}
       >
-        {cls.label}
+        {classification || cls.label}
       </div>
 
       {/* Historical bubbles */}

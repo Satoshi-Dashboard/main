@@ -5,6 +5,7 @@ import S04_MempoolGauge from '../components/sections/S04_MempoolGauge';
 import S05_LongTermTrend from '../components/sections/S05_LongTermTrend';
 import S08_NodesMap from '../components/sections/S08_NodesMap';
 import S09_LightningNetwork from '../components/sections/S09_LightningNetwork';
+import S09b_StablecoinPegHealth from '../components/sections/S09b_StablecoinPegHealth';
 import S10_FearGreedIndex from '../components/sections/S10_FearGreedIndex';
 import S11_AddressDistribution from '../components/sections/S11_AddressDistribution';
 import S12_BTCvsGold from '../components/sections/S12_BtcVsGold';
@@ -35,6 +36,7 @@ export const MODULES = [
   { code: 'S05', slug: 's05-long-term-trend', title: 'Long-Term Trend', component: S05_LongTermTrend },
   { code: 'S08', slug: 's08-nodes-map', title: 'Nodes Map', component: S08_NodesMap },
   { code: 'S09', slug: 's09-lightning-network', title: 'Lightning Network', component: S09_LightningNetwork },
+  { code: 'S09b', slug: 's09b-stablecoin-peg', title: 'Stablecoin Peg Health', component: S09b_StablecoinPegHealth },
   { code: 'S10', slug: 's10-fear-greed', title: 'Fear & Greed', component: S10_FearGreedIndex },
   { code: 'S11', slug: 's11-address-distribution', title: 'Address Distribution', component: S11_AddressDistribution },
   { code: 'S12', slug: 's12-btc-vs-gold', title: 'BTC vs Gold', component: S12_BTCvsGold },
@@ -46,7 +48,7 @@ export const MODULES = [
   { code: 'S18', slug: 's18-cycle-spiral', title: 'Cycle Spiral', component: S18_CycleSpiral },
   { code: 'S19', slug: 's19-power-law-model', title: 'Power Law Model', component: S19_PowerLawModel },
   { code: 'S20', slug: 's20-stock-to-flow', title: 'Stock to Flow', component: S20_StockToFlow },
-  { code: 'S21', slug: 's21-node-versions', title: 'Node Versions', component: S21_NodeVersions },
+  { code: 'S21', slug: 's21-node-versions', title: 'Big Mac Sats Tracker', component: S21_NodeVersions },
   { code: 'S22', slug: 's22-seasonality', title: 'Seasonality', component: S22_SeasonalityHeatmap },
   { code: 'S23', slug: 's23-big-mac-index', title: 'Big Mac Index', component: S23_BigMacIndex },
   { code: 'S24', slug: 's24-network-activity', title: 'Network Activity', component: S24_NetworkActivity },

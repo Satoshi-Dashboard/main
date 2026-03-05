@@ -12,7 +12,7 @@
   <h3 align="center">Satoshi Dashboard</h3>
 
   <p align="center">
-    Bitcoin analytics platform with 28 interactive modules, built with React + Vite.
+    Bitcoin analytics platform with 29 interactive modules, built with React + Vite.
     <br />
     <a href="https://github.com/Satoshi-Dashboard/main"><strong>Explore the repo</strong></a>
     <br />
@@ -29,7 +29,7 @@
 
 Satoshi Dashboard is a frontend-focused Bitcoin intelligence dashboard that groups market, network, valuation, and sentiment metrics into a single UI.
 
-It includes 28 ready-to-use modules such as price trends, MVRV, Stock-to-Flow, Fear & Greed, dominance, node versions, UTXO distribution, and more.
+It includes 29 ready-to-use modules such as price trends, stablecoin peg health, MVRV, Stock-to-Flow, Fear & Greed, dominance, node versions, UTXO distribution, and more.
 
 ### Built With
 
@@ -63,7 +63,9 @@ It includes 28 ready-to-use modules such as price trends, MVRV, Stock-to-Flow, F
 
 ## Usage
 
-- `npm run dev`: start local development server
+- `npm run dev`: start frontend (Vite) + backend API server concurrently
+- `npm run dev:ui`: start Vite frontend only
+- `npm run start:api`: start Express backend only (Bitnodes cache server)
 - `npm run build`: build production bundle in `dist/`
 - `npm run preview`: preview production build locally
 - `npm run lint`: run ESLint checks
@@ -79,8 +81,9 @@ The table below shows current API usage per module. Modules without live endpoin
 | `S03` Multi-Currency | Active | `CoinGecko /simple/price` (multi-currency) -> fallback `Binance /ticker/price` + `jsDelivr @fawazahmed0/currency-api` -> fallback `Kraken /Ticker` + `jsDelivr @fawazahmed0/currency-api`.<br/>Extra external dataset: Natural Earth GeoJSON via CloudFront. |
 | `S04` Mempool Gauge | Active | Mempool variants: `/api/mempool`, `/api/v1/fees/recommended`. |
 | `S05` Block Visualizer | Active | WebSocket `wss://mempool.space/api/v1/ws` (live blocks + mempool-blocks + stats).<br/>REST: `/api/v1/blocks`, `/api/v1/fees/recommended`. Double-click any block to open in mempool.space. |
-| `S08` Nodes Map | Active | `Bitnodes /api/v1/snapshots/latest/`.<br/>Map tiles: `basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png`. |
+| `S08` Nodes Map | Active | `Bitnodes /api/v1/snapshots/latest/` via local Express cache server (`server/`).<br/>Map tiles: `basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png`. |
 | `S09` Lightning Network | Active | `CoinGecko /simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true`. |
+| `S09b` Stablecoin Peg Health | Active | `stablecoins.llama.fi/stablecoins?includePrices=true` (price + market cap, 60s refresh).<br/>Sparkline history: `stablecoins.llama.fi/stablecoin/{id}` (14-day supply, lazy-loaded per card).<br/>Logos: jsDelivr SVG CDN → llamao.fi PNG 4× → text fallback. Interactive crosshair tooltip. |
 | `S10` Fear & Greed | Active | `Alternative.me /fng/?limit=31`. |
 | `S11` Address Distribution | Proximamente | No live API connected in the current component. |
 | `S12` BTC vs Gold | Active | `CoinGecko /coins/bitcoin/market_chart?vs_currency=usd&days=365&interval=daily`. |
@@ -92,7 +95,7 @@ The table below shows current API usage per module. Modules without live endpoin
 | `S18` Cycle Spiral | Proximamente | No live API connected in the current component. |
 | `S19` Power Law Model | Proximamente | No live API connected in the current component. |
 | `S20` Stock to Flow | Proximamente | No live API connected in the current component. |
-| `S21` Node Versions | Proximamente | No live API connected in the current component. |
+| `S21` Big Mac Sats Tracker | Active | `Alternative.me /v2/ticker/bitcoin` (spot, 5s) + `Binance /api/v3/klines` (historical: 7d, 30d, 1y, 3y, 5y, 10y) + The Economist CSV `big-mac-adjusted-index.csv` filtered by `iso_a3=USA` (daily reload, source updated bimonthly). |
 | `S22` Seasonality | Proximamente | No live API connected in the current component. |
 | `S23` Big Mac Index | Active | `CoinGecko /simple/price?ids=bitcoin&vs_currencies=usd`. |
 | `S24` Network Activity | Proximamente | No live API connected in the current component. |
@@ -105,10 +108,12 @@ The table below shows current API usage per module. Modules without live endpoin
 
 ## Roadmap
 
-- [x] Build complete dashboard shell with 28 modules
+- [x] Build complete dashboard shell with 29 modules
 - [x] Add reusable card, toast, and export interactions
-- [x] Integrate live Bitcoin and blockchain APIs (S01–S05, S08–S10, S12, S14, S17, S23)
+- [x] Integrate live Bitcoin and blockchain APIs (S01–S05, S08–S10, S12, S14, S17, S21, S23)
 - [x] Real-time WebSocket block visualizer (S05) with responsive layout
+- [x] Stablecoin Peg Health module (S09b) with interactive sparklines and DeFiLlama live data
+- [x] Local Express backend for Bitnodes cache (avoids rate-limiting on S08 nodes map)
 - [ ] Add user preferences persistence
 - [ ] Add alerts/watchlists and custom module filtering
 
