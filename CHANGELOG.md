@@ -1,35 +1,18 @@
 # Changelog
 
-## v1.1.2
+All notable changes to this project are documented in this file.
+
+## v0.2.0 - 2026-03-04
 
 ### Added or Changed
-- Change license to Unlicense; releasing the project fully into the public domain
-- Add simplified project cover image
+- Reworked all Best-README-Template docs to match Satoshi Dashboard.
+- Replaced generic template content in `README.md` with real project details.
+- Updated roadmap, installation, usage, and contribution guidance.
+- Customized issue templates for dashboard bug reports and feature requests.
 
+## v0.1.0 - 2026-03-04
 
-## v1.1.1
-
-### Added or Changed
-- Fixed back to top alignment (revert changes)
-
-
-## v1.1.0
-
-### Added or Changed
-- Fixed back to top link alignment deprecated tag, use CSS style instead
-- Added contrib.rocks to show top contributors
-
-
-## v1.0.0
-
-### Added or Changed
-- Added this changelog :)
-- Fixed typos in both templates
-- Back to top links
-- Added more "Built With" frameworks/libraries
-- Changed table of contents to start collapsed
-- Added checkboxes for major features on roadmap
-
-### Removed
-
-- Some packages/libraries from acknowledgements I no longer use
+### Added
+- Initial Satoshi Dashboard release with 30 Bitcoin analytics modules.
+- React + Vite frontend foundation with reusable layout and chart components.
+- Mock data coverage for price, network, valuation, and sentiment views.

@@ -1,15 +1,26 @@
 ---
-name: "Feature request \U0001F680"
-about: Suggest an idea
+name: "Feature request"
+about: Suggest an improvement for Satoshi Dashboard
 labels: enhancement
 
 ---
 
 ## Summary
-Brief explanation of the feature.
+Describe the feature in one short paragraph.
 
-### Basic example
-Include a basic example or links here.
+### Problem it solves
+What limitation or pain point does this address?
 
-### Motivation
-Why are we doing this? What use cases does it support? What is the expected outcome?
+### Proposed solution
+Explain the desired behavior or UI flow.
+
+### Scope
+- Modules affected: [e.g. S10 Fear and Greed]
+- Priority: [low/medium/high]
+- Breaking changes: [yes/no]
+
+### Alternatives considered
+Describe any other approaches you considered.
+
+### Additional context
+Attach references, mockups, or data sources if relevant.

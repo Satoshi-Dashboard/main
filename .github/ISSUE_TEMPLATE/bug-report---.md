@@ -1,22 +1,29 @@
 ---
-name: "Bug report \U0001F41E"
-about: Create a bug report
+name: "Bug report"
+about: Report a bug in Satoshi Dashboard
 labels: bug
 
 ---
 
 ## Describe the bug
-A clear and concise description of what the bug is.
+Provide a clear and concise description of the problem.
 
 ### Steps to reproduce
-Steps to reproduce the behavior.
+1. Go to module/page:
+2. Click on:
+3. Scroll to:
+4. Observe error:
 
 ### Expected behavior
-A clear and concise description of what you expected to happen.
+Describe what should have happened.
 
 ### Environment
- - OS: [e.g. Arch Linux]
- - Other details that you think may affect.
+- App version/commit: [e.g. main@abc123]
+- Browser: [e.g. Chrome 123]
+- OS: [e.g. Windows 11]
+- Screen size/device: [e.g. 1920x1080 desktop]
 
 ### Additional context
-Add any other context about the problem here.
+- Console errors (if any)
+- Network/API errors (if any)
+- Screenshot or short video
