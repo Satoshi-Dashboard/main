@@ -1,95 +1,87 @@
 import { useEffect, useState } from 'react';
 import { fmt } from '../../utils/formatters';
 
-const defaultMempool = {
-  size: 187,       // vMB
-  count: 84312,    // pending txs
-  maxSize: 300,    // vMB
-  feeLow: 3,       // sat/vB
-  feeMid: 8,
-  feeHigh: 24,
-};
+const MAX_VMEMPOOL = 300; // design max vMB for gauge scale
 
 /* ── Gauge Arc (SVG half-circle) ── */
-function GaugeArc({ pct }) {
+function GaugeArc({ pct, loading }) {
   const r = 120;
   const cx = 180;
   const cy = 160;
-  // Half-circle arc: from left (180°) to right (0°)
-  const toRad = (deg) => (deg * Math.PI) / 180;
-  // SVG arc path for half-circle (from 180° to 0°, top half only)
-  // Start: (cx - r, cy) → End: (cx + r, cy) through top
   const arcPath = `M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`;
-
-  // How much of the half-circle arc to fill
-  // Arc length of half-circle = π * r
   const totalArcLength = Math.PI * r;
-  const filledLength = (pct / 100) * totalArcLength;
+  const filledLength = ((pct ?? 0) / 100) * totalArcLength;
 
   return (
     <svg width="360" height="190" viewBox="0 0 360 190" className="w-full max-w-[420px]">
       {/* Track */}
-      <path
-        d={arcPath}
-        fill="none"
-        stroke="#2a2a2a"
-        strokeWidth="18"
-        strokeLinecap="round"
-      />
-      {/* Fill - using stroke-dasharray on the path */}
-      <path
-        d={arcPath}
-        fill="none"
-        stroke="#F7931A"
-        strokeWidth="18"
-        strokeLinecap="round"
-        strokeDasharray={`${filledLength} ${totalArcLength}`}
-        style={{ filter: 'drop-shadow(0 0 8px rgba(247,147,26,0.5))' }}
-      />
-      {/* Percentage text inside arc */}
-      <text
-        x={cx}
-        y={cy - 18}
-        textAnchor="middle"
-        fill="#F7931A"
-        fontSize="42"
-        fontFamily="JetBrains Mono, monospace"
-        fontWeight="700"
-      >
-        {pct.toFixed(1)}%
-      </text>
-      <text
-        x={cx}
-        y={cy + 14}
-        textAnchor="middle"
-        fill="rgba(255,255,255,0.35)"
-        fontSize="18"
-        fontFamily="JetBrains Mono, monospace"
-        letterSpacing="3"
-      >
-        CAPACITY
-      </text>
-      {/* Min / Max labels */}
-      <text x={cx - r + 4} y={cy + 30} fill="#444" fontSize="15" fontFamily="JetBrains Mono, monospace">
-        0
-      </text>
+      <path d={arcPath} fill="none" stroke="#2a2a2a" strokeWidth="18" strokeLinecap="round" />
+      {/* Fill */}
+      {!loading && (
+        <path
+          d={arcPath}
+          fill="none"
+          stroke="#F7931A"
+          strokeWidth="18"
+          strokeLinecap="round"
+          strokeDasharray={`${filledLength} ${totalArcLength}`}
+          style={{ filter: 'drop-shadow(0 0 8px rgba(247,147,26,0.5))' }}
+        />
+      )}
+      {/* Center text */}
+      {loading ? (
+        <>
+          <rect x={cx - 60} y={cy - 58} width="120" height="40" rx="6" fill="#2a2a2a" opacity="0.7">
+            <animate attributeName="opacity" values="0.4;0.8;0.4" dur="1.4s" repeatCount="indefinite" />
+          </rect>
+          <rect x={cx - 44} y={cy - 6} width="88" height="20" rx="4" fill="#2a2a2a" opacity="0.5">
+            <animate attributeName="opacity" values="0.3;0.6;0.3" dur="1.4s" repeatCount="indefinite" />
+          </rect>
+        </>
+      ) : (
+        <>
+          <text
+            x={cx} y={cy - 18}
+            textAnchor="middle"
+            fill="#F7931A"
+            fontSize="42"
+            fontFamily="JetBrains Mono, monospace"
+            fontWeight="700"
+          >
+            {pct.toFixed(1)}%
+          </text>
+          <text
+            x={cx} y={cy + 14}
+            textAnchor="middle"
+            fill="rgba(255,255,255,0.35)"
+            fontSize="18"
+            fontFamily="JetBrains Mono, monospace"
+            letterSpacing="3"
+          >
+            CAPACITY
+          </text>
+        </>
+      )}
+      {/* Scale labels */}
+      <text x={cx - r + 4} y={cy + 30} fill="#444" fontSize="15" fontFamily="JetBrains Mono, monospace">0</text>
       <text x={cx + r - 8} y={cy + 30} textAnchor="end" fill="#444" fontSize="15" fontFamily="JetBrains Mono, monospace">
-        {defaultMempool.maxSize} vMB
+        {MAX_VMEMPOOL} vMB
       </text>
     </svg>
   );
 }
 
 /* ── Fee Tile ── */
-function FeeTile({ label, value, color = '#F7931A' }) {
+function FeeTile({ label, value, color = '#F7931A', loading }) {
   return (
     <div className="flex flex-col items-center gap-2 border-[#2a2a2a] px-6">
-      <div
-        className="font-mono font-bold tabular-nums"
-        style={{ fontSize: 'var(--fs-title)', color }}
-      >
-        {value}
-      </div>
+      {loading || value == null ? (
+        <div className="skeleton" style={{ width: 48, height: '2em' }} />
+      ) : (
+        <div className="font-mono font-bold tabular-nums" style={{ fontSize: 'var(--fs-title)', color }}>
+          {value}
+        </div>
+      )}
       <div className="uppercase tracking-[0.2em] text-white/30" style={{ fontSize: 'var(--fs-tag)' }}>{label}</div>
       <div className="text-white/20 font-mono" style={{ fontSize: 'var(--fs-micro)' }}>sat/vB</div>
     </div>
@@ -97,7 +89,14 @@ function FeeTile({ label, value, color = '#F7931A' }) {
 }
 
 export default function S04_MempoolGauge() {
-  const [mempool, setMempool] = useState(defaultMempool);
+  const [mempool, setMempool] = useState({
+    size: null,
+    count: null,
+    feeLow: null,
+    feeMid: null,
+    feeHigh: null,
+  });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
@@ -111,14 +110,16 @@ export default function S04_MempoolGauge() {
         if (!active) return;
         setMempool((prev) => ({
           ...prev,
-          count: mem?.count ?? prev.count,
-          size: mem?.vsize ? Math.round(mem.vsize / 1e6) : prev.size,
-          feeLow: fees?.economyFee ?? prev.feeLow,
-          feeMid: fees?.halfHourFee ?? prev.feeMid,
-          feeHigh: fees?.fastestFee ?? prev.feeHigh,
+          count:   mem?.count   ?? prev.count,
+          size:    mem?.vsize   != null ? Math.round(mem.vsize / 1e6) : prev.size,
+          feeLow:  fees?.economyFee  ?? prev.feeLow,
+          feeMid:  fees?.halfHourFee ?? prev.feeMid,
+          feeHigh: fees?.fastestFee  ?? prev.feeHigh,
         }));
       } catch {
-        /* keep defaults */
+        /* keep previous values */
+      } finally {
+        if (active) setLoading(false);
       }
     };
     load();
@@ -129,7 +130,7 @@ export default function S04_MempoolGauge() {
     };
   }, []);
 
-  const pct = Math.min((mempool.size / mempool.maxSize) * 100, 100);
+  const pct = mempool.size != null ? Math.min((mempool.size / MAX_VMEMPOOL) * 100, 100) : null;
 
   return (
     <div className="flex h-full w-full flex-col items-center justify-center gap-6 bg-[#111111] py-4">
@@ -145,37 +146,35 @@ export default function S04_MempoolGauge() {
 
       {/* Gauge */}
       <div className="flex items-center justify-center">
-        <GaugeArc pct={pct} />
+        <GaugeArc pct={pct ?? 0} loading={loading} />
       </div>
 
       {/* Main stats */}
       <div className="flex items-center gap-8 border-t border-b border-[#2a2a2a] py-5 px-8">
         <div className="flex flex-col items-center gap-2">
-          <div
-            className="font-mono font-bold text-white tabular-nums"
-            style={{ fontSize: 'var(--fs-title)' }}
-          >
-            {fmt.num(mempool.count)}
-          </div>
-          <div
-            className="uppercase tracking-[0.18em] text-[#F7931A]"
-            style={{ fontSize: 'var(--fs-label)' }}
-          >
+          {loading || mempool.count == null ? (
+            <div className="skeleton" style={{ width: 100, height: '1.8em' }} />
+          ) : (
+            <div className="font-mono font-bold text-white tabular-nums" style={{ fontSize: 'var(--fs-title)' }}>
+              {fmt.num(mempool.count)}
+            </div>
+          )}
+          <div className="uppercase tracking-[0.18em] text-[#F7931A]" style={{ fontSize: 'var(--fs-label)' }}>
             PENDING TXS
           </div>
         </div>
+
         <div className="h-16 w-px bg-[#2a2a2a]" />
+
         <div className="flex flex-col items-center gap-2">
-          <div
-            className="font-mono font-bold text-white tabular-nums"
-            style={{ fontSize: 'var(--fs-title)' }}
-          >
-            {mempool.size} <span className="text-[0.4em] text-white/50">vMB</span>
-          </div>
-          <div
-            className="uppercase tracking-[0.18em] text-[#F7931A]"
-            style={{ fontSize: 'var(--fs-label)' }}
-          >
+          {loading || mempool.size == null ? (
+            <div className="skeleton" style={{ width: 80, height: '1.8em' }} />
+          ) : (
+            <div className="font-mono font-bold text-white tabular-nums" style={{ fontSize: 'var(--fs-title)' }}>
+              {mempool.size} <span className="text-[0.4em] text-white/50">vMB</span>
+            </div>
+          )}
+          <div className="uppercase tracking-[0.18em] text-[#F7931A]" style={{ fontSize: 'var(--fs-label)' }}>
             MEMPOOL SIZE
           </div>
         </div>
@@ -183,9 +182,9 @@ export default function S04_MempoolGauge() {
 
       {/* Fee row */}
       <div className="flex items-center divide-x divide-[#2a2a2a]">
-        <FeeTile label="ECONOMY" value={mempool.feeLow} color="#00D897" />
-        <FeeTile label="NORMAL" value={mempool.feeMid} color="#F7931A" />
-        <FeeTile label="PRIORITY" value={mempool.feeHigh} color="#FF4757" />
+        <FeeTile label="ECONOMY"  value={mempool.feeLow}  color="#00D897" loading={loading} />
+        <FeeTile label="NORMAL"   value={mempool.feeMid}  color="#F7931A" loading={loading} />
+        <FeeTile label="PRIORITY" value={mempool.feeHigh} color="#FF4757" loading={loading} />
       </div>
     </div>
   );

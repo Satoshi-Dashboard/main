@@ -12,7 +12,7 @@
   <h3 align="center">Satoshi Dashboard</h3>
 
   <p align="center">
-    Bitcoin analytics platform with 30 interactive modules, built with React + Vite.
+    Bitcoin analytics platform with 28 interactive modules, built with React + Vite.
     <br />
     <a href="https://github.com/Satoshi-Dashboard/main"><strong>Explore the repo</strong></a>
     <br />
@@ -29,7 +29,7 @@
 
 Satoshi Dashboard is a frontend-focused Bitcoin intelligence dashboard that groups market, network, valuation, and sentiment metrics into a single UI.
 
-It includes 30 ready-to-use modules such as price trends, MVRV, Stock-to-Flow, Fear & Greed, dominance, node versions, UTXO distribution, and more.
+It includes 28 ready-to-use modules such as price trends, MVRV, Stock-to-Flow, Fear & Greed, dominance, node versions, UTXO distribution, and more.
 
 ### Built With
 
@@ -74,13 +74,11 @@ The table below shows current API usage per module. Modules without live endpoin
 
 | Module | API status | APIs/endpoints in use |
 | --- | --- | --- |
-| `S01` Bitcoin Overview | Active | `CoinGecko /simple/price` + fallback `CoinCap /assets/bitcoin` + fallback `Binance /ticker/24hr` + fallback `Kraken /Ticker?pair=XBTUSD`.<br/>Mempool variants: `/api/v1/difficulty-adjustment`, `/api/blocks/tip/height`, `/api/v1/fees/recommended`, `/api/v1/mining/hashrate/pools`. |
+| `S01` Bitcoin Overview | Active | `CoinGecko /simple/price` + fallback `CoinCap /assets/bitcoin` + fallback `Binance /ticker/24hr` + fallback `Kraken /Ticker?pair=XBTUSD`.<br/>Mempool: `/api/v1/difficulty-adjustment`, `/api/blocks/tip/height`, `/api/v1/fees/recommended`, `/api/v1/mining/hashrate/3d`.<br/>Fear & Greed: `alternative.me/fng/?limit=7`. Refreshes every 15s. |
 | `S02` Price Chart | Active | Spot chain from `priceApi` (CoinGecko -> CoinCap -> Binance -> Kraken).<br/>History chain: `CoinGecko /coins/bitcoin/market_chart` -> fallback `Kraken /OHLC` -> fallback `CoinCap /assets/bitcoin/history`. |
 | `S03` Multi-Currency | Active | `CoinGecko /simple/price` (multi-currency) -> fallback `Binance /ticker/price` + `jsDelivr @fawazahmed0/currency-api` -> fallback `Kraken /Ticker` + `jsDelivr @fawazahmed0/currency-api`.<br/>Extra external dataset: Natural Earth GeoJSON via CloudFront. |
 | `S04` Mempool Gauge | Active | Mempool variants: `/api/mempool`, `/api/v1/fees/recommended`. |
-| `S05` Long-Term Trend | Active | Mempool variant: `/api/blocks/tip/height`. |
-| `S06` Block Composition | Active | Mempool variants: `/api/v1/blocks`, `/api/mempool`. |
-| `S07` Top Addresses | Proximamente | No live API connected in the current component. |
+| `S05` Block Visualizer | Active | WebSocket `wss://mempool.space/api/v1/ws` (live blocks + mempool-blocks + stats).<br/>REST: `/api/v1/blocks`, `/api/v1/fees/recommended`. Double-click any block to open in mempool.space. |
 | `S08` Nodes Map | Active | `Bitnodes /api/v1/snapshots/latest/`.<br/>Map tiles: `basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png`. |
 | `S09` Lightning Network | Active | `CoinGecko /simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true`. |
 | `S10` Fear & Greed | Active | `Alternative.me /fng/?limit=31`. |
@@ -107,9 +105,10 @@ The table below shows current API usage per module. Modules without live endpoin
 
 ## Roadmap
 
-- [x] Build complete Phase 1 dashboard shell with 30 modules
+- [x] Build complete dashboard shell with 28 modules
 - [x] Add reusable card, toast, and export interactions
-- [ ] Integrate live Bitcoin and blockchain APIs
+- [x] Integrate live Bitcoin and blockchain APIs (S01–S05, S08–S10, S12, S14, S17, S23)
+- [x] Real-time WebSocket block visualizer (S05) with responsive layout
 - [ ] Add user preferences persistence
 - [ ] Add alerts/watchlists and custom module filtering
 

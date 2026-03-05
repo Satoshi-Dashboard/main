@@ -3,8 +3,6 @@ import S02_PriceChart from '../components/sections/S02_PriceChart';
 import S03_MultiCurrencyBoard from '../components/sections/S03_MultiCurrencyBoard';
 import S04_MempoolGauge from '../components/sections/S04_MempoolGauge';
 import S05_LongTermTrend from '../components/sections/S05_LongTermTrend';
-import S06_BlockComposition from '../components/sections/S06_BlockComposition';
-import S07_TopAddresses from '../components/sections/S07_TopAddresses';
 import S08_NodesMap from '../components/sections/S08_NodesMap';
 import S09_LightningNetwork from '../components/sections/S09_LightningNetwork';
 import S10_FearGreedIndex from '../components/sections/S10_FearGreedIndex';
@@ -35,8 +33,6 @@ export const MODULES = [
   { code: 'S03', slug: 's03-multi-currency', title: 'Multi-Currency', component: S03_MultiCurrencyBoard },
   { code: 'S04', slug: 's04-mempool-gauge', title: 'Mempool Gauge', component: S04_MempoolGauge },
   { code: 'S05', slug: 's05-long-term-trend', title: 'Long-Term Trend', component: S05_LongTermTrend },
-  { code: 'S06', slug: 's06-block-composition', title: 'Block Composition', component: S06_BlockComposition },
-  { code: 'S07', slug: 's07-top-addresses', title: 'Top Addresses', component: S07_TopAddresses },
   { code: 'S08', slug: 's08-nodes-map', title: 'Nodes Map', component: S08_NodesMap },
   { code: 'S09', slug: 's09-lightning-network', title: 'Lightning Network', component: S09_LightningNetwork },
   { code: 'S10', slug: 's10-fear-greed', title: 'Fear & Greed', component: S10_FearGreedIndex },

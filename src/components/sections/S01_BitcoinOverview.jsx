@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts';
 import { fmt } from '../../utils/formatters';
 import { fetchBtcSpot } from '../../services/priceApi';
 
@@ -26,12 +27,23 @@ const defaultStats = {
   hashRateEh: null,
   difficultyT: null,
   circulatingSupply: null,
-  marketCap: null,
   nextDifficultyEtaBlocks: null,
   difficultyProgress: null,
   diffChangeNext: null,
   diffChangePrev: null,
+  fearGreedValue: null,
+  fearGreedClass: null,
+  fearGreedHistory: [],
 };
+
+/* ── Fear & Greed color by value ── */
+function fngColor(v) {
+  if (v >= 75) return '#00FF88';
+  if (v >= 56) return '#00D897';
+  if (v >= 45) return '#F7931A';
+  if (v >= 25) return '#FF6B35';
+  return '#FF4757';
+}
 
 /* ── Mini donut for Difficulty Adj. tile ── */
 function MiniDonut({ pct }) {
@@ -80,6 +92,72 @@ function Tile({ label, value, accent }) {
         style={{ fontSize: 'var(--fs-label)' }}
       >
         {label}
+      </div>
+    </div>
+  );
+}
+
+/* ── Fear & Greed tile ── */
+function FearGreedTile({ value, classification, history }) {
+  const loading = value == null;
+  const color = fngColor(value ?? 0);
+  const chartData = history.map((d, i) => ({ i, v: d.v }));
+  return (
+    <div className="flex flex-col items-center justify-center bg-[#111111] px-4 py-2 select-none gap-0.5">
+      {loading ? (
+        <div className="skeleton w-3/4" style={{ height: '2.4em' }} />
+      ) : (
+        <div
+          className="font-mono font-bold tabular-nums leading-none"
+          style={{ fontSize: 'var(--fs-hero)', color }}
+        >
+          {value}
+        </div>
+      )}
+      {loading ? (
+        <div className="skeleton w-1/2" style={{ height: '1em' }} />
+      ) : (
+        <div
+          className="font-mono uppercase tracking-widest"
+          style={{ fontSize: 'var(--fs-caption)', color }}
+        >
+          {classification}
+        </div>
+      )}
+      <div style={{ width: '100%', height: 44, marginTop: 4 }}>
+        {chartData.length > 0 && (
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={chartData} margin={{ top: 2, right: 2, left: 2, bottom: 2 }}>
+              <defs>
+                <linearGradient id="fngGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={color} stopOpacity={0.35} />
+                  <stop offset="95%" stopColor={color} stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <Area
+                type="monotone"
+                dataKey="v"
+                stroke={color}
+                strokeWidth={2}
+                fill="url(#fngGrad)"
+                dot={false}
+                isAnimationActive={false}
+              />
+              <Tooltip
+                contentStyle={{ background: '#12121A', border: `1px solid ${color}`, borderRadius: 4, fontSize: 11 }}
+                formatter={(v) => [v, 'Index']}
+                labelFormatter={() => ''}
+                cursor={{ stroke: color, strokeWidth: 1, strokeDasharray: '3 3' }}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        )}
+      </div>
+      <div
+        className="uppercase tracking-[0.18em] text-[#F7931A]"
+        style={{ fontSize: 'var(--fs-label)' }}
+      >
+        FEAR & GREED
       </div>
     </div>
   );
@@ -150,18 +228,20 @@ export default function S01_BitcoinOverview() {
     let active = true;
     const load = async () => {
       try {
-        const [spot, diffRes, heightRes, feeRes, hashRes] = await Promise.all([
+        const [spot, diffRes, heightRes, feeRes, hashRes, fngRes] = await Promise.all([
           fetchBtcSpot(),
           fetch('https://mempool.space/api/v1/difficulty-adjustment'),
           fetch('https://mempool.space/api/blocks/tip/height'),
           fetch('https://mempool.space/api/v1/fees/recommended'),
-          fetch('https://mempool.space/api/v1/mining/hashrate/pools'),
+          fetch('https://mempool.space/api/v1/mining/hashrate/3d'),
+          fetch('https://api.alternative.me/fng/?limit=7'),
         ]);
-        const [diff, heightText, fees, hashData] = await Promise.all([
+        const [diff, heightText, fees, hashData, fng] = await Promise.all([
           diffRes.json(),
           heightRes.text(),
           feeRes.json(),
           hashRes.json(),
+          fngRes.json(),
         ]);
         if (!active) return;
         const h = Number(heightText);
@@ -169,23 +249,25 @@ export default function S01_BitcoinOverview() {
           ...prev,
           price:         spot?.usd         || prev.price,
           satsPerDollar: spot?.usd ? Math.round(1e8 / spot.usd) : prev.satsPerDollar,
-          marketCap:     spot?.marketCap   || prev.marketCap,
           circulatingSupply: h ? calculateBitcoinSupply(h) : prev.circulatingSupply,
           avgTxFee:      Number(fees?.halfHourFee) || prev.avgTxFee,
           blockHeight:   h || prev.blockHeight,
-          difficultyT:   diff?.currentDifficulty ? diff.currentDifficulty / 1e12 : prev.difficultyT,
+          difficultyT:   hashData?.currentDifficulty ? hashData.currentDifficulty / 1e12 : prev.difficultyT,
           nextDifficultyEtaBlocks: diff?.remainingBlocks  != null ? Number(diff.remainingBlocks)  : prev.nextDifficultyEtaBlocks,
           difficultyProgress:     diff?.progressPercent  != null ? Number(diff.progressPercent)  : prev.difficultyProgress,
           diffChangeNext:         diff?.difficultyChange  != null ? Number(diff.difficultyChange) : prev.diffChangeNext,
           diffChangePrev:         diff?.previousRetarget  != null ? Number(diff.previousRetarget) : prev.diffChangePrev,
           hashRateEh: hashData?.currentHashrate ? hashData.currentHashrate / 1e18 : prev.hashRateEh,
+          fearGreedValue:   fng?.data?.[0]?.value != null ? Number(fng.data[0].value) : prev.fearGreedValue,
+          fearGreedClass:   fng?.data?.[0]?.value_classification ?? prev.fearGreedClass,
+          fearGreedHistory: fng?.data ? fng.data.map(d => ({ v: Number(d.value) })).reverse() : prev.fearGreedHistory,
         }));
       } catch {
         /* keep previous values */
       }
     };
     load();
-    const timer = setInterval(load, 60_000);
+    const timer = setInterval(load, 15_000);
     return () => {
       active = false;
       clearInterval(timer);
@@ -198,10 +280,9 @@ export default function S01_BitcoinOverview() {
       { label: 'SATS PER DOLLAR',    value: stats.satsPerDollar != null ? fmt.num(stats.satsPerDollar)                   : null },
       { label: 'AVG TX FEE (sat/vB)', value: stats.avgTxFee    != null ? fmt.num(stats.avgTxFee)                        : null },
       { label: 'BLOCK HEIGHT',        value: stats.blockHeight  != null ? fmt.num(stats.blockHeight)                     : null },
-      { label: 'CURRENT HASH RATE',   value: stats.hashRateEh   != null ? `${stats.hashRateEh.toFixed(2)} EH/s`          : null },
+      { label: 'CURRENT HASH RATE',   value: stats.hashRateEh   != null ? fmt.hashRate(stats.hashRateEh * 1e18)          : null },
       { label: 'NETWORK DIFFICULTY',  value: stats.difficultyT  != null ? `${stats.difficultyT.toFixed(2)} T`            : null },
       { label: 'CIRCULATING SUPPLY',  value: stats.circulatingSupply != null ? fmt.num(stats.circulatingSupply) : null, accent: '∞/21M' },
-      { label: 'MARKET CAP',          value: stats.marketCap    != null ? fmt.compact(stats.marketCap)                   : null },
     ],
     [stats],
   );
@@ -212,6 +293,11 @@ export default function S01_BitcoinOverview() {
         {tiles.map((t) => (
           <Tile key={t.label} {...t} />
         ))}
+        <FearGreedTile
+          value={stats.fearGreedValue}
+          classification={stats.fearGreedClass}
+          history={stats.fearGreedHistory}
+        />
         <DifficultyTile
           pct={stats.difficultyProgress}
           etaBlocks={stats.nextDifficultyEtaBlocks}
