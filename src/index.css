@@ -1,0 +1,147 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
+@import "tailwindcss";
+
+:root {
+  --bg-primary: #0A0A0F;
+  --bg-card: #12121A;
+  --bg-card-hover: #1A1A25;
+  --bg-elevated: #1E1E2A;
+  --accent-bitcoin: #F7931A;
+  --accent-gold: #D4A843;
+  --accent-green: #00D897;
+  --accent-red: #FF4757;
+  --text-primary: #E8E6E3;
+  --text-secondary: #8B8A88;
+  --text-tertiary: #555555;
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-active: rgba(247, 147, 26, 0.3);
+  --glow-bitcoin: 0 0 20px rgba(247, 147, 26, 0.15);
+  --glow-card: 0 4px 24px rgba(0, 0, 0, 0.4);
+  --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+
+  /* ── Typography Scale — optimised for 1920×1080+ ─────────────────── */
+  --fs-display:  clamp(2.5rem,  5.5vw,  6.5rem);   /* ~104px — hero BTC price      */
+  --fs-hero:     clamp(1.8rem,  4.5vw,  5rem);     /* ~80px  — large module numbers */
+  --fs-title:    clamp(1.4rem,  3.5vw,  4rem);     /* ~64px  — medium numbers       */
+  --fs-subtitle: clamp(1.1rem,  2.5vw,  2.8rem);   /* ~45px  — smaller numbers      */
+  --fs-section:  clamp(1rem,    1.8vw,  2rem);     /* ~32px  — section headings     */
+  --fs-heading:  clamp(0.9rem,  1.4vw,  1.5rem);   /* ~24px  — card titles, status  */
+  --fs-body:     clamp(0.8rem,  1.1vw,  1.25rem);  /* ~20px  — body text            */
+  --fs-label:    clamp(0.75rem, 1vw,    1.1rem);   /* ~17.6px — labels, categories  */
+  --fs-caption:  clamp(0.7rem,  0.9vw,  1rem);     /* ~16px  — small text           */
+  --fs-micro:    clamp(0.65rem, 0.78vw, 0.875rem); /* ~14px  — metadata, sub-labels */
+  --fs-tag:      clamp(0.6rem,  0.68vw, 0.75rem);  /* ~12px  — tags, tiny text      */
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body, #root { min-height: 100%; }
+
+html { scroll-behavior: smooth; font-feature-settings: "tnum" 1; }
+
+body {
+  margin: 0; padding: 0;
+  font-family: var(--font-mono);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--bg-primary); }
+::-webkit-scrollbar-thumb { background: #2A2A3A; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent-bitcoin); }
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, var(--bg-card) 25%, var(--bg-elevated) 50%, var(--bg-card) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 6px;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fadeUp 0.5s ease forwards; opacity: 0; }
+
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: var(--glow-bitcoin); }
+  50% { box-shadow: 0 0 35px rgba(247, 147, 26, 0.3); }
+}
+.glow-pulse { animation: glow-pulse 3s ease-in-out infinite; }
+
+.tabular { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+
+.recharts-cartesian-axis-tick-value { fill: var(--text-tertiary) !important; font-size: var(--fs-tag); font-family: var(--font-mono) !important; }
+.recharts-tooltip-wrapper { outline: none; }
+
+.player-module-shell > div { height: 100%; }
+
+.player-module-shell > div > [id^="card-"] {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.player-module-shell .dashboard-card-content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+.player-shell [id^="card-"] {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.player-shell [id^="section-"] {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.player-shell [id^="card-"] > .dashboard-card-content {
+  height: 100% !important;
+  display: flex;
+}
+
+.player-shell [id^="card-"] > .dashboard-card-content > * {
+  flex: 1;
+  min-height: 0;
+}
+
+.player-shell #section-0 .dashboard-card-content > .grid {
+  grid-auto-rows: 1fr;
+  height: 100%;
+}
+
+.player-shell #section-0 .dashboard-card-content > .grid > div {
+  height: 100%;
+  min-height: 0;
+}
+
+.player-shell [id^="card-"] > .px-6.py-4.border-b,
+.player-shell [id^="card-"] > .px-6.py-3.border-t {
+  display: none !important;
+}
+
+.player-shell [id^="card-"] > .dashboard-card-content {
+  padding: 0 !important;
+}

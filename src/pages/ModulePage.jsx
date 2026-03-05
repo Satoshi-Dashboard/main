@@ -1,0 +1,159 @@
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Maximize2, Minimize2, Pause, Play, SkipBack, SkipForward } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { MODULES, MODULES_BY_SLUG } from '../config/modules';
+
+const AUTOPLAY_MS = 9000;
+
+const getWrappedIndex = (index) => {
+  const total = MODULES.length;
+  return ((index % total) + total) % total;
+};
+
+function LiveClock() {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const dateStr = now.toLocaleDateString('en-US', {
+    month: '2-digit',
+    day: '2-digit',
+    year: 'numeric',
+  });
+  const timeStr = now.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+  return (
+    <span className="font-mono text-[12px] tracking-wide text-white/50">
+      {dateStr}, {timeStr}
+    </span>
+  );
+}
+
+export default function ModulePage() {
+  const { slug } = useParams();
+  const navigate = useNavigate();
+
+  const currentIndex = useMemo(() => {
+    const index = MODULES.findIndex((m) => m.slug === slug);
+    return index >= 0 ? index : 0;
+  }, [slug]);
+
+  const module = MODULES_BY_SLUG[slug] || MODULES[currentIndex];
+  const Component = module.component;
+
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    if (!MODULES_BY_SLUG[slug]) {
+      navigate(`/module/${MODULES[0].slug}`, { replace: true });
+    }
+  }, [slug, navigate]);
+
+  const goToModule = useCallback(
+    (index) => {
+      navigate(`/module/${MODULES[getWrappedIndex(index)].slug}`);
+    },
+    [navigate],
+  );
+
+  useEffect(() => {
+    if (!isPlaying) return undefined;
+    const timer = setInterval(() => goToModule(currentIndex + 1), AUTOPLAY_MS);
+    return () => clearInterval(timer);
+  }, [isPlaying, currentIndex, goToModule]);
+
+  useEffect(() => {
+    const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onFsChange);
+    return () => document.removeEventListener('fullscreenchange', onFsChange);
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+    } else {
+      document.exitFullscreen();
+    }
+  };
+
+  return (
+    <main className="player-shell flex h-screen w-screen flex-col overflow-hidden bg-[#111111]">
+      {/* ── TOP BAR ── */}
+      <div className="flex h-12 flex-none items-center justify-between border-b border-white/[0.06] px-5">
+        {/* Bitcoin logo */}
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#F7931A] shadow-[0_0_12px_rgba(247,147,26,0.4)]">
+            <span className="text-[15px] font-black leading-none text-white">₿</span>
+          </div>
+          <span className="text-[13px] font-semibold tracking-wide text-white/40">bitcoin</span>
+        </div>
+
+        {/* Right: LIVE + clock + fullscreen */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 rounded-[3px] bg-white px-2 py-[3px]">
+            <div className="h-[7px] w-[7px] animate-pulse rounded-full bg-green-500" />
+            <span className="text-[10px] font-black tracking-[0.18em] text-black">LIVE</span>
+          </div>
+          <LiveClock />
+          <button
+            type="button"
+            onClick={toggleFullscreen}
+            className="text-white/30 transition hover:text-white/70"
+            aria-label="Toggle fullscreen"
+          >
+            {isFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+          </button>
+        </div>
+      </div>
+
+      {/* ── MODULE CONTENT ── */}
+      <div className="min-h-0 flex-1 overflow-hidden">
+        <Component />
+      </div>
+
+      {/* ── BOTTOM BAR ── */}
+      <div className="flex h-10 flex-none items-center justify-between border-t border-white/[0.06] px-5">
+        {/* Play / Pause */}
+        <button
+          type="button"
+          onClick={() => setIsPlaying((v) => !v)}
+          className="flex h-7 w-7 items-center justify-center rounded-full border border-white/20 text-white/50 transition hover:border-[#F7931A]/60 hover:text-[#F7931A]"
+          aria-label={isPlaying ? 'Pause' : 'Play'}
+        >
+          {isPlaying ? <Pause size={11} /> : <Play size={11} />}
+        </button>
+
+        {/* Branding */}
+        <span className="text-[11px] tracking-[0.2em] text-white/20">satoshi-dashboard</span>
+
+        {/* Pagination */}
+        <div className="flex items-center gap-1 text-white/40">
+          <button
+            type="button"
+            onClick={() => goToModule(currentIndex - 1)}
+            className="p-1 transition hover:text-white"
+            aria-label="Previous module"
+          >
+            <SkipBack size={14} />
+          </button>
+          <span className="min-w-[3.5rem] text-center font-mono text-[12px] tabular-nums text-white/60">
+            {currentIndex + 1}&nbsp;/&nbsp;{MODULES.length}
+          </span>
+          <button
+            type="button"
+            onClick={() => goToModule(currentIndex + 1)}
+            className="p-1 transition hover:text-white"
+            aria-label="Next module"
+          >
+            <SkipForward size={14} />
+          </button>
+        </div>
+      </div>
+    </main>
+  );
+}

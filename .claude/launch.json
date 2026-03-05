@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "satoshi-dashboard",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["C:/Program Files/nodejs/node_modules/npm/bin/npm-cli.js", "run", "dev", "--", "--host"],
+      "port": 5173
+    },
+    {
+      "name": "satoshi-dashboard-preview",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["C:/Program Files/nodejs/node_modules/npm/bin/npm-cli.js", "run", "preview", "--", "--host"],
+      "port": 4173
+    }
+  ]
+}
