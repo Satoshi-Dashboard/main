@@ -68,6 +68,43 @@ It includes 30 ready-to-use modules such as price trends, MVRV, Stock-to-Flow, F
 - `npm run preview`: preview production build locally
 - `npm run lint`: run ESLint checks
 
+## Modules and API Status
+
+The table below shows current API usage per module. Modules without live endpoints are marked as `Proximamente`.
+
+| Module | API status | APIs/endpoints in use |
+| --- | --- | --- |
+| `S01` Bitcoin Overview | Active | `CoinGecko /simple/price` + fallback `CoinCap /assets/bitcoin` + fallback `Binance /ticker/24hr` + fallback `Kraken /Ticker?pair=XBTUSD`.<br/>Mempool variants: `/api/v1/difficulty-adjustment`, `/api/blocks/tip/height`, `/api/v1/fees/recommended`, `/api/v1/mining/hashrate/pools`. |
+| `S02` Price Chart | Active | Spot chain from `priceApi` (CoinGecko -> CoinCap -> Binance -> Kraken).<br/>History chain: `CoinGecko /coins/bitcoin/market_chart` -> fallback `Kraken /OHLC` -> fallback `CoinCap /assets/bitcoin/history`. |
+| `S03` Multi-Currency | Active | `CoinGecko /simple/price` (multi-currency) -> fallback `Binance /ticker/price` + `jsDelivr @fawazahmed0/currency-api` -> fallback `Kraken /Ticker` + `jsDelivr @fawazahmed0/currency-api`.<br/>Extra external dataset: Natural Earth GeoJSON via CloudFront. |
+| `S04` Mempool Gauge | Active | Mempool variants: `/api/mempool`, `/api/v1/fees/recommended`. |
+| `S05` Long-Term Trend | Active | Mempool variant: `/api/blocks/tip/height`. |
+| `S06` Block Composition | Active | Mempool variants: `/api/v1/blocks`, `/api/mempool`. |
+| `S07` Top Addresses | Proximamente | No live API connected in the current component. |
+| `S08` Nodes Map | Active | `Bitnodes /api/v1/snapshots/latest/`.<br/>Map tiles: `basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png`. |
+| `S09` Lightning Network | Active | `CoinGecko /simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true`. |
+| `S10` Fear & Greed | Active | `Alternative.me /fng/?limit=31`. |
+| `S11` Address Distribution | Proximamente | No live API connected in the current component. |
+| `S12` BTC vs Gold | Active | `CoinGecko /coins/bitcoin/market_chart?vs_currency=usd&days=365&interval=daily`. |
+| `S13` Global Assets | Proximamente | No live API connected in the current component. |
+| `S14` Transaction Count | Active | `Blockchain.com /charts/n-transactions?timespan=3years&format=json&sampled=false`. |
+| `S15` Wealth Pyramid | Proximamente | No live API connected in the current component. |
+| `S16` Mayer Multiple | Proximamente | No live API connected in the current component. |
+| `S17` Price Performance | Active | `CoinGecko /simple/price?ids=bitcoin&vs_currencies=usd`. |
+| `S18` Cycle Spiral | Proximamente | No live API connected in the current component. |
+| `S19` Power Law Model | Proximamente | No live API connected in the current component. |
+| `S20` Stock to Flow | Proximamente | No live API connected in the current component. |
+| `S21` Node Versions | Proximamente | No live API connected in the current component. |
+| `S22` Seasonality | Proximamente | No live API connected in the current component. |
+| `S23` Big Mac Index | Active | `CoinGecko /simple/price?ids=bitcoin&vs_currencies=usd`. |
+| `S24` Network Activity | Proximamente | No live API connected in the current component. |
+| `S25` Log Regression | Proximamente | No live API connected in the current component. |
+| `S26` MVRV Score | Proximamente | No live API connected in the current component. |
+| `S27` Google Trends | Proximamente | No live API connected in the current component. |
+| `S28` BTC Dominance | Proximamente | No live API connected in the current component. |
+| `S29` UTXO Distribution | Proximamente | No live API connected in the current component. |
+| `S30` Thank You Satoshi | Proximamente | No live API connected in the current component. |
+
 ## Roadmap
 
 - [x] Build complete Phase 1 dashboard shell with 30 modules
@@ -91,13 +128,6 @@ Contributions are welcome. If you want to improve modules, docs, or UI quality:
 ## License
 
 Distributed under the Unlicense. See `LICENSE.txt` for details.
-
-## Contact
-
-Maintainer: **iKhunsa**  
-Email: `luisleon.exe@gmail.com`
-
-Project Link: [https://github.com/Satoshi-Dashboard/main](https://github.com/Satoshi-Dashboard/main)
 
 ## Acknowledgments
 
