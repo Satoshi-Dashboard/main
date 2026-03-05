@@ -74,37 +74,37 @@ It includes 29 ready-to-use modules such as price trends, stablecoin peg health,
 
 The table below shows current API usage per module. Modules without live endpoints are marked as `Proximamente`.
 
-| Module | API status | APIs/endpoints in use |
-| --- | --- | --- |
-| `S01` Bitcoin Overview | Active | `CoinGecko /simple/price` + fallback `CoinCap /assets/bitcoin` + fallback `Binance /ticker/24hr` + fallback `Kraken /Ticker?pair=XBTUSD`.<br/>Mempool: `/api/v1/difficulty-adjustment`, `/api/blocks/tip/height`, `/api/v1/fees/recommended`, `/api/v1/mining/hashrate/3d`.<br/>Fear & Greed: `alternative.me/fng/?limit=7`. Refreshes every 15s. |
-| `S02` Price Chart | Active | Spot chain from `priceApi` (CoinGecko -> CoinCap -> Binance -> Kraken).<br/>History chain: `CoinGecko /coins/bitcoin/market_chart` -> fallback `Kraken /OHLC` -> fallback `CoinCap /assets/bitcoin/history`. |
-| `S03` Multi-Currency | Active | `CoinGecko /simple/price` (multi-currency) -> fallback `Binance /ticker/price` + `jsDelivr @fawazahmed0/currency-api` -> fallback `Kraken /Ticker` + `jsDelivr @fawazahmed0/currency-api`.<br/>Extra external dataset: Natural Earth GeoJSON via CloudFront. |
-| `S04` Mempool Gauge | Active | Mempool variants: `/api/mempool`, `/api/v1/fees/recommended`. |
-| `S05` Block Visualizer | Active | WebSocket `wss://mempool.space/api/v1/ws` (live blocks + mempool-blocks + stats).<br/>REST: `/api/v1/blocks`, `/api/v1/fees/recommended`. Double-click any block to open in mempool.space. |
-| `S08` Nodes Map | Active | `Bitnodes /api/v1/snapshots/latest/` via local Express cache server (`server/`).<br/>Map tiles: `basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png`. |
-| `S09` Lightning Network | Active | `CoinGecko /simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true`. |
-| `S09b` Stablecoin Peg Health | Active | `stablecoins.llama.fi/stablecoins?includePrices=true` (price + market cap, 60s refresh).<br/>Sparkline history: `stablecoins.llama.fi/stablecoin/{id}` (14-day supply, lazy-loaded per card).<br/>Logos: jsDelivr SVG CDN → llamao.fi PNG 4× → text fallback. Interactive crosshair tooltip. |
-| `S10` Fear & Greed | Active | `Alternative.me /fng/?limit=31`. |
-| `S11` Address Distribution | Proximamente | No live API connected in the current component. |
-| `S12` BTC vs Gold | Active | `CoinGecko /coins/bitcoin/market_chart?vs_currency=usd&days=365&interval=daily`. |
-| `S13` Global Assets | Proximamente | No live API connected in the current component. |
-| `S14` Transaction Count | Active | `Blockchain.com /charts/n-transactions?timespan=3years&format=json&sampled=false`. |
-| `S15` Wealth Pyramid | Proximamente | No live API connected in the current component. |
-| `S16` Mayer Multiple | Proximamente | No live API connected in the current component. |
-| `S17` Price Performance | Active | `CoinGecko /simple/price?ids=bitcoin&vs_currencies=usd`. |
-| `S18` Cycle Spiral | Proximamente | No live API connected in the current component. |
-| `S19` Power Law Model | Proximamente | No live API connected in the current component. |
-| `S20` Stock to Flow | Proximamente | No live API connected in the current component. |
-| `S21` Big Mac Sats Tracker | Active | `Alternative.me /v2/ticker/bitcoin` (spot, 5s) + `Binance /api/v3/klines` (historical: 7d, 30d, 1y, 3y, 5y, 10y) + The Economist CSV `big-mac-adjusted-index.csv` filtered by `iso_a3=USA` (daily reload, source updated bimonthly). |
-| `S22` Seasonality | Proximamente | No live API connected in the current component. |
-| `S23` Big Mac Index | Active | `CoinGecko /simple/price?ids=bitcoin&vs_currencies=usd`. |
-| `S24` Network Activity | Proximamente | No live API connected in the current component. |
-| `S25` Log Regression | Proximamente | No live API connected in the current component. |
-| `S26` MVRV Score | Proximamente | No live API connected in the current component. |
-| `S27` Google Trends | Proximamente | No live API connected in the current component. |
-| `S28` BTC Dominance | Proximamente | No live API connected in the current component. |
-| `S29` UTXO Distribution | Proximamente | No live API connected in the current component. |
-| `S30` Thank You Satoshi | Proximamente | No live API connected in the current component. |
+| Module | API status | Refresh | APIs/endpoints in use |
+| --- | --- | --- | --- |
+| `S01` Bitcoin Overview | Active | **15 s** | `CoinGecko /simple/price` + fallback `CoinCap /assets/bitcoin` + fallback `Binance /ticker/24hr` + fallback `Kraken /Ticker?pair=XBTUSD`.<br/>Mempool: `/api/v1/difficulty-adjustment`, `/api/blocks/tip/height`, `/api/v1/fees/recommended`, `/api/v1/mining/hashrate/3d`.<br/>Fear & Greed: `alternative.me/fng/?limit=7`. |
+| `S02` Price Chart | Active | on mount + range change | Spot chain from `priceApi` (CoinGecko -> CoinCap -> Binance -> Kraken).<br/>History chain: `CoinGecko /coins/bitcoin/market_chart` -> fallback `Kraken /OHLC` -> fallback `CoinCap /assets/bitcoin/history`.<br/>Historical data is cached per selected range (7d / 30d / 90d / 1y) for the duration of the session. |
+| `S03` Multi-Currency | Active | **60 s** | `CoinGecko /simple/price` (multi-currency) -> fallback `Binance /ticker/price` + `jsDelivr @fawazahmed0/currency-api` -> fallback `Kraken /Ticker` + `jsDelivr @fawazahmed0/currency-api`.<br/>Extra external dataset: Natural Earth GeoJSON via CloudFront. |
+| `S04` Mempool Gauge | Active | **30 s** | Mempool variants: `/api/mempool`, `/api/v1/fees/recommended`. |
+| `S05` Block Visualizer | Active | **real-time** (WebSocket) | WebSocket `wss://mempool.space/api/v1/ws` (live blocks + mempool-blocks + stats).<br/>REST: `/api/v1/blocks`, `/api/v1/fees/recommended`. Double-click any block to open in mempool.space. |
+| `S08` Nodes Map | Active | **60 s** (server cache) | `Bitnodes /api/v1/snapshots/latest/` via local Express cache server (`server/`).<br/>Map tiles: `basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png`. |
+| `S09` Lightning Network | Active | **15 s** | `CoinGecko /simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true`. |
+| `S09b` Stablecoin Peg Health | Active | **60 s** (list) · once/session (sparklines) | `stablecoins.llama.fi/stablecoins?includePrices=true` (price + market cap).<br/>Sparkline history: `stablecoins.llama.fi/stablecoin/{id}` (14-day supply, lazy-loaded per card via IntersectionObserver — fetched once, cached for the session).<br/>Logos: jsDelivr SVG CDN → llamao.fi PNG 4× → text fallback. Interactive crosshair tooltip. |
+| `S10` Fear & Greed | Active | **60 s** | `Alternative.me /fng/?limit=31`. |
+| `S11` Address Distribution | Proximamente | — | No live API connected in the current component. |
+| `S12` BTC vs Gold | Active | on mount | `CoinGecko /coins/bitcoin/market_chart?vs_currency=usd&days=365&interval=daily`. |
+| `S13` Global Assets | Proximamente | — | No live API connected in the current component. |
+| `S14` Transaction Count | Active | on mount | `Blockchain.com /charts/n-transactions?timespan=3years&format=json&sampled=false`. |
+| `S15` Wealth Pyramid | Proximamente | — | No live API connected in the current component. |
+| `S16` Mayer Multiple | Proximamente | — | No live API connected in the current component. |
+| `S17` Price Performance | Active | on mount | `CoinGecko /simple/price?ids=bitcoin&vs_currencies=usd`. |
+| `S18` Cycle Spiral | Proximamente | — | No live API connected in the current component. |
+| `S19` Power Law Model | Proximamente | — | No live API connected in the current component. |
+| `S20` Stock to Flow | Proximamente | — | No live API connected in the current component. |
+| `S21` Big Mac Sats Tracker | Active | **5 min** (price) · **24 h** (data) | `Alternative.me /v2/ticker/bitcoin` (spot, every 5 min) + `Binance /api/v3/klines` (historical: 7d, 30d, 1y, 3y, 5y, 10y; reloaded every 24 h) + The Economist CSV `big-mac-adjusted-index.csv` filtered by `iso_a3=USA` (daily reload, source updated bimonthly). |
+| `S22` Seasonality | Proximamente | — | No live API connected in the current component. |
+| `S23` Big Mac Index | Active | on mount | `CoinGecko /simple/price?ids=bitcoin&vs_currencies=usd`. |
+| `S24` Network Activity | Proximamente | — | No live API connected in the current component. |
+| `S25` Log Regression | Proximamente | — | No live API connected in the current component. |
+| `S26` MVRV Score | Proximamente | — | No live API connected in the current component. |
+| `S27` Google Trends | Proximamente | — | No live API connected in the current component. |
+| `S28` BTC Dominance | Proximamente | — | No live API connected in the current component. |
+| `S29` UTXO Distribution | Proximamente | — | No live API connected in the current component. |
+| `S30` Thank You Satoshi | Proximamente | — | No live API connected in the current component. |
 
 ## Roadmap
 
