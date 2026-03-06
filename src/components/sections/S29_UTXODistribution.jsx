@@ -2,6 +2,7 @@ import DashboardCard from '../common/DashboardCard';
 import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 import { Layers } from 'lucide-react';
 import { fmt } from '../../utils/formatters';
+import UniqueVisitorsCounter from '../common/UniqueVisitorsCounter';
 
 const ageData = [
   { range: '0-1d', utxos: 12340000, value: 5600000000 },
@@ -29,7 +30,7 @@ export default function S29_UTXODistribution() {
       >
         <div className="space-y-4">
           {/* Stats */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             <div className="bg-gray-800/40 rounded p-3 border border-gray-700/30 text-center">
               <div className="text-gray-500s uppercase tracking-widest mb-1">Total UTXOs</div>
               <div className="font-mono font-bold text-yellow-50" style={{ fontSize: 'var(--fs-body)' }}>{fmt.compactNum(totalUTXOs)}</div>
@@ -42,6 +43,7 @@ export default function S29_UTXODistribution() {
               <div className="text-gray-500s uppercase tracking-widest mb-1">Avg Value</div>
               <div className="font-mono font-bold text-yellow-50" style={{ fontSize: 'var(--fs-body)' }}>${Math.round(avgUTXOValue)}</div>
             </div>
+            <UniqueVisitorsCounter compact />
           </div>
 
           {/* Age Distribution Chart */}

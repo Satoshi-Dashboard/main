@@ -17,9 +17,9 @@
     <a href="https://github.com/Satoshi-Dashboard/main"><strong>Explore the repo</strong></a>
     <br />
     <br />
-    <a href="https://github.com/Satoshi-Dashboard/main/issues/new?labels=bug&template=bug-report---.md">Report Bug</a>
+    <a href="https://github.com/Satoshi-Dashboard/main/issues/new?labels=bug&template=bug_report.md">Report Bug</a>
     &middot;
-    <a href="https://github.com/Satoshi-Dashboard/main/issues/new?labels=enhancement&template=feature-request---.md">Request Feature</a>
+    <a href="https://github.com/Satoshi-Dashboard/main/issues/new?labels=enhancement&template=feature_request.md">Request Feature</a>
   </p>
 </div>
 
@@ -30,6 +30,81 @@
 Satoshi Dashboard is a frontend-focused Bitcoin intelligence dashboard that groups market, network, valuation, and sentiment metrics into a single UI.
 
 It includes 29 ready-to-use modules such as price trends, stablecoin peg health, MVRV, Stock-to-Flow, Fear & Greed, dominance, node versions, UTXO distribution, and more.
+
+### Project Name and Metadata
+
+- Official project name: `Satoshi Dashboard`
+- Global SEO metadata is defined in `index.html` (description, keywords, Open Graph, Twitter cards, robots, and structured data).
+- Favicon and home-screen icons are configured in `index.html` and `public/` (`favicon.svg`, `apple-touch-icon.png`, `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`).
+- PWA metadata is defined in `public/site.webmanifest` with app colors aligned to the dashboard theme (`#0A0A0F`).
+
+### Distribution Data API (BitInfoCharts scraper)
+
+- The backend now scrapes `https://bitinfocharts.com/top-100-richest-bitcoin-addresses.html` directly (HTML source, no r.jina.ai dependency).
+- It extracts only the `Bitcoin distribution` table, normalizes values, and caches results server-side.
+- Refresh is handled in request-time mode (stale TTL + on-demand refresh), with frontend polling every **60 seconds**.
+- Available endpoints:
+  - `GET /api/s10/btc-distribution` -> normalized JSON payload
+  - `GET /api/s10/btc-distribution.js` -> generated JS module (`BTC_DISTRIBUTION`, `BTC_DISTRIBUTION_META`)
+  - `GET /api/s10/btc-distribution/status` -> source, updatedAt, nextUpdateAt, rows
+  - `GET /api/s10/btc-distribution/refresh` -> force refresh
+- `S11 Address Distribution` consumes this API and shows grouped tiers (`<0.1`, `0.1-1`, `1-10`, etc.) with a visible `Auto update: 60s` indicator.
+
+### Addresses Richer API (BitInfoCharts scraper)
+
+- Module `S14` uses a dedicated scraper for the `Addresses richer than` table from the same BitInfoCharts source page.
+- It reads the USD thresholds (`$1`, `$100`, `$1,000`, `$10,000`, `$100,000`, `$1,000,000`, `$10,000,000`) and the matching address counts.
+- Refresh is handled in request-time mode (stale TTL + on-demand refresh), with frontend polling every **60 seconds**.
+- Available endpoints:
+  - `GET /api/s14/addresses-richer` -> normalized JSON payload
+  - `GET /api/s14/addresses-richer.js` -> generated JS module (`BTC_ADDRESSES_RICHER`, `BTC_ADDRESSES_RICHER_META`)
+  - `GET /api/s14/addresses-richer/status` -> source, updatedAt, nextUpdateAt, rows
+  - `GET /api/s14/addresses-richer/refresh` -> force refresh
+
+### Backend Architecture (Refactored)
+
+- API app is now centralized in `server/app.js` (route registration + endpoint contracts).
+- Local runtime entrypoint is `server/index.js` (starts Express listener only).
+- Vercel serverless entrypoint is `api/index.js` (exports Express app directly).
+- Runtime cache writes are now safe in read-only/serverless contexts (write failures do not break API responses).
+- Refresh strategy is now request-time (`stale-if-error` fallback), replacing long-lived scheduler dependency for production.
+- Phase 2 cache layer is active in `server/runtimeCache.js`: shared KV support + anti-thundering lock + endpoint TTL strategy.
+- `REFRESH` endpoints can be protected in production via `REFRESH_API_TOKEN`.
+
+### Agent Backend Rules
+
+- Strict backend/API rules live at `.claude/BACKEND_API_RULES.md`.
+- All automated agents (OpenCode/Codex/Claude) must read and follow those rules before backend/API work.
+- Runtime policy entrypoint for agents is `AGENTS.md`.
+
+### Backend/API Flow (Simple)
+
+1. Frontend asks `/api/...` for data.
+2. Backend checks cached data first.
+3. If cache is fresh, it responds immediately.
+4. If cache is stale, backend attempts refresh under lock (one refresher at a time).
+5. If source fails, backend returns last known valid cache (when available).
+
+### Vercel Deployment Notes
+
+- `vercel.json` is configured for:
+  - API rewrite: `/api/*` -> `api/index.js`
+  - SPA rewrites for `BrowserRouter` routes (`/module/*` and fallback).
+- Recommended env vars:
+  - `KV_REST_API_URL` (optional; shared cache endpoint, Upstash/Vercel KV REST URL)
+  - `KV_REST_API_TOKEN` (optional; shared cache token)
+  - `UPSTASH_REDIS_REST_URL` (optional alias)
+  - `UPSTASH_REDIS_REST_TOKEN` (optional alias)
+  - `CACHE_KEY_PREFIX` (optional namespace prefix for cache keys)
+  - `REFRESH_API_TOKEN` (optional; protects refresh endpoints)
+  - `VISITOR_COUNTER_SALT` (optional; hashes visitor IPs)
+  - `API_PORT` (local only)
+
+### Repository Hygiene
+
+- Legacy and duplicate frontend modules were removed.
+- Legacy backend entrypoints and temporary scaffolding files were removed.
+- Runtime logs/caches are generated locally and ignored by git.
 
 ### Built With
 
@@ -65,7 +140,8 @@ It includes 29 ready-to-use modules such as price trends, stablecoin peg health,
 
 - `npm run dev`: start frontend (Vite) + backend API server concurrently
 - `npm run dev:ui`: start Vite frontend only
-- `npm run start:api`: start Express backend only (Bitnodes cache server)
+- `npm run start:api`: start main Express API (`server/index.js`)
+- `npm run start`: start main Express API (`server/index.js`)
 - `npm run build`: build production bundle in `dist/`
 - `npm run preview`: preview production build locally
 - `npm run lint`: run ESLint checks
@@ -85,10 +161,10 @@ The table below shows current API usage per module. Modules without live endpoin
 | `S09` Lightning Network | Active | **15 s** | `CoinGecko /simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true`. |
 | `S09b` Stablecoin Peg Health | Active | **60 s** (list) · once/session (sparklines) | `stablecoins.llama.fi/stablecoins?includePrices=true` (price + market cap).<br/>Sparkline history: `stablecoins.llama.fi/stablecoin/{id}` (14-day supply, lazy-loaded per card via IntersectionObserver — fetched once, cached for the session).<br/>Logos: jsDelivr SVG CDN → llamao.fi PNG 4× → text fallback. Interactive crosshair tooltip. |
 | `S10` Fear & Greed | Active | **60 s** | `Alternative.me /fng/?limit=31`. |
-| `S11` Address Distribution | Proximamente | — | No live API connected in the current component. |
+| `S11` Address Distribution | Active | **60 s** | Local scraper API (`/api/s10/btc-distribution`) built from BitInfoCharts `Bitcoin distribution` table.<br/>Also exposes JS feed: `/api/s10/btc-distribution.js` and status/refresh endpoints. |
 | `S12` BTC vs Gold | Active | on mount | `CoinGecko /coins/bitcoin/market_chart?vs_currency=usd&days=365&interval=daily`. |
 | `S13` Global Assets | Proximamente | — | No live API connected in the current component. |
-| `S14` Transaction Count | Active | on mount | `Blockchain.com /charts/n-transactions?timespan=3years&format=json&sampled=false`. |
+| `S14` Transaction Count | Active | **60 s** | Local scraper API (`/api/s14/addresses-richer`) built from BitInfoCharts `Addresses richer than` table (`$1` to `$10,000,000`).<br/>Also exposes JS feed: `/api/s14/addresses-richer.js` and status/refresh endpoints. |
 | `S15` Wealth Pyramid | Proximamente | — | No live API connected in the current component. |
 | `S16` Mayer Multiple | Proximamente | — | No live API connected in the current component. |
 | `S17` Price Performance | Active | on mount | `CoinGecko /simple/price?ids=bitcoin&vs_currencies=usd`. |
@@ -114,6 +190,8 @@ The table below shows current API usage per module. Modules without live endpoin
 - [x] Real-time WebSocket block visualizer (S05) with responsive layout
 - [x] Stablecoin Peg Health module (S09b) with interactive sparklines and DeFiLlama live data
 - [x] Local Express backend for Bitnodes cache (avoids rate-limiting on S08 nodes map)
+- [x] Live Address Distribution pipeline (BitInfoCharts scraper + JSON/JS API + 60s refresh)
+- [x] Live Addresses Richer pipeline for S14 (BitInfoCharts scraper + JSON/JS API + 60s refresh)
 - [ ] Add user preferences persistence
 - [ ] Add alerts/watchlists and custom module filtering
 

@@ -1,5 +1,6 @@
 import DashboardCard from '../common/DashboardCard';
 import { Heart } from 'lucide-react';
+import UniqueVisitorsCounter from '../common/UniqueVisitorsCounter';
 
 export default function S30_ThankYouSatoshi() {
   const genesisHash = '000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f';
@@ -15,6 +16,8 @@ export default function S30_ThankYouSatoshi() {
         icon={Heart}
       >
         <div className="space-y-6">
+          <UniqueVisitorsCounter />
+
           {/* Animated BTC Symbol */}
           <div className="flex justify-center py-4">
             <div className="text-9xl animate-pulse">₿</div>

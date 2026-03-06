@@ -6,6 +6,18 @@ import { fmt } from '../../utils/formatters';
 const CACHE_ENDPOINT = '/api/bitnodes/cache';
 const COUNTRIES_URL = 'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson';
 
+const UI_COLORS = {
+  brand: 'var(--accent-bitcoin)',
+  warning: 'var(--accent-warning)',
+};
+
+const NODE_DENSITY_SCALE = [
+  { label: 'High', color: '#f7931a' },
+  { label: 'Mid', color: '#c87717' },
+  { label: 'Low', color: '#8e560f' },
+  { label: 'Very low', color: '#4b2c0b' },
+];
+
 function getFeatureCountryCode(feature) {
   const code = feature?.properties?.ISO_A2 || feature?.properties?.iso_a2 || feature?.properties?.['ISO3166-1-Alpha-2'];
   return String(code || '').toUpperCase();
@@ -157,8 +169,8 @@ export default function S08_NodesMap() {
   const isLoading = cacheLoading || geoLoading;
 
   return (
-    <div className="flex h-full w-full bg-[#111111]">
-      <div className="relative min-w-0 flex-1">
+    <div className="flex h-full w-full flex-col bg-[#111111] lg:flex-row">
+      <div className="relative min-h-[260px] min-w-0 flex-1 sm:min-h-[320px] lg:min-h-0">
         {isLoading ? (
           <div className="h-full w-full p-6">
             <div className="skeleton h-full w-full rounded-md" />
@@ -206,7 +218,7 @@ export default function S08_NodesMap() {
           </MapContainer>
         )}
 
-        <div className="absolute bottom-5 left-1/2 z-[1000] -translate-x-1/2 rounded-md border border-white/10 bg-black/75 px-5 py-2 font-mono text-[12px] backdrop-blur-sm">
+        <div className="absolute bottom-2 left-1/2 z-[1000] -translate-x-1/2 rounded-md border border-white/10 bg-black/75 px-3 py-1.5 font-mono text-[11px] backdrop-blur-sm sm:bottom-5 sm:px-5 sm:py-2 sm:text-[12px]">
           {isLoading ? (
             <div className="skeleton" style={{ width: 170, height: '0.95em' }} />
           ) : (
@@ -216,9 +228,23 @@ export default function S08_NodesMap() {
             </>
           )}
         </div>
+
+        {!isLoading && !isPending && countryCounts.length > 0 && (
+          <div className="absolute left-3 top-3 z-[1000] rounded border border-white/10 bg-black/70 px-2 py-1.5 font-mono text-[10px] backdrop-blur-sm sm:left-4 sm:top-4">
+            <div className="mb-1 text-white/60">Node density</div>
+            <div className="flex items-center gap-2">
+              {NODE_DENSITY_SCALE.map((step) => (
+                <span key={step.label} className="inline-flex items-center gap-1 text-white/65">
+                  <span className="inline-block h-2 w-2 rounded-sm" style={{ background: step.color }} />
+                  {step.label}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
-      <aside className="flex w-[280px] flex-none flex-col border-l border-white/10 bg-[#111111]">
+      <aside className="flex h-[40%] w-full flex-none flex-col border-t border-white/10 bg-[#111111] lg:h-auto lg:w-[280px] lg:border-l lg:border-t-0">
         <div className="border-b border-white/10 px-4 py-3 font-mono text-[12px] tracking-wide text-white/60">
           Active Nodes by Country
         </div>
@@ -235,7 +261,7 @@ export default function S08_NodesMap() {
               {topCountries.map((item) => (
                 <div key={item.country_code} className="flex items-center justify-between rounded border border-white/5 bg-white/[0.02] px-2 py-1.5">
                   <span className="truncate font-mono text-[11px] text-white/80">{item.country_code}</span>
-                  <span className="font-mono text-[11px] text-[#f7931a]">{fmt.num(item.nodes)}</span>
+                  <span className="font-mono text-[11px]" style={{ color: UI_COLORS.brand }}>{fmt.num(item.nodes)}</span>
                 </div>
               ))}
 
@@ -254,7 +280,7 @@ export default function S08_NodesMap() {
         </div>
 
         {error && (
-          <div className="border-t border-white/10 px-4 py-2 font-mono text-[10px] text-[#f7931a]">
+          <div className="border-t border-white/10 px-4 py-2 font-mono text-[10px]" style={{ color: UI_COLORS.warning }}>
             {error}
           </div>
         )}

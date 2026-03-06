@@ -2,6 +2,12 @@ import { useEffect, useState } from 'react';
 import { fmt } from '../../utils/formatters';
 import { fetchBtcSpot } from '../../services/priceApi';
 
+const UI_COLORS = {
+  brand: 'var(--accent-bitcoin)',
+  positive: 'var(--accent-green)',
+  negative: 'var(--accent-red)',
+};
+
 function SkeletonSatGrid() {
   return (
     <div className="flex flex-wrap items-start justify-center gap-2 opacity-70">
@@ -48,7 +54,7 @@ function SatGrid({ sats }) {
                 width: 'clamp(5px, 0.9vw, 11px)',
                 height: 'clamp(5px, 0.9vw, 11px)',
                 borderRadius: '1px',
-                backgroundColor: si < count ? '#F7931A' : '#222',
+                backgroundColor: si < count ? UI_COLORS.brand : '#222',
               }}
             />
           ))}
@@ -89,16 +95,16 @@ export default function S09_LightningNetwork() {
   const isUp = Number.isFinite(data.change) ? data.change >= 0 : null;
 
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center gap-5 bg-[#111111] px-6 py-6">
+    <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-[#111111] px-3 py-4 sm:gap-5 sm:px-6 sm:py-6">
       {/* Header */}
-      <div className="flex flex-shrink-0 items-center gap-4">
+      <div className="flex flex-shrink-0 flex-wrap items-center justify-center gap-2 sm:gap-4">
         {hasData ? (
           <>
             <div
-              className="h-4 w-4 rounded-full"
+              className="h-3 w-3 rounded-full sm:h-4 sm:w-4"
               style={{
-                backgroundColor: isUp ? '#00D897' : '#FF4757',
-                boxShadow: isUp ? '0 0 10px #00D897' : '0 0 10px #FF4757',
+                backgroundColor: isUp ? UI_COLORS.positive : UI_COLORS.negative,
+                boxShadow: `0 0 10px ${isUp ? UI_COLORS.positive : UI_COLORS.negative}`,
               }}
             />
             <span
@@ -109,8 +115,8 @@ export default function S09_LightningNetwork() {
             </span>
             {Number.isFinite(data.change) ? (
               <span
-                className={`font-mono font-bold ${isUp ? 'text-[#00D897]' : 'text-red-400'}`}
-                style={{ fontSize: 'var(--fs-subtitle)' }}
+                className="font-mono font-bold"
+                style={{ fontSize: 'var(--fs-subtitle)', color: isUp ? UI_COLORS.positive : UI_COLORS.negative }}
               >
                 {isUp ? '+' : ''}{data.change.toFixed(2)}%&nbsp;{isUp ? '▲' : '▼'}
               </span>
@@ -129,19 +135,19 @@ export default function S09_LightningNetwork() {
 
       {/* Label */}
       <div
-        className="flex-shrink-0 text-center uppercase tracking-[0.25em] text-white/50"
+        className="flex-shrink-0 px-2 text-center uppercase tracking-[0.2em] text-white/50 sm:tracking-[0.25em]"
         style={{ fontSize: 'var(--fs-label)' }}
       >
         SATS PER DOLLAR
       </div>
 
       {/* Dot grid */}
-      <div className="min-h-0 flex-1 flex items-center justify-center overflow-hidden">
+      <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden">
         {hasData ? <SatGrid sats={sats} /> : <SkeletonSatGrid />}
       </div>
 
       {/* Sub-info */}
-      <div className="flex-shrink-0 font-monos text-white/25">
+      <div className="flex-shrink-0 px-2 text-center font-mono text-white/25" style={{ fontSize: 'var(--fs-caption)' }}>
         {hasData ? (
           <>1 BTC = 100,000,000 sats &nbsp;·&nbsp; 1 USD = {fmt.num(sats)} sats</>
         ) : (

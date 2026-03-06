@@ -12,9 +12,9 @@ function getStatus(price) {
 }
 
 const STATUS = {
-  on_peg:  { label: 'ON PEG',  color: '#00D897', bg: 'rgba(0,216,151,0.12)',  border: 'rgba(0,216,151,0.25)'  },
-  warning: { label: 'WARNING', color: '#FFD700', bg: 'rgba(255,215,0,0.12)',   border: 'rgba(255,215,0,0.25)'   },
-  off_peg: { label: 'OFF PEG', color: '#FF4757', bg: 'rgba(255,71,87,0.12)',   border: 'rgba(255,71,87,0.25)'   },
+  on_peg: { label: 'ON PEG', color: 'var(--accent-green)', bg: 'rgba(0,216,151,0.12)', border: 'rgba(0,216,151,0.25)' },
+  warning: { label: 'WARNING', color: 'var(--accent-warning)', bg: 'rgba(255,215,0,0.12)', border: 'rgba(255,215,0,0.25)' },
+  off_peg: { label: 'OFF PEG', color: 'var(--accent-red)', bg: 'rgba(255,71,87,0.12)', border: 'rgba(255,71,87,0.25)' },
 };
 
 /* ─── Formatters ────────────────────────────────────────────── */
@@ -214,7 +214,7 @@ function CoinLogo({ coinName, symbol, size = 36 }) {
     return (
       <div
         className="flex-shrink-0 rounded-full flex items-center justify-center font-mono font-bold"
-        style={{ width: size, height: size, background: '#1e1e1e', color: '#F7931A', fontSize: size * 0.33 }}
+        style={{ width: size, height: size, background: '#1e1e1e', color: 'var(--accent-bitcoin)', fontSize: size * 0.33 }}
       >
         {symbol?.slice(0, 2).toUpperCase()}
       </div>
@@ -331,7 +331,7 @@ function CoinCard({ coin, idx, sparkCache, onVisible }) {
                 fontSize: 'var(--fs-caption)',
                 color: delta === null || delta === 0
                   ? 'rgba(255,255,255,0.3)'
-                  : delta > 0 ? '#00D897' : '#FF4757',
+                  : delta > 0 ? 'var(--accent-green)' : 'var(--accent-red)',
               }}
             >
               {delta === null
@@ -403,19 +403,16 @@ export default function S09b_StablecoinPegHealth() {
     <div className="flex h-full w-full flex-col bg-[#0d0d0d] overflow-hidden select-none font-mono">
 
       {/* ── Cards grid ── */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-4 pb-2 flex flex-col">
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-3 pb-2 pt-3 sm:px-5 sm:pt-4">
         {loading ? (
-          <div className="grid gap-4 flex-1" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gridTemplateRows: 'repeat(2, 1fr)' }}>
+          <div className="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
             {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="skeleton rounded-xl" />
             ))}
           </div>
         ) : (
           <>
-            <div
-              className="grid gap-4 flex-1"
-              style={{ gridTemplateColumns: 'repeat(3, 1fr)', gridTemplateRows: 'repeat(2, 1fr)' }}
-            >
+            <div className="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
               {coins.map((coin, i) => (
                 <CoinCard
                   key={coin.id}

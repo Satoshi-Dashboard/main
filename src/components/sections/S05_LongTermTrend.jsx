@@ -1,11 +1,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-/* ─── Fee color scale ──────────────────────────────────────── */
+const UI_COLORS = {
+  brand: 'var(--accent-bitcoin)',
+  positive: 'var(--accent-green)',
+  warning: 'var(--accent-warning)',
+};
+
+const FEE_SCALE = [
+  { max: 2, color: '#00FFCC', label: '<2' },
+  { max: 10, color: '#00FF88', label: '2-10' },
+  { max: 50, color: '#FFD700', label: '10-50' },
+  { max: Number.POSITIVE_INFINITY, color: '#FF8C00', label: '>50' },
+];
+
 function feeColor(satVb) {
-  if (satVb < 2)  return '#00FFCC';
-  if (satVb < 10) return '#00FF88';
-  if (satVb < 50) return '#FFD700';
-  return '#FF8C00';
+  return FEE_SCALE.find((step) => satVb < step.max)?.color ?? '#FF8C00';
 }
 
 /* ─── Binary treemap (recursive halving) ──────────────────── */
@@ -77,10 +86,12 @@ function BlockCanvas({ block, selected, onClick, onDoubleClick, side }) {
     <div
       onClick={onClick}
       onDoubleClick={onDoubleClick}
-      className={`relative flex-shrink-0 cursor-pointer rounded overflow-hidden transition-all duration-150 ${
-        selected ? 'ring-2 ring-[#F7931A]' : 'ring-1 ring-[#2a2a2a] hover:ring-[#555]'
-      }`}
-      style={{ width: side, height: side }}
+      className="relative flex-shrink-0 cursor-pointer overflow-hidden rounded transition-all duration-150"
+      style={{
+        width: side,
+        height: side,
+        border: selected ? `2px solid ${UI_COLORS.brand}` : '1px solid #2a2a2a',
+      }}
     >
       <canvas ref={ref} width={side} height={side} style={{ display: 'block' }} />
 
@@ -159,7 +170,7 @@ function MempoolChip({ block, idx, chipW }) {
 }
 
 /* ─── Block detail panel ───────────────────────────────────── */
-function DetailPanel({ block, onClose }) {
+function DetailPanel({ block, onClose, className = '' }) {
   const e = block.extras ?? {};
   const rows = [
     ['Height',     `#${block.height}`],
@@ -175,9 +186,9 @@ function DetailPanel({ block, onClose }) {
   ];
 
   return (
-    <div className="flex-shrink-0 flex flex-col gap-1.5 bg-[#0d0d0d] border border-[#F7931A]/30 rounded-lg p-3 w-52">
+    <div className={`flex flex-col gap-1.5 rounded-lg bg-[#0d0d0d]/95 p-3 ${className}`} style={{ border: `1px solid ${UI_COLORS.brand}4d` }}>
       <div className="flex justify-between items-center mb-0.5">
-        <span className="font-mono font-bold text-[#F7931A] text-[11px] tracking-widest uppercase">
+        <span className="font-mono font-bold text-[11px] tracking-widest uppercase" style={{ color: UI_COLORS.brand }}>
           Block Detail
         </span>
         <button onClick={onClose} className="text-white/30 hover:text-white/70 text-xs">✕</button>
@@ -196,10 +207,10 @@ function DetailPanel({ block, onClose }) {
 /* ─── Fee legend ───────────────────────────────────────────── */
 function FeeLegend() {
   return (
-    <div className="flex items-center gap-2">
-      {[['#00FFCC','<2'],['#00FF88','2-10'],['#FFD700','10-50'],['#FF8C00','>50']].map(([col, label]) => (
+    <div className="flex flex-wrap items-center gap-2">
+      {FEE_SCALE.map(({ color, label }) => (
         <div key={label} className="flex items-center gap-1">
-          <div className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: col }} />
+          <div className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: color }} />
           <span className="text-[10px] font-mono text-white/30">{label}</span>
         </div>
       ))}
@@ -216,8 +227,15 @@ export default function S05_LongTermTrend() {
   const [selected,      setSelected]      = useState(null);
   const [wsStatus,      setWsStatus]      = useState('connecting');
   const [side,          setSide]          = useState(BASE_SIDE);
+  const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth);
   const wsRef        = useRef(null);
   const scrollRef    = useRef(null);
+
+  useEffect(() => {
+    const onResize = () => setViewportWidth(window.innerWidth);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   /* Responsive block size via ResizeObserver */
   useEffect(() => {
@@ -225,11 +243,13 @@ export default function S05_LongTermTrend() {
     if (!el) return;
     const obs = new ResizeObserver(([entry]) => {
       const { height, width } = entry.contentRect;
-      const n   = 6;
+      const isCompact = width < 640;
+      const n = isCompact ? 2 : width >= 1500 ? 6 : width >= 1200 ? 5 : width >= 900 ? 4 : 3;
+      const rows = isCompact ? 2 : 1;
       const gap = 8;
-      const fromH = Math.max(BASE_SIDE, height - 4);
+      const fromH = Math.max(110, Math.floor((height - gap * (rows - 1)) / rows));
       const fromW = Math.floor((width - gap * (n - 1)) / n);
-      setSide(Math.max(120, Math.min(fromH, fromW, 420)));
+      setSide(Math.max(110, Math.min(fromH, fromW, 420)));
     });
     obs.observe(el);
     return () => obs.disconnect();
@@ -287,6 +307,10 @@ export default function S05_LongTermTrend() {
     [],
   );
 
+  const isMobile = viewportWidth < 640;
+  const visibleBlocks = blocks.slice(0, isMobile ? 4 : 6);
+  const mobileMissingCards = isMobile && visibleBlocks.length > 0 ? Math.max(0, 4 - visibleBlocks.length) : 0;
+
   /* Chip width proportional to block side */
   const chipW = Math.max(72, Math.min(Math.round(side * 0.44), 120));
 
@@ -294,14 +318,14 @@ export default function S05_LongTermTrend() {
     <div className="flex h-full w-full flex-col bg-[#0d0d0d] overflow-hidden select-none font-mono">
 
       {/* ── Top bar ── */}
-      <div className="flex flex-shrink-0 items-center justify-between px-4 py-2 border-b border-[#1c1c1c] gap-4 flex-wrap">
+      <div className="flex flex-shrink-0 flex-wrap items-center justify-between gap-3 border-b border-[#1c1c1c] px-3 py-2 sm:px-4">
         {/* WS status dot */}
         <div className="flex items-center gap-2">
           <div
             className="h-2 w-2 rounded-full flex-shrink-0"
             style={{
-              background:  wsStatus === 'connected' ? '#00D897' : '#F7931A',
-              boxShadow: `0 0 6px ${wsStatus === 'connected' ? '#00D897' : '#F7931A'}`,
+              background: wsStatus === 'connected' ? UI_COLORS.positive : UI_COLORS.warning,
+              boxShadow: `0 0 6px ${wsStatus === 'connected' ? UI_COLORS.positive : UI_COLORS.warning}`,
             }}
           />
           <span className="text-[11px] uppercase tracking-widest text-white/30">
@@ -310,8 +334,8 @@ export default function S05_LongTermTrend() {
         </div>
 
         {/* Fee indicator */}
-        {fees && (
-          <div className="flex items-center gap-4">
+        {fees ? (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             {[
               { label: 'ECO',  val: fees.economy,  col: '#00FFCC' },
               { label: '30M',  val: fees.halfHour, col: '#00FF88' },
@@ -324,26 +348,39 @@ export default function S05_LongTermTrend() {
               </div>
             ))}
           </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="skeleton" style={{ width: 54, height: '1em' }} />
+            ))}
+          </div>
         )}
 
-        <FeeLegend />
+        <div className="hidden sm:block">
+          <FeeLegend />
+        </div>
       </div>
 
       {/* ── Confirmed blocks ── */}
-      <div className="flex flex-1 min-h-0 gap-3 p-3 overflow-hidden">
-        <div className="flex flex-col flex-1 min-w-0 gap-2">
-          <div className="flex items-center gap-3">
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden p-2 sm:p-3 lg:flex-row">
+        <div className="relative flex min-w-0 flex-1 flex-col gap-2">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <span className="text-[11px] uppercase tracking-[0.2em] text-white/20">Confirmed Blocks</span>
             <span className="text-[9px] font-mono text-white/15 border border-white/10 rounded px-1.5 py-px">
               ↗ dbl-click → mempool.space
             </span>
           </div>
-          <div ref={scrollRef} className="flex items-start gap-2 overflow-x-auto pb-1 flex-1">
-            {blocks.length === 0
-              ? Array.from({ length: 5 }).map((_, i) => (
+          <div
+            ref={scrollRef}
+            className={isMobile
+              ? 'grid flex-1 grid-cols-2 auto-rows-max gap-2 overflow-y-auto pb-1 pr-1'
+              : 'flex flex-1 items-start gap-2 overflow-x-auto pb-1'}
+          >
+            {visibleBlocks.length === 0
+              ? Array.from({ length: isMobile ? 4 : 5 }).map((_, i) => (
                   <div key={i} className="skeleton flex-shrink-0 rounded" style={{ width: side, height: side }} />
                 ))
-              : blocks.slice(0, 6).map(b => (
+              : visibleBlocks.map(b => (
                   <BlockCanvas
                     key={b.id ?? b.height}
                     block={b}
@@ -354,15 +391,29 @@ export default function S05_LongTermTrend() {
                   />
                 ))
             }
+            {mobileMissingCards > 0
+              ? Array.from({ length: mobileMissingCards }).map((_, i) => (
+                  <div key={`fill-${i}`} className="skeleton flex-shrink-0 rounded" style={{ width: side, height: side }} />
+                ))
+              : null}
           </div>
+
+          {selected && (
+            <div className="absolute right-1 top-8 z-10 w-[min(320px,92%)] max-h-[calc(100%-2.2rem)] overflow-y-auto rounded-lg shadow-[0_10px_30px_rgba(0,0,0,0.55)] lg:hidden">
+              <DetailPanel block={selected} onClose={() => setSelected(null)} />
+            </div>
+          )}
         </div>
 
-        {/* Detail panel */}
-        {selected && <DetailPanel block={selected} onClose={() => setSelected(null)} />}
+        {selected && (
+          <div className="hidden w-52 flex-shrink-0 lg:block">
+            <DetailPanel block={selected} onClose={() => setSelected(null)} className="h-full" />
+          </div>
+        )}
       </div>
 
       {/* ── Mempool queue ── */}
-      <div className="flex-shrink-0 border-t border-[#1c1c1c] px-3 pt-2 pb-3">
+      <div className="flex-shrink-0 border-t border-[#1c1c1c] px-2 pt-2 pb-3 sm:px-3">
         <span className="text-[11px] uppercase tracking-[0.2em] text-white/20 block mb-2">
           Mempool Queue
         </span>

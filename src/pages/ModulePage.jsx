@@ -27,7 +27,7 @@ function LiveClock() {
     second: '2-digit',
   });
   return (
-    <span className="font-mono text-[12px] tracking-wide text-white/50">
+    <span className="font-mono text-[11px] tracking-wide text-white/50 sm:text-[12px]">
       {dateStr}, {timeStr}
     </span>
   );
@@ -45,6 +45,15 @@ export default function ModulePage() {
   const module = MODULES_BY_SLUG[slug] || MODULES[currentIndex];
   const Component = module.component;
 
+  const footerPage = useMemo(() => String(module.code || '').replace(/^S/i, ''), [module.code]);
+  const footerTotal = useMemo(
+    () => MODULES.reduce((max, item) => {
+      const n = Number(String(item.code || '').match(/\d+/)?.[0] || 0);
+      return Number.isFinite(n) ? Math.max(max, n) : max;
+    }, 0),
+    [],
+  );
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -60,6 +69,10 @@ export default function ModulePage() {
     },
     [navigate],
   );
+
+  const goToHomeModule = useCallback(() => {
+    navigate(`/module/${MODULES[0].slug}`);
+  }, [navigate]);
 
   useEffect(() => {
     const onKeyDown = (event) => {
@@ -105,75 +118,85 @@ export default function ModulePage() {
   };
 
   return (
-    <main className="player-shell flex h-screen w-screen flex-col overflow-hidden bg-[#111111]">
+    <main className="player-shell relative h-dvh w-screen overflow-hidden bg-[#111111]">
       {/* ── TOP BAR ── */}
-      <div className="flex h-12 flex-none items-center justify-between border-b border-white/[0.06] px-5">
-        {/* Bitcoin logo */}
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#F7931A] shadow-[0_0_12px_rgba(247,147,26,0.4)]">
-            <span className="text-[15px] font-black leading-none text-white">₿</span>
-          </div>
-          <span className="text-[13px] font-semibold tracking-wide text-white/40">bitcoin</span>
-        </div>
+      <div className="absolute inset-x-0 top-0 z-40 flex h-14 items-center justify-between gap-3 border-b border-white/[0.06] bg-[#0d0d0d]/95 px-3 backdrop-blur-sm sm:h-14 sm:px-4 lg:h-12 lg:px-5">
+        {/* Project logo */}
+        <button
+          type="button"
+          onClick={goToHomeModule}
+          className="flex h-10 cursor-pointer items-center rounded px-1 py-0.5 transition hover:opacity-90"
+          aria-label="Go to first module"
+        >
+          <img
+            src="/logo.svg"
+            alt="Satoshi Dashboard"
+            className="h-6 w-auto max-w-[110px] drop-shadow-[0_0_10px_rgba(245,136,13,0.35)] sm:h-7 sm:max-w-[120px]"
+          />
+        </button>
 
         {/* Right: LIVE + clock + fullscreen */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 rounded-[3px] bg-white px-2 py-[3px]">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1.5 rounded-[3px] bg-white px-2 py-[4px]">
             <div className="h-[7px] w-[7px] animate-pulse rounded-full bg-green-500" />
             <span className="text-[10px] font-black tracking-[0.18em] text-black">LIVE</span>
           </div>
-          <LiveClock />
+          <div className="hidden md:block">
+            <LiveClock />
+          </div>
           <button
             type="button"
             onClick={toggleFullscreen}
-            className="text-white/30 transition hover:text-white/70"
+            className="flex h-9 w-9 items-center justify-center rounded-full text-white/40 transition hover:bg-white/10 hover:text-white/80"
             aria-label="Toggle fullscreen"
           >
-            {isFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+            {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
           </button>
         </div>
       </div>
 
       {/* ── MODULE CONTENT ── */}
-      <div className="min-h-0 flex-1 overflow-hidden">
-        <Component />
+      <div className="h-full w-full pt-14 pb-[68px] sm:pb-16 lg:pt-12 lg:pb-10">
+        <div className="h-full overflow-hidden">
+          <Component />
+        </div>
       </div>
 
       {/* ── BOTTOM BAR ── */}
-      <div className="flex h-10 flex-none items-center justify-between border-t border-white/[0.06] px-5">
+      <div className="absolute inset-x-0 bottom-0 z-40 flex h-[68px] items-center justify-between border-t border-white/[0.06] bg-[#0d0d0d]/95 px-3 backdrop-blur-sm sm:h-16 sm:px-4 lg:h-10 lg:px-5">
         {/* Play / Pause */}
         <button
           type="button"
           onClick={() => setIsPlaying((v) => !v)}
-          className="flex h-7 w-7 items-center justify-center rounded-full border border-white/20 text-white/50 transition hover:border-[#F7931A]/60 hover:text-[#F7931A]"
+          className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 text-white/60 transition hover:border-[#F7931A]/60 hover:text-[#F7931A] sm:h-10 sm:w-10 lg:h-7 lg:w-7"
           aria-label={isPlaying ? 'Pause' : 'Play'}
         >
-          {isPlaying ? <Pause size={11} /> : <Play size={11} />}
+          {isPlaying ? <Pause size={16} /> : <Play size={16} />}
         </button>
 
         {/* Branding */}
-        <span className="text-[11px] tracking-[0.2em] text-white/20">satoshi-dashboard</span>
+        <span className="hidden text-[11px] tracking-[0.2em] text-white/20 lg:block">satoshi-dashboard</span>
 
         {/* Pagination */}
-        <div className="flex items-center gap-1 text-white/40">
+        <div className="flex items-center gap-1.5 text-white/50 sm:gap-2">
           <button
             type="button"
             onClick={() => goToModule(currentIndex - 1)}
-            className="p-1 transition hover:text-white"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 transition hover:border-white/35 hover:text-white sm:h-9 sm:w-9 lg:h-7 lg:w-7 lg:border-0"
             aria-label="Previous module"
           >
-            <SkipBack size={14} />
+            <SkipBack size={16} />
           </button>
-          <span className="min-w-[3.5rem] text-center font-mono text-[12px] tabular-nums text-white/60">
-            {currentIndex + 1}&nbsp;/&nbsp;{MODULES.length}
+          <span className="min-w-[4.4rem] text-center font-mono text-[14px] tabular-nums text-white/70 sm:text-[13px] lg:min-w-[3.5rem] lg:text-[12px]">
+            {footerPage}&nbsp;/&nbsp;{footerTotal}
           </span>
           <button
             type="button"
             onClick={() => goToModule(currentIndex + 1)}
-            className="p-1 transition hover:text-white"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 transition hover:border-white/35 hover:text-white sm:h-9 sm:w-9 lg:h-7 lg:w-7 lg:border-0"
             aria-label="Next module"
           >
-            <SkipForward size={14} />
+            <SkipForward size={16} />
           </button>
         </div>
       </div>

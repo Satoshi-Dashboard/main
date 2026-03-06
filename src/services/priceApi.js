@@ -1,17 +1,12 @@
 /**
- * Bitcoin price service with multi-source fallback:
- *   1. CoinGecko  (primary — best data)
- *   2. CoinCap    (free, no key, price + supply + market cap)
- *   3. Binance    (price + 24h change, no key needed)
- *   4. Kraken     (price + 24h change derived from open, no key needed)
+ * Bitcoin price service:
+ *   - Spot: Binance primary, CoinGecko fallback
+ *   - History: BTCUSDT daily klines
+ *   - Multi-currency: direct BTC<FIAT> pairs available on Binance
  */
 
 const CG    = 'https://api.coingecko.com/api/v3';
-const CC    = 'https://api.coincap.io/v2';
 const BN    = 'https://api.binance.com/api/v3';
-const KR    = 'https://api.kraken.com/0/public';
-// jsdelivr-hosted currency CDN (no key, daily updated, ~5 KB)
-const FXCDN = 'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json';
 
 // ── Generic timed fetch ──────────────────────────────────────────────────────
 async function get(url, ms = 8000) {
@@ -28,62 +23,45 @@ async function get(url, ms = 8000) {
 
 // ── Spot price + 24h change + market cap + supply ───────────────────────────
 /**
- * Returns { usd, change24h, marketCap, supply } or null if every source fails.
+ * Returns { usd, change24h, marketCap, supply, source } or null if every source fails.
  */
 export async function fetchBtcSpot() {
-  // 1) CoinGecko
-  try {
-    const d = await get(
-      `${CG}/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true&include_market_cap=true`
-    );
-    if (d?.bitcoin?.usd) return {
-      usd:       d.bitcoin.usd,
-      change24h: d.bitcoin.usd_24h_change ?? 0,
-      marketCap: d.bitcoin.usd_market_cap ?? 0,
-      supply:    null,
-    };
-  } catch { /* try next */ }
-
-  // 2) CoinCap — price + change + marketCap + supply in one call
-  try {
-    const d = await get(`${CC}/assets/bitcoin`);
-    if (d?.data?.priceUsd) return {
-      usd:       parseFloat(d.data.priceUsd),
-      change24h: parseFloat(d.data.changePercent24Hr ?? 0),
-      marketCap: parseFloat(d.data.marketCapUsd    ?? 0),
-      supply:    parseFloat(d.data.supply           ?? 0),
-    };
-  } catch { /* try next */ }
-
-  // 3) Binance — price + 24h change
+  // 1) Binance (primary)
   try {
     const d = await get(`${BN}/ticker/24hr?symbol=BTCUSDT`);
     if (d?.lastPrice) {
       const usd = parseFloat(d.lastPrice);
-      return {
-        usd,
-        change24h: parseFloat(d.priceChangePercent ?? 0),
-        marketCap: usd * 19_900_000,
-        supply:    null,
-      };
-    }
-  } catch { /* try next */ }
+      const change24h = parseFloat(d.priceChangePercent ?? 0);
+      if (!Number.isFinite(usd) || usd <= 0) throw new Error('Invalid Binance price');
 
-  // 4) Kraken — price, derive 24h change from today's open
-  try {
-    const d = await get(`${KR}/Ticker?pair=XBTUSD`);
-    const t = d?.result?.XXBTZUSD;
-    if (t) {
-      const usd   = parseFloat(t.c[0]);
-      const open  = parseFloat(t.o);
       return {
         usd,
-        change24h: open ? ((usd - open) / open) * 100 : 0,
+        change24h: Number.isFinite(change24h) ? change24h : 0,
         marketCap: usd * 19_900_000,
         supply:    null,
+        source:    'binance',
       };
     }
-  } catch { /* all failed */ }
+  } catch { /* fallback */ }
+
+  // 2) CoinGecko (fallback only if Binance fails)
+  try {
+    const d = await get(
+      `${CG}/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true&include_market_cap=true`
+    );
+    const usd = Number(d?.bitcoin?.usd);
+    const change24h = Number(d?.bitcoin?.usd_24h_change ?? 0);
+    const marketCap = Number(d?.bitcoin?.usd_market_cap ?? 0);
+    if (!Number.isFinite(usd) || usd <= 0) return null;
+
+    return {
+      usd,
+      change24h: Number.isFinite(change24h) ? change24h : 0,
+      marketCap: Number.isFinite(marketCap) ? marketCap : usd * 19_900_000,
+      supply: null,
+      source: 'coingecko_fallback',
+    };
+  } catch { /* failed */ }
 
   return null;
 }
@@ -104,34 +82,18 @@ function toChartPoint(ts, price) {
  * @param {number} days - 7 | 30 | 90 | 365
  */
 export async function fetchBtcHistory(days) {
-  // 1) CoinGecko
+  // Binance daily klines, max 1000 candles per request.
   try {
-    const d = await get(
-      `${CG}/coins/bitcoin/market_chart?vs_currency=usd&days=${days}&interval=daily`
-    );
-    if (Array.isArray(d?.prices) && d.prices.length > 3)
-      return d.prices.map(([ts, p]) => toChartPoint(ts, p));
-  } catch { /* try next */ }
-
-  // 2) Kraken OHLC — interval=1440 min (daily), max 720 candles
-  try {
-    const since = Math.floor((Date.now() - days * 86_400_000) / 1000);
-    const d = await get(`${KR}/OHLC?pair=XBTUSD&interval=1440&since=${since}`);
-    const pair = d?.result?.XXBTZUSD ?? d?.result?.XBTUSD;
-    if (Array.isArray(pair) && pair.length > 3)
-      return pair
-        .slice(-days)
-        .map(([ts, , , , close]) => toChartPoint(ts * 1000, parseFloat(close)));
-  } catch { /* try next */ }
-
-  // 3) CoinCap history
-  try {
-    const end   = Date.now();
-    const start = end - days * 86_400_000;
-    const d = await get(`${CC}/assets/bitcoin/history?interval=d1&start=${start}&end=${end}`);
-    if (Array.isArray(d?.data) && d.data.length > 3)
-      return d.data.map(p => toChartPoint(p.time, parseFloat(p.priceUsd)));
-  } catch { /* all failed */ }
+    const limit = Math.min(Math.max(days, 2), 1000);
+    const d = await get(`${BN}/klines?symbol=BTCUSDT&interval=1d&limit=${limit}`);
+    if (Array.isArray(d) && d.length > 1) {
+      return d.map((row) => {
+        const openTime = Number(row?.[0]);
+        const close = Number(row?.[4]);
+        return toChartPoint(openTime, close);
+      }).filter((x) => Number.isFinite(x.ts) && Number.isFinite(x.price));
+    }
+  } catch { /* failed */ }
 
   return null;
 }
@@ -143,74 +105,89 @@ export async function fetchBtcHistory(days) {
  * @param {string[]} currencyCodes - e.g. ['usd','eur','gbp',...]
  */
 export async function fetchMultiCurrencyBtc(currencyCodes) {
-  const codes = currencyCodes.map(c => c.toLowerCase());
+  const requestedCodes = Array.isArray(currencyCodes)
+    ? currencyCodes.map(c => String(c).toLowerCase()).filter(Boolean)
+    : [];
 
-  // 1) Binance 24h ticker + jsdelivr FX rates
+  // 0) Internal backend cache (Binance BTC + Frankfurter fiat)
   try {
-    const [ticker24h, fx] = await Promise.all([
-      get(`${BN}/ticker/24hr?symbol=BTCUSDT`),
-      get(FXCDN),
-    ]);
-    const btcUsd = parseFloat(ticker24h?.lastPrice ?? 0);
-    const ch24   = parseFloat(ticker24h?.priceChangePercent ?? 0);
-    const rates  = fx?.usd;
-
-    if (btcUsd > 0 && rates) {
+    const cache = await get('/api/btc/rates');
+    const rates = cache?.rates;
+    if (rates && typeof rates === 'object') {
       const result = {};
-      for (const code of codes) {
-        if (code === 'usd') {
-          result.usd = btcUsd;
-          result.usd_24h_change = ch24;
-          continue;
+      const cacheCodes = Object.keys(rates)
+        .filter((k) => /^[A-Z]{3}$/.test(k))
+        .map((k) => k.toLowerCase());
+      const effectiveCodes = requestedCodes.length ? requestedCodes : cacheCodes;
+      const defaultChange = Number(cache?.btc_change_24h_pct);
+
+      for (const code of effectiveCodes) {
+        const key = code.toUpperCase();
+        const price = Number(rates[key]);
+        if (!Number.isFinite(price) || price <= 0) continue;
+
+        result[code] = price;
+        if (Number.isFinite(defaultChange)) {
+          result[`${code}_24h_change`] = defaultChange;
         }
-        const rate = rates[code];
-        if (!rate) continue;
-        result[code] = Math.round(btcUsd * rate);
-        result[`${code}_24h_change`] = ch24;
       }
-      return result;
-    }
-  } catch { /* try next */ }
 
-  // 2) Binance spot price + jsdelivr FX rates (without 24h changes)
-  try {
-    const [ticker, fx] = await Promise.all([
-      get(`${BN}/ticker/price?symbol=BTCUSDT`),
-      get(FXCDN),
-    ]);
-    const btcUsd = parseFloat(ticker?.price ?? 0);
-    const rates  = fx?.usd; // { eur: 0.92, gbp: 0.79, jpy: 149.5, ... }
-    if (btcUsd > 0 && rates) {
-      const result = {};
-      for (const code of codes) {
-        if (code === 'usd') { result.usd = btcUsd; continue; }
-        const rate = rates[code];
-        if (rate) result[code] = Math.round(btcUsd * rate);
+      if (Object.keys(result).length > 0) {
+        result.__source = `${cache?.source_btc || 'internal_cache'} + ${cache?.source_fiat || 'fiat_source'}`;
+        return result;
       }
-      // 24h change not available from this source — default 0
-      return result;
     }
-  } catch { /* try next */ }
+  } catch { /* try Binance direct */ }
 
-  // 3) Kraken USD + jsdelivr FX rates
-  try {
-    const [ticker, fx] = await Promise.all([
-      get(`${KR}/Ticker?pair=XBTUSD`),
-      get(FXCDN),
-    ]);
-    const t = ticker?.result?.XXBTZUSD;
-    const btcUsd = t ? parseFloat(t.c[0]) : 0;
-    const rates  = fx?.usd;
-    if (btcUsd > 0 && rates) {
-      const result = {};
-      for (const code of codes) {
-        if (code === 'usd') { result.usd = btcUsd; continue; }
-        const rate = rates[code];
-        if (rate) result[code] = Math.round(btcUsd * rate);
-      }
-      return result;
+  // Binance-only: direct BTC<QUOTE> pairs. Unsupported quotes are omitted.
+  const symbolByCode = {
+    usd: 'BTCUSDT',
+    eur: 'BTCEUR',
+    gbp: 'BTCGBP',
+    try: 'BTCTRY',
+    rub: 'BTCRUB',
+    brl: 'BTCBRL',
+    aud: 'BTCAUD',
+    bidr: 'BTCBIDR',
+    pln: 'BTCPLN',
+    ars: 'BTCARS',
+    idr: 'BTCIDR',
+  };
+
+  const codes = requestedCodes.length ? requestedCodes : Object.keys(symbolByCode);
+
+  const jobs = codes.map(async (code) => {
+    const symbol = symbolByCode[code];
+    if (!symbol) return null;
+
+    try {
+      const t = await get(`${BN}/ticker/24hr?symbol=${symbol}`);
+      const price = Number(t?.lastPrice);
+      const change = Number(t?.priceChangePercent);
+      if (!Number.isFinite(price) || price <= 0) return null;
+
+      return {
+        code,
+        price,
+        change: Number.isFinite(change) ? change : null,
+      };
+    } catch {
+      return null;
     }
-  } catch { /* all failed */ }
+  });
+
+  const settled = await Promise.all(jobs);
+  const result = {};
+  settled.forEach((row) => {
+    if (!row) return;
+    result[row.code] = row.price;
+    if (row.change != null) result[`${row.code}_24h_change`] = row.change;
+  });
+
+  if (Object.keys(result).length > 0) {
+    result.__source = 'binance_direct';
+    return result;
+  }
 
   return null;
 }

@@ -1,96 +1,142 @@
 import { useState, useEffect } from 'react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
-// Generate realistic mock that mirrors btcframe shape
-function mockData() {
-  const out = [];
-  const start = new Date('2022-06-01');
-  for (let i = 0; i < 365 * 3; i++) {
-    const dt = new Date(start.getTime() + i * 86400000);
-    const t = i / (365 * 3);
-    let v = 260000 + t * 60000;
-    // Ordinals spike early 2023 (day ~210-310)
-    if (i > 200 && i < 320) v += Math.sin(((i - 200) / 120) * Math.PI) * 400000;
-    // 2024 halving run spike (day ~560-660)
-    if (i > 550 && i < 680) v += Math.sin(((i - 550) / 130) * Math.PI) * 650000;
-    v += (Math.random() - 0.5) * 90000;
-    out.push({
-      label: dt.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
-      txs: Math.max(140000, Math.round(v)),
-    });
-  }
-  return out;
+function parseThreshold(label) {
+  const match = String(label || '').match(/[\d,]+/);
+  if (!match) return 0;
+  return Number(match[0].replace(/,/g, ''));
+}
+
+function toChartData(payload) {
+  if (!Array.isArray(payload?.richerThan)) return [];
+
+  return payload.richerThan
+    .map((row) => {
+      const usdThreshold = Number(row?.usdThreshold || parseThreshold(row?.label));
+      const addresses = Number(row?.addresses || 0);
+      if (!Number.isFinite(usdThreshold) || !Number.isFinite(addresses)) return null;
+
+      return {
+        label: row?.label || `$${usdThreshold.toLocaleString('en-US')}`,
+        usdThreshold,
+        addresses,
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.usdThreshold - b.usdThreshold);
+}
+
+function formatYAxis(value) {
+  if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
+  if (value >= 1000) return `${(value / 1000).toFixed(0)}K`;
+  return String(Math.round(value));
 }
 
 export default function S14_TransactionCount() {
   const [data, setData] = useState([]);
   const [latest, setLatest] = useState(null);
-  const [pct, setPct] = useState(null);
+  const [share10m, setShare10m] = useState(null);
+  const [updatedAt, setUpdatedAt] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    (async () => {
+    let active = true;
+
+    const load = async () => {
       try {
-        const res = await fetch(
-          'https://api.blockchain.info/charts/n-transactions?timespan=3years&format=json&sampled=false'
-        );
-        const json = await res.json();
-        const raw = json.values.map((p) => ({
-          label: new Date(p.x * 1000).toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
-          txs: p.y,
-        }));
-        setData(raw);
-        if (raw.length >= 2) {
-          const last = raw[raw.length - 1].txs;
-          const prev = raw[raw.length - 2].txs;
-          setLatest(last);
-          setPct(((last - prev) / prev) * 100);
+        const res = await fetch('/api/s14/addresses-richer');
+        if (!res.ok) return;
+
+        const payload = await res.json();
+        const rows = toChartData(payload);
+        if (!active || !rows.length) return;
+
+        setData(rows);
+        setLatest(rows[0].addresses);
+
+        const richest = rows[rows.length - 1]?.addresses || 0;
+        const broad = rows[0]?.addresses || 0;
+        setShare10m(broad > 0 ? (richest / broad) * 100 : null);
+
+        if (typeof payload?.updatedAt === 'string') {
+          setUpdatedAt(payload.updatedAt);
         }
       } catch {
-        const mock = mockData();
-        setData(mock);
-        setLatest(mock[mock.length - 1].txs);
-        setPct(5.77);
+        /* keep previous values */
+      } finally {
+        if (active) setLoading(false);
       }
-    })();
+
+    };
+
+    load();
+    const timer = setInterval(load, 60_000);
+
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
   }, []);
 
   // Sample to max ~400 points for render performance
   const displayData = data.filter((_, i) => i % Math.max(1, Math.floor(data.length / 400)) === 0);
 
-  const up = pct !== null && pct >= 0;
-
   return (
     <div className="flex h-full w-full flex-col bg-[#111111]">
       {/* Header */}
       <div className="flex-none flex items-baseline gap-3 px-10 pt-6 pb-1">
-        <span className="inline-block h-3 w-3 rounded-full bg-green-400" style={{ marginBottom: 2 }} />
-        <span
-          style={{
-            color: '#ffffff',
-            fontFamily: 'monospace',
-            fontSize: 'var(--fs-title)',
-            fontWeight: 700,
-          }}
-        >
-          {latest ? latest.toLocaleString() : '—'} TXs
-        </span>
-        {pct !== null && (
-          <span
-            style={{
-              color: up ? '#00D897' : '#FF4757',
-              fontFamily: 'monospace',
-              fontSize: 'var(--fs-section)',
-              fontWeight: 600,
-            }}
-          >
-            {up ? '+' : ''}{pct.toFixed(2)}% {up ? '▲' : '▼'}
-          </span>
+        {loading ? (
+          <>
+            <div className="skeleton rounded-full" style={{ width: 12, height: 12, marginBottom: 2 }} />
+            <div className="skeleton" style={{ width: 220, height: '1.25em' }} />
+            <div className="skeleton" style={{ width: 140, height: '1em' }} />
+          </>
+        ) : (
+          <>
+            <span className="inline-block h-3 w-3 rounded-full bg-green-400" style={{ marginBottom: 2 }} />
+            <span
+              style={{
+                color: '#ffffff',
+                fontFamily: 'monospace',
+                fontSize: 'var(--fs-title)',
+                fontWeight: 700,
+              }}
+            >
+              {latest ? latest.toLocaleString() : '—'} Addresses
+            </span>
+            {share10m !== null && (
+              <span
+                style={{
+                  color: '#F7931A',
+                  fontFamily: 'monospace',
+                  fontSize: 'var(--fs-section)',
+                  fontWeight: 600,
+                }}
+              >
+                {share10m.toFixed(3)}% are $10M+
+              </span>
+            )}
+          </>
         )}
       </div>
 
+      <div className="flex-none px-10 pb-1 text-[10px] font-mono tracking-wider text-[#5c5c5c]">
+        {updatedAt ? `Source updated: ${updatedAt} · ` : ''}Auto update: 60s
+      </div>
+
       {/* Chart */}
-      <div className="min-h-0 flex-1 pb-1">
-        {displayData.length > 0 ? (
+      <div className="relative min-h-0 flex-1 pb-1">
+        {loading ? (
+          <div className="absolute inset-0 flex items-end px-3 pb-8 gap-[3px]">
+            {Array.from({ length: 20 }).map((_, i) => (
+              <div
+                key={i}
+                className="skeleton flex-1"
+                style={{ height: `${25 + Math.sin(i * 0.35) * 18 + Math.sin(i * 0.12) * 25}%`, borderRadius: 2 }}
+              />
+            ))}
+          </div>
+        ) : displayData.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={displayData} margin={{ top: 10, right: 24, left: 10, bottom: 30 }}>
               <defs>
@@ -111,11 +157,9 @@ export default function S14_TransactionCount() {
               <YAxis
                 stroke="#2a2a2a"
                 tick={{ fill: '#555', fontSize: 10 }}
-                tickFormatter={(v) =>
-                  v >= 1000000 ? `${(v / 1000000).toFixed(1)}M` : `${(v / 1000).toFixed(0)}K`
-                }
+                tickFormatter={formatYAxis}
                 label={{
-                  value: 'Confirmed Bitcoin Transactions Per Day',
+                  value: 'Bitcoin addresses richer than each USD threshold',
                   angle: -90,
                   position: 'insideLeft',
                   fill: '#444',
@@ -126,12 +170,12 @@ export default function S14_TransactionCount() {
               />
               <Tooltip
                 contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #444', borderRadius: 4, fontSize: 11 }}
-                formatter={(v) => [v.toLocaleString(), 'Transactions']}
+                formatter={(v) => [v.toLocaleString(), 'Addresses']}
                 labelStyle={{ color: '#888' }}
               />
               <Area
                 type="monotone"
-                dataKey="txs"
+                dataKey="addresses"
                 stroke="#F7931A"
                 fill="url(#txGrad14)"
                 strokeWidth={1.5}
@@ -142,7 +186,7 @@ export default function S14_TransactionCount() {
           </ResponsiveContainer>
         ) : (
           <div className="flex h-full items-center justify-center font-mono text-gray-600" style={{ fontSize: 'var(--fs-micro)' }}>
-            Loading…
+            Data unavailable
           </div>
         )}
       </div>
@@ -157,7 +201,7 @@ export default function S14_TransactionCount() {
             letterSpacing: '0.12em',
           }}
         >
-          HISTORICAL DATA — SINCE GENESIS BLOCK 2009
+          ADDRESSES RICHER THAN USD THRESHOLDS
         </span>
       </div>
     </div>

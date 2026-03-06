@@ -3,6 +3,12 @@ import { fmt } from '../../utils/formatters';
 
 const MAX_VMEMPOOL = 300; // design max vMB for gauge scale
 
+const UI_COLORS = {
+  brand: 'var(--accent-bitcoin)',
+  positive: 'var(--accent-green)',
+  negative: 'var(--accent-red)',
+};
+
 /* ── Gauge Arc (SVG half-circle) ── */
 function GaugeArc({ pct, loading }) {
   const r = 120;
@@ -21,7 +27,7 @@ function GaugeArc({ pct, loading }) {
         <path
           d={arcPath}
           fill="none"
-          stroke="#F7931A"
+          stroke={UI_COLORS.brand}
           strokeWidth="18"
           strokeLinecap="round"
           strokeDasharray={`${filledLength} ${totalArcLength}`}
@@ -43,7 +49,7 @@ function GaugeArc({ pct, loading }) {
           <text
             x={cx} y={cy - 18}
             textAnchor="middle"
-            fill="#F7931A"
+            fill={UI_COLORS.brand}
             fontSize="42"
             fontFamily="JetBrains Mono, monospace"
             fontWeight="700"
@@ -72,9 +78,9 @@ function GaugeArc({ pct, loading }) {
 }
 
 /* ── Fee Tile ── */
-function FeeTile({ label, value, color = '#F7931A', loading }) {
+function FeeTile({ label, value, color = UI_COLORS.brand, loading }) {
   return (
-    <div className="flex flex-col items-center gap-2 border-[#2a2a2a] px-6">
+    <div className="flex min-w-[92px] flex-col items-center gap-2 border-[#2a2a2a] px-4 py-1 sm:px-6">
       {loading || value == null ? (
         <div className="skeleton" style={{ width: 48, height: '2em' }} />
       ) : (
@@ -133,24 +139,24 @@ export default function S04_MempoolGauge() {
   const pct = mempool.size != null ? Math.min((mempool.size / MAX_VMEMPOOL) * 100, 100) : null;
 
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center gap-6 bg-[#111111] py-4">
+    <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-[#111111] px-3 py-4 sm:gap-6 sm:px-4">
       {/* Title */}
       <div className="text-center">
         <div
-          className="font-mono font-bold uppercase tracking-[0.2em] text-[#F7931A]"
-          style={{ fontSize: 'var(--fs-heading)' }}
+          className="font-mono font-bold uppercase tracking-[0.2em]"
+          style={{ fontSize: 'var(--fs-heading)', color: UI_COLORS.brand }}
         >
           MEMPOOL STATUS
         </div>
       </div>
 
       {/* Gauge */}
-      <div className="flex items-center justify-center">
+      <div className="flex w-full items-center justify-center">
         <GaugeArc pct={pct ?? 0} loading={loading} />
       </div>
 
       {/* Main stats */}
-      <div className="flex items-center gap-8 border-t border-b border-[#2a2a2a] py-5 px-8">
+      <div className="flex w-full max-w-[660px] flex-col items-center gap-4 border-y border-[#2a2a2a] px-3 py-4 sm:flex-row sm:justify-center sm:gap-8 sm:px-8 sm:py-5">
         <div className="flex flex-col items-center gap-2">
           {loading || mempool.count == null ? (
             <div className="skeleton" style={{ width: 100, height: '1.8em' }} />
@@ -159,12 +165,12 @@ export default function S04_MempoolGauge() {
               {fmt.num(mempool.count)}
             </div>
           )}
-          <div className="uppercase tracking-[0.18em] text-[#F7931A]" style={{ fontSize: 'var(--fs-label)' }}>
+          <div className="uppercase tracking-[0.18em]" style={{ fontSize: 'var(--fs-label)', color: UI_COLORS.brand }}>
             PENDING TXS
           </div>
         </div>
 
-        <div className="h-16 w-px bg-[#2a2a2a]" />
+        <div className="h-px w-28 bg-[#2a2a2a] sm:h-16 sm:w-px" />
 
         <div className="flex flex-col items-center gap-2">
           {loading || mempool.size == null ? (
@@ -174,17 +180,17 @@ export default function S04_MempoolGauge() {
               {mempool.size} <span className="text-[0.4em] text-white/50">vMB</span>
             </div>
           )}
-          <div className="uppercase tracking-[0.18em] text-[#F7931A]" style={{ fontSize: 'var(--fs-label)' }}>
+          <div className="uppercase tracking-[0.18em]" style={{ fontSize: 'var(--fs-label)', color: UI_COLORS.brand }}>
             MEMPOOL SIZE
           </div>
         </div>
       </div>
 
       {/* Fee row */}
-      <div className="flex items-center divide-x divide-[#2a2a2a]">
-        <FeeTile label="ECONOMY"  value={mempool.feeLow}  color="#00D897" loading={loading} />
-        <FeeTile label="NORMAL"   value={mempool.feeMid}  color="#F7931A" loading={loading} />
-        <FeeTile label="PRIORITY" value={mempool.feeHigh} color="#FF4757" loading={loading} />
+      <div className="flex w-full flex-wrap items-center justify-center gap-1 sm:w-auto sm:flex-nowrap sm:gap-0 sm:divide-x sm:divide-[#2a2a2a]">
+        <FeeTile label="ECONOMY" value={mempool.feeLow} color={UI_COLORS.positive} loading={loading} />
+        <FeeTile label="NORMAL" value={mempool.feeMid} color={UI_COLORS.brand} loading={loading} />
+        <FeeTile label="PRIORITY" value={mempool.feeHigh} color={UI_COLORS.negative} loading={loading} />
       </div>
     </div>
   );

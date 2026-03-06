@@ -1,4 +1,4 @@
-// World Map Price Explorer — BTC price in 20 global currencies
+// World Map Price Explorer — BTC price in all available Frankfurter fiat currencies
 // Globe uses Natural Earth 110m GeoJSON for pixel-accurate land shapes
 // Fallback to bounding-box mask if network unavailable
 
@@ -6,33 +6,66 @@ import { useEffect, useRef, useState } from 'react';
 import { fetchMultiCurrencyBtc } from '../../services/priceApi';
 
 // ─── Currency data ──────────────────────────────────────────────────────────────
-const CURRENCY_META = [
-  { code: 'USD', name: 'US Dollar'         },
-  { code: 'EUR', name: 'Euro'              },
-  { code: 'GBP', name: 'British Pound'     },
-  { code: 'JPY', name: 'Japanese Yen'      },
-  { code: 'CNY', name: 'Chinese Yuan'      },
-  { code: 'INR', name: 'Indian Rupee'      },
-  { code: 'KRW', name: 'Korean Won'        },
-  { code: 'CAD', name: 'Canadian Dollar'   },
+const BASE_CURRENCY_META = [
+  { code: 'USD', name: 'United States Dollar' },
+  { code: 'EUR', name: 'Euro' },
+  { code: 'GBP', name: 'British Pound' },
+  { code: 'JPY', name: 'Japanese Yen' },
+  { code: 'CNY', name: 'Chinese Renminbi Yuan' },
+  { code: 'INR', name: 'Indian Rupee' },
+  { code: 'KRW', name: 'South Korean Won' },
+  { code: 'CAD', name: 'Canadian Dollar' },
   { code: 'AUD', name: 'Australian Dollar' },
-  { code: 'CHF', name: 'Swiss Franc'       },
-  { code: 'RUB', name: 'Russian Ruble'     },
-  { code: 'BRL', name: 'Brazilian Real'    },
-  { code: 'MXN', name: 'Mexican Peso'      },
-  { code: 'SGD', name: 'Singapore Dollar'  },
-  { code: 'HKD', name: 'Hong Kong Dollar'  },
-  { code: 'TRY', name: 'Turkish Lira'      },
-  { code: 'SEK', name: 'Swedish Krona'     },
-  { code: 'NOK', name: 'Norwegian Krone'   },
-  { code: 'DKK', name: 'Danish Krone'      },
-  { code: 'PLN', name: 'Polish Zloty'      },
+  { code: 'CHF', name: 'Swiss Franc' },
+  { code: 'BRL', name: 'Brazilian Real' },
+  { code: 'MXN', name: 'Mexican Peso' },
+  { code: 'SGD', name: 'Singapore Dollar' },
+  { code: 'HKD', name: 'Hong Kong Dollar' },
+  { code: 'TRY', name: 'Turkish Lira' },
+  { code: 'SEK', name: 'Swedish Krona' },
+  { code: 'NOK', name: 'Norwegian Krone' },
+  { code: 'DKK', name: 'Danish Krone' },
+  { code: 'PLN', name: 'Polish Zloty' },
+  { code: 'CZK', name: 'Czech Koruna' },
+  { code: 'HUF', name: 'Hungarian Forint' },
+  { code: 'IDR', name: 'Indonesian Rupiah' },
+  { code: 'ILS', name: 'Israeli New Shekel' },
+  { code: 'ISK', name: 'Icelandic Krona' },
+  { code: 'MYR', name: 'Malaysian Ringgit' },
+  { code: 'NZD', name: 'New Zealand Dollar' },
+  { code: 'PHP', name: 'Philippine Peso' },
+  { code: 'RON', name: 'Romanian Leu' },
+  { code: 'THB', name: 'Thai Baht' },
+  { code: 'ZAR', name: 'South African Rand' },
 ];
 
-const EMPTY_CURRENCIES = CURRENCY_META.map(m => ({ ...m, price: null, change: null }));
+const EMPTY_CURRENCIES = BASE_CURRENCY_META.map(m => ({ ...m, price: null, change: null }));
 
 const BAND_CODES = ['JPY', 'INR', 'KRW', 'CNY', 'EUR', 'GBP', 'USD', 'RUB'];
-const CG_CURRENCIES = CURRENCY_META.map(c => c.code.toLowerCase()).join(',');
+const REFRESH_MS = 60_000;
+
+const UI_COLORS = {
+  positive: 'var(--accent-green)',
+  negative: 'var(--accent-red)',
+  textSecondary: 'var(--text-secondary)',
+  textTertiary: 'var(--text-tertiary)',
+};
+
+const currencyDisplayNames = typeof Intl !== 'undefined' && Intl.DisplayNames
+  ? new Intl.DisplayNames(['en'], { type: 'currency' })
+  : null;
+
+function getCurrencyName(code) {
+  if (BASE_CURRENCY_META.find((m) => m.code === code)?.name) {
+    return BASE_CURRENCY_META.find((m) => m.code === code).name;
+  }
+  try {
+    const pretty = currencyDisplayNames?.of(code);
+    return pretty || code;
+  } catch {
+    return code;
+  }
+}
 
 // ─── Land texture from GeoJSON ─────────────────────────────────────────────────
 const TEX_W = 2048, TEX_H = 1024;
@@ -291,15 +324,15 @@ function TickerItem({ code, change }) {
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 5,
-      padding: '0 18px',
+      padding: '0 12px',
       fontFamily: 'monospace', fontSize: 'var(--fs-caption)',
-      color: '#888', whiteSpace: 'nowrap',
+      color: UI_COLORS.textSecondary, whiteSpace: 'nowrap',
     }}>
-      <span style={{ color: up == null ? '#555' : (up ? '#00D897' : '#FF4757'), fontSize: '0.55rem' }}>
+      <span style={{ color: up == null ? UI_COLORS.textTertiary : (up ? UI_COLORS.positive : UI_COLORS.negative), fontSize: '0.55rem' }}>
         {up == null ? '•' : (up ? '▲' : '▼')}
       </span>
       <span style={{ color: '#bbb', fontWeight: 700 }}>{code}</span>
-      <span style={{ color: up == null ? '#666' : (up ? '#00D897' : '#FF4757') }}>{fmtChange(change)}</span>
+      <span style={{ color: up == null ? UI_COLORS.textTertiary : (up ? UI_COLORS.positive : UI_COLORS.negative) }}>{fmtChange(change)}</span>
     </span>
   );
 }
@@ -315,23 +348,39 @@ export default function S03_MultiCurrencyBoard() {
   const [search, setSearch]     = useState('');
   const [currencies, setCurrencies] = useState(EMPTY_CURRENCIES);
   const [isPriceLoading, setIsPriceLoading] = useState(true);
+  const [dataSource, setDataSource] = useState(null);
 
-  // Live multi-source multi-currency fetch (CoinGecko → Binance+FX → Kraken+FX)
+  // Multi-currency fetch via internal backend cache (Binance+Frankfurter),
+  // falling back to direct Binance pairs when needed.
   useEffect(() => {
     let active = true;
-    const codes = CURRENCY_META.map(m => m.code.toLowerCase());
 
     const load = async () => {
       try {
-        const btc = await fetchMultiCurrencyBtc(codes);
+        const btc = await fetchMultiCurrencyBtc([]);
         if (!active || !btc) return;
 
-        const updated = CURRENCY_META.map(m => {
-          const key = m.code.toLowerCase();
+        const availableCodes = Object.keys(btc)
+          .filter((k) => /^[a-z]{3}$/.test(k))
+          .map((k) => k.toUpperCase());
+
+        const selectedCodes = availableCodes.length > 0
+          ? availableCodes
+          : BASE_CURRENCY_META.map((m) => m.code);
+
+        selectedCodes.sort((a, b) => {
+          if (a === 'USD') return -1;
+          if (b === 'USD') return 1;
+          return a.localeCompare(b);
+        });
+
+        const updated = selectedCodes.map((code) => {
+          const key = code.toLowerCase();
           const price = Number(btc[key]);
           const change = Number(btc[`${key}_24h_change`]);
           return {
-            ...m,
+            code,
+            name: getCurrencyName(code),
             price: Number.isFinite(price) ? price : null,
             change: Number.isFinite(change) ? change : null,
           };
@@ -339,13 +388,19 @@ export default function S03_MultiCurrencyBoard() {
 
         setCurrencies(updated);
         bandDataRef.current = updated.filter(c => BAND_CODES.includes(c.code));
+
+        const src = String(btc.__source || '').toLowerCase();
+        if (src.includes('binance') && src.includes('frankfurter')) setDataSource('BINANCE + FRANKFURTER');
+        else if (src.includes('binance')) setDataSource('BINANCE');
+        else if (src.includes('coingecko')) setDataSource('COINGECKO');
+        else if (src) setDataSource(src.toUpperCase());
       } finally {
         if (active) setIsPriceLoading(false);
       }
     };
 
     load();
-    const t = setInterval(load, 60_000);
+    const t = setInterval(load, REFRESH_MS);
     return () => { active = false; clearInterval(t); };
   }, []);
 
@@ -394,18 +449,18 @@ export default function S03_MultiCurrencyBoard() {
   const filtered = currencies.filter(
     c =>
       c.code.toLowerCase().includes(search.toLowerCase()) ||
-      c.name.toLowerCase().includes(search.toLowerCase())
+      String(c.name || '').toLowerCase().includes(search.toLowerCase())
   );
 
   const tickerItems = [...currencies, ...currencies];
 
   return (
-    <div className="flex h-full w-full flex-col bg-[#111111]">
+    <div className="flex h-full w-full flex-col overflow-hidden bg-[#111111]">
 
       {/* ── Ticker ─────────────────────────────────────────────────────── */}
       <div className="flex-none overflow-hidden" style={{
         borderTop: '1px solid #1a1a1a', borderBottom: '1px solid #1a1a1a',
-        background: '#111111', padding: '3px 0',
+        background: '#111111', padding: '2px 0',
       }}>
         {isPriceLoading ? (
           <div className="flex items-center gap-3 px-4 py-1">
@@ -435,10 +490,10 @@ export default function S03_MultiCurrencyBoard() {
       </div>
 
       {/* ── Globe + Right panel ────────────────────────────────────────── */}
-      <div className="min-h-0 flex-1 flex">
+      <div className="min-h-0 flex-1 flex flex-col lg:flex-row">
 
         {/* Globe canvas */}
-        <div ref={containerRef} className="flex-1 min-w-0" style={{ position: 'relative' }}>
+        <div ref={containerRef} className="relative min-h-[250px] flex-1 min-w-0 sm:min-h-[320px] lg:min-h-0">
           <canvas
             ref={canvasRef}
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
@@ -446,11 +501,7 @@ export default function S03_MultiCurrencyBoard() {
         </div>
 
         {/* Right panel */}
-        <div className="flex-none flex flex-col" style={{
-          width: 'clamp(160px, 18vw, 240px)',
-          borderLeft: '1px solid #1a1a1a',
-          background: '#111111',
-        }}>
+        <div className="h-[clamp(220px,42%,360px)] flex flex-none flex-col border-t border-[#1a1a1a] bg-[#111111] lg:h-auto lg:w-[clamp(180px,22vw,260px)] lg:border-l lg:border-t-0">
           <div style={{ padding: '8px 10px', borderBottom: '1px solid #1a1a1a' }}>
             <div style={{
               display: 'flex', alignItems: 'center', gap: 6,
@@ -468,7 +519,29 @@ export default function S03_MultiCurrencyBoard() {
                   fontSize: 'var(--fs-micro)',
                   width: '100%',
                 }}
-              />
+                />
+              </div>
+            {dataSource && (
+              <div style={{
+                marginTop: 6,
+                color: '#5d5d5d',
+                fontFamily: 'monospace',
+                fontSize: 'var(--fs-tag)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+              }}>
+                src: {dataSource}
+              </div>
+            )}
+            <div style={{
+              marginTop: 4,
+              color: '#4d4d4d',
+              fontFamily: 'monospace',
+              fontSize: 'var(--fs-tag)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
+            }}>
+              update: {Math.round(REFRESH_MS / 1000)}s
             </div>
           </div>
 
@@ -489,7 +562,7 @@ export default function S03_MultiCurrencyBoard() {
                     ) : (
                       <div style={{
                         width: 6, height: 6, borderRadius: '50%',
-                        background: up == null ? '#555' : (up ? '#00D897' : '#FF4757'), flexShrink: 0,
+                        background: up == null ? UI_COLORS.textTertiary : (up ? UI_COLORS.positive : UI_COLORS.negative), flexShrink: 0,
                       }} />
                     )}
                     <span style={{
@@ -510,7 +583,7 @@ export default function S03_MultiCurrencyBoard() {
                           fontSize: 'var(--fs-micro)', fontWeight: 600,
                         }}>{fmtPrice(c.price)}</div>
                         <div style={{
-                          color: up == null ? '#666' : (up ? '#00D897' : '#FF4757'),
+                          color: up == null ? UI_COLORS.textTertiary : (up ? UI_COLORS.positive : UI_COLORS.negative),
                           fontFamily: 'monospace',
                           fontSize: 'var(--fs-tag)',
                         }}>{fmtChange(c.change)}</div>

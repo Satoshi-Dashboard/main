@@ -9,11 +9,11 @@ const EMPTY_DATA = {
 };
 
 const SEGMENTS = [
-  { from: 0,  to: 25,  color: '#b30000', label: 'EXTREME FEAR' },
+  { from: 0, to: 25, color: 'var(--accent-red)', label: 'EXTREME FEAR' },
   { from: 25, to: 45,  color: '#e05600', label: 'FEAR' },
-  { from: 45, to: 55,  color: '#f4c430', label: 'NEUTRAL' },
-  { from: 55, to: 75,  color: '#56c45a', label: 'GREED' },
-  { from: 75, to: 100, color: '#1ea849', label: 'EXTREME GREED' },
+  { from: 45, to: 55, color: 'var(--accent-warning)', label: 'NEUTRAL' },
+  { from: 55, to: 75, color: '#56c45a', label: 'GREED' },
+  { from: 75, to: 100, color: 'var(--accent-green)', label: 'EXTREME GREED' },
 ];
 
 function classify(v) {
@@ -68,7 +68,7 @@ function Label({ cx, cy, r, v, sw }) {
       y={cy - lr * Math.sin(rad)}
       textAnchor="middle"
       dominantBaseline="middle"
-      fill="#666"
+      fill="var(--text-secondary)"
       fontSize="13"
       fontFamily="JetBrains Mono, monospace"
     >
@@ -120,6 +120,13 @@ function Bubble({ label, value }) {
 
 export default function S10_FearGreedIndex() {
   const [data, setData] = useState(EMPTY_DATA);
+  const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth);
+
+  useEffect(() => {
+    const onResize = () => setViewportWidth(window.innerWidth);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -157,19 +164,24 @@ export default function S10_FearGreedIndex() {
 
   const { value, yesterday, sevenDaysAgo, thirtyDaysAgo, classification } = data;
   const hasMain = Number.isFinite(value);
-  const cls = hasMain ? classify(value) : { color: '#555', label: 'LOADING' };
+  const cls = hasMain ? classify(value) : { color: 'var(--text-tertiary)', label: 'LOADING' };
   const pct = hasMain && Number.isFinite(yesterday) && yesterday !== 0
     ? ((value - yesterday) / yesterday) * 100
     : null;
   const pctLabel = Number.isFinite(pct) ? `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%` : null;
 
   /* SVG gauge params */
-  const VW = 700;
-  const VH = 380;
+  const gauge = viewportWidth < 480
+    ? { VW: 420, VH: 250, R: 150, SW: 20 }
+    : viewportWidth < 768
+      ? { VW: 560, VH: 300, R: 210, SW: 26 }
+      : { VW: 700, VH: 380, R: 270, SW: 32 };
+  const VW = gauge.VW;
+  const VH = gauge.VH;
   const cx = VW / 2;
   const cy = VH - 20;
-  const R = 270;
-  const SW = 32;
+  const R = gauge.R;
+  const SW = gauge.SW;
 
   /* Needle */
   const needleRad = Math.PI - (((Number.isFinite(value) ? value : 50) / 100) * Math.PI);
@@ -182,9 +194,9 @@ export default function S10_FearGreedIndex() {
   const labelVals = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
 
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-[#111111] py-4">
+    <div className="flex h-full w-full flex-col items-center justify-center gap-2 overflow-y-auto bg-[#111111] px-2 py-3 sm:px-3 sm:py-4">
       {/* Title row */}
-      <div className="flex flex-shrink-0 items-center gap-3">
+      <div className="flex flex-shrink-0 flex-wrap items-center justify-center gap-2 sm:gap-3">
         <span className="font-mono text-white/70" style={{ fontSize: 'var(--fs-section)' }}>
           Fear &amp; Greed:
         </span>
@@ -219,7 +231,7 @@ export default function S10_FearGreedIndex() {
       </div>
 
       {/* SVG Gauge */}
-      <div className="w-full flex-shrink-0 flex justify-center" style={{ maxWidth: 'min(95vw, 680px)' }}>
+      <div className="flex w-full flex-shrink-0 justify-center" style={{ maxWidth: `min(96vw, ${VW}px)` }}>
         <svg viewBox={`0 0 ${VW} ${VH}`} width="100%" style={{ overflow: 'visible' }}>
           {/* Colored arc segments */}
           {SEGMENTS.map((s) => (
@@ -243,7 +255,7 @@ export default function S10_FearGreedIndex() {
               <circle cx={cx} cy={cy} r="9" fill="#888" />
             </>
           ) : (
-            <circle cx={cx} cy={cy} r="9" fill="#555" />
+            <circle cx={cx} cy={cy} r="9" fill="var(--text-tertiary)" />
           )}
         </svg>
       </div>
@@ -257,7 +269,7 @@ export default function S10_FearGreedIndex() {
       </div>
 
       {/* Historical bubbles */}
-      <div className="flex flex-shrink-0 justify-center gap-8 pt-2 sm:gap-14">
+      <div className="flex flex-shrink-0 flex-wrap justify-center gap-6 pt-2 sm:gap-10">
         <Bubble label="Yesterday" value={yesterday} />
         <Bubble label="7 Days Ago" value={sevenDaysAgo} />
         <Bubble label="30 Days Ago" value={thirtyDaysAgo} />

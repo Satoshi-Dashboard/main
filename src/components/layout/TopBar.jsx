@@ -24,7 +24,7 @@ export default function TopBar() {
       <div className="h-full px-6 flex items-center justify-between">
         {/* Left */}
         <div className="flex items-center gap-4">
-          <div className="text-3xl font-bold text-yellow-500">₿</div>
+          <img src="/logo.svg" alt="Satoshi Dashboard" className="h-9 w-auto max-w-[180px]" />
           <div className="flex flex-col">
             <span className="font-mono text-lg font-bold text-yellow-50">SATOSHI</span>
             <span className="font-mono text-xs text-gray-500">DASHBOARD</span>
