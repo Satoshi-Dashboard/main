@@ -289,7 +289,7 @@ export default function S01_BitcoinOverview() {
       try {
         const [spot, overviewRes] = await Promise.all([
           fetchBtcSpot(),
-          fetch('/api/public/mempool/overview', { cache: 'no-store' }),
+          fetch('/api/public/mempool/overview'),
         ]);
 
         if (!overviewRes.ok) throw new Error(`HTTP ${overviewRes.status}`);
@@ -326,7 +326,7 @@ export default function S01_BitcoinOverview() {
       }
     };
     load();
-    const timer = setInterval(load, 15_000);
+    const timer = setInterval(load, 30_000);
     return () => {
       active = false;
       clearInterval(timer);

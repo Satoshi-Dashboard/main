@@ -138,7 +138,7 @@ export function createApp() {
   const app = express();
 
   app.get('/api/bitnodes/cache', asyncRoute(async (_req, res) => {
-    setDataCacheHeaders(res, { sMaxAge: 300, swr: 900 });
+    setDataCacheHeaders(res, { sMaxAge: 21600, swr: 3600 });
     const payload = await getBitnodesPayload();
     if (!payload || !payload.data) {
       res.json(pendingResponse());
@@ -208,7 +208,7 @@ export function createApp() {
   }));
 
   app.get('/api/s03/multi-currency', asyncRoute(async (_req, res) => {
-    setDataCacheHeaders(res, { sMaxAge: 10, swr: 35 });
+    setDataCacheHeaders(res, { sMaxAge: 30, swr: 60 });
     try {
       const payload = await getS03MultiCurrencyPayload();
       res.json(payload);
@@ -218,7 +218,7 @@ export function createApp() {
   }));
 
   app.get('/api/s03/multi-currency/status', asyncRoute(async (_req, res) => {
-    setDataCacheHeaders(res, { sMaxAge: 10, swr: 35 });
+    setDataCacheHeaders(res, { sMaxAge: 30, swr: 60 });
     try {
       const status = await getS03MultiCurrencyStatus();
       res.json(status);
@@ -243,7 +243,7 @@ export function createApp() {
   }));
 
   app.get('/api/s08/stablecoins', asyncRoute(async (_req, res) => {
-    setDataCacheHeaders(res, { sMaxAge: 30, swr: 90 });
+    setDataCacheHeaders(res, { sMaxAge: 120, swr: 240 });
     try {
       const payload = await getS08StablecoinList();
       res.json(payload);
@@ -253,7 +253,7 @@ export function createApp() {
   }));
 
   app.get('/api/s08/stablecoins/live-prices', asyncRoute(async (_req, res) => {
-    setDataCacheHeaders(res, { sMaxAge: 30, swr: 90 });
+    setDataCacheHeaders(res, { sMaxAge: 120, swr: 240 });
     try {
       const payload = await getS08StablecoinLivePrices();
       res.json(payload);
@@ -273,7 +273,7 @@ export function createApp() {
   }));
 
   app.get('/api/s13/global-assets', asyncRoute(async (_req, res) => {
-    setDataCacheHeaders(res, { sMaxAge: 60, swr: 180 });
+    setDataCacheHeaders(res, { sMaxAge: 3600, swr: 7200 });
     try {
       const payload = await getS13GlobalAssetsPayload();
       res.json(payload);
@@ -283,7 +283,7 @@ export function createApp() {
   }));
 
   app.get('/api/s13/global-assets/status', asyncRoute(async (_req, res) => {
-    setDataCacheHeaders(res, { sMaxAge: 60, swr: 180 });
+    setDataCacheHeaders(res, { sMaxAge: 3600, swr: 7200 });
     try {
       const payload = await getS13GlobalAssetsStatus();
       res.json(payload);
@@ -328,7 +328,7 @@ export function createApp() {
   }));
 
   app.get('/api/public/fear-greed', asyncRoute(async (req, res) => {
-    setDataCacheHeaders(res, { sMaxAge: 10, swr: 25 });
+    setDataCacheHeaders(res, { sMaxAge: 21600, swr: 3600 });
     try {
       const limit = Number(req.query?.limit || 31);
       const payload = await getFearGreedPayload({ limit });
@@ -339,7 +339,7 @@ export function createApp() {
   }));
 
   app.get('/api/public/geo/countries', asyncRoute(async (_req, res) => {
-    setDataCacheHeaders(res, { sMaxAge: 3600, swr: 21600 });
+    setDataCacheHeaders(res, { sMaxAge: 2592000, swr: 86400 });
     try {
       const payload = await getCountriesGeoPayload();
       res.json(payload);
@@ -349,7 +349,7 @@ export function createApp() {
   }));
 
   app.get('/api/public/geo/land', asyncRoute(async (_req, res) => {
-    setDataCacheHeaders(res, { sMaxAge: 3600, swr: 21600 });
+    setDataCacheHeaders(res, { sMaxAge: 2592000, swr: 86400 });
     try {
       const payload = await getLandGeoPayload();
       res.json(payload);
@@ -391,7 +391,7 @@ export function createApp() {
   }));
 
   app.get('/api/public/s21/big-mac-sats-data', asyncRoute(async (_req, res) => {
-    setDataCacheHeaders(res, { sMaxAge: 10, swr: 30 });
+    setDataCacheHeaders(res, { sMaxAge: 604800, swr: 86400 });
     try {
       const payload = await getS21BigMacSatsPayload();
       res.json(payload);
@@ -414,7 +414,7 @@ export function createApp() {
   }));
 
   app.get('/api/s10/btc-distribution.js', asyncRoute(async (_req, res) => {
-    setDataCacheHeaders(res, { sMaxAge: 60, swr: 120 });
+    setDataCacheHeaders(res, { sMaxAge: 3600, swr: 7200 });
     try {
       const js = await getBtcDistributionJs();
       res.type('application/javascript; charset=utf-8').send(js);
@@ -425,7 +425,7 @@ export function createApp() {
   }));
 
   app.get('/api/s10/btc-distribution', asyncRoute(async (_req, res) => {
-    setDataCacheHeaders(res, { sMaxAge: 60, swr: 120 });
+    setDataCacheHeaders(res, { sMaxAge: 3600, swr: 7200 });
     try {
       const payload = await getBtcDistributionPayload();
       res.json(payload);
@@ -436,7 +436,7 @@ export function createApp() {
   }));
 
   app.get('/api/s10/btc-distribution/status', asyncRoute(async (_req, res) => {
-    setDataCacheHeaders(res, { sMaxAge: 60, swr: 120 });
+    setDataCacheHeaders(res, { sMaxAge: 3600, swr: 7200 });
     try {
       const status = await getBtcDistributionStatus();
       res.json(status);
@@ -463,7 +463,7 @@ export function createApp() {
   }));
 
   app.get('/api/s14/addresses-richer.js', asyncRoute(async (_req, res) => {
-    setDataCacheHeaders(res, { sMaxAge: 60, swr: 120 });
+    setDataCacheHeaders(res, { sMaxAge: 3600, swr: 7200 });
     try {
       const js = await getBtcAddressesRicherJs();
       res.type('application/javascript; charset=utf-8').send(js);
@@ -474,7 +474,7 @@ export function createApp() {
   }));
 
   app.get('/api/s14/addresses-richer', asyncRoute(async (_req, res) => {
-    setDataCacheHeaders(res, { sMaxAge: 60, swr: 120 });
+    setDataCacheHeaders(res, { sMaxAge: 3600, swr: 7200 });
     try {
       const payload = await getBtcAddressesRicherPayload();
       res.json(payload);
@@ -485,7 +485,7 @@ export function createApp() {
   }));
 
   app.get('/api/s14/addresses-richer/status', asyncRoute(async (_req, res) => {
-    setDataCacheHeaders(res, { sMaxAge: 60, swr: 120 });
+    setDataCacheHeaders(res, { sMaxAge: 3600, swr: 7200 });
     try {
       const status = await getBtcAddressesRicherStatus();
       res.json(status);

@@ -155,7 +155,7 @@ export default function S21_NodeVersions() {
               marginBottom: '0.8rem',
             }}
           >
-            BTC/USD {Math.round(spotBtcPrice).toLocaleString('en-US')} (live 5m)
+            BTC/USD {Math.round(spotBtcPrice).toLocaleString('en-US')}
           </div>
         ) : (
           <div className="skeleton" style={{ width: 220, height: '0.9em', marginBottom: '0.8rem' }} />
@@ -295,6 +295,7 @@ export default function S21_NodeVersions() {
         </div>
 
         <div style={{ marginTop: 8, fontFamily: 'monospace', fontSize: 'var(--fs-tag)', color: '#5f5f5f' }}>
+          <span style={{ color: '#4a4a4a', marginRight: '0.6rem' }}>Índice anual</span>
           CSV source:{' '}
           <a
             href="https://github.com/TheEconomist/big-mac-data"

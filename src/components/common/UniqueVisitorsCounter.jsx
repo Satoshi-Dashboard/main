@@ -52,7 +52,7 @@ export default function UniqueVisitorsCounter({ compact = false }) {
     };
 
     initCounter();
-    const timer = setInterval(refreshStats, 30_000);
+    const timer = setInterval(refreshStats, 300_000);
 
     return () => {
       isActive = false;

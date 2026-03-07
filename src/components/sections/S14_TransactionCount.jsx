@@ -70,7 +70,7 @@ export default function S14_TransactionCount() {
     };
 
     load();
-    const timer = setInterval(load, 60_000);
+    const timer = setInterval(load, 3_600_000);
 
     return () => {
       active = false;
@@ -121,7 +121,7 @@ export default function S14_TransactionCount() {
       </div>
 
       <div className="flex-none px-10 pb-1 text-[11px] font-mono tracking-wider text-[#5c5c5c]">
-        {updatedAt ? `Source updated: ${updatedAt} · ` : ''}Auto update: 60s
+        {updatedAt ? `Source updated: ${updatedAt} · ` : ''}On-chain data · daily update · bitinfocharts.com
       </div>
 
       {/* Chart */}

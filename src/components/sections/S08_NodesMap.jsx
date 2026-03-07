@@ -171,7 +171,7 @@ export default function S08_NodesMap() {
 
     const load = async () => {
       try {
-        const res = await fetch(CACHE_ENDPOINT, { cache: 'no-store' });
+        const res = await fetch(CACHE_ENDPOINT);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = await res.json();
         if (!active) return;
@@ -186,7 +186,7 @@ export default function S08_NodesMap() {
     };
 
     load();
-    const timer = setInterval(load, 60_000);
+    const timer = setInterval(load, 600_000);
 
     return () => {
       active = false;
@@ -198,7 +198,7 @@ export default function S08_NodesMap() {
     let active = true;
     (async () => {
       try {
-        const res = await fetch(COUNTRIES_URL, { cache: 'no-store' });
+        const res = await fetch(COUNTRIES_URL);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const payload = await res.json();
         const geo = payload?.data || payload;
@@ -273,7 +273,7 @@ export default function S08_NodesMap() {
       const resolvedCode = /^[A-Z]{2}$/.test(directCode) ? directCode : inferredCode;
       const resolvedNameFromCode = featureNameByCode.get(resolvedCode) || '';
       const baseName = isUnknownCountryValue(countryName)
-        ? UNKNOWN_COUNTRY_LABEL
+        ? (resolvedNameFromCode || (/^[A-Z]{2}$/.test(resolvedCode) ? resolvedCode : UNKNOWN_COUNTRY_LABEL))
         : (countryName || resolvedNameFromCode || resolvedCode || UNKNOWN_COUNTRY_LABEL);
       const label = resolvedCode && resolvedNameFromCode
         ? `${baseName} (${resolvedCode})`
@@ -486,14 +486,23 @@ export default function S08_NodesMap() {
                           }
                     }
                   >
-                    <span
-                      className="truncate font-mono text-[11px]"
-                      style={{ color: isTorRow ? UI_COLORS.tor : 'rgba(255, 255, 255, 0.8)' }}
-                    >
-                      {item.country_label}
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <span
+                        className="inline-block h-2 w-2 flex-none rounded-sm"
+                        style={{
+                          background: isTorRow ? UI_COLORS.tor : getFillColor(item.nodes),
+                          boxShadow: `0 0 4px ${isTorRow ? UI_COLORS.tor : getFillColor(item.nodes)}`,
+                        }}
+                      />
+                      <span
+                        className="truncate font-mono text-[11px]"
+                        style={{ color: isTorRow ? UI_COLORS.tor : 'rgba(255, 255, 255, 0.8)' }}
+                      >
+                        {item.country_label}
+                      </span>
                     </span>
                     <span
-                      className="font-mono text-[11px]"
+                      className="flex-none font-mono text-[11px]"
                       style={{ color: isTorRow ? UI_COLORS.tor : getFillColor(item.nodes) }}
                     >
                       {fmt.num(item.nodes)}

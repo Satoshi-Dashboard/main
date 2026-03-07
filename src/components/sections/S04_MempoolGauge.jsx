@@ -193,6 +193,13 @@ export default function S04_MempoolGauge() {
         <FeeTile label="NORMAL" value={mempool.feeMid} color={UI_COLORS.brand} loading={loading} />
         <FeeTile label="PRIORITY" value={mempool.feeHigh} color={UI_COLORS.negative} loading={loading} />
       </div>
+
+      {/* Data cadence badge */}
+      <div className="flex-shrink-0 pb-1">
+        <span className="font-mono text-white/20" style={{ fontSize: 'var(--fs-micro)' }}>
+          src: mempool.space · ~30s
+        </span>
+      </div>
     </div>
   );
 }
