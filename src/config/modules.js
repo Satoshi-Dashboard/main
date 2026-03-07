@@ -4,6 +4,7 @@ import S03_MultiCurrencyBoard from '../components/sections/S03_MultiCurrencyBoar
 import S04_MempoolGauge from '../components/sections/S04_MempoolGauge';
 import S05_LongTermTrend from '../components/sections/S05_LongTermTrend';
 import S08_NodesMap from '../components/sections/S08_NodesMap';
+import S08b_LightningNodesMap from '../components/sections/S08b_LightningNodesMap';
 import S09_LightningNetwork from '../components/sections/S09_LightningNetwork';
 import S09b_StablecoinPegHealth from '../components/sections/S09b_StablecoinPegHealth';
 import S10_FearGreedIndex from '../components/sections/S10_FearGreedIndex';
@@ -34,6 +35,7 @@ const MODULE_DEFS = [
   { slugBase: 'mempool-gauge', title: 'Mempool Gauge', component: S04_MempoolGauge },
   { slugBase: 'long-term-trend', title: 'Long-Term Trend', component: S05_LongTermTrend },
   { slugBase: 'nodes-map', title: 'Nodes Map', component: S08_NodesMap },
+  { slugBase: 'lightning-nodes-map', title: 'Lightning Nodes Map', component: S08b_LightningNodesMap },
   { slugBase: 'lightning-network', title: 'Lightning Network', component: S09_LightningNetwork },
   { slugBase: 'stablecoin-peg', title: 'Stablecoin Peg Health', component: S09b_StablecoinPegHealth },
   { slugBase: 'fear-greed', title: 'Fear & Greed', component: S10_FearGreedIndex },

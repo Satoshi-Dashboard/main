@@ -197,7 +197,7 @@ export default function S02_PriceChart() {
               <XAxis
                 dataKey="date"
                 ticks={xTicks}
-                tick={{ fill: '#555', fontSize: isPhone ? 9 : 11, fontFamily: 'JetBrains Mono, monospace' }}
+                tick={{ fill: '#555', fontSize: 11, fontFamily: 'JetBrains Mono, monospace' }}
                 axisLine={false}
                 tickLine={false}
                 height={isPhone ? 24 : 28}
@@ -205,7 +205,7 @@ export default function S02_PriceChart() {
               <YAxis
                 domain={[yMin, yMax]}
                 tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
-                tick={{ fill: '#555', fontSize: isPhone ? 9 : 11, fontFamily: 'JetBrains Mono, monospace' }}
+                tick={{ fill: '#555', fontSize: 11, fontFamily: 'JetBrains Mono, monospace' }}
                 axisLine={false}
                 tickLine={false}
                 width={isPhone ? 38 : 48}

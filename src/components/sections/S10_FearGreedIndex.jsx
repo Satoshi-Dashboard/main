@@ -133,8 +133,10 @@ export default function S10_FearGreedIndex() {
 
     const load = async () => {
       try {
-        const res = await fetch('https://api.alternative.me/fng/?limit=31');
-        const json = await res.json();
+        const res = await fetch('/api/public/fear-greed?limit=31', { cache: 'no-store' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const payload = await res.json();
+        const json = payload?.data || payload;
         if (!active || !Array.isArray(json?.data)) return;
         const e = json.data;
         const value = Number(e[0]?.value);

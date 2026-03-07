@@ -1,15 +1,13 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { cacheGetJson, cacheSetJson, withCacheLock } from './runtimeCache.js';
+import { getBitinfochartsHtmlPayload } from './bitinfochartsShared.js';
 
-const SOURCE_URL = 'https://bitinfocharts.com/top-100-richest-bitcoin-addresses.html';
 const SOURCE_NAME = 'bitinfocharts.com';
 const CACHE_FILE = path.resolve(process.cwd(), 'btc_addresses_richer_cache.json');
-const FETCH_TIMEOUT_MS = 15_000;
-const NEXT_UPDATE_MS = 10 * 60 * 1000;
 const SHARED_CACHE_KEY = 's14-addresses-richer';
 const SHARED_LOCK_KEY = 's14-addresses-richer-refresh';
-const SHARED_CACHE_TTL_SECONDS = 10 * 60;
+const SHARED_CACHE_TTL_SECONDS = 30 * 60;
 
 let memoryCache = null;
 
@@ -149,29 +147,6 @@ function toJs(payload) {
   return lines.join('\n');
 }
 
-async function fetchHtml() {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-
-  try {
-    const response = await fetch(SOURCE_URL, {
-      signal: controller.signal,
-      headers: {
-        Accept: 'text/html',
-        'User-Agent': 'Mozilla/5.0 (compatible; SatoshiDashboardBot/1.0)',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`BitInfoCharts request failed with HTTP ${response.status}`);
-    }
-
-    return await response.text();
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
 async function readCacheFile() {
   try {
     const text = await readFile(CACHE_FILE, 'utf8');
@@ -191,11 +166,11 @@ async function writeCacheFile(payload) {
 }
 
 export async function updateBtcAddressesRicherCache() {
-  const html = await fetchHtml();
+  const sourcePayload = await getBitinfochartsHtmlPayload();
+  const html = sourcePayload.html;
   const richerThan = parseAddressesRicherTable(html);
-  const updatedAt = parseFooterTimestamp(html);
-  const updatedDate = parseUtcTimestamp(updatedAt);
-  const nextUpdateAt = formatUtcTimestamp(new Date(updatedDate.getTime() + NEXT_UPDATE_MS));
+  const updatedAt = sourcePayload.updatedAt || parseFooterTimestamp(html);
+  const nextUpdateAt = sourcePayload.nextUpdateAt || formatUtcTimestamp(new Date(parseUtcTimestamp(updatedAt).getTime() + (30 * 60 * 1000)));
 
   const payload = {
     source: SOURCE_NAME,

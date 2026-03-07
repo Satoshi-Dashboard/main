@@ -19,6 +19,15 @@ Apply these rules when editing anything under:
 4. Keep relative API paths used by frontend (`/api/...`).
 5. Keep serverless compatibility (Vercel-first runtime behavior).
 
+## Module index preflight (mandatory)
+
+Before applying any backend/API change that references modules by number, slug, title, route behavior, or module-specific data:
+
+1. Re-read `src/config/modules.js` and confirm the current `code <-> slug <-> title` mapping.
+2. Do not trust prior chat memory for module identity/order; always use current registry as source of truth.
+3. If touching frontend calls to `/api/*` for a specific module, verify that module slug/code still match the intended target.
+4. In final verification, re-check that no unintended module reindexing happened.
+
 ## Architecture baseline (current)
 
 - API route definitions live in `server/app.js`.
@@ -43,6 +52,36 @@ Apply these rules when editing anything under:
 3. Use `withCacheLock(...)` for expensive refresh paths.
 4. Use namespaced cache keys via `server/runtimeCache.js`.
 5. If KV is unavailable, local fallback must still work.
+
+## Provider-aware refresh budget policy (mandatory)
+
+This is a strict global rule for every external API integration (new or existing):
+
+1. One upstream refresh window, many client readers
+   - Public traffic must read cached payloads.
+   - 1000 concurrent users must not trigger 1000 upstream calls.
+   - Refresh attempts must be single-flight via cache lock + shared cache whenever available.
+
+2. Always define per-provider budget profile
+   - `hard_daily_limit` and `hard_minute_limit` when known.
+   - `safe_daily_budget` and `safe_minute_budget` below hard limits (mandatory safety margin).
+   - `min_interval_ms` derived from safe daily budget (or stricter by provider cadence).
+
+3. Respect provider freshness signals
+   - If provider returns cache/freshness timestamps (`until`, `next_update`, etc.), do not re-request before that point.
+   - Effective next refresh = max(local safe interval, provider freshness boundary).
+
+4. Throttle behavior under pressure
+   - If budget window is exhausted, return last valid cached payload and move next update forward.
+   - Do not fail hard if a valid stale payload exists.
+
+5. Endpoint contract stability
+   - Keep existing response fields.
+   - New operational metadata can be additive only (e.g., source provider, fallback flag, refresh limits).
+
+6. UX-facing refresh messaging
+   - Surface concise refresh ETA in frontend (`min` / `h`), not only raw timestamps.
+   - Keep warning/disclaimer text discreet and semantically clear.
 
 ## Performance and reliability
 

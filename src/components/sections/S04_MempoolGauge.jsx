@@ -108,11 +108,12 @@ export default function S04_MempoolGauge() {
     let active = true;
     const load = async () => {
       try {
-        const [mempoolRes, feesRes] = await Promise.all([
-          fetch('https://mempool.space/api/mempool'),
-          fetch('https://mempool.space/api/v1/fees/recommended'),
-        ]);
-        const [mem, fees] = await Promise.all([mempoolRes.json(), feesRes.json()]);
+        const response = await fetch('/api/public/mempool/overview', { cache: 'no-store' });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const payload = await response.json();
+        const mem = payload?.data?.mempool || {};
+        const fees = payload?.data?.fees || {};
+
         if (!active) return;
         setMempool((prev) => ({
           ...prev,

@@ -63,7 +63,7 @@ export default function UniqueVisitorsCounter({ compact = false }) {
   if (compact) {
     return (
       <div className="bg-gray-800/40 rounded p-3 border border-[#F7931A]/30 text-center">
-        <div className="mb-1 flex items-center justify-center gap-1 text-[10px] uppercase tracking-widest text-[#f4be7f]">
+        <div className="mb-1 flex items-center justify-center gap-1 text-[11px] uppercase tracking-widest text-[#f4be7f]">
           <RefreshCw size={11} className="animate-spin text-[#F7931A]" />
           Unique Visits
         </div>
@@ -78,7 +78,7 @@ export default function UniqueVisitorsCounter({ compact = false }) {
     <div className="rounded-lg border border-[#F7931A]/35 bg-gradient-to-br from-[#F7931A]/12 to-[#F7931A]/5 p-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <div className="text-[10px] uppercase tracking-[0.18em] text-[#f4be7f]">Unique Visitors</div>
+          <div className="text-[11px] uppercase tracking-[0.18em] text-[#f4be7f]">Unique Visitors</div>
           <div className="mt-1 font-mono text-2xl font-bold tabular-nums text-yellow-50">
             {isLoading ? '--' : formatVisitorCount(visitorCount)}
           </div>

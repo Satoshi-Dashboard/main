@@ -28,10 +28,10 @@ export default function S12_BTCvsGold() {
   useEffect(() => {
     (async () => {
       try {
-        const r = await fetch(
-          'https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=365&interval=daily'
-        );
-        const json = await r.json();
+        const r = await fetch('/api/public/coingecko/bitcoin-market-chart?days=365', { cache: 'no-store' });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const payload = await r.json();
+        const json = payload?.data || payload;
         const caps = json.market_caps;
         const merged = caps
           .filter((_, i) => i % 3 === 0)
@@ -87,12 +87,12 @@ export default function S12_BTCvsGold() {
               <XAxis
                 dataKey="date"
                 stroke="#333"
-                tick={{ fill: '#666', fontSize: 10 }}
+                tick={{ fill: '#666', fontSize: 11 }}
                 interval={Math.max(1, Math.floor(data.length / 12))}
               />
               <YAxis
                 stroke="#333"
-                tick={{ fill: '#666', fontSize: 10 }}
+                tick={{ fill: '#666', fontSize: 11 }}
                 tickFormatter={(v) => `${v}T`}
                 domain={[0, 'dataMax + 2']}
                 label={{
@@ -100,7 +100,7 @@ export default function S12_BTCvsGold() {
                   angle: -90,
                   position: 'insideLeft',
                   fill: '#555',
-                  fontSize: 10,
+                  fontSize: 11,
                   dx: -14,
                 }}
               />

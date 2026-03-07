@@ -83,24 +83,33 @@ Note: some component filenames keep legacy names and do not necessarily match ge
 Currently wired live/external data modules:
 
 - `S01` Bitcoin Overview: Binance/CoinGecko spot + mempool.space + Alternative.me
-- `S02` Price Chart: Binance spot/history via `priceApi`
-- `S03` Multi-Currency: `/api/btc/rates` backend cache (fallback Binance direct) + Natural Earth GeoJSON
-- `S04` Mempool Gauge: mempool.space REST
-- `S05` Long-Term Trend: mempool.space REST + WebSocket
-- `S06` Nodes Map: `/api/bitnodes/cache` + Natural Earth countries GeoJSON
+- `S02` Price Chart: `/api/public/binance/btc-history` (cache-first Binance daily history)
+- `S03` Multi-Currency: `/api/s03/multi-currency` Investing single-currency-crosses (USD) scrape + BTC anchor from `/api/btc/rates` + `/api/public/geo/land`
+- `S04` Mempool Gauge: `/api/public/mempool/overview`
+- `S05` Long-Term Trend: `/api/public/mempool/live` (cache-first polling snapshot)
+- `S06` Nodes Map: `/api/bitnodes/cache` + `/api/public/geo/countries` (Bitnodes primary, scrape fallback)
 - `S07` Lightning Network: spot feed via `priceApi`
-- `S08` Stablecoin Peg Health: DeFiLlama stablecoins API
-- `S09` Fear & Greed: Alternative.me index API
+- `S08` Stablecoin Peg Health: CoinGecko stablecoins market API
+- `S09` Fear & Greed: `/api/public/fear-greed`
 - `S10` Address Distribution: `/api/s10/btc-distribution`
 - `S11` Wealth Pyramid: `/api/s14/addresses-richer`
-- `S13` BTC vs Gold: CoinGecko market chart
-- `S15` Price Performance: CoinGecko spot endpoint
-- `S19` Big Mac Sats Tracker: Alternative.me + Binance + Economist CSV
-- `S21` Big Mac Index: CoinGecko spot endpoint
+- `S13` Global Assets: `/api/s13/global-assets` Newhedge global asset values scrape
+- `S14` BTC vs Gold: `/api/public/coingecko/bitcoin-market-chart`
+- `S15` Price Performance: `/api/btc/rates`
+- `S19` Big Mac Sats Tracker: `/api/public/s21/big-mac-sats-data` (BTC spot cache + Binance history + Economist CSV)
+- `S21` Big Mac Index: `/api/btc/rates`
+
+Browser clients use internal `/api/*` routes for upstream reads so provider request budgets are enforced server-side via shared cache + single-flight refresh.
 
 Other modules currently render from local/generated data in frontend code.
 
 ## API endpoints
+
+Global refresh governance:
+
+- External providers are accessed with cache-first single-flight refresh policy (many readers, minimal upstream calls).
+- Per-provider refresh windows must respect provider cadence and safe request budgets, not only hard limits.
+- Effective refresh time uses the stricter boundary between local safe interval and provider freshness window.
 
 ### BTC rates
 
@@ -108,11 +117,64 @@ Other modules currently render from local/generated data in frontend code.
 - `GET /api/btc/rates/:currency`
 - `GET /api/btc/refresh` (token-protectable)
 
+Behavior notes:
+
+- Near-live spot cadence (target): ~5 seconds per shared refresh window.
+- Spot source priority: Binance.com (`ticker/24hr`) -> CoinGecko fallback.
+- CoinGecko fallback is throttled with local safety interval to avoid over-requesting.
+- Fiat conversion source (Frankfurter) is cached separately with slower cadence (hours), then combined with fresh spot.
+
+### S03 multi-currency scraper
+
+- `GET /api/s03/multi-currency`
+- `GET /api/s03/multi-currency/status`
+- `GET /api/s03/multi-currency/refresh` (token-protectable)
+
+Behavior notes:
+
+- Scrapes Investing single-currency-crosses table (`/currencies/single-currency-crosses?currency=usd`) with a 30-second refresh window.
+- Uses BTC anchor from `/api/btc/rates` (Binance primary) for USD and combines it with Investing scraped USD quote pairs for non-USD conversions.
+- Applies cache-first single-flight refresh with stale fallback when upstream scrape fails.
+
+### S08 stablecoin peg cache
+
+- `GET /api/s08/stablecoins`
+- `GET /api/s08/stablecoins/live-prices`
+- `GET /api/s08/stablecoin/:id`
+
+Behavior notes:
+
+- Stablecoin metadata/list is cached from CoinGecko markets endpoint (stablecoins category) with cache-first single-flight and a strict 60s refresh window (1 upstream request/minute max).
+- Peg deviation uses `/api/s08/stablecoins/live-prices`, derived from the same shared CoinGecko cache window (no extra upstream endpoint hit).
+- Historical 14d series payload per coin id is sourced from CoinGecko `market_chart` and normalized to the existing `data.tokens` contract.
+- List payload keeps backward-compatible fields and adds richer CoinGecko metrics (rank, 24h range/change, volume, FDV, ATH/ATL, supplies, image, timestamps) when available.
+
+### S13 global assets snapshot
+
+- `GET /api/s13/global-assets`
+- `GET /api/s13/global-assets/status`
+- `GET /api/s13/global-assets/refresh` (token-protectable)
+
+Behavior notes:
+
+- Scrapes Newhedge global asset values page (`/bitcoin/global-asset-values`) and extracts the "Latest Global Asset Values snapshot" card.
+- Uses cache-first single-flight refresh with a strict 1-hour window (safe budget: 24 provider refreshes/day).
+- Returns additive operational metadata (`is_fallback`, `fallback_note`, `stale_age_ms`) when stale cache is served after transient scrape errors.
+
 ### Bitnodes cache
 
 - `GET /api/bitnodes/cache`
 - `GET /api/bitnodes/cache/status`
 - `GET /api/bitnodes/cache/refresh` (token-protectable)
+
+Behavior notes:
+
+- Primary source is Bitnodes snapshot API.
+- If Bitnodes API is unavailable/rate-limited, backend falls back to Bitnodes countries modal scraping (`/nodes/`).
+- Bitnodes scrape fallback enforces a minimum refresh interval of ~10 minutes.
+- Fallback response adds `source_provider`, `is_fallback`, and `fallback_note` fields.
+- Payload includes `data.network_breakdown` (Nodes, IPv4, IPv6, .onion, Full, Pruned with percentages).
+- Breakdown is computed from Bitnodes API snapshot when available; otherwise from Bitnodes `/nodes/` scrape summary.
 
 ### BTC distribution (BitInfoCharts)
 
@@ -121,6 +183,11 @@ Other modules currently render from local/generated data in frontend code.
 - `GET /api/s10/btc-distribution/status`
 - `GET /api/s10/btc-distribution/refresh` (token-protectable)
 
+Behavior notes:
+
+- Uses shared BitInfoCharts HTML source cache with 30-minute cadence.
+- Avoids duplicate upstream refreshes when S10 and S14 request the same source window.
+
 ### Addresses richer (BitInfoCharts)
 
 - `GET /api/s14/addresses-richer`
@@ -128,10 +195,26 @@ Other modules currently render from local/generated data in frontend code.
 - `GET /api/s14/addresses-richer/status`
 - `GET /api/s14/addresses-richer/refresh` (token-protectable)
 
+Behavior notes:
+
+- Shares the same 30-minute BitInfoCharts source-refresh window used by S10.
+
 ### Visitors
 
 - `GET /api/visitors/stats`
 - `GET /api/visitors/track`
+
+### Public shared feeds (cache-first)
+
+- `GET /api/public/mempool/overview`
+- `GET /api/public/mempool/live`
+- `GET /api/public/fear-greed?limit=7|31`
+- `GET /api/public/geo/countries`
+- `GET /api/public/geo/land`
+- `GET /api/public/lightning/world`
+- `GET /api/public/coingecko/bitcoin-market-chart?days=365`
+- `GET /api/public/binance/btc-history?days=7|30|90|365`
+- `GET /api/public/s21/big-mac-sats-data`
 
 ## Environment variables
 
@@ -175,6 +258,10 @@ Useful scripts:
 - fallback `/*` -> `index.html`
 
 This keeps serverless API and client-side routing compatible in one deployment.
+
+Function runtime region:
+
+- `api/index.js` is pinned to Vercel region `fra1` in `vercel.json` to keep Binance-backed server-side calls outside US regions.
 
 ## Agent policy files
 

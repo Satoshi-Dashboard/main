@@ -127,13 +127,6 @@ const RINGS = [
   { price: 100000,  label: '$100K' },
 ];
 
-// Halving arm labels
-const HALVING_LABELS = HALVINGS_Y.slice(0, 4).map((hy, i) => {
-  const angle = 0 * 2 * Math.PI - Math.PI / 2; // t=0 means halving → top
-  const r = priceToRadius(interpLogPrice(hy));
-  return { year: Math.round(hy), r, label: `Halving ${i + 1}` };
-});
-
 export default function S18_CycleSpiral() {
   const lastDot = DOTS[DOTS.length - 1];
 

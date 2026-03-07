@@ -179,7 +179,7 @@ export default function S20_StockToFlow() {
           <path d={modelPath} fill="none" stroke="#00cc66" strokeWidth={2.5} opacity={0.85} />
 
           {/* Scatter dots */}
-          {RAW.map(([year, sf, price, mths], i) => {
+          {RAW.map(([, sf, price, mths], i) => {
             const x = xScale(sf);
             const y = yScale(price);
             if (x < ML || x > ML + CW || y < MT || y > MT + CH) return null;

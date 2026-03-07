@@ -157,6 +157,12 @@ export default function S11_AddressDistribution() {
             Address Distribution
           </h1>
           <div className="text-right font-mono text-[11px] tracking-wide text-[#7c7c7c]">
+            <div>
+              src:{' '}
+              <a href="https://bitinfocharts.com" target="_blank" rel="noreferrer" style={{ color: 'var(--btc-orange)', textDecoration: 'none' }}>
+                BitInfoCharts
+              </a>
+            </div>
             <div>Auto update: 30m</div>
             {meta.updatedAtLocal ? <div>Last: {meta.updatedAtLocal}</div> : null}
           </div>

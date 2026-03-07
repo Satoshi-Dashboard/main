@@ -78,7 +78,7 @@ export default function S16_MayerMultiple() {
             <XAxis
               dataKey="date"
               stroke="#2a2a2a"
-              tick={{ fill: '#555', fontSize: 9 }}
+              tick={{ fill: '#555', fontSize: 11 }}
               interval={Math.floor(DATA.length / 10)}
               angle={-30}
               textAnchor="end"
@@ -88,25 +88,25 @@ export default function S16_MayerMultiple() {
             <YAxis
               yAxisId="mm"
               stroke="#2a2a2a"
-              tick={{ fill: '#555', fontSize: 9 }}
+              tick={{ fill: '#555', fontSize: 11 }}
               domain={[0, 3]}
               ticks={[0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0]}
               tickFormatter={(v) => v.toFixed(1)}
-              label={{ value: 'Mayer Multiple', angle: -90, position: 'insideLeft', fill: '#444', fontSize: 9, dx: -2 }}
+              label={{ value: 'Mayer Multiple', angle: -90, position: 'insideLeft', fill: '#444', fontSize: 11, dx: -2 }}
             />
             {/* Right axis — BTC Price */}
             <YAxis
               yAxisId="price"
               orientation="right"
               stroke="#2a2a2a"
-              tick={{ fill: '#555', fontSize: 9 }}
+              tick={{ fill: '#555', fontSize: 11 }}
               tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
               width={44}
             />
             {/* Fair-value reference line at MM = 1 */}
             <ReferenceLine yAxisId="mm" y={1.0} stroke="#00D897" strokeDasharray="4 4" strokeWidth={1} />
             <Tooltip
-              contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #444', fontSize: 10 }}
+              contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #444', fontSize: 11 }}
               formatter={(v, name) => [
                 name === 'mm' ? v.toFixed(3) : `$${Number(v).toLocaleString()}`,
                 name === 'mm' ? 'MM' : 'Price',

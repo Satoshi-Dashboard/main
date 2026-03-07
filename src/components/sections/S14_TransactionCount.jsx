@@ -120,7 +120,7 @@ export default function S14_TransactionCount() {
         )}
       </div>
 
-      <div className="flex-none px-10 pb-1 text-[10px] font-mono tracking-wider text-[#5c5c5c]">
+      <div className="flex-none px-10 pb-1 text-[11px] font-mono tracking-wider text-[#5c5c5c]">
         {updatedAt ? `Source updated: ${updatedAt} · ` : ''}Auto update: 60s
       </div>
 
@@ -148,7 +148,7 @@ export default function S14_TransactionCount() {
               <XAxis
                 dataKey="label"
                 stroke="#2a2a2a"
-                tick={{ fill: '#555', fontSize: 10 }}
+                tick={{ fill: '#555', fontSize: 11 }}
                 interval={Math.max(1, Math.floor(displayData.length / 14))}
                 angle={-30}
                 textAnchor="end"
@@ -156,14 +156,14 @@ export default function S14_TransactionCount() {
               />
               <YAxis
                 stroke="#2a2a2a"
-                tick={{ fill: '#555', fontSize: 10 }}
+                tick={{ fill: '#555', fontSize: 11 }}
                 tickFormatter={formatYAxis}
                 label={{
                   value: 'Bitcoin addresses richer than each USD threshold',
                   angle: -90,
                   position: 'insideLeft',
                   fill: '#444',
-                  fontSize: 10,
+                  fontSize: 11,
                   dx: 14,
                 }}
                 width={68}

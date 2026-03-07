@@ -194,3 +194,32 @@ body {
 .player-shell [id^="card-"] > .dashboard-card-content {
   padding: 0 !important;
 }
+
+.scrollbar-hidden-mobile {
+  -ms-overflow-style: auto;
+  scrollbar-width: auto;
+}
+
+@media (max-width: 1023px) {
+  .scrollbar-hidden-mobile {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hidden-mobile::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+  }
+
+  .scrollbar-hidden-mobile * {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hidden-mobile *::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;
+  }
+}

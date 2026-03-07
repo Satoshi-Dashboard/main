@@ -1,4 +1,11 @@
 {
+  "functions": {
+    "api/index.js": {
+      "regions": [
+        "fra1"
+      ]
+    }
+  },
   "rewrites": [
     {
       "source": "/api/(.*)",

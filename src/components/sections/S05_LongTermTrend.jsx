@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 const UI_COLORS = {
   brand: 'var(--accent-bitcoin)',
@@ -15,6 +15,24 @@ const FEE_SCALE = [
 
 function feeColor(satVb) {
   return FEE_SCALE.find((step) => satVb < step.max)?.color ?? '#FF8C00';
+}
+
+function formatMetaTimestamp(value) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (!Number.isFinite(date.getTime())) return 'N/A';
+
+  const dateStr = date.toLocaleDateString('en-US', {
+    month: '2-digit',
+    day: '2-digit',
+    year: 'numeric',
+  });
+  const timeStr = date.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+
+  return `${dateStr}, ${timeStr}`;
 }
 
 /* ─── Binary treemap (recursive halving) ──────────────────── */
@@ -72,10 +90,7 @@ const BASE_SIDE = 170;
 
 function BlockCanvas({ block, selected, onClick, onDoubleClick, side }) {
   const ref  = useRef(null);
-  const txs  = useMemo(
-    () => genTxs(block.extras?.feeRange, block.tx_count, block.size),
-    [block.height], // eslint-disable-line react-hooks/exhaustive-deps
-  );
+  const txs  = genTxs(block.extras?.feeRange, block.tx_count, block.size);
   useEffect(() => { drawTreemap(ref.current, txs); }, [txs, side]);
 
   const med  = block.extras?.medianFee;
@@ -98,14 +113,14 @@ function BlockCanvas({ block, selected, onClick, onDoubleClick, side }) {
       {/* height */}
       <div
         className="absolute top-1 left-1 bg-black/75 rounded px-1.5 py-px font-mono text-white/80"
-        style={{ fontSize: Math.max(9, Math.round(10 * sc)) }}
+        style={{ fontSize: Math.max(11, Math.round(10 * sc)) }}
       >
         #{block.height}
       </div>
       {/* pool */}
       <div
         className="absolute top-1 right-1 bg-black/70 rounded px-1 py-px font-mono text-white/40 truncate"
-        style={{ fontSize: Math.max(8, Math.round(8 * sc)), maxWidth: Math.round(68 * sc) }}
+        style={{ fontSize: Math.max(11, Math.round(8 * sc)), maxWidth: Math.round(68 * sc) }}
       >
         {pool}
       </div>
@@ -116,7 +131,7 @@ function BlockCanvas({ block, selected, onClick, onDoubleClick, side }) {
           style={{
             background: 'rgba(0,0,0,0.75)',
             color: feeColor(med),
-            fontSize: Math.max(9, Math.round(10 * sc)),
+            fontSize: Math.max(11, Math.round(10 * sc)),
           }}
         >
           {med.toFixed(1)} s/vB
@@ -125,7 +140,7 @@ function BlockCanvas({ block, selected, onClick, onDoubleClick, side }) {
       {/* tx count */}
       <div
         className="absolute bottom-1 left-1 bg-black/70 rounded px-1 py-px font-mono text-white/35"
-        style={{ fontSize: Math.max(8, Math.round(8 * sc)) }}
+        style={{ fontSize: Math.max(11, Math.round(8 * sc)) }}
       >
         {block.tx_count?.toLocaleString()} tx
       </div>
@@ -149,7 +164,7 @@ function MempoolChip({ block, idx, chipW }) {
       className="flex-shrink-0 flex flex-col items-center gap-1 rounded border border-[#252525] cursor-pointer"
       style={{ width: chipW, paddingTop: Math.round(6 * sc), paddingBottom: Math.round(8 * sc), paddingLeft: Math.round(8 * sc), paddingRight: Math.round(8 * sc) }}
     >
-      <span className="font-mono text-white/30" style={{ fontSize: Math.max(8, Math.round(9 * sc)) }}>
+      <span className="font-mono text-white/30" style={{ fontSize: Math.max(11, Math.round(9 * sc)) }}>
         {idx === 0 ? 'NEXT' : `+${idx}`}
       </span>
       {/* fill bar */}
@@ -159,10 +174,10 @@ function MempoolChip({ block, idx, chipW }) {
           style={{ height: `${pct}%`, background: col, opacity: 0.75 }}
         />
       </div>
-      <span className="font-mono font-bold" style={{ color: col, fontSize: Math.max(8, Math.round(9 * sc)) }}>
+      <span className="font-mono font-bold" style={{ color: col, fontSize: Math.max(11, Math.round(9 * sc)) }}>
         {lo}–{hi}
       </span>
-      <span className="font-mono text-white/30" style={{ fontSize: Math.max(7, Math.round(8 * sc)) }}>
+      <span className="font-mono text-white/30" style={{ fontSize: Math.max(11, Math.round(8 * sc)) }}>
         {(block.nTx ?? 0).toLocaleString()} tx
       </span>
     </div>
@@ -196,8 +211,8 @@ function DetailPanel({ block, onClose, className = '' }) {
       <div className="border-t border-[#1c1c1c]" />
       {rows.map(([label, val]) => (
         <div key={label} className="flex justify-between items-baseline gap-2">
-          <span className="text-[9px] font-mono text-white/30 uppercase tracking-wide flex-shrink-0">{label}</span>
-          <span className="text-[10px] font-mono text-white text-right truncate">{val}</span>
+          <span className="text-[11px] font-mono text-white/30 uppercase tracking-wide flex-shrink-0">{label}</span>
+          <span className="text-[11px] font-mono text-white text-right truncate">{val}</span>
         </div>
       ))}
     </div>
@@ -211,10 +226,10 @@ function FeeLegend() {
       {FEE_SCALE.map(({ color, label }) => (
         <div key={label} className="flex items-center gap-1">
           <div className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: color }} />
-          <span className="text-[10px] font-mono text-white/30">{label}</span>
+          <span className="text-[11px] font-mono text-white/30">{label}</span>
         </div>
       ))}
-      <span className="text-[10px] font-mono text-white/20">s/vB</span>
+      <span className="text-[11px] font-mono text-white/20">s/vB</span>
     </div>
   );
 }
@@ -228,8 +243,26 @@ export default function S05_LongTermTrend() {
   const [wsStatus,      setWsStatus]      = useState('connecting');
   const [side,          setSide]          = useState(BASE_SIDE);
   const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth);
-  const wsRef        = useRef(null);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState(() => new Date());
+  const [showDesktopOverlay, setShowDesktopOverlay] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia('(min-width: 1024px)').matches;
+  });
   const scrollRef    = useRef(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const media = window.matchMedia('(min-width: 1024px)');
+    const onChange = (event) => setShowDesktopOverlay(event.matches);
+
+    if (typeof media.addEventListener === 'function') {
+      media.addEventListener('change', onChange);
+      return () => media.removeEventListener('change', onChange);
+    }
+
+    media.addListener(onChange);
+    return () => media.removeListener(onChange);
+  }, []);
 
   useEffect(() => {
     const onResize = () => setViewportWidth(window.innerWidth);
@@ -255,51 +288,44 @@ export default function S05_LongTermTrend() {
     return () => obs.disconnect();
   }, []);
 
-  /* Initial REST load */
+  /* Polling snapshot from backend cache */
   useEffect(() => {
-    fetch('https://mempool.space/api/v1/blocks')
-      .then(r => r.json())
-      .then(data => setBlocks(data.slice(0, 8)))
-      .catch(() => {});
-    fetch('https://mempool.space/api/v1/fees/recommended')
-      .then(r => r.json())
-      .then(d => setFees({ fastest: d.fastestFee, halfHour: d.halfHourFee, economy: d.economyFee }))
-      .catch(() => {});
-  }, []);
+    let active = true;
 
-  /* WebSocket with auto-reconnect */
-  useEffect(() => {
-    let alive = true;
-    function connect() {
-      const ws = new WebSocket('wss://mempool.space/api/v1/ws');
-      wsRef.current = ws;
+    const load = async () => {
+      try {
+        const response = await fetch('/api/public/mempool/live', { cache: 'no-store' });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const payload = await response.json();
+        if (!active) return;
 
-      ws.onopen = () => {
-        if (!alive) return;
+        const live = payload?.data || {};
+        const blocksData = Array.isArray(live.blocks) ? live.blocks : [];
+        const mempoolQueue = Array.isArray(live.mempool_blocks) ? live.mempool_blocks : [];
+        const feePayload = live.fees || {};
+
+        setBlocks(blocksData.slice(0, 8));
+        setMempoolBlocks(mempoolQueue.slice(0, 8));
+        setFees({
+          fastest: Number(feePayload.fastestFee) || null,
+          halfHour: Number(feePayload.halfHourFee) || null,
+          economy: Number(feePayload.economyFee) || null,
+        });
+        setLastUpdatedAt(payload?.updated_at || new Date());
         setWsStatus('connected');
-        ws.send(JSON.stringify({ action: 'want', data: ['blocks', 'mempool-blocks', 'stats'] }));
-      };
+      } catch {
+        if (!active) return;
+        setWsStatus((prev) => (prev === 'connected' ? 'reconnecting' : 'connecting'));
+      }
+    };
 
-      ws.onmessage = ({ data }) => {
-        if (!alive) return;
-        try {
-          const msg = JSON.parse(data);
-          if (msg.block)              setBlocks(prev => [msg.block, ...prev].slice(0, 8));
-          if (msg['mempool-blocks'])  setMempoolBlocks(msg['mempool-blocks'].slice(0, 8));
-          const f = msg.fees ?? msg.stats?.fees;
-          if (f) setFees({ fastest: f.fastestFee, halfHour: f.halfHourFee, economy: f.economyFee });
-        } catch { /* ignore */ }
-      };
+    load();
+    const timer = setInterval(load, 10_000);
 
-      ws.onclose = () => {
-        if (!alive) return;
-        setWsStatus('reconnecting');
-        setTimeout(connect, 5_000);
-      };
-      ws.onerror = () => ws.close();
-    }
-    connect();
-    return () => { alive = false; wsRef.current?.close(); };
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
   }, []);
 
   const toggle = useCallback(
@@ -342,9 +368,9 @@ export default function S05_LongTermTrend() {
               { label: 'FAST', val: fees.fastest,  col: '#FF8C00' },
             ].map(({ label, val, col }) => (
               <div key={label} className="flex items-center gap-0.5">
-                <span className="text-[10px] text-white/30 mr-0.5">{label}</span>
+                <span className="text-[11px] text-white/30 mr-0.5">{label}</span>
                 <span className="text-[13px] font-bold" style={{ color: col }}>{val}</span>
-                <span className="text-[10px] text-white/20"> s/vB</span>
+                <span className="text-[11px] text-white/20"> s/vB</span>
               </div>
             ))}
           </div>
@@ -366,7 +392,7 @@ export default function S05_LongTermTrend() {
         <div className="relative flex min-w-0 flex-1 flex-col gap-2">
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <span className="text-[11px] uppercase tracking-[0.2em] text-white/20">Confirmed Blocks</span>
-            <span className="text-[9px] font-mono text-white/15 border border-white/10 rounded px-1.5 py-px">
+            <span className="text-[11px] font-mono text-white/15 border border-white/10 rounded px-1.5 py-px">
               ↗ dbl-click → mempool.space
             </span>
           </div>
@@ -413,7 +439,7 @@ export default function S05_LongTermTrend() {
       </div>
 
       {/* ── Mempool queue ── */}
-      <div className="flex-shrink-0 border-t border-[#1c1c1c] px-2 pt-2 pb-3 sm:px-3">
+      <div className="relative flex-shrink-0 border-t border-[#1c1c1c] px-2 pt-2 pb-3 sm:px-3">
         <span className="text-[11px] uppercase tracking-[0.2em] text-white/20 block mb-2">
           Mempool Queue
         </span>
@@ -425,6 +451,21 @@ export default function S05_LongTermTrend() {
             : mempoolBlocks.map((b, i) => <MempoolChip key={i} block={b} idx={i} chipW={chipW} />)
           }
         </div>
+
+        {showDesktopOverlay && (
+          <div className="mt-2 flex justify-end">
+            <div className="text-right font-mono text-[11px] tracking-wide text-[#7c7c7c]">
+            <div>
+              <span>src: </span>
+              <a href="https://mempool.space" target="_blank" rel="noreferrer" style={{ color: 'var(--accent-bitcoin)', textDecoration: 'none' }}>
+                mempool.space
+              </a>
+            </div>
+            <div>Auto update: 10s</div>
+            <div>Last: {formatMetaTimestamp(lastUpdatedAt)}</div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

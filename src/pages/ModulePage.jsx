@@ -1,9 +1,72 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Maximize2, Minimize2, Pause, Play, SkipBack, SkipForward } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { MODULES, MODULES_BY_SLUG } from '../config/modules';
+import { getModuleDataMeta } from '../config/moduleDataMeta';
 
 const AUTOPLAY_MS = 9000;
+
+function getCadenceLabel(meta) {
+  if (meta?.refreshLabel) return meta.refreshLabel;
+  if (meta?.refreshRangeLabel) return meta.refreshRangeLabel;
+
+  const refreshSeconds = Number(meta?.refreshSeconds);
+  if (Number.isFinite(refreshSeconds) && refreshSeconds > 0) {
+    if (refreshSeconds < 60) return `${Math.round(refreshSeconds)}s`;
+    return `${Math.ceil(refreshSeconds / 60)}m`;
+  }
+
+  const refreshMinutes = Number(meta?.refreshMinutes);
+  if (!Number.isFinite(refreshMinutes) || refreshMinutes <= 0) {
+    return 'on demand';
+  }
+  if (refreshMinutes < 60) return `${Math.ceil(refreshMinutes)}m`;
+  return `${Math.ceil(refreshMinutes / 60)}h`;
+}
+
+function renderProviderLinks(providers) {
+  return (providers || []).map((provider, index) => (
+    <span key={`${provider.name}-${provider.url}`}>
+      <a
+        href={provider.url}
+        target="_blank"
+        rel="noreferrer"
+        className="text-[#F7931A] underline-offset-2 hover:underline"
+      >
+        {provider.name}
+      </a>
+      {index < providers.length - 1 ? <span className="text-white/45"> + </span> : null}
+    </span>
+  ));
+}
+
+function formatMetaTimestamp(value) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (!Number.isFinite(date.getTime())) return 'N/A';
+
+  const dateStr = date.toLocaleDateString('en-US', {
+    month: '2-digit',
+    day: '2-digit',
+    year: 'numeric',
+  });
+  const timeStr = date.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+
+  return `${dateStr}, ${timeStr}`;
+}
+
+function getCadenceMs(meta) {
+  const seconds = Number(meta?.refreshSeconds);
+  if (Number.isFinite(seconds) && seconds > 0) return Math.round(seconds * 1000);
+
+  const minutes = Number(meta?.refreshMinutes);
+  if (Number.isFinite(minutes) && minutes > 0) return Math.round(minutes * 60 * 1000);
+
+  return null;
+}
 
 const getWrappedIndex = (index) => {
   const total = MODULES.length;
@@ -56,6 +119,77 @@ export default function ModulePage() {
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [, setMetaTick] = useState(0);
+  const [isResponsiveViewport, setIsResponsiveViewport] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia('(max-width: 1023px)').matches;
+  });
+  const contentScrollRef = useRef(null);
+  const metaLastAtRef = useRef(new Date());
+
+  const moduleMeta = useMemo(() => getModuleDataMeta(module), [module]);
+  const cadenceLabel = useMemo(() => getCadenceLabel(moduleMeta), [moduleMeta]);
+  const showSharedStrip = moduleMeta?.showSharedStrip !== false;
+  const showSharedStripOnResponsive = moduleMeta?.showSharedStripOnResponsive !== false;
+  const cadenceMs = useMemo(() => getCadenceMs(moduleMeta), [moduleMeta]);
+  const hideSharedMetaForDesktopOverlay = Boolean(!isResponsiveViewport && moduleMeta?.desktopOverlayInModule);
+  const showSharedMeta = showSharedStrip
+    && !hideSharedMetaForDesktopOverlay
+    && (!isResponsiveViewport || showSharedStripOnResponsive);
+  const useAbsoluteSharedMetaCard = Boolean(moduleMeta?.sharedMetaAbsoluteCard);
+  const showAbsoluteMetaCard = showSharedMeta && useAbsoluteSharedMetaCard && !isResponsiveViewport;
+  const showTopMeta = showSharedMeta && !isResponsiveViewport && !useAbsoluteSharedMetaCard;
+  const showBottomMeta = showSharedMeta && isResponsiveViewport;
+  const metaLastAt = metaLastAtRef.current;
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const mobileMedia = window.matchMedia('(max-width: 1023px)');
+
+    const onMobile = (event) => setIsResponsiveViewport(event.matches);
+
+    if (typeof mobileMedia.addEventListener === 'function') {
+      mobileMedia.addEventListener('change', onMobile);
+      return () => {
+        mobileMedia.removeEventListener('change', onMobile);
+      };
+    }
+
+    mobileMedia.addListener(onMobile);
+    return () => {
+      mobileMedia.removeListener(onMobile);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isResponsiveViewport) return;
+
+    const resetScroll = () => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+      if (contentScrollRef.current) {
+        contentScrollRef.current.scrollTop = 0;
+      }
+    };
+
+    resetScroll();
+    requestAnimationFrame(resetScroll);
+  }, [slug, isResponsiveViewport]);
+
+  useEffect(() => {
+    metaLastAtRef.current = new Date();
+  }, [slug]);
+
+  useEffect(() => {
+    if (!showSharedMeta || !Number.isFinite(cadenceMs) || cadenceMs <= 0) return undefined;
+
+    const intervalMs = Math.max(1000, cadenceMs);
+    const timer = setInterval(() => {
+      metaLastAtRef.current = new Date();
+      setMetaTick((value) => value + 1);
+    }, intervalMs);
+    return () => clearInterval(timer);
+  }, [showSharedMeta, cadenceMs]);
 
   useEffect(() => {
     if (!MODULES_BY_SLUG[slug]) {
@@ -139,7 +273,7 @@ export default function ModulePage() {
         <div className="flex items-center gap-2 sm:gap-3">
           <div className="flex items-center gap-1.5 rounded-[3px] bg-white px-2 py-[4px]">
             <div className="h-[7px] w-[7px] animate-pulse rounded-full bg-green-500" />
-            <span className="text-[10px] font-black tracking-[0.18em] text-black">LIVE</span>
+            <span className="text-[11px] font-black tracking-[0.18em] text-black">LIVE</span>
           </div>
           <div className="hidden md:block">
             <LiveClock />
@@ -157,8 +291,51 @@ export default function ModulePage() {
 
       {/* ── MODULE CONTENT ── */}
       <div className="h-full w-full pt-14 pb-[68px] sm:pb-16 lg:pt-12 lg:pb-10">
-        <div className="h-full overflow-hidden">
-          <Component />
+        <div
+          ref={contentScrollRef}
+          className={`scrollbar-hidden-mobile relative flex h-full min-h-0 flex-col ${showBottomMeta ? 'overflow-y-auto' : 'overflow-hidden'} lg:overflow-hidden`}
+        >
+          {showAbsoluteMetaCard && (
+            <div className="pointer-events-none absolute right-2 top-2 z-30 sm:right-3 sm:top-3 lg:right-4 lg:top-3">
+              <div className="pointer-events-auto rounded-md border border-white/10 bg-[#0f0f0f]/88 px-3 py-2 text-right font-mono text-[11px] tracking-wide text-[#9a9a9a] shadow-[0_8px_28px_rgba(0,0,0,0.38)] backdrop-blur-sm sm:text-[12px]">
+                <div>
+                  <span>src: </span>
+                  {renderProviderLinks(moduleMeta.providers)}
+                </div>
+                <div>Auto update: {cadenceLabel}</div>
+                <div>Last: {formatMetaTimestamp(metaLastAt)}</div>
+              </div>
+            </div>
+          )}
+
+          {showTopMeta && (
+            <div className="flex flex-none justify-end px-2 py-1 sm:px-3 lg:px-4">
+              <div className="text-right font-mono text-[11px] tracking-wide text-[#7c7c7c]">
+                <div>
+                  <span>src: </span>
+                  {renderProviderLinks(moduleMeta.providers)}
+                </div>
+                <div>Auto update: {cadenceLabel}</div>
+                <div>Last: {formatMetaTimestamp(metaLastAt)}</div>
+              </div>
+            </div>
+          )}
+          <div className={`min-h-0 ${showBottomMeta ? 'min-h-full flex-none' : 'flex-1'}`}>
+            <Component />
+          </div>
+
+          {showBottomMeta && (
+            <div className="flex flex-none justify-end px-3 pb-24 pt-3 sm:px-4">
+              <div className="text-right font-mono text-[11px] tracking-wide text-[#7c7c7c]">
+                <div>
+                  <span>src: </span>
+                  {renderProviderLinks(moduleMeta.providers)}
+                </div>
+                <div>Auto update: {cadenceLabel}</div>
+                <div>Last: {formatMetaTimestamp(metaLastAt)}</div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

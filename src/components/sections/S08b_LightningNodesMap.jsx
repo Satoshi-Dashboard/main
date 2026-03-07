@@ -3,29 +3,37 @@ import { GeoJSON, MapContainer } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { fmt } from '../../utils/formatters';
 
-const CACHE_ENDPOINT = '/api/bitnodes/cache';
+const LIGHTNING_WORLD_ENDPOINT = '/api/public/lightning/world';
 const COUNTRIES_URL = '/api/public/geo/countries';
-const UNKNOWN_COUNTRY_LABEL = 'TOR Cyberspace';
+const UNKNOWN_COUNTRY_LABEL = 'Unknown region';
+const REFRESH_INTERVAL_MS = 60_000;
 
 const UI_COLORS = {
-  brand: 'var(--accent-bitcoin)',
+  lightning: '#3BA3FF',
+  lightningSoft: '#6CC0FF',
   warning: 'var(--accent-warning)',
-  textSecondary: 'var(--text-secondary)',
-  tor: '#A855F7',
-};
-
-const PROVIDER_LINKS = {
-  bitnodes: 'https://bitnodes.io',
-  bitnodes_scrape: 'https://bitnodes.io/nodes/',
 };
 
 const NODE_DENSITY_SCALE = [
-  { key: 'very-high', label: 'Very high', color: '#FF6A00', minNodes: 1001, legend: '> 1000' },
-  { key: 'high', label: 'High', color: '#FF8C1A', minNodes: 201, legend: '> 200' },
-  { key: 'mid', label: 'Mid', color: '#FFAA33', minNodes: 51, legend: '> 50' },
-  { key: 'low', label: 'Low', color: '#FFC266', minNodes: 11, legend: '> 10' },
-  { key: 'trace', label: 'Trace', color: '#FFD9A0', minNodes: 1, legend: '<= 10' },
+  { key: 'very-high', label: 'Very high', color: '#0A3D91', minNodes: 801, legend: '> 800' },
+  { key: 'high', label: 'High', color: '#145BB8', minNodes: 201, legend: '> 200' },
+  { key: 'mid', label: 'Mid', color: '#1E78D8', minNodes: 51, legend: '> 50' },
+  { key: 'low', label: 'Low', color: '#49A5EB', minNodes: 11, legend: '> 10' },
+  { key: 'trace', label: 'Trace', color: '#93CCF7', minNodes: 1, legend: '<= 10' },
 ];
+
+const COUNTRY_NAME_ALIASES = {
+  'united states': 'united states of america',
+  'russian federation': 'russia',
+  'korea the republic of': 'south korea',
+  'czechia': 'czech republic',
+  'n a': 'unknown',
+};
+
+const BTC_FORMATTER = new Intl.NumberFormat('en-US', {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2,
+});
 
 function getFeatureCountryCode(feature) {
   const code = feature?.properties?.ISO_A2 || feature?.properties?.iso_a2 || feature?.properties?.['ISO3166-1-Alpha-2'];
@@ -51,14 +59,6 @@ function normalizeCountryName(value) {
     .toLowerCase();
 }
 
-const COUNTRY_NAME_ALIASES = {
-  'united states': 'united states of america',
-  'russian federation': 'russia',
-  'korea the republic of': 'south korea',
-  'czechia': 'czech republic',
-  'n a': 'unknown',
-};
-
 function isUnknownCountryValue(value) {
   const normalized = String(value || '').trim().toLowerCase();
   return !normalized || normalized === 'n/a' || normalized === 'na' || normalized === 'unknown';
@@ -74,45 +74,16 @@ function getFillColor(count) {
   return step?.color || '#141414';
 }
 
-function getDensityLabel(count) {
-  const step = getDensityStepByCount(count);
-  return step?.label || 'No data';
+function formatBtcFromSats(value) {
+  const sats = Number(value);
+  if (!Number.isFinite(sats) || sats <= 0) return '0 BTC';
+  return `${BTC_FORMATTER.format(sats / 100_000_000)} BTC`;
 }
 
-function parseCountryCounts(payload) {
-  if (Array.isArray(payload?.country_counts)) {
-    return payload.country_counts
-      .map((row) => ({
-        country_code: String(row.country_code || '').toUpperCase(),
-        country_name: String(row.country_name || '').trim(),
-        nodes: Number(row.nodes) || 0,
-      }))
-      .filter((row) => (row.country_code || row.country_name) && row.nodes >= 0)
-      .sort((a, b) => b.nodes - a.nodes);
-  }
+function formatNextUpdateDelay(nextUpdateMs) {
+  if (!Number.isFinite(nextUpdateMs)) return 'N/A';
 
-  const sortedAsns = payload?.data?.sorted_asns;
-  if (!Array.isArray(sortedAsns)) return [];
-
-  const map = new Map();
-  sortedAsns.forEach((row) => {
-    if (!Array.isArray(row) || row.length < 4) return;
-    const code = String(row[0] || '').toUpperCase();
-    const count = Number(row[3]);
-    if (!code || !Number.isFinite(count) || count < 0) return;
-    map.set(code, (map.get(code) || 0) + count);
-  });
-
-  return [...map.entries()]
-    .map(([country_code, nodes]) => ({ country_code, country_name: '', nodes }))
-    .sort((a, b) => b.nodes - a.nodes);
-}
-
-function formatNextUpdateDelay(nextUpdateIso) {
-  const next = new Date(String(nextUpdateIso || ''));
-  if (!Number.isFinite(next.getTime())) return 'N/A';
-
-  const diffMs = next.getTime() - Date.now();
+  const diffMs = nextUpdateMs - Date.now();
   if (diffMs <= 0) return 'now';
 
   const minutes = Math.ceil(diffMs / 60_000);
@@ -122,24 +93,60 @@ function formatNextUpdateDelay(nextUpdateIso) {
   return `${hours} h`;
 }
 
-function formatPct(value) {
-  if (!Number.isFinite(Number(value))) return '0.00%';
-  return `${Number(value).toFixed(2)}%`;
+function parseLightningCountryCounts(payload) {
+  const nodes = payload?.nodes;
+  if (!Array.isArray(nodes)) return [];
+
+  const map = new Map();
+
+  nodes.forEach((row) => {
+    if (!Array.isArray(row)) return;
+
+    const capacity = Number(row[4]);
+    const channels = Number(row[5]);
+    const countryMeta = row[6];
+    const countryCodeRaw = String(row[7] || '').toUpperCase();
+    const countryCode = /^[A-Z]{2}$/.test(countryCodeRaw) ? countryCodeRaw : '';
+    const countryName = typeof countryMeta === 'string'
+      ? countryMeta.trim()
+      : (
+        String(countryMeta?.en || '').trim()
+        || String(countryMeta?.['pt-BR'] || '').trim()
+        || String(Object.values(countryMeta || {})[0] || '').trim()
+      );
+
+    const normalizedName = normalizeCountryName(countryName);
+    const key = countryCode || normalizedName || 'UNKNOWN';
+    const existing = map.get(key) || {
+      country_code: countryCode,
+      country_name: countryName,
+      nodes: 0,
+      channels: 0,
+      capacity: 0,
+    };
+
+    existing.country_code = existing.country_code || countryCode;
+    existing.country_name = existing.country_name || countryName;
+    existing.nodes += 1;
+    existing.channels += Number.isFinite(channels) && channels > 0 ? channels : 0;
+    existing.capacity += Number.isFinite(capacity) && capacity > 0 ? capacity : 0;
+
+    map.set(key, existing);
+  });
+
+  return [...map.values()].sort((a, b) => b.nodes - a.nodes);
 }
 
-function isTorCyberspaceRow(label) {
-  return String(label || '').toLowerCase().includes('tor cyberspace');
-}
-
-export default function S08_NodesMap() {
+export default function S08b_LightningNodesMap() {
   const [payload, setPayload] = useState(null);
   const [countriesGeo, setCountriesGeo] = useState(null);
-  const [cacheLoading, setCacheLoading] = useState(true);
+  const [apiLoading, setApiLoading] = useState(true);
   const [geoLoading, setGeoLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isBreakdownExpanded, setIsBreakdownExpanded] = useState(false);
   const [isMetaExpanded, setIsMetaExpanded] = useState(false);
   const [isDensityExpanded, setIsDensityExpanded] = useState(false);
+  const [nowTs, setNowTs] = useState(() => Date.now());
   const [isCompactViewport, setIsCompactViewport] = useState(() => {
     if (typeof window === 'undefined') return false;
     return window.matchMedia('(max-width: 1023px)').matches;
@@ -171,22 +178,27 @@ export default function S08_NodesMap() {
 
     const load = async () => {
       try {
-        const res = await fetch(CACHE_ENDPOINT, { cache: 'no-store' });
+        const res = await fetch(LIGHTNING_WORLD_ENDPOINT, { cache: 'no-store' });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const json = await res.json();
+        const payload = await res.json();
+        const json = payload?.data || payload;
         if (!active) return;
-        setPayload(json);
+        setPayload({
+          source_provider: payload?.source_provider || 'mempool.space',
+          fetched_at: payload?.updated_at ? new Date(payload.updated_at).getTime() : Date.now(),
+          data: json,
+        });
         setError(null);
       } catch {
         if (!active) return;
-        setError('Could not load local Bitnodes cache endpoint.');
+        setError('Could not load Lightning nodes world API.');
       } finally {
-        if (active) setCacheLoading(false);
+        if (active) setApiLoading(false);
       }
     };
 
     load();
-    const timer = setInterval(load, 60_000);
+    const timer = setInterval(load, REFRESH_INTERVAL_MS);
 
     return () => {
       active = false;
@@ -196,6 +208,7 @@ export default function S08_NodesMap() {
 
   useEffect(() => {
     let active = true;
+
     (async () => {
       try {
         const res = await fetch(COUNTRIES_URL, { cache: 'no-store' });
@@ -216,18 +229,17 @@ export default function S08_NodesMap() {
     };
   }, []);
 
-  const isPending = payload?.status === 'pending' || !payload?.data;
-  const isFallback = Boolean(payload?.is_fallback);
-  const nextUpdateDelay = useMemo(() => formatNextUpdateDelay(payload?.next_update), [payload?.next_update]);
-  const sourceProvider = String(payload?.source_provider || '').toLowerCase();
-  const sourceProviderLabel = sourceProvider === 'bitnodes_scrape' ? 'bitnodes (scrape)' : (payload?.source_provider || 'N/A');
-  const sourceProviderUrl = PROVIDER_LINKS[sourceProvider] || 'https://bitnodes.io';
-  const fallbackNote = String(
-    payload?.fallback_note
-    || 'Fallback active: Bitnodes API is unavailable. Showing Bitnodes countries modal snapshot from the website.',
+  useEffect(() => {
+    const timer = setInterval(() => setNowTs(Date.now()), 30_000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const countryCounts = useMemo(() => parseLightningCountryCounts(payload?.data), [payload?.data]);
+  const nextUpdateDelay = useMemo(
+    () => formatNextUpdateDelay((payload?.fetched_at || nowTs) + REFRESH_INTERVAL_MS),
+    [payload?.fetched_at, nowTs],
   );
-  const countryCounts = useMemo(() => parseCountryCounts(payload), [payload]);
-  const networkBreakdown = payload?.data?.network_breakdown || null;
+  const sourceProviderLabel = payload?.source_provider || 'mempool.space';
   const showBreakdownPanel = !isCompactViewport || isBreakdownExpanded;
   const showDensityLegend = !isCompactViewport || isDensityExpanded;
 
@@ -287,29 +299,47 @@ export default function S08_NodesMap() {
     });
   }, [countryCounts, featureCodeByName, featureNameByCode]);
 
-  const countsByCode = useMemo(() => {
+  const metricRows = useMemo(
+    () => resolvedCountryRows.filter((row) => /^[A-Z]{2}$/.test(row.country_code_resolved)),
+    [resolvedCountryRows],
+  );
+
+  const statsByCode = useMemo(() => {
     const map = {};
-    resolvedCountryRows.forEach((row) => {
+
+    metricRows.forEach((row) => {
       const code = row.country_code_resolved;
       if (!/^[A-Z]{2}$/.test(code)) return;
-      map[code] = (map[code] || 0) + row.nodes;
+
+      map[code] = {
+        nodes: (map[code]?.nodes || 0) + row.nodes,
+        channels: (map[code]?.channels || 0) + row.channels,
+        capacity: (map[code]?.capacity || 0) + row.capacity,
+      };
     });
+
     return map;
-  }, [resolvedCountryRows]);
+  }, [metricRows]);
+
+  const totals = useMemo(() => {
+    return metricRows.reduce((acc, row) => {
+      acc.nodes += row.nodes;
+      acc.channels += row.channels;
+      acc.capacity += row.capacity;
+      return acc;
+    }, { nodes: 0, channels: 0, capacity: 0 });
+  }, [metricRows]);
 
   const maxCount = useMemo(() => {
-    if (!countryCounts.length) return 0;
-    return Math.max(...countryCounts.map((x) => x.nodes));
-  }, [countryCounts]);
+    if (!resolvedCountryRows.length) return 0;
+    return Math.max(...resolvedCountryRows.map((row) => row.nodes));
+  }, [resolvedCountryRows]);
 
   const allCountries = useMemo(() => resolvedCountryRows, [resolvedCountryRows]);
-
-  const totalNodes = useMemo(() => {
-    if (Number.isFinite(payload?.data?.total_nodes)) return payload.data.total_nodes;
-    return countryCounts.reduce((sum, row) => sum + row.nodes, 0);
-  }, [payload, countryCounts]);
-
-  const isLoading = cacheLoading || geoLoading;
+  const avgChannelsPerNode = totals.nodes > 0 ? totals.channels / totals.nodes : 0;
+  const maxChannels = Number(payload?.data?.maxChannels) || 0;
+  const maxLiquidity = Number(payload?.data?.maxLiquidity) || 0;
+  const isLoading = apiLoading || geoLoading;
 
   return (
     <div className="flex h-full w-full flex-col bg-[#111111] lg:flex-row">
@@ -318,10 +348,10 @@ export default function S08_NodesMap() {
           <div className="h-full w-full p-6">
             <div className="skeleton h-full w-full rounded-md" />
           </div>
-        ) : isPending || !countryCounts.length ? (
+        ) : !countryCounts.length ? (
           <div className="flex h-full w-full items-center justify-center p-6">
             <div className="max-w-[520px] rounded border border-white/10 bg-[#151515] px-4 py-4 font-mono text-[12px] text-white/70">
-              <div>{payload?.message || 'Country node counts are not yet available in cache.'}</div>
+              <div>No country data returned by Lightning world API.</div>
               <div className="mt-2 text-white/45">
                 Next update: {nextUpdateDelay === 'N/A' ? 'N/A' : (nextUpdateDelay === 'now' ? 'now' : `in ${nextUpdateDelay}`)}
               </div>
@@ -345,20 +375,23 @@ export default function S08_NodesMap() {
                 data={countriesGeo}
                 style={(feature) => {
                   const code = getFeatureCountryCode(feature);
-                  const count = countsByCode[code] || 0;
+                  const nodes = statsByCode[code]?.nodes || 0;
                   return {
                     color: '#2d2d2d',
                     weight: 0.7,
-                    fillColor: getFillColor(count),
+                    fillColor: getFillColor(nodes),
                     fillOpacity: 0.9,
                   };
                 }}
                 onEachFeature={(feature, layer) => {
                   const code = getFeatureCountryCode(feature);
                   const name = getFeatureCountryName(feature, 0);
-                  const count = countsByCode[code] || 0;
+                  const countryStats = statsByCode[code] || { nodes: 0, channels: 0, capacity: 0 };
                   const displayCode = code && code !== '-99' ? code : UNKNOWN_COUNTRY_LABEL;
-                  layer.bindTooltip(`${name} (${displayCode}): ${fmt.num(count)} nodes - ${getDensityLabel(count)}`, { sticky: true, opacity: 0.95 });
+                  layer.bindTooltip(
+                    `${name} (${displayCode}): ${fmt.num(countryStats.nodes)} nodes - ${fmt.num(countryStats.channels)} channels - ${formatBtcFromSats(countryStats.capacity)}`,
+                    { sticky: true, opacity: 0.95 },
+                  );
                 }}
               />
             )}
@@ -367,16 +400,17 @@ export default function S08_NodesMap() {
 
         <div className="absolute bottom-2 left-1/2 z-[1000] -translate-x-1/2 rounded-md border border-white/10 bg-black/75 px-3 py-1.5 font-mono text-[11px] backdrop-blur-sm sm:bottom-5 sm:px-5 sm:py-2 sm:text-[12px]">
           {isLoading ? (
-            <div className="skeleton" style={{ width: 170, height: '0.95em' }} />
+            <div className="skeleton" style={{ width: 190, height: '0.95em' }} />
           ) : (
             <>
-              <span className="text-white/60">Public Bitcoin Nodes: </span>
-              <span className="font-bold text-white">{fmt.num(totalNodes)}</span>
+              <span className="text-white/60">Public Lightning Nodes: </span>
+              <span className="text-white/45">(Tor nodes excluded) </span>
+              <span className="font-bold text-white">{fmt.num(totals.nodes)}</span>
             </>
           )}
         </div>
 
-        {!isLoading && !isPending && countryCounts.length > 0 && (
+        {!isLoading && countryCounts.length > 0 && (
           <>
             {isCompactViewport && (
               <button
@@ -384,7 +418,7 @@ export default function S08_NodesMap() {
                 onClick={() => setIsDensityExpanded((prev) => !prev)}
                 className="absolute left-3 top-3 z-[1001] rounded border border-white/15 bg-black/65 px-2 py-1 font-mono text-[11px] text-white/80 backdrop-blur-sm"
               >
-                {isDensityExpanded ? '◧' : '◨'} Density
+                {isDensityExpanded ? '[-]' : '[+]'} Density
               </button>
             )}
 
@@ -406,9 +440,9 @@ export default function S08_NodesMap() {
         )}
       </div>
 
-      <aside className="flex h-[40%] w-full flex-none flex-col border-t border-white/10 bg-[#111111] lg:h-auto lg:w-[280px] lg:border-l lg:border-t-0">
+      <aside className="flex h-[42%] w-full flex-none flex-col border-t border-white/10 bg-[#111111] lg:h-auto lg:w-[300px] lg:border-l lg:border-t-0">
         <div className="border-b border-white/10 px-4 py-3 font-mono text-[12px] tracking-wide text-white/60">
-          Active Nodes by Country ({fmt.num(allCountries.length)})
+          Lightning Nodes by Country ({fmt.num(allCountries.length)})
         </div>
 
         <div className="border-b border-white/10 px-3 py-2">
@@ -418,44 +452,30 @@ export default function S08_NodesMap() {
               onClick={() => setIsBreakdownExpanded((prev) => !prev)}
               className="flex w-full items-center justify-between rounded border border-white/10 bg-white/[0.02] px-2 py-1.5 text-left font-mono text-[11px] text-white/70 transition hover:border-white/20"
             >
-              <span>Network Breakdown {networkBreakdown ? `(${fmt.num(networkBreakdown.total_nodes)} nodes)` : ''}</span>
-              <span style={{ color: 'var(--accent-bitcoin)' }}>{isBreakdownExpanded ? 'Hide' : 'Show'}</span>
+              <span>Lightning breakdown (Tor nodes excluded) ({fmt.num(totals.nodes)} nodes)</span>
+              <span style={{ color: UI_COLORS.lightning }}>{isBreakdownExpanded ? 'Hide' : 'Show'}</span>
             </button>
           )}
 
           {showBreakdownPanel && (
-            networkBreakdown ? (
-              <div className={`${isCompactViewport ? 'mt-2' : ''} grid grid-cols-2 gap-1.5 font-mono text-[11px]`}>
-                <div className="rounded border border-white/10 bg-white/[0.02] px-2 py-1">
-                  <div className="text-white/50">Nodes</div>
-                  <div className="text-white/85">{fmt.num(networkBreakdown.total_nodes)}</div>
-                </div>
-                <div className="rounded border border-white/10 bg-white/[0.02] px-2 py-1">
-                  <div className="text-white/50">IPv4</div>
-                  <div className="text-white/85">{fmt.num(networkBreakdown.ipv4_nodes)} ({formatPct(networkBreakdown.ipv4_pct)})</div>
-                </div>
-                <div className="rounded border border-white/10 bg-white/[0.02] px-2 py-1">
-                  <div className="text-white/50">IPv6</div>
-                  <div className="text-white/85">{fmt.num(networkBreakdown.ipv6_nodes)} ({formatPct(networkBreakdown.ipv6_pct)})</div>
-                </div>
-                <div className="rounded border border-white/10 bg-white/[0.02] px-2 py-1">
-                  <div className="text-white/50">.onion</div>
-                  <div className="text-white/85">{fmt.num(networkBreakdown.onion_nodes)} ({formatPct(networkBreakdown.onion_pct)})</div>
-                </div>
-                <div className="rounded border border-white/10 bg-white/[0.02] px-2 py-1">
-                  <div className="text-white/50">Full nodes</div>
-                  <div className="text-white/85">{fmt.num(networkBreakdown.full_nodes)} ({formatPct(networkBreakdown.full_pct)})</div>
-                </div>
-                <div className="rounded border border-white/10 bg-white/[0.02] px-2 py-1">
-                  <div className="text-white/50">Pruned nodes</div>
-                  <div className="text-white/85">{fmt.num(networkBreakdown.pruned_nodes)} ({formatPct(networkBreakdown.pruned_pct)})</div>
-                </div>
+            <div className={`${isCompactViewport ? 'mt-2' : ''} grid grid-cols-2 gap-1.5 font-mono text-[11px]`}>
+              <div className="rounded border border-white/10 bg-white/[0.02] px-2 py-1">
+                <div className="text-white/50">Nodes</div>
+                <div className="text-white/85">{fmt.num(totals.nodes)}</div>
               </div>
-            ) : (
-              <div className="mt-2 rounded border border-white/10 bg-white/[0.02] px-2 py-1 font-mono text-[11px] text-white/55">
-                Breakdown unavailable
+              <div className="rounded border border-white/10 bg-white/[0.02] px-2 py-1">
+                <div className="text-white/50">Channels</div>
+                <div className="text-white/85">{fmt.num(totals.channels)}</div>
               </div>
-            )
+              <div className="rounded border border-white/10 bg-white/[0.02] px-2 py-1">
+                <div className="text-white/50">Capacity</div>
+                <div className="text-white/85">{formatBtcFromSats(totals.capacity)}</div>
+              </div>
+              <div className="rounded border border-white/10 bg-white/[0.02] px-2 py-1">
+                <div className="text-white/50">Avg channels / node</div>
+                <div className="text-white/85">{avgChannelsPerNode.toFixed(1)}</div>
+              </div>
+            </div>
           )}
         </div>
 
@@ -468,39 +488,22 @@ export default function S08_NodesMap() {
             </div>
           ) : (
             <div className="space-y-1">
-              {allCountries.map((item, index) => {
-                const isTorRow = isTorCyberspaceRow(item.country_label);
-                return (
-                  <div
-                    key={`${item.country_label}-${item.country_code_resolved}-${index}`}
-                    className="flex items-center justify-between rounded border px-2 py-1.5"
-                    style={
-                      isTorRow
-                        ? {
-                            borderColor: 'rgba(168, 85, 247, 0.45)',
-                            backgroundColor: 'rgba(168, 85, 247, 0.12)',
-                          }
-                        : {
-                            borderColor: 'rgba(255, 255, 255, 0.05)',
-                            backgroundColor: 'rgba(255, 255, 255, 0.02)',
-                          }
-                    }
+              {allCountries.map((item, index) => (
+                <div
+                  key={`${item.country_label}-${item.country_code_resolved}-${index}`}
+                  className="flex items-center justify-between rounded border border-white/5 bg-white/[0.02] px-2 py-1.5"
+                >
+                  <span className="truncate font-mono text-[11px] text-white/80">
+                    {item.country_label}
+                  </span>
+                  <span
+                    className="font-mono text-[11px]"
+                    style={{ color: getFillColor(item.nodes) }}
                   >
-                    <span
-                      className="truncate font-mono text-[11px]"
-                      style={{ color: isTorRow ? UI_COLORS.tor : 'rgba(255, 255, 255, 0.8)' }}
-                    >
-                      {item.country_label}
-                    </span>
-                    <span
-                      className="font-mono text-[11px]"
-                      style={{ color: isTorRow ? UI_COLORS.tor : getFillColor(item.nodes) }}
-                    >
-                      {fmt.num(item.nodes)}
-                    </span>
-                  </div>
-                );
-              })}
+                    {fmt.num(item.nodes)}
+                  </span>
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -517,18 +520,13 @@ export default function S08_NodesMap() {
           <div className="hidden flex-wrap items-center gap-2 text-white/65 lg:flex">
             <span className="rounded border border-white/10 bg-white/[0.03] px-1.5 py-0.5">
               src:{' '}
-              <a href={sourceProviderUrl} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-bitcoin)', textDecoration: 'none' }}>
+              <a href="https://mempool.space" target="_blank" rel="noreferrer" style={{ color: UI_COLORS.lightningSoft, textDecoration: 'none' }}>
                 {sourceProviderLabel}
               </a>
             </span>
             <span className="rounded border border-white/10 bg-white/[0.03] px-1.5 py-0.5 text-white/75">
               refresh: {nextUpdateDelay === 'N/A' ? 'N/A' : (nextUpdateDelay === 'now' ? 'now' : `in ${nextUpdateDelay}`)}
             </span>
-            {isFallback && (
-              <span className="rounded border border-[#f7931a]/40 bg-[#f7931a]/10 px-1.5 py-0.5" style={{ color: 'var(--accent-warning)' }}>
-                fallback
-              </span>
-            )}
             <button
               type="button"
               onClick={() => setIsMetaExpanded((prev) => !prev)}
@@ -542,23 +540,28 @@ export default function S08_NodesMap() {
             <div className="mt-2 rounded border border-white/10 bg-white/[0.02] px-2 py-1.5 text-white/55">
               <div>
                 Source:{' '}
-                <a href={sourceProviderUrl} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-bitcoin)', textDecoration: 'none' }}>
-                  {sourceProviderLabel}
+                <a href="https://mempool.space/graphs/lightning/nodes-channels-map" target="_blank" rel="noreferrer" style={{ color: UI_COLORS.lightningSoft, textDecoration: 'none' }}>
+                  https://mempool.space/graphs/lightning/nodes-channels-map
                 </a>
               </div>
               <div>
-                Refresh: {nextUpdateDelay === 'N/A' ? 'N/A' : (nextUpdateDelay === 'now' ? 'now' : `in ${nextUpdateDelay}`)}
+                API: {LIGHTNING_WORLD_ENDPOINT}
               </div>
               <div>
-                Coverage: {payload?.data?.coverage === 'countries_modal_all'
-                  ? 'countries modal (all)'
-                  : 'full snapshot'}
+                Last snapshot: {payload?.fetched_at ? `${fmt.date(payload.fetched_at)} ${fmt.time(payload.fetched_at)}` : 'N/A'}
               </div>
-              {isFallback && (
-                <div className="mt-1" style={{ color: UI_COLORS.textSecondary }}>
-                  <span style={{ color: UI_COLORS.warning }}>Fallback:</span> {fallbackNote}
-                </div>
-              )}
+              <div>
+                Refresh target: every {Math.round(REFRESH_INTERVAL_MS / 60_000)} min
+              </div>
+              <div>
+                Peak channels (single node): {fmt.num(maxChannels)}
+              </div>
+              <div>
+                Peak liquidity (single node): {formatBtcFromSats(maxLiquidity)}
+              </div>
+              <div>
+                Lightning metrics: (Tor nodes excluded)
+              </div>
             </div>
           )}
         </div>

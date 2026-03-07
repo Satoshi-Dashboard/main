@@ -287,23 +287,22 @@ export default function S01_BitcoinOverview() {
     let active = true;
     const load = async () => {
       try {
-        const [spot, diffRes, heightRes, feeRes, hashRes, fngRes] = await Promise.all([
+        const [spot, overviewRes] = await Promise.all([
           fetchBtcSpot(),
-          fetch('https://mempool.space/api/v1/difficulty-adjustment'),
-          fetch('https://mempool.space/api/blocks/tip/height'),
-          fetch('https://mempool.space/api/v1/fees/recommended'),
-          fetch('https://mempool.space/api/v1/mining/hashrate/3d'),
-          fetch('https://api.alternative.me/fng/?limit=7'),
+          fetch('/api/public/mempool/overview', { cache: 'no-store' }),
         ]);
-        const [diff, heightText, fees, hashData, fng] = await Promise.all([
-          diffRes.json(),
-          heightRes.text(),
-          feeRes.json(),
-          hashRes.json(),
-          fngRes.json(),
-        ]);
+
+        if (!overviewRes.ok) throw new Error(`HTTP ${overviewRes.status}`);
+        const overviewPayload = await overviewRes.json();
+        const overview = overviewPayload?.data || {};
+        const diff = overview.difficulty || {};
+        const fees = overview.fees || {};
+        const hashData = overview.hashrate || {};
+        const fng = overview.fear_greed || {};
+
         if (!active) return;
-        const h = Number(heightText);
+        const h = Number(overview.block_height);
+
         setStats((prev) => ({
           ...prev,
           price:         spot?.usd         || prev.price,

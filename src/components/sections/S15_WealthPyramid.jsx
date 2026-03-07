@@ -131,7 +131,13 @@ export default function S15_WealthPyramid() {
           >
             Bitcoin Wealth Distribution
           </h1>
-          <div className="text-right font-mono text-[11px] tracking-wide text-[#7c7c7c]">
+          <div className="text-right font-mono text-[11px] tracking-wide" style={{ color: UI_COLORS.textSecondary }}>
+            <div>
+              src:{' '}
+              <a href="https://bitinfocharts.com" target="_blank" rel="noreferrer" style={{ color: UI_COLORS.brand, textDecoration: 'none' }}>
+                BitInfoCharts
+              </a>
+            </div>
             <div>Auto update: 30m</div>
             {meta.updatedAtLocal ? <div>Last: {meta.updatedAtLocal}</div> : null}
           </div>

@@ -25,11 +25,10 @@ export default function S17_PricePerformance() {
   useEffect(() => {
     (async () => {
       try {
-        const r = await fetch(
-          'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd'
-        );
+        const r = await fetch('/api/btc/rates', { cache: 'no-store' });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
         const j = await r.json();
-        setBtcPrice(j.bitcoin.usd);
+        setBtcPrice(Number(j?.btc_usd));
       } catch {
         setBtcPrice(84000);
       }
@@ -113,7 +112,7 @@ export default function S17_PricePerformance() {
 
       {/* Comparison cards */}
       <div className="min-h-0 flex-1 px-6 pb-6">
-        <div className="grid grid-cols-3 gap-3 h-full">
+        <div className="grid h-full grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {HISTORY.map((h) => {
             const hBtc = HOME_USD / h.btcPrice;
             const currentVal = currentBtc ?? (HOME_USD / 84000);

@@ -28,9 +28,13 @@ async function remoteCommand(args) {
     return { ok: false, result: null };
   }
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 4000);
+
   try {
     const response = await fetch(REMOTE_URL, {
       method: 'POST',
+      signal: controller.signal,
       headers: {
         Authorization: `Bearer ${REMOTE_TOKEN}`,
         'Content-Type': 'application/json',
@@ -46,6 +50,8 @@ async function remoteCommand(args) {
     return { ok: true, result: json?.result ?? null };
   } catch {
     return { ok: false, result: null };
+  } finally {
+    clearTimeout(timeout);
   }
 }
 

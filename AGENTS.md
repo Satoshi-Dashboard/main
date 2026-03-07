@@ -14,3 +14,6 @@ For OpenCode, Codex, Claude, and any automated coding agent:
 10. For every frontend update, preserve responsive typography hierarchy and minimum readable font sizes for mobile/tablet.
 11. Treat tiny unreadable text in responsive layouts as a defect that must be corrected before completion.
 12. For every new frontend module, follow the mandatory "New module example rules" section in `.claude/FRONTEND_COLOR_UX_UI_RULES.md`.
+13. For any new frontend user-facing text, use English by default unless the owner explicitly requests another language.
+14. Before any code change (addition, modification, or deletion), verify the planned implementation remains compatible with Vercel deployment.
+15. After finishing each code change, re-verify that the project can still be deployed on Vercel without issues.

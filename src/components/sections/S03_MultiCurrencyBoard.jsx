@@ -1,4 +1,4 @@
-// World Map Price Explorer — BTC price in all available Frankfurter fiat currencies
+// World Map Price Explorer — BTC price in currencies derived from Investing USD crosses
 // Globe uses Natural Earth 110m GeoJSON for pixel-accurate land shapes
 // Fallback to bounding-box mask if network unavailable
 
@@ -42,7 +42,7 @@ const BASE_CURRENCY_META = [
 const EMPTY_CURRENCIES = BASE_CURRENCY_META.map(m => ({ ...m, price: null, change: null }));
 
 const BAND_CODES = ['JPY', 'INR', 'KRW', 'CNY', 'EUR', 'GBP', 'USD', 'RUB'];
-const REFRESH_MS = 60_000;
+const REFRESH_MS = 30_000;
 
 const UI_COLORS = {
   positive: 'var(--accent-green)',
@@ -50,6 +50,36 @@ const UI_COLORS = {
   textSecondary: 'var(--text-secondary)',
   textTertiary: 'var(--text-tertiary)',
 };
+
+function formatMetaTimestamp(value) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (!Number.isFinite(date.getTime())) return 'N/A';
+
+  const dateStr = date.toLocaleDateString('en-US', {
+    month: '2-digit',
+    day: '2-digit',
+    year: 'numeric',
+  });
+  const timeStr = date.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+
+  return `${dateStr}, ${timeStr}`;
+}
+
+function parseOverlayProviders(sourceLabel) {
+  const src = String(sourceLabel || '').toUpperCase();
+  if (src.includes('INVESTING')) {
+    return [
+      { name: 'Investing', url: 'https://www.investing.com/currencies/single-currency-crosses?currency=usd' },
+      { name: 'Binance', url: 'https://api.binance.com' },
+    ];
+  }
+
+  return [{ name: 'Satoshi Dashboard', url: 'https://github.com/Satoshi-Dashboard/main' }];
+}
 
 const currencyDisplayNames = typeof Intl !== 'undefined' && Intl.DisplayNames
   ? new Intl.DisplayNames(['en'], { type: 'currency' })
@@ -73,11 +103,10 @@ const TEX_W = 2048, TEX_H = 1024;
 // Draw GeoJSON land polygons onto an offscreen canvas → ImageData for fast lookup
 async function buildLandTexture() {
   // Natural Earth 110m land polygons (public domain, ~60 KB)
-  const resp = await fetch(
-    'https://d2ad6b4ur7yvpq.cloudfront.net/naturalearth-3.3.0/ne_110m_land.geojson'
-  );
+  const resp = await fetch('/api/public/geo/land', { cache: 'no-store' });
   if (!resp.ok) throw new Error('fetch failed');
-  const geojson = await resp.json();
+  const payload = await resp.json();
+  const geojson = payload?.data || payload;
 
   const oc = document.createElement('canvas');
   oc.width  = TEX_W;
@@ -348,10 +377,29 @@ export default function S03_MultiCurrencyBoard() {
   const [search, setSearch]     = useState('');
   const [currencies, setCurrencies] = useState(EMPTY_CURRENCIES);
   const [isPriceLoading, setIsPriceLoading] = useState(true);
-  const [dataSource, setDataSource] = useState(null);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState(() => new Date());
+  const [sourceLabel, setSourceLabel] = useState('/API/BTC/RATES + INVESTING');
+  const [showDesktopOverlay, setShowDesktopOverlay] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia('(min-width: 1024px)').matches;
+  });
 
-  // Multi-currency fetch via internal backend cache (Binance+Frankfurter),
-  // falling back to direct Binance pairs when needed.
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const media = window.matchMedia('(min-width: 1024px)');
+    const onChange = (event) => setShowDesktopOverlay(event.matches);
+    setShowDesktopOverlay(media.matches);
+
+    if (typeof media.addEventListener === 'function') {
+      media.addEventListener('change', onChange);
+      return () => media.removeEventListener('change', onChange);
+    }
+
+    media.addListener(onChange);
+    return () => media.removeListener(onChange);
+  }, []);
+
+  // Multi-currency fetch via internal TradingEconomics scraper cache.
   useEffect(() => {
     let active = true;
 
@@ -388,12 +436,13 @@ export default function S03_MultiCurrencyBoard() {
 
         setCurrencies(updated);
         bandDataRef.current = updated.filter(c => BAND_CODES.includes(c.code));
+        const src = String(btc.__source || '').trim();
+        if (src) {
+          const fallbackTag = btc.__is_fallback ? ' (STALE FALLBACK)' : '';
+          setSourceLabel(`${src.toUpperCase()}${fallbackTag}`);
+        }
+        setLastUpdatedAt(new Date());
 
-        const src = String(btc.__source || '').toLowerCase();
-        if (src.includes('binance') && src.includes('frankfurter')) setDataSource('BINANCE + FRANKFURTER');
-        else if (src.includes('binance')) setDataSource('BINANCE');
-        else if (src.includes('coingecko')) setDataSource('COINGECKO');
-        else if (src) setDataSource(src.toUpperCase());
       } finally {
         if (active) setIsPriceLoading(false);
       }
@@ -478,7 +527,7 @@ export default function S03_MultiCurrencyBoard() {
             `}</style>
             <div style={{
               display: 'inline-flex',
-              animation: 's03-ticker 30s linear infinite',
+              animation: 's03-ticker 75s linear infinite',
               whiteSpace: 'nowrap',
             }}>
               {tickerItems.map((c, i) => (
@@ -490,14 +539,35 @@ export default function S03_MultiCurrencyBoard() {
       </div>
 
       {/* ── Globe + Right panel ────────────────────────────────────────── */}
-      <div className="min-h-0 flex-1 flex flex-col lg:flex-row">
+      <div className="min-h-0 flex flex-col lg:flex-1 lg:flex-row">
 
         {/* Globe canvas */}
-        <div ref={containerRef} className="relative min-h-[250px] flex-1 min-w-0 sm:min-h-[320px] lg:min-h-0">
+        <div
+          ref={containerRef}
+          className="relative h-[42vh] min-h-[240px] max-h-[420px] min-w-0 flex-none sm:h-[48vh] sm:min-h-[280px] sm:max-h-[500px] lg:h-auto lg:min-h-0 lg:max-h-none lg:flex-1"
+        >
           <canvas
             ref={canvasRef}
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
           />
+
+          {showDesktopOverlay && (
+            <div className="absolute bottom-3 left-3 z-10 text-left font-mono text-[11px] tracking-wide text-[#7c7c7c]">
+              <div>
+                <span>src: </span>
+                {parseOverlayProviders(sourceLabel).map((provider, index, arr) => (
+                  <span key={provider.name}>
+                    <a href={provider.url} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-bitcoin)', textDecoration: 'none' }}>
+                      {provider.name}
+                    </a>
+                    {index < arr.length - 1 ? <span> + </span> : null}
+                  </span>
+                ))}
+              </div>
+              <div>Auto update: {Math.round(REFRESH_MS / 1000)}s</div>
+              <div>Last: {formatMetaTimestamp(lastUpdatedAt)}</div>
+            </div>
+          )}
         </div>
 
         {/* Right panel */}
@@ -508,7 +578,7 @@ export default function S03_MultiCurrencyBoard() {
               background: '#141418', border: '1px solid #252530',
               borderRadius: 5, padding: '4px 8px',
             }}>
-              <span style={{ color: '#444', fontSize: 10 }}>⌕</span>
+              <span style={{ color: '#444', fontSize: 11 }}>⌕</span>
               <input
                 value={search}
                 onChange={e => setSearch(e.target.value)}
@@ -521,31 +591,9 @@ export default function S03_MultiCurrencyBoard() {
                 }}
                 />
               </div>
-            {dataSource && (
-              <div style={{
-                marginTop: 6,
-                color: '#5d5d5d',
-                fontFamily: 'monospace',
-                fontSize: 'var(--fs-tag)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.08em',
-              }}>
-                src: {dataSource}
-              </div>
-            )}
-            <div style={{
-              marginTop: 4,
-              color: '#4d4d4d',
-              fontFamily: 'monospace',
-              fontSize: 'var(--fs-tag)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em',
-            }}>
-              update: {Math.round(REFRESH_MS / 1000)}s
-            </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto" style={{
+          <div className="scrollbar-hidden-mobile flex-1 overflow-y-auto" style={{
             scrollbarWidth: 'thin', scrollbarColor: '#2a2a2a transparent',
           }}>
             {filtered.map((c) => {

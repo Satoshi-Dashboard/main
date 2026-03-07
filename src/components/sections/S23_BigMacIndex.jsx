@@ -18,19 +18,16 @@ function toSats(btcPrice) {
   return Math.round((BIG_MAC_USD / btcPrice) * 1e8);
 }
 
-function fmtSats(n) {
-  return n.toLocaleString() + ' sats';
-}
-
 export default function S23_BigMacIndex() {
   const [btcPrice, setBtcPrice] = useState(null);
 
   useEffect(() => {
     (async () => {
       try {
-        const r = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd');
+        const r = await fetch('/api/btc/rates', { cache: 'no-store' });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
         const j = await r.json();
-        setBtcPrice(j.bitcoin.usd);
+        setBtcPrice(Number(j?.btc_usd));
       } catch {
         setBtcPrice(84000);
       }
@@ -79,8 +76,12 @@ export default function S23_BigMacIndex() {
 
       {/* Comparison cards 2×3 grid */}
       <div style={{
-        display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
-        gap: '0.75rem', width: '100%', maxWidth: 860, padding: '0 1.5rem',
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+        gap: '0.75rem',
+        width: '100%',
+        maxWidth: 860,
+        padding: '0 1rem',
       }}>
         {HISTORY.map((h) => {
           const hSats = toSats(h.btcPrice);

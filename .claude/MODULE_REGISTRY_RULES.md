@@ -23,3 +23,10 @@ After changing module registry/order:
 1. Run `npm run build`.
 2. Confirm navigation works for previous and next controls.
 3. Confirm footer shows module identity clearly (`module.code` + position).
+
+## Cross-domain guardrail (mandatory)
+
+Even when changes are not directly editing `src/config/modules.js`, agents must re-check module index mapping before any backend/API or frontend UX work that names modules by number/slug/title.
+
+- Source of truth: `src/config/modules.js` (`MODULE_DEFS`, generated `code`, generated `slug`).
+- Never assume module index from chat history in multi-agent sessions.

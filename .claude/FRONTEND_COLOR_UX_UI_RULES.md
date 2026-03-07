@@ -21,6 +21,15 @@ Color can be diverse by context, but semantic meaning must stay stable:
 - same purpose -> same token family
 - different purpose -> different color family
 
+## Module index preflight (mandatory)
+
+Before applying any frontend UX/UI change that references module numbers, slugs, titles, navigation order, or module-specific copy/labels:
+
+1. Re-read `src/config/modules.js` and confirm the live `code <-> slug <-> title` mapping.
+2. Do not rely on prior chat memory for module identity/order in multi-agent workflows.
+3. Verify the targeted module slug/code still match the requested module before editing.
+4. Re-check mapping after edits to ensure no unintended module index/slug drift occurred.
+
 ## Responsive-first policy (mandatory)
 
 For any new module, new UI content, new element, or update to existing frontend elements:
@@ -160,3 +169,9 @@ When creating any new frontend module, agents must follow the project example pa
    - status uses semantic colors (green/red/yellow)
    - metadata uses neutral gray role
 6. New modules are non-compliant if they skip this example baseline.
+
+## Frontend language rule (mandatory)
+
+1. All new user-facing text added to frontend must be in English.
+2. Do not introduce new Spanish (or other language) labels unless the owner explicitly requests multilingual/localized behavior.
+3. If updating an existing mixed-language area, new copy must still default to English unless instructed otherwise.

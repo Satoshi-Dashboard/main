@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 // Static market cap data (approximations in trillions)
@@ -169,7 +169,7 @@ export default function S24_NetworkActivity() {
             <XAxis
               dataKey="label"
               stroke="#2a2a2a"
-              tick={{ fill: '#555', fontSize: 9 }}
+              tick={{ fill: '#555', fontSize: 11 }}
               interval={Math.floor(data.length / 10)}
               angle={-20}
               textAnchor="end"
@@ -177,13 +177,13 @@ export default function S24_NetworkActivity() {
             />
             <YAxis
               stroke="#2a2a2a"
-              tick={{ fill: '#555', fontSize: 9 }}
+              tick={{ fill: '#555', fontSize: 11 }}
               domain={['dataMin - 0.5', 'dataMax + 0.5']}
               tickFormatter={(v) => v.toFixed(1) + '%'}
               width={44}
             />
             <Tooltip
-              contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #444', fontSize: 10 }}
+              contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #444', fontSize: 11 }}
               formatter={(v) => [v.toFixed(2) + '%', 'BTC Dominance']}
               labelStyle={{ color: '#888' }}
             />

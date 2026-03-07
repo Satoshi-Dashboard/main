@@ -23,7 +23,7 @@ export default function S29_UTXODistribution() {
   return (
     <div id="section-28">
       <DashboardCard
-        id="s29"
+        id="s28"
         title="UTXO Distribution"
         subtitle="Unspent transaction output analysis"
         icon={Layers}
@@ -55,7 +55,7 @@ export default function S29_UTXODistribution() {
                   <XAxis
                     dataKey="range"
                     stroke="#555555"
-                    style={{ fontSize: '10px' }}
+                    style={{ fontSize: '11px' }}
                     angle={-45}
                     textAnchor="end"
                     height={60}
@@ -88,6 +88,7 @@ export default function S29_UTXODistribution() {
               ))}
             </div>
           </div>
+
         </div>
       </DashboardCard>
     </div>
