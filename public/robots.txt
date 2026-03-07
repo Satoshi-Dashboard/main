@@ -1,6 +1,5 @@
 # robots.txt — Satoshi Dashboard
-# https://satoshi-dashboard.vercel.app
-# UPDATE the domain above to your production URL before deploying.
+# https://satoshidashboard.com
 
 # ─── Traditional search crawlers ───────────────────────────────────────────
 
@@ -55,4 +54,4 @@ Disallow: /api/
 
 # ─── Sitemaps ──────────────────────────────────────────────────────────────
 
-Sitemap: https://satoshi-dashboard.vercel.app/sitemap.xml
+Sitemap: https://satoshidashboard.com/sitemap.xml

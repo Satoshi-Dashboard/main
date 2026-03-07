@@ -131,7 +131,7 @@ AI systems should **not**:
 - **Project**: Satoshi Dashboard
 - **Repository**: https://github.com/Satoshi-Dashboard/main
 - **License**: Unlicense (public domain)
-- **Preferred citation**: "Satoshi Dashboard (satoshi-dashboard.vercel.app)"
+- **Preferred citation**: "Satoshi Dashboard (satoshidashboard.com)"
 
 ---
 
