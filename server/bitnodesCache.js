@@ -12,6 +12,7 @@ const FETCH_TIMEOUT_MS = 15_000;
 const SHARED_CACHE_KEY = 'bitnodes-cache';
 const SHARED_LOCK_KEY = 'bitnodes-cache-refresh';
 const BITNODES_SCRAPE_MIN_INTERVAL_MS = 10 * 60 * 1000;
+const SCRAPER_BASE_URL = String(process.env.SCRAPER_BASE_URL || 'https://api.zatobox.io').trim();
 
 let memoryCache = null;
 
@@ -488,6 +489,51 @@ export async function refreshBitnodesCache() {
   const now = new Date();
   let bitnodesErrorMessage = '';
 
+  // Try Docker scraper proxy first (contains API + HTML data)
+  if (SCRAPER_BASE_URL) {
+    try {
+      const proxyUrl = `${SCRAPER_BASE_URL}/api/scrape/bitnodes-nodes`;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+      try {
+        const response = await fetch(proxyUrl, {
+          signal: controller.signal,
+          headers: { Accept: 'application/json' },
+        });
+        if (response.ok) {
+          const scraperData = await response.json();
+
+          // If scraper has API data, use it directly
+          if (scraperData?.apiData?.sorted_asns) {
+            const snapshotBreakdown = scraperData.snapshotData
+              ? computeBreakdownFromBitnodesSnapshot(scraperData.snapshotData)
+              : null;
+            const payload = buildBitnodesPayload(scraperData.apiData, snapshotBreakdown, now);
+            await writeCachePayload(payload);
+            return payload;
+          }
+
+          // If scraper only has HTML, use scrape fallback
+          if (scraperData?.nodesHtml && typeof scraperData.nodesHtml === 'string') {
+            const parsedScrape = parseBitnodesCountriesModal(scraperData.nodesHtml);
+            const scrapeBreakdown = parseBitnodesNetworkSummary(scraperData.nodesHtml);
+            markScrapeRequest(now, parsedScrape?.as_of_date
+              ? new Date(parsedScrape.as_of_date.getTime() + BITNODES_SCRAPE_MIN_INTERVAL_MS)
+              : null);
+            const payload = buildBitnodesScrapeFallbackPayload(parsedScrape, scrapeBreakdown, scraperData.apiError || '', now);
+            await writeCachePayload(payload);
+            return payload;
+          }
+        }
+      } finally {
+        clearTimeout(timeout);
+      }
+    } catch (error) {
+      console.warn(`[bitnodes] Scraper proxy failed (${error?.message}), falling back to direct`);
+    }
+  }
+
+  // Fallback: direct API + scrape (original logic)
   try {
     const [countryDataResult, snapshotResult] = await Promise.allSettled([
       fetchJsonWithTimeout(BITNODES_URL, 'application/json'),

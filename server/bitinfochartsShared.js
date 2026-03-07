@@ -3,6 +3,7 @@ import { cacheGetJson, cacheSetJson, withCacheLock } from './runtimeCache.js';
 const SOURCE_URL = 'https://bitinfocharts.com/top-100-richest-bitcoin-addresses.html';
 const SOURCE_NAME = 'bitinfocharts.com';
 const FETCH_TIMEOUT_MS = 15_000;
+const SCRAPER_BASE_URL = String(process.env.SCRAPER_BASE_URL || 'https://api.zatobox.io').trim();
 const NEXT_UPDATE_MS = 30 * 60 * 1000;
 const SHARED_HTML_CACHE_KEY = 'bitinfocharts-richlist-html';
 const SHARED_HTML_LOCK_KEY = 'bitinfocharts-richlist-html-refresh';
@@ -59,6 +60,30 @@ function needsRefresh(payload, now = Date.now()) {
 }
 
 async function fetchHtml() {
+  // Try Docker scraper proxy first
+  if (SCRAPER_BASE_URL) {
+    const proxyUrl = `${SCRAPER_BASE_URL}/api/scrape/bitinfocharts-richlist`;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    try {
+      const response = await fetch(proxyUrl, {
+        signal: controller.signal,
+        headers: { Accept: 'application/json' },
+      });
+      if (response.ok) {
+        const json = await response.json();
+        if (json?.html && typeof json.html === 'string' && json.html.length > 1000) {
+          return json.html;
+        }
+      }
+    } catch (error) {
+      console.warn(`[bitinfocharts] Scraper proxy failed (${error?.message}), falling back to direct`);
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  // Fallback: direct scrape
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 

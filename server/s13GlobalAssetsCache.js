@@ -6,6 +6,7 @@ const SNAPSHOT_TITLE = 'Latest Global Asset Values snapshot';
 
 const FETCH_TIMEOUT_MS = 15_000;
 const REFRESH_INTERVAL_MS = 60 * 60_000;
+const SCRAPER_BASE_URL = String(process.env.SCRAPER_BASE_URL || 'https://api.zatobox.io').trim();
 
 const SHARED_CACHE_KEY = 's13:global-assets:newhedge';
 const SHARED_LOCK_KEY = 's13:global-assets:newhedge:refresh';
@@ -269,7 +270,36 @@ function getCacheTtlSeconds() {
 }
 
 export async function refreshS13GlobalAssetsPayload() {
-  const markdown = await fetchTextWithTimeout(SOURCE_FETCH_URL);
+  let markdown = null;
+
+  // Try Docker scraper proxy first
+  if (SCRAPER_BASE_URL) {
+    const proxyUrl = `${SCRAPER_BASE_URL}/api/scrape/newhedge-global-assets`;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    try {
+      const response = await fetch(proxyUrl, {
+        signal: controller.signal,
+        headers: { Accept: 'application/json' },
+      });
+      if (response.ok) {
+        const json = await response.json();
+        if (json?.html && typeof json.html === 'string' && json.html.length > 200) {
+          markdown = json.html;
+        }
+      }
+    } catch (error) {
+      console.warn(`[s13] Scraper proxy failed (${error?.message}), falling back to direct`);
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  // Fallback: direct scrape
+  if (!markdown) {
+    markdown = await fetchTextWithTimeout(SOURCE_FETCH_URL);
+  }
+
   const snapshot = parseSnapshotFromMarkdown(markdown);
   const payload = buildPayload(snapshot);
 

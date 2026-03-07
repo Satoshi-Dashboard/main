@@ -2,6 +2,7 @@ import { cacheGetJson, cacheSetJson, withCacheLock } from './runtimeCache.js';
 import { getBtcRates } from '../btcRates.js';
 
 const SOURCE_URL = 'https://www.investing.com/currencies/single-currency-crosses?currency=usd';
+const SCRAPER_BASE_URL = String(process.env.SCRAPER_BASE_URL || 'https://api.zatobox.io').trim();
 
 const FETCH_TIMEOUT_MS = 12_000;
 const REFRESH_INTERVAL_MS = 30_000;
@@ -158,6 +159,30 @@ function combineChangePct(aPct, bPct) {
 }
 
 async function fetchSourceHtml() {
+  // Try Docker scraper proxy first
+  if (SCRAPER_BASE_URL) {
+    const proxyUrl = `${SCRAPER_BASE_URL}/api/scrape/investing-currencies`;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    try {
+      const response = await fetch(proxyUrl, {
+        signal: controller.signal,
+        headers: { Accept: 'application/json' },
+      });
+      if (response.ok) {
+        const json = await response.json();
+        if (json?.html && typeof json.html === 'string' && json.html.length > 500) {
+          return json.html;
+        }
+      }
+    } catch (error) {
+      console.warn(`[s03] Scraper proxy failed (${error?.message}), falling back to direct`);
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  // Fallback: direct scrape
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
