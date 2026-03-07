@@ -133,7 +133,7 @@ export default function S10_FearGreedIndex() {
 
     const load = async () => {
       try {
-        const res = await fetch('/api/public/fear-greed?limit=31', { cache: 'no-store' });
+        const res = await fetch('/api/public/fear-greed?limit=31');
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const payload = await res.json();
         const json = payload?.data || payload;
@@ -156,11 +156,9 @@ export default function S10_FearGreedIndex() {
     };
 
     load();
-    const timer = setInterval(load, 60_000);
 
     return () => {
       active = false;
-      clearInterval(timer);
     };
   }, []);
 
@@ -275,6 +273,13 @@ export default function S10_FearGreedIndex() {
         <Bubble label="Yesterday" value={yesterday} />
         <Bubble label="7 Days Ago" value={sevenDaysAgo} />
         <Bubble label="30 Days Ago" value={thirtyDaysAgo} />
+      </div>
+
+      {/* Data cadence badge */}
+      <div className="flex-shrink-0 pt-1">
+        <span className="font-mono text-white/20" style={{ fontSize: 'var(--fs-micro)' }}>
+          src: alternative.me · daily update
+        </span>
       </div>
     </div>
   );

@@ -16,7 +16,7 @@ const MODULE_DATA_META = {
       { name: 'mempool.space', url: 'https://mempool.space' },
       { name: 'Alternative.me', url: 'https://alternative.me/crypto/fear-and-greed-index/' },
     ],
-    refreshSeconds: 15,
+    refreshSeconds: 30,
   },
   'price-chart': {
     providers: [{ name: 'Binance', url: 'https://api.binance.com' }],
@@ -58,12 +58,12 @@ const MODULE_DATA_META = {
   },
   'stablecoin-peg': {
     providers: [{ name: 'CoinGecko', url: 'https://www.coingecko.com/en/api' }],
-    refreshMinutes: 1,
+    refreshMinutes: 2,
     sharedMetaAbsoluteCard: true,
   },
   'fear-greed': {
     providers: [{ name: 'Alternative.me', url: 'https://alternative.me/crypto/fear-and-greed-index/' }],
-    refreshMinutes: 60,
+    refreshLabel: 'daily update',
   },
   'address-distribution': {
     providers: [{ name: 'BitInfoCharts', url: 'https://bitinfocharts.com' }],
@@ -93,7 +93,7 @@ const MODULE_DATA_META = {
       { name: 'Alternative.me', url: 'https://alternative.me' },
       { name: 'The Economist', url: 'https://github.com/TheEconomist/big-mac-data' },
     ],
-    refreshMinutes: 60,
+    refreshLabel: 'annual index',
   },
   'big-mac-index': {
     providers: [{ name: 'CoinGecko', url: 'https://www.coingecko.com/en/api' }],
