@@ -119,13 +119,12 @@ export default function ModulePage() {
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [, setMetaTick] = useState(0);
+  const [metaLastAtMs, setMetaLastAtMs] = useState(() => Date.now());
   const [isResponsiveViewport, setIsResponsiveViewport] = useState(() => {
     if (typeof window === 'undefined') return false;
     return window.matchMedia('(max-width: 1023px)').matches;
   });
   const contentScrollRef = useRef(null);
-  const metaLastAtRef = useRef(new Date());
 
   const moduleMeta = useMemo(() => getModuleDataMeta(module), [module]);
   const cadenceLabel = useMemo(() => getCadenceLabel(moduleMeta), [moduleMeta]);
@@ -140,7 +139,7 @@ export default function ModulePage() {
   const showAbsoluteMetaCard = showSharedMeta && useAbsoluteSharedMetaCard && !isResponsiveViewport;
   const showTopMeta = showSharedMeta && !isResponsiveViewport && !useAbsoluteSharedMetaCard;
   const showBottomMeta = showSharedMeta && isResponsiveViewport;
-  const metaLastAt = metaLastAtRef.current;
+  const metaLastAt = new Date(metaLastAtMs);
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
@@ -177,17 +176,10 @@ export default function ModulePage() {
   }, [slug, isResponsiveViewport]);
 
   useEffect(() => {
-    metaLastAtRef.current = new Date();
-  }, [slug]);
-
-  useEffect(() => {
     if (!showSharedMeta || !Number.isFinite(cadenceMs) || cadenceMs <= 0) return undefined;
 
     const intervalMs = Math.max(1000, cadenceMs);
-    const timer = setInterval(() => {
-      metaLastAtRef.current = new Date();
-      setMetaTick((value) => value + 1);
-    }, intervalMs);
+    const timer = setInterval(() => setMetaLastAtMs(Date.now()), intervalMs);
     return () => clearInterval(timer);
   }, [showSharedMeta, cadenceMs]);
 
