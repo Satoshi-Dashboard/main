@@ -8,6 +8,7 @@ export default defineConfig({
     tailwindcss(),
   ],
   server: {
+    host: true,
     watch: {
       ignored: [
         '**/bitnodes_cache.json',
@@ -19,7 +20,7 @@ export default defineConfig({
     },
     proxy: {
       '/api': {
-        target: 'http://localhost:8787',
+        target: 'http://192.168.0.137:8787',
         changeOrigin: true,
       },
     },

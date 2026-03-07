@@ -1,5 +1,5 @@
 import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, Cell } from 'recharts';
-import { Layers } from 'lucide-react';
+import { Layers, QrCode } from 'lucide-react';
 import { fmt } from '../../utils/formatters';
 
 const ageData = [
@@ -39,7 +39,7 @@ const CustomTooltip = ({ active, payload, label }) => {
   );
 };
 
-export default function S29_UTXODistribution() {
+export default function S29_UTXODistribution({ onOpenDonate }) {
   return (
     <div className="flex h-full w-full flex-col overflow-hidden bg-[#111111]">
 
@@ -173,10 +173,22 @@ export default function S29_UTXODistribution() {
             </div>
           </div>
 
-          {/* Footer totals */}
+          {/* Footer totals + Donate QR */}
           <div className="flex-none border-t border-white/[0.07] px-4 py-2">
             <div className="flex items-center justify-between font-mono text-[11px]">
-              <span className="text-white/35">8 age bands</span>
+              <div className="flex items-center gap-3">
+                <span className="text-white/35">8 age bands</span>
+                <button
+                  type="button"
+                  onClick={onOpenDonate}
+                  className="flex items-center gap-1.5 rounded border border-white/10 bg-white/5 px-2 py-1.5 transition hover:border-[#F7931A]/40 hover:bg-white/10"
+                  title="Support this project"
+                  aria-label="Open donation QR"
+                >
+                  <QrCode size={14} className="text-[#F7931A]" />
+                  <span className="text-white/60">Support</span>
+                </button>
+              </div>
               <span className="text-white/55">
                 {fmt.compactNum(totalUTXOs)} UTXOs total
               </span>

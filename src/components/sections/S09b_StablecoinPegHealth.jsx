@@ -17,13 +17,6 @@ const STATUS = {
   off_peg: { label: 'OFF PEG', color: 'var(--accent-red)', bg: 'rgba(255,71,87,0.12)', border: 'rgba(255,71,87,0.25)' },
 };
 
-const SORTS = {
-  mcap: 'Market Cap',
-  peg: 'Peg Deviation',
-  rank: 'Rank',
-  change24h: '24h Change',
-};
-
 /* ─── Formatters ────────────────────────────────────────────── */
 function fmtUsd(v, digits = 4) {
   const n = Number(v);
@@ -339,6 +332,7 @@ function CoinLogo({ coinName, symbol, apiImage, size = 36 }) {
 function CoinCard({ coin, idx, sparkCache, onVisible }) {
   const ref = useRef(null);
   const [spark, setSpark] = useState(sparkCache.current[coin.id] ?? null);
+  const [metricsOpen, setMetricsOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
 
   const currentPrice = Number.isFinite(Number(coin.live_price))
@@ -437,37 +431,47 @@ function CoinCard({ coin, idx, sparkCache, onVisible }) {
               </span>
             </div>
           </div>
-          <div className="text-right">
-            <div className="font-mono uppercase" style={{ fontSize: 'var(--fs-micro)', color: 'rgba(255,255,255,0.34)' }}>
-              Source
-            </div>
-            <div className="font-mono" style={{ fontSize: 'var(--fs-caption)', color: 'var(--accent-bitcoin)' }}>
-              {coin.source_provider || 'coingecko'}
-            </div>
-          </div>
         </div>
 
-        {/* Row 3: metric grid from CoinGecko payload */}
-        <div className="grid grid-cols-2 gap-2 rounded-lg border border-white/10 bg-[#141414] p-2">
-          <div>
-            <div className="font-mono uppercase" style={{ fontSize: 'var(--fs-micro)', color: 'rgba(255,255,255,0.34)' }}>MCap</div>
-            <div className="font-mono tabular-nums text-white" style={{ fontSize: 'var(--fs-caption)' }}>{fmtUsdCompact(coin.market_cap)}</div>
+        {/* Row 3: metric grid — collapsible */}
+        <button
+          type="button"
+          className="w-full rounded-lg border border-white/10 bg-[#121212] px-3 py-2 text-left transition-colors hover:border-white/20"
+          onClick={() => setMetricsOpen((v) => !v)}
+          aria-expanded={metricsOpen}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <span className="font-mono uppercase" style={{ fontSize: 'var(--fs-caption)', color: 'rgba(255,255,255,0.74)' }}>
+              {metricsOpen ? 'Hide metrics' : 'Show metrics'}
+            </span>
+            <span className="font-mono" style={{ fontSize: 'var(--fs-caption)', color: 'rgba(255,255,255,0.54)' }}>
+              {metricsOpen ? '−' : '+'}
+            </span>
           </div>
-          <div>
-            <div className="font-mono uppercase" style={{ fontSize: 'var(--fs-micro)', color: 'rgba(255,255,255,0.34)' }}>Volume 24h</div>
-            <div className="font-mono tabular-nums text-white" style={{ fontSize: 'var(--fs-caption)' }}>{fmtUsdCompact(coin.total_volume)}</div>
-          </div>
-          <div>
-            <div className="font-mono uppercase" style={{ fontSize: 'var(--fs-micro)', color: 'rgba(255,255,255,0.34)' }}>FDV</div>
-            <div className="font-mono tabular-nums text-white" style={{ fontSize: 'var(--fs-caption)' }}>{fmtUsdCompact(coin.fully_diluted_valuation)}</div>
-          </div>
-          <div>
-            <div className="font-mono uppercase" style={{ fontSize: 'var(--fs-micro)', color: 'rgba(255,255,255,0.34)' }}>MCap Δ</div>
-            <div className="font-mono tabular-nums" style={{ fontSize: 'var(--fs-caption)', color: supplyDeltaColor(marketCapDelta) }}>
-              {marketCapDelta === null ? '—' : `${marketCapDelta > 0 ? '+' : ''}${fmtUsdCompact(Math.abs(marketCapDelta))}`}
+        </button>
+
+        {metricsOpen && (
+          <div className="grid grid-cols-2 gap-2 rounded-lg border border-white/10 bg-[#141414] p-2">
+            <div>
+              <div className="font-mono uppercase" style={{ fontSize: 'var(--fs-micro)', color: 'rgba(255,255,255,0.34)' }}>MCap</div>
+              <div className="font-mono tabular-nums text-white" style={{ fontSize: 'var(--fs-caption)' }}>{fmtUsdCompact(coin.market_cap)}</div>
+            </div>
+            <div>
+              <div className="font-mono uppercase" style={{ fontSize: 'var(--fs-micro)', color: 'rgba(255,255,255,0.34)' }}>Volume 24h</div>
+              <div className="font-mono tabular-nums text-white" style={{ fontSize: 'var(--fs-caption)' }}>{fmtUsdCompact(coin.total_volume)}</div>
+            </div>
+            <div>
+              <div className="font-mono uppercase" style={{ fontSize: 'var(--fs-micro)', color: 'rgba(255,255,255,0.34)' }}>FDV</div>
+              <div className="font-mono tabular-nums text-white" style={{ fontSize: 'var(--fs-caption)' }}>{fmtUsdCompact(coin.fully_diluted_valuation)}</div>
+            </div>
+            <div>
+              <div className="font-mono uppercase" style={{ fontSize: 'var(--fs-micro)', color: 'rgba(255,255,255,0.34)' }}>MCap Δ</div>
+              <div className="font-mono tabular-nums" style={{ fontSize: 'var(--fs-caption)', color: supplyDeltaColor(marketCapDelta) }}>
+                {marketCapDelta === null ? '—' : `${marketCapDelta > 0 ? '+' : ''}${fmtUsdCompact(Math.abs(marketCapDelta))}`}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Row 4: circulating/total supply progress */}
         <div className="rounded-lg border border-white/10 bg-[#121212] p-2">
@@ -568,8 +572,6 @@ export default function S09b_StablecoinPegHealth() {
   const [listSource, setListSource] = useState('coingecko');
   const [livePricesBySymbol, setLivePricesBySymbol] = useState({});
   const [liveUpdatedAt, setLiveUpdatedAt] = useState(null);
-  const [sortBy, setSortBy] = useState('mcap');
-  const [showOnlyRisk, setShowOnlyRisk] = useState(false);
   const sparkCache = useRef({});
 
   /* ── Fetch + filter to whitelist ── */
@@ -645,13 +647,9 @@ export default function S09b_StablecoinPegHealth() {
         };
       });
 
-      const filtered = showOnlyRisk
-        ? merged.filter((coin) => getStatus(coin.live_price ?? coin.price) !== 'on_peg')
-        : merged;
-
-      return sortCoins(filtered, sortBy);
+      return sortCoins(merged, 'mcap');
     },
-    [coins, livePricesBySymbol, liveUpdatedAt, showOnlyRisk, sortBy],
+    [coins, livePricesBySymbol, liveUpdatedAt],
   );
 
   const summary = useMemo(() => {
@@ -718,39 +716,6 @@ export default function S09b_StablecoinPegHealth() {
               </div>
             </div>
 
-            <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-white/10 bg-[#121212] p-2">
-              {Object.entries(SORTS).map(([key, label]) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setSortBy(key)}
-                  className="rounded px-2 py-1 font-mono transition-colors"
-                  style={{
-                    fontSize: 'var(--fs-caption)',
-                    border: `1px solid ${sortBy === key ? 'rgba(247,147,26,0.5)' : 'rgba(255,255,255,0.12)'}`,
-                    color: sortBy === key ? 'var(--accent-bitcoin)' : 'rgba(255,255,255,0.65)',
-                    background: sortBy === key ? 'rgba(247,147,26,0.1)' : 'transparent',
-                  }}
-                >
-                  {label}
-                </button>
-              ))}
-
-              <button
-                type="button"
-                onClick={() => setShowOnlyRisk((v) => !v)}
-                className="rounded px-2 py-1 font-mono transition-colors"
-                style={{
-                  fontSize: 'var(--fs-caption)',
-                  border: `1px solid ${showOnlyRisk ? 'rgba(255,215,0,0.45)' : 'rgba(255,255,255,0.12)'}`,
-                  color: showOnlyRisk ? 'var(--accent-warning)' : 'rgba(255,255,255,0.65)',
-                  background: showOnlyRisk ? 'rgba(255,215,0,0.1)' : 'transparent',
-                }}
-              >
-                {showOnlyRisk ? 'Showing Risk Only' : 'Show Risk Only'}
-              </button>
-            </div>
-
             {coinsWithLivePeg.length > 0 ? (
               <div className="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
                 {coinsWithLivePeg.map((coin, i) => (
@@ -766,7 +731,7 @@ export default function S09b_StablecoinPegHealth() {
             ) : (
               <div className="flex flex-1 items-center justify-center">
                 <div className="rounded border border-white/10 bg-[#121212] px-4 py-3 text-center font-mono text-[12px] text-white/60">
-                  {showOnlyRisk ? 'No risky stablecoins right now.' : (error || 'No stablecoin data available.')}
+                  {error || 'No stablecoin data available.'}
                 </div>
               </div>
             )}

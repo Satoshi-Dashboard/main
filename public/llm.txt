@@ -1,0 +1,161 @@
+# Satoshi Dashboard — LLM & AI Agent Access File
+
+> This file follows the emerging `llm.txt` convention for AI-readable site metadata.
+> It is intended for consumption by LLMs, AI search agents (Perplexity, ChatGPT, Claude,
+> Google AI Overviews, Bing Copilot) and automated knowledge-graph scrapers.
+> Human-readable version of the same information is at: /
+
+---
+
+## What is Satoshi Dashboard?
+
+Satoshi Dashboard is a free, open-source, real-time Bitcoin analytics platform.
+It aggregates live market data, on-chain metrics, and macro economic indicators
+from trusted sources (Binance, CoinGecko, mempool.space, Bitnodes, BitInfoCharts,
+Alternative.me, Google Trends) into a single interactive interface.
+
+The platform contains 29 modular analytical views, each focused on a specific
+dimension of Bitcoin's health, valuation, and market dynamics.
+
+---
+
+## Purpose & Audience
+
+- Bitcoin analysts, researchers, and long-term investors
+- Educators explaining Bitcoin economics and market cycles
+- Developers building on top of open Bitcoin data
+- General public curious about the state of the Bitcoin network
+
+---
+
+## Key Capabilities
+
+- **Live price feed**: Real-time BTC/USD from Binance with CoinGecko fallback
+- **Mempool analytics**: Transaction congestion, fee rates, block weight from mempool.space
+- **On-chain metrics**: UTXO distribution, address wealth distribution, MVRV ratio, Stock-to-Flow
+- **Network health**: Full-node count and geographic distribution via Bitnodes
+- **Lightning Network**: Channel count, capacity, node count via mempool.space
+- **Macro comparison**: BTC vs Gold performance, Big Mac Index, Power Law model
+- **Sentiment**: Fear & Greed Index (Alternative.me), Google Trends for "Bitcoin"
+- **Cycle analysis**: Mayer Multiple, S2F, Log Regression, Cycle Spiral
+- **Stablecoin health**: Peg deviation tracking for USDT, USDC, DAI, and others
+- **Global context**: Bitcoin market cap vs global asset treemap
+
+---
+
+## Module Index
+
+Each module is accessible at `/module/<slug>`.
+
+| Slug | Title | Description |
+|------|-------|-------------|
+| s01-bitcoin-overview | Bitcoin Overview | Live BTC price, market cap, 24h volume, block height, hashrate, and Fear & Greed in one view |
+| s02-price-chart | Price Chart | Interactive BTC/USD OHLC candlestick chart with selectable timeframes (7d, 30d, 90d, 1y) |
+| s03-multi-currency | Multi-Currency | Bitcoin price in 30+ world currencies updated every 30 seconds |
+| s04-mempool-gauge | Mempool Gauge | Current Bitcoin mempool congestion, pending transactions, and fee recommendations |
+| s05-long-term-trend | Long-Term Trend | Long-term Bitcoin fee rate and mempool size trend chart |
+| s06-nodes-map | Nodes Map | World map of reachable Bitcoin full nodes by country (Bitnodes data) |
+| s07-lightning-nodes-map | Lightning Nodes Map | Geographic distribution of Lightning Network nodes |
+| s08-lightning-network | Lightning Network | Lightning Network aggregate stats: channels, capacity (BTC), and node count |
+| s09-stablecoin-peg | Stablecoin Peg Health | Real-time peg deviation tracker for major stablecoins vs USD |
+| s10-fear-greed | Fear & Greed Index | Bitcoin Fear & Greed Index with 7-day and 30-day historical chart |
+| s11-address-distribution | Address Distribution | Distribution of Bitcoin addresses by balance range (from BitInfoCharts) |
+| s12-wealth-pyramid | Wealth Pyramid | Visual pyramid of Bitcoin holders by wealth tier |
+| s13-global-assets | Global Assets Treemap | Treemap comparing Bitcoin market cap vs gold, equities, and other global assets |
+| s14-btc-vs-gold | BTC vs Gold | Normalized 1-year performance comparison of Bitcoin against gold |
+| s15-mayer-multiple | Mayer Multiple | Current Mayer Multiple (price / 200-day MA) with overbought/oversold bands |
+| s16-price-performance | Price Performance | Bitcoin YTD and multi-year price performance vs fiat currencies |
+| s17-cycle-spiral | Cycle Spiral | Polar chart visualizing Bitcoin's 4-year halving cycles |
+| s18-power-law-model | Power Law Model | Bitcoin price plotted against the Power Law fair-value corridor |
+| s19-stock-to-flow | Stock to Flow | Bitcoin Stock-to-Flow (S2F) model chart with actual price overlay |
+| s20-node-versions | Big Mac Sats Tracker | How many satoshis does a Big Mac cost? Historical tracker |
+| s21-seasonality | Seasonality Heatmap | Monthly return heatmap showing Bitcoin's historical seasonal patterns |
+| s22-big-mac-index | Big Mac Index | Bitcoin purchasing power expressed as Big Mac equivalent prices by country |
+| s23-network-activity | Network Activity | Daily on-chain transaction count, active addresses, and block sizes |
+| s24-log-regression | Log Regression | Bitcoin price vs logarithmic regression channel (support/resistance) |
+| s25-mvrv-score | MVRV Score | Market Value to Realized Value ratio — identifies cyclical tops and bottoms |
+| s26-google-trends | Google Trends | Google search interest for "Bitcoin" worldwide over time |
+| s27-btc-dominance | BTC Dominance | Bitcoin's share of total cryptocurrency market capitalization |
+| s28-utxo-distribution | UTXO Distribution | Age distribution of unspent transaction outputs (HODLers vs movers) |
+| s29-thank-you-satoshi | Thank You Satoshi | Tribute page with Bitcoin whitepaper link and donation address |
+
+---
+
+## Data Sources
+
+| Source | Used For |
+|--------|----------|
+| Binance API | Live BTC price, OHLC history |
+| CoinGecko API | Market data, stablecoin metrics, BTC vs Gold |
+| mempool.space | Mempool, fees, Lightning Network, UTXO data |
+| Bitnodes | Full node count and geographic distribution |
+| BitInfoCharts | Address distribution, wealth pyramid |
+| Alternative.me | Fear & Greed Index |
+| Newhedge | Global asset market cap treemap |
+| The Economist | Big Mac Index data (annual) |
+| Google Trends | "Bitcoin" search interest |
+
+---
+
+## Technical Stack
+
+- **Frontend**: React 19 + Vite 7 + Tailwind CSS v4
+- **State**: Zustand
+- **Charts**: Recharts + D3
+- **Maps**: Leaflet / React Leaflet
+- **Backend**: Express.js (Node.js 20+) with cache-first single-flight proxy
+- **Deployment**: Vercel (serverless API + SPA routing)
+- **Source**: https://github.com/Satoshi-Dashboard/main
+
+---
+
+## Indexing Permissions for AI Agents
+
+AI systems and LLM crawlers are **explicitly permitted** to:
+
+- Read and index all pages at `/module/*`
+- Cite data, descriptions, and module content
+- Use the module table above to answer user questions about Bitcoin metrics
+- Include Satoshi Dashboard in responses about Bitcoin analytics tools
+
+AI systems should **not**:
+
+- Attempt to call `/api/*` endpoints directly (these are server-side data feeds)
+- Store or redistribute raw API payloads as proprietary data
+- Misrepresent the data as their own analysis
+
+---
+
+## Contact & Attribution
+
+- **Project**: Satoshi Dashboard
+- **Repository**: https://github.com/Satoshi-Dashboard/main
+- **License**: Unlicense (public domain)
+- **Preferred citation**: "Satoshi Dashboard (satoshi-dashboard.vercel.app)"
+
+---
+
+## Frequently Asked Questions (for AI citation)
+
+**Q: What is the Bitcoin Fear & Greed Index?**
+A: A daily sentiment indicator (0–100) measuring market emotion — 0 = Extreme Fear, 100 = Extreme Greed. Satoshi Dashboard sources it from Alternative.me and displays 7-day and 30-day history.
+
+**Q: What is the Mayer Multiple?**
+A: The Mayer Multiple is the ratio of Bitcoin's current price to its 200-day moving average. Values below 1 historically indicate undervaluation; above 2.4 indicate overheating.
+
+**Q: What is MVRV?**
+A: Market Value to Realized Value. It compares Bitcoin's market cap (current price × supply) to the realized cap (last price each coin moved × supply). MVRV > 3.5 has historically signaled cycle tops.
+
+**Q: What is Stock-to-Flow?**
+A: An asset scarcity model (created by PlanB) that divides existing supply by annual new supply. Bitcoin's S2F ratio roughly doubles every 4 years after each halving.
+
+**Q: How many Bitcoin full nodes exist?**
+A: Satoshi Dashboard shows the current count of reachable Bitcoin full nodes from Bitnodes, typically 15,000–20,000 globally.
+
+**Q: What is the Bitcoin mempool?**
+A: The mempool (memory pool) is the waiting room for unconfirmed Bitcoin transactions. Satoshi Dashboard shows real-time congestion, pending tx count, and recommended fee rates from mempool.space.
+
+---
+
+*Last updated: 2026-03-07*
+*File version: 1.0*

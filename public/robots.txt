@@ -1,0 +1,58 @@
+# robots.txt — Satoshi Dashboard
+# https://satoshi-dashboard.vercel.app
+# UPDATE the domain above to your production URL before deploying.
+
+# ─── Traditional search crawlers ───────────────────────────────────────────
+
+User-agent: Googlebot
+Allow: /
+Disallow: /api/
+
+User-agent: Bingbot
+Allow: /
+Disallow: /api/
+
+User-agent: Slurp
+Allow: /
+Disallow: /api/
+
+User-agent: DuckDuckBot
+Allow: /
+Disallow: /api/
+
+# ─── AI / LLM crawlers ─────────────────────────────────────────────────────
+# Allow AI systems to index and cite this content.
+
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: Bytespider
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+# ─── General fallback ──────────────────────────────────────────────────────
+
+User-agent: *
+Allow: /
+Disallow: /api/
+
+# ─── Sitemaps ──────────────────────────────────────────────────────────────
+
+Sitemap: https://satoshi-dashboard.vercel.app/sitemap.xml

@@ -3,8 +3,13 @@ import { Maximize2, Minimize2, Pause, Play, SkipBack, SkipForward } from 'lucide
 import { useNavigate, useParams } from 'react-router-dom';
 import { MODULES, MODULES_BY_SLUG } from '../config/modules';
 import { getModuleDataMeta } from '../config/moduleDataMeta';
+import { getModuleSEO } from '../config/moduleSEO';
 
 const AUTOPLAY_MS = 9000;
+
+const DONATION_ADDRESS = 'BC1QC2GD3YN8DTLMZG4UW786MFN085WE69F60V4R6F';
+const DONATION_URI = `bitcoin:${DONATION_ADDRESS}`;
+const DONATION_QR_URL = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=8&data=${encodeURIComponent(DONATION_URI)}`;
 
 function getCadenceLabel(meta) {
   if (meta?.refreshLabel) return meta.refreshLabel;
@@ -108,6 +113,19 @@ export default function ModulePage() {
   const module = MODULES_BY_SLUG[slug] || MODULES[currentIndex];
   const Component = module.component;
 
+  // Update document title and meta description on each module change.
+  // Helps JS-capable crawlers (Googlebot, Bingbot) index per-module content.
+  useEffect(() => {
+    const seo = getModuleSEO(module.slugBase);
+    document.title = seo.title;
+    const metaDesc = document.querySelector('meta[name="description"]');
+    if (metaDesc) metaDesc.setAttribute('content', seo.description);
+    const ogTitle = document.querySelector('meta[property="og:title"]');
+    if (ogTitle) ogTitle.setAttribute('content', seo.title);
+    const ogDesc = document.querySelector('meta[property="og:description"]');
+    if (ogDesc) ogDesc.setAttribute('content', seo.description);
+  }, [module.slugBase]);
+
   const footerPage = useMemo(() => String(module.code || '').replace(/^S/i, ''), [module.code]);
   const footerTotal = useMemo(
     () => MODULES.reduce((max, item) => {
@@ -119,7 +137,35 @@ export default function ModulePage() {
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [donateOpen, setDonateOpen] = useState(false);
+  const [donateCopied, setDonateCopied] = useState(false);
   const [metaLastAtMs, setMetaLastAtMs] = useState(() => Date.now());
+
+  const onCopyDonation = async () => {
+    try {
+      await navigator.clipboard.writeText(DONATION_ADDRESS);
+      setDonateCopied(true);
+      setTimeout(() => setDonateCopied(false), 1400);
+    } catch {
+      // Fallback for non-secure contexts (HTTP, non-localhost IPs)
+      try {
+        const textArea = document.createElement('textarea');
+        textArea.value = DONATION_ADDRESS;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-9999px';
+        textArea.style.top = '0';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        const successful = document.execCommand('copy');
+        document.body.removeChild(textArea);
+        if (successful) {
+          setDonateCopied(true);
+          setTimeout(() => setDonateCopied(false), 1400);
+        }
+      } catch { /* ignore */ }
+    }
+  };
   const [isResponsiveViewport, setIsResponsiveViewport] = useState(() => {
     if (typeof window === 'undefined') return false;
     return window.matchMedia('(max-width: 1023px)').matches;
@@ -235,6 +281,13 @@ export default function ModulePage() {
     return () => document.removeEventListener('fullscreenchange', onFsChange);
   }, []);
 
+  useEffect(() => {
+    if (!donateOpen) return;
+    const onKey = (e) => { if (e.key === 'Escape') setDonateOpen(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [donateOpen]);
+
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen();
@@ -263,6 +316,14 @@ export default function ModulePage() {
 
         {/* Right: LIVE + clock + fullscreen */}
         <div className="flex items-center gap-2 sm:gap-3">
+          <button
+            type="button"
+            onClick={() => setDonateOpen(true)}
+            className="flex items-center gap-1 rounded-[3px] px-2 py-[4px] font-mono text-[11px] font-black tracking-[0.14em] transition hover:opacity-80"
+            style={{ background: '#F7C948', color: '#000' }}
+          >
+            ♥ DONATE
+          </button>
           <div className="flex items-center gap-1.5 rounded-[3px] bg-white px-2 py-[4px]">
             <div className="h-[7px] w-[7px] animate-pulse rounded-full bg-green-500" />
             <span className="text-[11px] font-black tracking-[0.18em] text-black">LIVE</span>
@@ -288,7 +349,7 @@ export default function ModulePage() {
           className={`scrollbar-hidden-mobile relative flex h-full min-h-0 flex-col ${showBottomMeta ? 'overflow-y-auto' : 'overflow-hidden'} lg:overflow-hidden`}
         >
           {showAbsoluteMetaCard && (
-            <div className="pointer-events-none absolute right-2 top-2 z-30 sm:right-3 sm:top-3 lg:right-4 lg:top-3">
+            <div className="pointer-events-none absolute right-2 top-2 z-30 sm:right-3 sm:top-3 lg:hidden">
               <div className="pointer-events-auto rounded-md border border-white/10 bg-[#0f0f0f]/88 px-3 py-2 text-right font-mono text-[11px] tracking-wide text-[#9a9a9a] shadow-[0_8px_28px_rgba(0,0,0,0.38)] backdrop-blur-sm sm:text-[12px]">
                 <div>
                   <span>src: </span>
@@ -313,7 +374,7 @@ export default function ModulePage() {
             </div>
           )}
           <div className={`min-h-0 ${showBottomMeta ? 'min-h-full flex-none' : 'flex-1'}`}>
-            <Component />
+            <Component onOpenDonate={() => setDonateOpen(true)} />
           </div>
 
           {showBottomMeta && (
@@ -369,6 +430,63 @@ export default function ModulePage() {
           </button>
         </div>
       </div>
+
+      {/* ── DONATE MODAL ── */}
+      {donateOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+          onClick={() => setDonateOpen(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl border border-white/15 bg-[#0b0f18] p-5"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Bitcoin donation QR"
+          >
+            <div
+              className="text-center font-mono"
+              style={{ color: 'var(--accent-bitcoin)', fontSize: 'var(--fs-label)' }}
+            >
+              Scan to Donate
+            </div>
+            <div className="mt-3 flex justify-center">
+              <img
+                src={DONATION_QR_URL}
+                alt="Bitcoin donation QR code"
+                className="h-56 w-56 max-w-full rounded border border-white/15 bg-white p-2"
+                loading="lazy"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={onCopyDonation}
+              className="group/addr mt-3 w-full overflow-hidden rounded border px-2 py-2 text-center font-mono text-white transition-colors"
+              style={{
+                fontSize: 'var(--fs-caption)',
+                borderColor: donateCopied ? 'rgba(0,216,151,0.55)' : 'rgba(255,255,255,0.1)',
+                background: donateCopied ? 'rgba(0,216,151,0.08)' : 'rgba(255,255,255,0.04)',
+                color: donateCopied ? 'var(--accent-green)' : '#fff',
+              }}
+            >
+              {donateCopied ? '✓ Copied!' : (
+                <>
+                  <span className="block truncate group-hover/addr:hidden">{DONATION_ADDRESS}</span>
+                  <span className="hidden group-hover/addr:block text-white/60">click to copy</span>
+                </>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => setDonateOpen(false)}
+              className="mt-3 w-full rounded border border-white/10 py-1.5 font-mono text-white/50 transition hover:border-white/25 hover:text-white/80"
+              style={{ fontSize: 'var(--fs-caption)' }}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

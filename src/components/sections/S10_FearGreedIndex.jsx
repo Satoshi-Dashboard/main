@@ -275,12 +275,6 @@ export default function S10_FearGreedIndex() {
         <Bubble label="30 Days Ago" value={thirtyDaysAgo} />
       </div>
 
-      {/* Data cadence badge */}
-      <div className="flex-shrink-0 pt-1">
-        <span className="font-mono text-white/20" style={{ fontSize: 'var(--fs-micro)' }}>
-          src: alternative.me · daily update
-        </span>
-      </div>
     </div>
   );
 }

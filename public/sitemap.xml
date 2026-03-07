@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  sitemap.xml — Satoshi Dashboard
+  UPDATE the <loc> base URL to your production domain before deploying.
+  Current placeholder: https://satoshi-dashboard.vercel.app
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+
+  <!-- ── Root redirect (canonical entry point) ─────────────────────────── -->
+  <url>
+    <loc>https://satoshi-dashboard.vercel.app/</loc>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+    <lastmod>2026-03-07</lastmod>
+    <image:image>
+      <image:loc>https://satoshi-dashboard.vercel.app/modulos-referencia/001-main-dashboard.png</image:loc>
+      <image:title>Satoshi Dashboard — Bitcoin Analytics Overview</image:title>
+    </image:image>
+  </url>
+
+  <!-- ── S01: Bitcoin Overview ──────────────────────────────────────────── -->
+  <url>
+    <loc>https://satoshi-dashboard.vercel.app/module/s01-bitcoin-overview</loc>
+    <changefreq>always</changefreq>
+    <priority>0.9</priority>
+    <lastmod>2026-03-07</lastmod>
+  </url>
+
+  <!-- ── S02: Price Chart ───────────────────────────────────────────────── -->
+  <url>
+    <loc>https://satoshi-dashboard.vercel.app/module/s02-price-chart</loc>
+    <changefreq>always</changefreq>
+    <priority>0.9</priority>
+    <lastmod>2026-03-07</lastmod>
+  </url>
+
+  <!-- ── S03: Multi-Currency ───────────────────────────────────────────── -->
+  <url>
+    <loc>https://satoshi-dashboard.vercel.app/module/s03-multi-currency</loc>
+    <changefreq>always</changefreq>
+    <priority>0.8</priority>
+    <lastmod>2026-03-07</lastmod>
+  </url>
+
+  <!-- ── S04: Mempool Gauge ─────────────────────────────────────────────── -->
+  <url>
+    <loc>https://satoshi-dashboard.vercel.app/module/s04-mempool-gauge</loc>
+    <changefreq>always</changefreq>
+    <priority>0.8</priority>
+    <lastmod>2026-03-07</lastmod>
+  </url>
+
+  <!-- ── S05: Long-Term Trend ───────────────────────────────────────────── -->
+  <url>
+    <loc>https://satoshi-dashboard.vercel.app/module/s05-long-term-trend</loc>
+    <changefreq>hourly</changefreq>
+    <priority>0.8</priority>
+    <lastmod>2026-03-07</lastmod>
+  </url>
+
+  <!-- ── S06: Nodes Map ─────────────────────────────────────────────────── -->
+  <url>
+    <loc>https://satoshi-dashboard.vercel.app/module/s06-nodes-map</loc>
+    <changefreq>hourly</changefreq>
+    <priority>0.7</priority>
+    <lastmod>2026-03-07</lastmod>
+  </url>
+
+  <!-- ── S07: Lightning Nodes Map ───────────────────────────────────────── -->
+  <url>
+    <loc>https://satoshi-dashboard.vercel.app/module/s07-lightning-nodes-map</loc>
+    <changefreq>hourly</changefreq>
+    <priority>0.7</priority>
+    <lastmod>2026-03-07</lastmod>
+  </url>
+
+  <!-- ── S08: Lightning Network ─────────────────────────────────────────── -->
+  <url>
+    <loc>https://satoshi-dashboard.vercel.app/module/s08-lightning-network</loc>
+    <changefreq>hourly</changefreq>
+    <priority>0.7</priority>
+    <lastmod>2026-03-07</lastmod>
+  </url>
+
+  <!-- ── S09: Stablecoin Peg Health ────────────────────────────────────── -->
+  <url>
+    <loc>https://satoshi-dashboard.vercel.app/module/s09-stablecoin-peg</loc>
+    <changefreq>hourly</changefreq>
+    <priority>0.7</priority>
+    <lastmod>2026-03-07</lastmod>
+  </url>
+
+  <!-- ── S10: Fear & Greed Index ────────────────────────────────────────── -->
+  <url>
+    <loc>https://satoshi-dashboard.vercel.app/module/s10-fear-greed</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+    <lastmod>2026-03-07</lastmod>
+  </url>
+
+  <!-- ── S11: Address Distribution ─────────────────────────────────────── -->
+  <url>
+    <loc>https://satoshi-dashboard.vercel.app/module/s11-address-distribution</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+    <lastmod>2026-03-07</lastmod>
+  </url>
+
+  <!-- ── S12: Wealth Pyramid ────────────────────────────────────────────── -->
+  <url>
+    <loc>https://satoshi-dashboard.vercel.app/module/s12-wealth-pyramid</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+    <lastmod>2026-03-07</lastmod>
+  </url>
+
+  <!-- ── S13: Global Assets Treemap ────────────────────────────────────── -->
+  <url>
+    <loc>https://satoshi-dashboard.vercel.app/module/s13-global-assets</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+    <lastmod>2026-03-07</lastmod>
+  </url>
+
+  <!-- ── S14: BTC vs Gold ───────────────────────────────────────────────── -->
+  <url>
+    <loc>https://satoshi-dashboard.vercel.app/module/s14-btc-vs-gold</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+    <lastmod>2026-03-07</lastmod>
+  </url>
+
+  <!-- ── S15: Mayer Multiple ────────────────────────────────────────────── -->
+  <url>
+    <loc>https://satoshi-dashboard.vercel.app/module/s15-mayer-multiple</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+    <lastmod>2026-03-07</lastmod>
+  </url>
+
+  <!-- ── S16: Price Performance ─────────────────────────────────────────── -->
+  <url>
+    <loc>https://satoshi-dashboard.vercel.app/module/s16-price-performance</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+    <lastmod>2026-03-07</lastmod>
+  </url>
+
+  <!-- ── S17: Cycle Spiral ──────────────────────────────────────────────── -->
+  <url>
+    <loc>https://satoshi-dashboard.vercel.app/module/s17-cycle-spiral</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+    <lastmod>2026-03-07</lastmod>
+  </url>
+
+  <!-- ── S18: Power Law Model ───────────────────────────────────────────── -->
+  <url>
+    <loc>https://satoshi-dashboard.vercel.app/module/s18-power-law-model</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+    <lastmod>2026-03-07</lastmod>
+  </url>
+
+  <!-- ── S19: Stock to Flow ─────────────────────────────────────────────── -->
+  <url>
+    <loc>https://satoshi-dashboard.vercel.app/module/s19-stock-to-flow</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+    <lastmod>2026-03-07</lastmod>
+  </url>
+
+  <!-- ── S20: Big Mac Sats Tracker ─────────────────────────────────────── -->
+  <url>
+    <loc>https://satoshi-dashboard.vercel.app/module/s20-node-versions</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+    <lastmod>2026-03-07</lastmod>
+  </url>
+
+  <!-- ── S21: Seasonality Heatmap ──────────────────────────────────────── -->
+  <url>
+    <loc>https://satoshi-dashboard.vercel.app/module/s21-seasonality</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+    <lastmod>2026-03-07</lastmod>
+  </url>
+
+  <!-- ── S22: Big Mac Index ─────────────────────────────────────────────── -->
+  <url>
+    <loc>https://satoshi-dashboard.vercel.app/module/s22-big-mac-index</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+    <lastmod>2026-03-07</lastmod>
+  </url>
+
+  <!-- ── S23: Network Activity ──────────────────────────────────────────── -->
+  <url>
+    <loc>https://satoshi-dashboard.vercel.app/module/s23-network-activity</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+    <lastmod>2026-03-07</lastmod>
+  </url>
+
+  <!-- ── S24: Log Regression ───────────────────────────────────────────── -->
+  <url>
+    <loc>https://satoshi-dashboard.vercel.app/module/s24-log-regression</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+    <lastmod>2026-03-07</lastmod>
+  </url>
+
+  <!-- ── S25: MVRV Score ────────────────────────────────────────────────── -->
+  <url>
+    <loc>https://satoshi-dashboard.vercel.app/module/s25-mvrv-score</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+    <lastmod>2026-03-07</lastmod>
+  </url>
+
+  <!-- ── S26: Google Trends ─────────────────────────────────────────────── -->
+  <url>
+    <loc>https://satoshi-dashboard.vercel.app/module/s26-google-trends</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+    <lastmod>2026-03-07</lastmod>
+  </url>
+
+  <!-- ── S27: BTC Dominance ─────────────────────────────────────────────── -->
+  <url>
+    <loc>https://satoshi-dashboard.vercel.app/module/s27-btc-dominance</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+    <lastmod>2026-03-07</lastmod>
+  </url>
+
+  <!-- ── S28: UTXO Distribution ────────────────────────────────────────── -->
+  <url>
+    <loc>https://satoshi-dashboard.vercel.app/module/s28-utxo-distribution</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+    <lastmod>2026-03-07</lastmod>
+  </url>
+
+  <!-- ── S29: Thank You Satoshi ─────────────────────────────────────────── -->
+  <url>
+    <loc>https://satoshi-dashboard.vercel.app/module/s29-thank-you-satoshi</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+    <lastmod>2026-03-07</lastmod>
+  </url>
+
+</urlset>

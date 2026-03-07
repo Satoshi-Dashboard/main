@@ -27,3 +27,5 @@ visitor_counter.json
 *.njsproj
 *.sln
 *.sw?
+
+.vercel

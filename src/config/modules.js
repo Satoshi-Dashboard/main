@@ -26,7 +26,7 @@ import S26_MVRVScore from '../components/sections/S26_MVRVScore';
 import S27_GoogleTrends from '../components/sections/S27_GoogleTrends';
 import S28_BTCDominance from '../components/sections/S28_BTCDominance';
 import S29_UTXODistribution from '../components/sections/S29_UTXODistribution';
-import S30_ThankYouSatoshi from '../components/sections/S30_ThankYouSatoshi';
+import S29_ThankYouSatoshi from '../components/sections/S29_ThankYouSatoshi';
 
 const MODULE_DEFS = [
   { slugBase: 'bitcoin-overview', title: 'Bitcoin Overview', component: S01_BitcoinOverview },
@@ -57,7 +57,7 @@ const MODULE_DEFS = [
   { slugBase: 'google-trends', title: 'Google Trends', component: S27_GoogleTrends },
   { slugBase: 'btc-dominance', title: 'BTC Dominance', component: S28_BTCDominance },
   { slugBase: 'utxo-distribution', title: 'UTXO Distribution', component: S29_UTXODistribution },
-  { slugBase: 'thank-you-satoshi', title: 'Thank You Satoshi', component: S30_ThankYouSatoshi },
+  { slugBase: 'thank-you-satoshi', title: 'Thank You Satoshi', component: S29_ThankYouSatoshi },
 ];
 
 const toCode = (index) => `S${String(index + 1).padStart(2, '0')}`;
