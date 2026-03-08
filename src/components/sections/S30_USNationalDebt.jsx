@@ -286,7 +286,7 @@ export default function S30_USNationalDebt() {
               >
                 <span
                   className="h-1.5 w-1.5 rounded-full"
-                  style={{ background: 'var(--accent-red)', boxShadow: '0 0 12px rgba(255,71,87,0.5)' }}
+                  style={{ background: 'var(--accent-bitcoin)', boxShadow: '0 0 12px rgba(247,147,26,0.4)' }}
                 />
                 REAL-TIME
               </span>

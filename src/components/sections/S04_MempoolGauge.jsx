@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { fetchJson } from '../../lib/api.js';
 import { fmt } from '../../utils/formatters';
 
 const MAX_VMEMPOOL = 300; // design max vMB for gauge scale
@@ -108,9 +109,7 @@ export default function S04_MempoolGauge() {
     let active = true;
     const load = async () => {
       try {
-        const response = await fetch('/api/public/mempool/overview', { cache: 'no-store' });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const payload = await response.json();
+        const payload = await fetchJson('/api/public/mempool/overview', { timeout: 8000, cache: 'no-store' });
         const mem = payload?.data?.mempool || {};
         const fees = payload?.data?.fees || {};
 

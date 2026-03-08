@@ -114,18 +114,22 @@ export default function DashboardCard({
   return (
     <div
       id={`card-${id}`}
-      className={`bg-gradient-to-br from-gray-900/50 to-gray-950 border border-gray-700/30 rounded-xl overflow-hidden hover:border-yellow-500/30 transition-all duration-300 ${isExpanded ? 'col-span-2 row-span-2' : ''} ${className}`}
+      className={`rounded-xl overflow-hidden transition-all duration-300 ${isExpanded ? 'col-span-2 row-span-2' : ''} ${className}`}
+      style={{
+        background: 'linear-gradient(135deg, rgba(18,18,26,0.92), rgba(17,17,17,0.98))',
+        border: '1px solid rgba(255,255,255,0.12)',
+      }}
     >
       {/* Header */}
-      <div className="px-6 py-4 border-b border-gray-700/20 flex items-start justify-between gap-4">
+      <div className="flex items-start justify-between gap-4 px-6 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
         <div className="flex items-start gap-3 min-w-0">
-          {Icon && <Icon size={20} className="text-yellow-500 mt-1 flex-shrink-0" />}
+          {Icon && <Icon size={20} className="mt-1 flex-shrink-0" style={{ color: 'var(--accent-bitcoin)' }} />}
           <div className="min-w-0">
-            <h3 className="text-yellow-50 font-mono font-semibold text-sm">{title}</h3>
-            {subtitle && <p className="text-gray-500 font-mono text-xs mt-1">{subtitle}</p>}
+            <h3 className="font-mono text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{title}</h3>
+            {subtitle && <p className="mt-1 font-mono text-xs" style={{ color: 'var(--text-secondary)' }}>{subtitle}</p>}
           </div>
         </div>
-        <div className="text-gray-600 font-mono text-xs whitespace-nowrap flex-shrink-0">
+        <div className="whitespace-nowrap font-mono text-xs flex-shrink-0" style={{ color: 'var(--text-tertiary)' }}>
           {fmt.ago(lastUpdated)}
         </div>
       </div>
@@ -136,10 +140,11 @@ export default function DashboardCard({
       </div>
 
       {/* Footer */}
-      <div className="px-6 py-3 border-t border-gray-700/20 flex items-center justify-between gap-2 bg-gray-950/30">
+      <div className="flex items-center justify-between gap-2 px-6 py-3" style={{ borderTop: '1px solid rgba(255,255,255,0.08)', background: 'rgba(17,17,17,0.35)' }}>
         <button
           onClick={handleCopyMarkdown}
-          className="flex items-center gap-1 px-2 py-1 rounded text-xs font-mono text-gray-400 hover:text-yellow-400 hover:bg-gray-800 transition"
+          className="flex items-center gap-1 rounded px-2 py-1 text-xs font-mono transition hover:bg-white/6 hover:text-[color:var(--accent-bitcoin)]"
+          style={{ color: 'var(--text-secondary)' }}
           title="Copy Markdown"
         >
           <Copy size={14} />
@@ -149,7 +154,8 @@ export default function DashboardCard({
         <button
           onClick={handleScreenshot}
           disabled={isScreenshotting}
-          className="flex items-center gap-1 px-2 py-1 rounded text-xs font-mono text-gray-400 hover:text-yellow-400 hover:bg-gray-800 transition disabled:opacity-50"
+          className="flex items-center gap-1 rounded px-2 py-1 text-xs font-mono transition hover:bg-white/6 hover:text-[color:var(--accent-bitcoin)] disabled:opacity-50"
+          style={{ color: 'var(--text-secondary)' }}
           title="Screenshot"
         >
           {isScreenshotting ? (
@@ -169,7 +175,8 @@ export default function DashboardCard({
 
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="flex items-center gap-1 px-2 py-1 rounded text-xs font-mono text-gray-400 hover:text-yellow-400 hover:bg-gray-800 transition"
+          className="flex items-center gap-1 rounded px-2 py-1 text-xs font-mono transition hover:bg-white/6 hover:text-[color:var(--accent-bitcoin)]"
+          style={{ color: 'var(--text-secondary)' }}
           title={isExpanded ? 'Collapse' : 'Expand'}
         >
           {isExpanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}

@@ -651,12 +651,13 @@ export default function S09b_StablecoinPegHealth() {
 
   const summary = useMemo(() => {
     const totalMcap = coinsWithLivePeg.reduce((acc, coin) => acc + coinMcap(coin), 0);
-    const riskCount = coinsWithLivePeg.filter((coin) => getStatus(coin.live_price ?? coin.price) !== 'on_peg').length;
+    const warningCount = coinsWithLivePeg.filter((coin) => getStatus(coin.live_price ?? coin.price) === 'warning').length;
+    const offPegCount = coinsWithLivePeg.filter((coin) => getStatus(coin.live_price ?? coin.price) === 'off_peg').length;
     const avgDev = coinsWithLivePeg.length
       ? coinsWithLivePeg.reduce((acc, coin) => acc + deviationPct(coin.live_price ?? coin.price), 0) / coinsWithLivePeg.length
       : 0;
 
-    return { totalMcap, riskCount, avgDev };
+    return { totalMcap, warningCount, offPegCount, avgDev };
   }, [coinsWithLivePeg]);
 
   /* ── Lazy sparkline fetch — stores { date, value }[] ── */
@@ -692,22 +693,28 @@ export default function S09b_StablecoinPegHealth() {
           </div>
         ) : (
           <>
-            <div className="mb-3 grid grid-cols-1 gap-2 lg:grid-cols-3">
-              <div className="rounded-lg border border-white/10 bg-[#121212] px-3 py-2">
-                <div className="font-mono uppercase" style={{ fontSize: 'var(--fs-micro)', color: 'rgba(255,255,255,0.4)' }}>Total Stablecoin MCap</div>
-                <div className="font-mono text-white tabular-nums" style={{ fontSize: 'var(--fs-heading)' }}>{fmtUsdCompact(summary.totalMcap)}</div>
-              </div>
-              <div className="rounded-lg border border-white/10 bg-[#121212] px-3 py-2">
-                <div className="font-mono uppercase" style={{ fontSize: 'var(--fs-micro)', color: 'rgba(255,255,255,0.4)' }}>Off/Warn Count</div>
-                <div className="font-mono tabular-nums" style={{ fontSize: 'var(--fs-heading)', color: summary.riskCount > 0 ? 'var(--accent-warning)' : 'var(--accent-green)' }}>
-                  {summary.riskCount} / {coinsWithLivePeg.length}
+              <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="rounded-lg border border-white/10 bg-[#121212] px-3 py-2">
+                  <div className="font-mono uppercase" style={{ fontSize: 'var(--fs-micro)', color: 'var(--text-secondary)' }}>Total Stablecoin MCap</div>
+                  <div className="font-mono text-white tabular-nums" style={{ fontSize: 'var(--fs-heading)' }}>{fmtUsdCompact(summary.totalMcap)}</div>
                 </div>
-              </div>
-              <div className="rounded-lg border border-white/10 bg-[#121212] px-3 py-2">
-                <div className="font-mono uppercase" style={{ fontSize: 'var(--fs-micro)', color: 'rgba(255,255,255,0.4)' }}>Avg Peg Deviation</div>
-                <div className="font-mono tabular-nums text-white" style={{ fontSize: 'var(--fs-heading)' }}>
-                  ±{Number.isFinite(summary.avgDev) ? summary.avgDev.toFixed(3) : '—'}%
+                <div className="rounded-lg border border-white/10 bg-[#121212] px-3 py-2">
+                  <div className="font-mono uppercase" style={{ fontSize: 'var(--fs-micro)', color: 'var(--text-secondary)' }}>Warning Count</div>
+                  <div className="font-mono tabular-nums" style={{ fontSize: 'var(--fs-heading)', color: summary.warningCount > 0 ? 'var(--accent-warning)' : 'var(--text-secondary)' }}>
+                    {summary.warningCount}
+                  </div>
                 </div>
+                <div className="rounded-lg border border-white/10 bg-[#121212] px-3 py-2">
+                  <div className="font-mono uppercase" style={{ fontSize: 'var(--fs-micro)', color: 'var(--text-secondary)' }}>Off Peg Count</div>
+                  <div className="font-mono tabular-nums" style={{ fontSize: 'var(--fs-heading)', color: summary.offPegCount > 0 ? 'var(--accent-red)' : 'var(--text-secondary)' }}>
+                    {summary.offPegCount}
+                  </div>
+                </div>
+                <div className="rounded-lg border border-white/10 bg-[#121212] px-3 py-2">
+                  <div className="font-mono uppercase" style={{ fontSize: 'var(--fs-micro)', color: 'var(--text-secondary)' }}>Avg Peg Deviation</div>
+                  <div className="font-mono tabular-nums text-white" style={{ fontSize: 'var(--fs-heading)' }}>
+                    ±{Number.isFinite(summary.avgDev) ? summary.avgDev.toFixed(3) : '—'}%
+                  </div>
               </div>
             </div>
 
@@ -732,7 +739,7 @@ export default function S09b_StablecoinPegHealth() {
             )}
             {/* Refresh cadence hint — intentionally very dim */}
             <div style={{ textAlign: 'right', paddingTop: 4, paddingRight: 2, flexShrink: 0 }}>
-              <span style={{ fontSize: 'var(--fs-micro)', color: 'rgba(255,255,255,0.1)', fontFamily: 'monospace' }}>
+              <span style={{ fontSize: 'var(--fs-micro)', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
                 src {listSource} · ↻ list 2min · peg 2min
                 {liveUpdatedAt
                   ? ` · live ${new Date(liveUpdatedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`

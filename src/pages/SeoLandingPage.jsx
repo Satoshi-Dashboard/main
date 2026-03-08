@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import SeoChrome from '../components/seo/SeoChrome';
-import { FIRST_MODULE, getModulePath, MODULES_BY_CODE } from '../config/modules';
+import { FIRST_MODULE, getModulePath } from '../config/modules';
 import {
   BLOG_POSTS,
   SEO_BLOG_PATH,
@@ -11,41 +11,41 @@ import {
 } from '../config/seoContent';
 import { absoluteUrl, DEFAULT_OG_IMAGE, SITE_URL, usePageSEO } from '../lib/usePageSEO';
 
-const LANDING_TITLE = 'Free Bitcoin Dashboard, Nodes Map & Live BTC Price | Satoshi Dashboard';
-const LANDING_DESCRIPTION = 'Explore a free Bitcoin dashboard with live BTC price, mempool data, Bitcoin nodes maps, merchant coverage, and SEO content built for Google and AI search engines.';
+const LANDING_TITLE = 'Satoshi Dashboard Landing Page | Bitcoin Price, Nodes, Tools and Blog';
+const LANDING_DESCRIPTION = 'A minimal landing page and editorial index for Satoshi Dashboard, built to explain the product, surface high-intent Bitcoin topics, and route visitors into the live dashboard.';
 const LANDING_KEYWORDS = [
   'free bitcoin dashboard',
-  'bitcoin price dashboard',
+  'bitcoin landing page',
   'bitcoin nodes map',
   'bitcoin analytics tools',
-  'bitcoin merchant map',
+  'bitcoin blog',
   'live bitcoin price',
 ];
 
-const FEATURE_CARDS = [
+const HIGHLIGHTS = [
   {
-    title: 'Live Bitcoin price',
-    copy: 'A root-level dashboard view built to answer immediate market questions without an intermediate redirect.',
-    path: '/',
-    pathLabel: 'Open dashboard',
+    label: 'Root dashboard',
+    title: 'Live market view',
+    copy: 'Open the main dashboard directly at the root URL with no redirect layer in between.',
+    to: '/',
   },
   {
-    title: 'Bitcoin nodes map',
-    copy: 'A full-node distribution view built for decentralization, infrastructure, and AI-answer style queries.',
-    path: getModulePath('S06'),
-    pathLabel: MODULES_BY_CODE.S06.title,
+    label: 'Nodes module',
+    title: 'Infrastructure visibility',
+    copy: 'Surface decentralization, node distribution, and network footprint with one direct module route.',
+    to: getModulePath('S06'),
   },
   {
-    title: 'Merchant and POS research',
-    copy: 'Merchant map and Lightning data that support Bitcoin payment, adoption, and point-of-sale research intent.',
-    path: getModulePath('S08'),
-    pathLabel: MODULES_BY_CODE.S08.title,
+    label: 'Merchant module',
+    title: 'Adoption and POS context',
+    copy: 'Connect merchant discovery, Bitcoin payments, and Lightning research from one starting point.',
+    to: getModulePath('S08'),
   },
   {
-    title: 'Search-ready editorial pages',
-    copy: 'An SEO hub and blog that answer real user questions, then move high-intent traffic into the live product.',
-    path: SEO_BLOG_PATH,
-    pathLabel: 'Read blog',
+    label: 'Editorial index',
+    title: 'Topic-led entry paths',
+    copy: 'Use blog articles to capture broad search intent, then move readers into live product flows.',
+    to: SEO_BLOG_PATH,
   },
 ];
 
@@ -65,17 +65,12 @@ const FAQ_SCHEMA = {
 const WEB_APP_SCHEMA = {
   '@context': 'https://schema.org',
   '@type': 'WebApplication',
-  name: 'Satoshi Dashboard SEO Hub',
+  name: 'Satoshi Dashboard landing page',
   url: absoluteUrl(SEO_HUB_PATH),
   applicationCategory: 'FinanceApplication',
   operatingSystem: 'Web Browser',
   isAccessibleForFree: true,
   description: LANDING_DESCRIPTION,
-  offers: {
-    '@type': 'Offer',
-    price: '0',
-    priceCurrency: 'USD',
-  },
 };
 
 const SOFTWARE_SCHEMA = {
@@ -86,42 +81,26 @@ const SOFTWARE_SCHEMA = {
   applicationCategory: 'FinanceApplication',
   operatingSystem: 'Web Browser',
   isAccessibleForFree: true,
-  description: 'Free Bitcoin analytics platform with live price, mempool, nodes, Lightning, merchant maps, and 31 interactive modules.',
-  featureList: [
-    'Live Bitcoin price dashboard',
-    'Bitcoin price chart',
-    'Bitcoin nodes world map',
-    'Merchant map and point-of-sale research',
-    'Mempool and fee monitoring',
-    'On-chain and cycle indicators',
-  ],
+  description: 'Free Bitcoin analytics platform with live price, mempool, nodes, merchant maps, Lightning metrics, and long-term market indicators.',
 };
 
 const BREADCRUMB_SCHEMA = {
   '@context': 'https://schema.org',
   '@type': 'BreadcrumbList',
   itemListElement: [
-    {
-      '@type': 'ListItem',
-      position: 1,
-      name: 'Dashboard',
-      item: `${SITE_URL}/`,
-    },
-    {
-      '@type': 'ListItem',
-      position: 2,
-      name: 'SEO Hub',
-      item: absoluteUrl(SEO_HUB_PATH),
-    },
+    { '@type': 'ListItem', position: 1, name: 'Dashboard', item: `${SITE_URL}/` },
+    { '@type': 'ListItem', position: 2, name: 'Landing', item: absoluteUrl(SEO_HUB_PATH) },
   ],
 };
 
-function SectionHeading({ eyebrow, title, body }) {
+function SectionIntro({ kicker, title, body }) {
   return (
-    <div className="mb-6 max-w-3xl">
-      <div className="font-mono text-[11px] uppercase tracking-[0.24em] text-[color:var(--accent-bitcoin)] sm:text-[12px]">{eyebrow}</div>
-      <h2 className="mt-3 font-mono text-[clamp(1.35rem,3vw,2.35rem)] leading-tight text-white">{title}</h2>
-      <p className="mt-3 text-[14px] leading-7 text-white/72 sm:text-[15px]">{body}</p>
+    <div className="mb-8 max-w-3xl">
+      <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-[color:var(--accent-bitcoin)] sm:text-[12px]">
+        {kicker}
+      </div>
+      <h2 className="mt-3 font-mono text-[clamp(1.4rem,3vw,2.5rem)] leading-tight text-white">{title}</h2>
+      <p className="mt-4 text-[15px] leading-8 text-white/66 sm:text-[16px]">{body}</p>
     </div>
   );
 }
@@ -133,153 +112,138 @@ export default function SeoLandingPage() {
     canonicalPath: SEO_HUB_PATH,
     keywords: LANDING_KEYWORDS,
     image: DEFAULT_OG_IMAGE,
-    imageAlt: 'Free Bitcoin dashboard, nodes map, and live BTC price tools',
+    imageAlt: 'Satoshi Dashboard landing page and blog',
     schema: [WEB_APP_SCHEMA, SOFTWARE_SCHEMA, FAQ_SCHEMA, BREADCRUMB_SCHEMA],
   });
 
   return (
     <SeoChrome>
-      <section className="relative overflow-hidden rounded-[28px] border border-white/8 bg-[linear-gradient(135deg,rgba(247,147,26,0.14),rgba(255,255,255,0.03)_48%,rgba(0,0,0,0.24))] px-5 py-8 shadow-[0_24px_80px_rgba(0,0,0,0.35)] sm:px-8 sm:py-10 lg:px-10">
-        <div className="absolute inset-y-0 right-0 w-1/2 bg-[radial-gradient(circle_at_center,rgba(247,147,26,0.18),transparent_60%)]" />
-        <div className="relative max-w-4xl">
-          <div className="font-mono text-[11px] uppercase tracking-[0.26em] text-[color:var(--accent-bitcoin)] sm:text-[12px]">
-            Bitcoin SEO hub
+      <section className="grid gap-10 border-b border-white/8 pb-12 lg:grid-cols-[minmax(0,1.2fr)_280px] lg:pb-16">
+        <div className="max-w-4xl">
+          <div className="font-mono text-[11px] uppercase tracking-[0.24em] text-[color:var(--accent-bitcoin)] sm:text-[12px]">
+            Landing page
           </div>
-          <h1 className="mt-4 max-w-4xl font-mono text-[clamp(2rem,5vw,4rem)] leading-[1.05] text-white">
-            Free Bitcoin dashboard for live price, nodes, mempool, merchants, and AI-ready answers
+          <h1 className="mt-4 font-mono text-[clamp(2.3rem,6vw,5rem)] leading-[1.02] text-white">
+            A quieter way to explain the dashboard, the blog, and the Bitcoin tools behind them.
           </h1>
-          <p className="mt-5 max-w-3xl text-[15px] leading-8 text-white/76 sm:text-[16px]">
-            This landing page is built to capture searches around <strong>Bitcoin price today</strong>, <strong>Bitcoin nodes map</strong>, <strong>free Bitcoin dashboard</strong>, <strong>BTC analysis tools</strong>, and <strong>Bitcoin point of sale</strong>. The goal is simple: answer the search intent clearly, earn visibility in Google and AI search engines, and route qualified visitors into the live dashboard at the root URL.
+          <p className="mt-6 max-w-3xl text-[16px] leading-8 text-white/68 sm:text-[18px]">
+            This page exists as a clean editorial front door. It explains what Satoshi Dashboard is, why the product has supporting articles, and where visitors should go next if they care about live Bitcoin price, nodes, mempool pressure, merchant adoption, or free analysis tools.
           </p>
-          <p className="mt-4 max-w-3xl text-[15px] leading-8 text-white/72 sm:text-[16px]">
-            Instead of sending users to a generic marketing page, the site now connects informational content with working modules. A user who starts with a broad search can move from this SEO hub into live Bitcoin tools in one click, whether the question is about price, fees, full nodes, merchant adoption, or long-term valuation models.
+          <p className="mt-5 max-w-3xl text-[15px] leading-8 text-white/60 sm:text-[16px]">
+            The main product still lives at the root URL. The landing page and blog simply give broader search traffic a calmer entry point before moving people into the live dashboard or a specific module.
           </p>
 
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link
-              to={getModulePath(FIRST_MODULE)}
-              className="rounded-full border border-[color:var(--border-active)] bg-[rgba(247,147,26,0.16)] px-5 py-3 font-mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--accent-bitcoin)] transition hover:bg-[rgba(247,147,26,0.24)] sm:text-[12px]"
-            >
-              Open the live dashboard
+          <div className="mt-8 flex flex-wrap gap-6 text-[12px] uppercase tracking-[0.18em] text-white/66">
+            <Link to={getModulePath(FIRST_MODULE)} className="border-b border-[color:var(--accent-bitcoin)] pb-1 text-white transition hover:text-[color:var(--accent-bitcoin)]">
+              Open dashboard
             </Link>
-            <Link
-              to={SEO_BLOG_PATH}
-              className="rounded-full border border-white/12 bg-white/[0.04] px-5 py-3 font-mono text-[11px] uppercase tracking-[0.18em] text-white/76 transition hover:border-white/20 hover:text-white sm:text-[12px]"
-            >
-              Explore the blog
+            <Link to={SEO_BLOG_PATH} className="border-b border-white/20 pb-1 transition hover:text-white">
+              Open blog
             </Link>
           </div>
         </div>
+
+        <aside className="space-y-6 border-t border-white/8 pt-8 lg:border-l lg:border-t-0 lg:pt-0 lg:pl-8">
+          <div>
+            <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-white/42">Primary path</div>
+            <div className="mt-2 font-mono text-[1.05rem] text-white">`/`</div>
+            <p className="mt-2 text-[14px] leading-7 text-white/56">The canonical dashboard route, now served directly with no redirect.</p>
+          </div>
+          <div>
+            <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-white/42">Landing route</div>
+            <div className="mt-2 font-mono text-[1.05rem] text-white">`{SEO_HUB_PATH}`</div>
+            <p className="mt-2 text-[14px] leading-7 text-white/56">A dedicated landing page for product context, search intent mapping, and internal distribution.</p>
+          </div>
+          <div>
+            <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-white/42">Editorial route</div>
+            <div className="mt-2 font-mono text-[1.05rem] text-white">`{SEO_BLOG_PATH}`</div>
+            <p className="mt-2 text-[14px] leading-7 text-white/56">A simple article index for price, nodes, merchant, and Bitcoin tool explainers.</p>
+          </div>
+        </aside>
       </section>
 
-      <section className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {FEATURE_CARDS.map((card, index) => (
+      <section className="grid gap-0 border-b border-white/8 py-12 sm:py-14 lg:grid-cols-2 lg:py-16">
+        {HIGHLIGHTS.map((item, index) => (
           <Link
-            key={card.title}
-            to={card.path}
-            className="fade-up rounded-[24px] border border-white/8 bg-[#111118]/90 p-5 shadow-[0_18px_42px_rgba(0,0,0,0.24)] transition hover:-translate-y-0.5 hover:border-[color:var(--border-active)]"
-            style={{ animationDelay: `${index * 0.08}s` }}
+            key={item.title}
+            to={item.to}
+            className={[
+              'group border-white/8 py-7 transition',
+              index % 2 === 0 ? 'lg:border-r lg:pr-10' : 'lg:pl-10',
+              index < 2 ? 'border-b lg:pb-10' : 'pt-10',
+            ].join(' ')}
           >
-            <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-[color:var(--accent-bitcoin)] sm:text-[12px]">
-              {card.pathLabel}
-            </div>
-            <h2 className="mt-3 font-mono text-[1.15rem] text-white">{card.title}</h2>
-            <p className="mt-3 text-[14px] leading-7 text-white/68">{card.copy}</p>
+            <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--accent-bitcoin)]">{item.label}</div>
+            <h2 className="mt-3 font-mono text-[1.45rem] text-white transition group-hover:text-[color:var(--accent-bitcoin)]">{item.title}</h2>
+            <p className="mt-4 max-w-xl text-[15px] leading-8 text-white/62">{item.copy}</p>
           </Link>
         ))}
       </section>
 
-      <section className="mt-14">
-        <SectionHeading
-          eyebrow="Why this exists"
-          title="A Bitcoin SEO architecture that answers the query and exposes the product"
-          body="The site now has a cleaner acquisition path: the dashboard loads directly at the root URL, while the landing page and blog capture informational, comparative, and transactional search demand. That structure improves technical SEO, internal linking, canonical clarity, and user progression from search result to working tool."
+      <section className="border-b border-white/8 py-12 sm:py-14 lg:py-16">
+        <SectionIntro
+          kicker="Positioning"
+          title="The landing page explains the system. The dashboard proves it. The blog expands it."
+          body="That is the structure now. The root handles product truth, the landing handles orientation, and the blog handles broader thematic entry points. It is a cleaner split for branding, SEO, and AI-readable discovery."
         />
-        <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-          <div className="rounded-[24px] border border-white/8 bg-[#101018]/90 p-6">
-            <p className="text-[14px] leading-8 text-white/72 sm:text-[15px]">
-              A common SEO mistake in analytics products is to hide the tool behind redirects or thin landing pages. That weakens canonical signals and breaks the natural connection between intent and destination. Here, the root URL is now the canonical dashboard. That means a user who searches for live Bitcoin price or Bitcoin dashboard lands directly on the real experience instead of on a redirect chain.
+
+        <div className="grid gap-10 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
+          <div className="space-y-5 text-[15px] leading-8 text-white/64 sm:text-[16px]">
+            <p>
+              A landing page should not feel like a cramped marketing block. It should read like a briefing page. That is why this version stays minimal: more space, more typography, fewer decorative cards, and clearer transitions between overview, keyword mapping, user questions, and the article layer.
             </p>
-            <p className="mt-4 text-[14px] leading-8 text-white/72 sm:text-[15px]">
-              The SEO hub serves a different purpose. It is designed to target broader discovery phrases such as free Bitcoin dashboard, monitor BTC nodes, or best free Bitcoin analysis tool. Those users often need explanation, comparison, and orientation before they are ready to engage with a live module. The hub supplies that missing context and then funnels traffic to the exact module that satisfies the task.
+            <p>
+              The visual goal is close to an editorial product release page, but adapted to the dashboard aesthetic. The background stays black, the typography stays restrained, and the orange brand token only appears where it helps orientation. The result is still on-brand, but less heavy and easier to scan.
             </p>
-            <p className="mt-4 text-[14px] leading-8 text-white/72 sm:text-[15px]">
-              This same structure is strong for AI search. Systems like SearchGPT, Perplexity, and Gemini prefer pages that answer questions directly, contain compact definitions, and point to a clear source-of-truth experience. The combination of schema, FAQ formatting, route clarity, and tool-specific internal links makes the content easier to summarize and cite.
+            <p>
+              From an acquisition standpoint, the page is also easier to understand. Visitors can immediately tell the difference between the main product, the explanatory landing page, and the blog that supports it. That reduces brand confusion and lowers the chance that secondary pages compete with the dashboard for navigational intent.
             </p>
           </div>
 
-          <div className="rounded-[24px] border border-white/8 bg-[#0d0d13]/92 p-6">
-            <h3 className="font-mono text-[1rem] text-white">Recommended traffic flow</h3>
-            <div className="mt-4 space-y-3 text-[14px] leading-7 text-white/70">
-              <p><strong>Step 1:</strong> Capture broad searches with the landing page and blog.</p>
-              <p><strong>Step 2:</strong> Answer the question with concise, snippet-friendly copy.</p>
-              <p><strong>Step 3:</strong> Route the visitor to the live module that completes the job.</p>
-              <p><strong>Step 4:</strong> Keep the root dashboard as the canonical home for the flagship experience.</p>
+          <div className="space-y-6 border-t border-white/8 pt-8 lg:border-l lg:border-t-0 lg:pl-10 lg:pt-0">
+            <div>
+              <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-white/42">Signal 01</div>
+              <p className="mt-2 text-[15px] leading-8 text-white/62">Brand intent resolves to `/`.</p>
+            </div>
+            <div>
+              <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-white/42">Signal 02</div>
+              <p className="mt-2 text-[15px] leading-8 text-white/62">The landing page at `{SEO_HUB_PATH}` handles explanation and navigation.</p>
+            </div>
+            <div>
+              <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-white/42">Signal 03</div>
+              <p className="mt-2 text-[15px] leading-8 text-white/62">The blog captures broader question-based discovery without replacing the product.</p>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="mt-14">
-        <SectionHeading
-          eyebrow="Core search themes"
-          title="Bitcoin price today, nodes map, merchant coverage, and free BTC tools in one content funnel"
-          body="These are the search themes with the strongest fit for the current product. Each one connects naturally to a live module, which means the SEO pages can rank for discovery while still feeding real product usage."
+      <section className="border-b border-white/8 py-12 sm:py-14 lg:py-16">
+        <SectionIntro
+          kicker="Keyword map"
+          title="A compact keyword table for product, tool, and conversational intent"
+          body="The Spanish keyword phrases stay here intentionally because they help capture search demand. The surrounding explanatory copy remains in English so the interface keeps one primary language."
         />
-        <div className="grid gap-4 lg:grid-cols-2">
-          <article className="rounded-[24px] border border-white/8 bg-[#101018]/90 p-6">
-            <h3 className="font-mono text-[1.1rem] text-white">Live Bitcoin price and chart intent</h3>
-            <p className="mt-3 text-[14px] leading-8 text-white/72 sm:text-[15px]">
-              Queries around price dominate the top of funnel. Users search for price today, live Bitcoin chart, BTC price in real time, or how to monitor price without paying for a trading terminal. The root dashboard and the dedicated chart module answer those requests directly, while the price blog post handles comparative and conversational phrasing.
-            </p>
-          </article>
-          <article className="rounded-[24px] border border-white/8 bg-[#101018]/90 p-6">
-            <h3 className="font-mono text-[1.1rem] text-white">Bitcoin nodes and decentralization intent</h3>
-            <p className="mt-3 text-[14px] leading-8 text-white/72 sm:text-[15px]">
-              Node queries are highly relevant because they attract researchers, developers, journalists, and long-term investors. They also map perfectly to a visual tool. The nodes module answers the live count and distribution question, while the nodes article explains what the map means and why the metric matters.
-            </p>
-          </article>
-          <article className="rounded-[24px] border border-white/8 bg-[#101018]/90 p-6">
-            <h3 className="font-mono text-[1.1rem] text-white">Free Bitcoin tools and analysis intent</h3>
-            <p className="mt-3 text-[14px] leading-8 text-white/72 sm:text-[15px]">
-              Many users search for a free Bitcoin dashboard because they want a focused tool, not a broad crypto terminal. That makes tool-intent keywords valuable. The landing page frames the product, the tools post gives the monitoring workflow, and the modules provide the concrete utility that turns curiosity into repeated usage.
-            </p>
-          </article>
-          <article className="rounded-[24px] border border-white/8 bg-[#101018]/90 p-6">
-            <h3 className="font-mono text-[1.1rem] text-white">Bitcoin merchant and point-of-sale intent</h3>
-            <p className="mt-3 text-[14px] leading-8 text-white/72 sm:text-[15px]">
-              Merchant and POS intent may be smaller in volume, but it is highly qualified. Users searching for Bitcoin point of sale, Bitcoin merchant dashboard, or how to accept BTC are closer to action. The merchant map, Lightning stats, and POS blog page support that journey with stronger transactional relevance.
-            </p>
-          </article>
-        </div>
-      </section>
 
-      <section className="mt-14">
-        <SectionHeading
-          eyebrow="Keyword map"
-          title="Keyword clusters aligned to search intent and destination pages"
-          body="The table below mixes high-volume informational keywords, niche tool phrases, AI-style conversational prompts, and long-tail searches in Spanish and English. Each cluster is connected to the page that should answer it best."
-        />
-        <div className="overflow-x-auto rounded-[24px] border border-white/8 bg-[#0f0f16]/92">
-          <table className="min-w-full border-collapse text-left text-[13px] text-white/72 sm:text-[14px]">
-            <thead className="bg-white/[0.03] text-[11px] uppercase tracking-[0.16em] text-[color:var(--accent-bitcoin)] sm:text-[12px]">
-              <tr>
-                <th className="px-4 py-4">Category</th>
-                <th className="px-4 py-4">Keyword</th>
-                <th className="px-4 py-4">Lang</th>
-                <th className="px-4 py-4">Intent</th>
-                <th className="px-4 py-4">Target page</th>
+        <div className="overflow-x-auto">
+          <table className="min-w-full border-collapse text-left text-[13px] sm:text-[14px]">
+            <thead>
+              <tr className="border-b border-white/8 text-[11px] uppercase tracking-[0.18em] text-white/40">
+                <th className="px-0 py-4 pr-6">Category</th>
+                <th className="px-0 py-4 pr-6">Keyword</th>
+                <th className="px-0 py-4 pr-6">Language</th>
+                <th className="px-0 py-4 pr-6">Intent</th>
+                <th className="px-0 py-4">Destination</th>
               </tr>
             </thead>
             <tbody>
               {SEO_KEYWORD_ROWS.map((row) => (
-                <tr key={row.keyword} className="border-t border-white/6 align-top">
-                  <td className="px-4 py-4">{row.category}</td>
-                  <td className="px-4 py-4 text-white">{row.keyword}</td>
-                  <td className="px-4 py-4">{row.language}</td>
-                  <td className="px-4 py-4">{row.intent}</td>
-                  <td className="px-4 py-4">
-                    <Link to={row.pagePath} className="text-[color:var(--accent-bitcoin)] underline-offset-4 hover:underline">
+                <tr key={row.keyword} className="border-b border-white/6 align-top text-white/62">
+                  <td className="px-0 py-4 pr-6">{row.category}</td>
+                  <td className="px-0 py-4 pr-6 text-white">{row.keyword}</td>
+                  <td className="px-0 py-4 pr-6">{row.language}</td>
+                  <td className="px-0 py-4 pr-6">{row.intent}</td>
+                  <td className="px-0 py-4">
+                    <Link to={row.pagePath} className="text-[color:var(--accent-bitcoin)] transition hover:text-white">
                       {row.pageLabel}
                     </Link>
                   </td>
@@ -290,83 +254,65 @@ export default function SeoLandingPage() {
         </div>
       </section>
 
-      <section className="mt-14">
-        <SectionHeading
-          eyebrow="People also ask"
-          title="Questions users ask in Google, ChatGPT, Perplexity, and Gemini"
-          body="These questions reflect the conversational phrasing that matters more and more in AI-led discovery. Each one should have a clear destination page so the site becomes easier to quote, summarize, and navigate."
+      <section className="border-b border-white/8 py-12 sm:py-14 lg:py-16">
+        <SectionIntro
+          kicker="Questions"
+          title="Fifteen user questions that should route cleanly into the right page"
+          body="These are the kinds of prompts users type into Google, ChatGPT, Perplexity, and Gemini. The point of the landing layer is to make those paths explicit."
         />
-        <div className="overflow-x-auto rounded-[24px] border border-white/8 bg-[#0f0f16]/92">
-          <table className="min-w-full border-collapse text-left text-[13px] text-white/72 sm:text-[14px]">
-            <thead className="bg-white/[0.03] text-[11px] uppercase tracking-[0.16em] text-[color:var(--accent-bitcoin)] sm:text-[12px]">
-              <tr>
-                <th className="px-4 py-4">Intent</th>
-                <th className="px-4 py-4">Question</th>
-                <th className="px-4 py-4">Best page</th>
-              </tr>
-            </thead>
-            <tbody>
-              {SEO_QUESTION_ROWS.map((row) => (
-                <tr key={row.question} className="border-t border-white/6 align-top">
-                  <td className="px-4 py-4">{row.intent}</td>
-                  <td className="px-4 py-4 text-white">{row.question}</td>
-                  <td className="px-4 py-4">
-                    <Link to={row.pagePath} className="text-[color:var(--accent-bitcoin)] underline-offset-4 hover:underline">
-                      {row.pageLabel}
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+
+        <div className="space-y-4">
+          {SEO_QUESTION_ROWS.map((item) => (
+            <div key={item.question} className="grid gap-2 border-b border-white/6 py-4 md:grid-cols-[160px_minmax(0,1fr)_220px] md:gap-6">
+              <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-white/42">{item.intent}</div>
+              <div className="text-[15px] leading-8 text-white/74">{item.question}</div>
+              <Link to={item.pagePath} className="text-[14px] leading-8 text-[color:var(--accent-bitcoin)] transition hover:text-white">
+                {item.pageLabel}
+              </Link>
+            </div>
+          ))}
         </div>
       </section>
 
-      <section className="mt-14 rounded-[28px] border border-white/8 bg-[#101018]/90 p-6 sm:p-8">
-        <SectionHeading
-          eyebrow="FAQ"
-          title="Frequently asked questions about the free Bitcoin dashboard"
-          body="This FAQ section is written to support featured snippets, AI answer extraction, and faster user orientation. Each answer is short enough to summarize and specific enough to direct the next click."
+      <section className="border-b border-white/8 py-12 sm:py-14 lg:py-16">
+        <SectionIntro
+          kicker="FAQ"
+          title="Direct answers for snippet-style discovery"
+          body="These answers stay concise on purpose so they can be extracted, summarized, and understood quickly by both humans and answer engines."
         />
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-8 lg:grid-cols-2">
           {SEO_HUB_FAQS.map((item) => (
-            <article key={item.question} className="rounded-[22px] border border-white/8 bg-black/20 p-5">
-              <h3 className="font-mono text-[1rem] text-white">{item.question}</h3>
-              <p className="mt-3 text-[14px] leading-7 text-white/70">{item.answer}</p>
+            <article key={item.question} className="border-t border-white/8 pt-5">
+              <h3 className="font-mono text-[1.05rem] text-white">{item.question}</h3>
+              <p className="mt-3 text-[15px] leading-8 text-white/62">{item.answer}</p>
             </article>
           ))}
         </div>
       </section>
 
-      <section className="mt-14">
-        <SectionHeading
-          eyebrow="SEO blog"
-          title="Use the blog to target broader search demand, then move visitors into the modules"
-          body="The blog extends the acquisition surface with higher-context pages for price tracking, node monitoring, free tools, and merchant workflows. Each article is linked to the live dashboard or the relevant module so traffic can move naturally from research to action."
+      <section className="py-12 sm:py-14 lg:py-16">
+        <SectionIntro
+          kicker="Blog"
+          title="A restrained article index instead of a noisy content grid"
+          body="The blog should feel like a continuation of the landing page, not a different product. Each article is positioned as a simple entry route into a live module or the root dashboard."
         />
-        <div className="grid gap-4 lg:grid-cols-2">
+
+        <div className="divide-y divide-white/8 border-t border-white/8">
           {BLOG_POSTS.map((post) => (
-            <article key={post.slug} className="rounded-[24px] border border-white/8 bg-[#101018]/90 p-6 shadow-[0_16px_40px_rgba(0,0,0,0.22)]">
-              <div className="flex flex-wrap items-center gap-3 font-mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--accent-bitcoin)] sm:text-[12px]">
-                <span>{post.readTime}</span>
-                <span className="text-white/28">/</span>
-                <span>{post.publishedDate}</span>
+            <article key={post.slug} className="grid gap-6 py-7 lg:grid-cols-[190px_minmax(0,1fr)_180px] lg:items-start">
+              <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-white/42">
+                <div>{post.publishedDate}</div>
+                <div className="mt-2">{post.readTime}</div>
               </div>
-              <h3 className="mt-3 font-mono text-[1.15rem] text-white">{post.title}</h3>
-              <p className="mt-3 text-[14px] leading-7 text-white/70">{post.excerpt}</p>
-              <div className="mt-5 flex flex-wrap gap-2">
-                {post.keywords.map((keyword) => (
-                  <span key={keyword} className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-[12px] text-white/60">
-                    {keyword}
-                  </span>
-                ))}
+              <div>
+                <h3 className="font-mono text-[1.3rem] text-white">{post.title}</h3>
+                <p className="mt-3 max-w-3xl text-[15px] leading-8 text-white/62">{post.excerpt}</p>
               </div>
-              <Link
-                to={`${SEO_BLOG_PATH}/${post.slug}`}
-                className="mt-6 inline-flex rounded-full border border-[color:var(--border-active)] bg-[rgba(247,147,26,0.14)] px-4 py-2 font-mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--accent-bitcoin)] transition hover:bg-[rgba(247,147,26,0.22)] sm:text-[12px]"
-              >
-                Read article
-              </Link>
+              <div className="flex items-start lg:justify-end">
+                <Link to={`${SEO_BLOG_PATH}/${post.slug}`} className="border-b border-[color:var(--accent-bitcoin)] pb-1 text-[12px] uppercase tracking-[0.18em] text-[color:var(--accent-bitcoin)] transition hover:text-white">
+                  Read article
+                </Link>
+              </div>
             </article>
           ))}
         </div>

@@ -8,15 +8,20 @@ const BINANCE_BTC_24H_URLS = [
   'https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT',
   'https://api.binance.us/api/v3/ticker/24hr?symbol=BTCUSDT',
 ];
+const FRANKFURTER_USD_URL = 'https://api.frankfurter.app/latest?from=USD';
 
 const FETCH_TIMEOUT_MS = 10_000;
 
 const SPOT_REFRESH_MS = 5_000;
+const FIAT_REFRESH_MS = 60 * 60_000;
 
 const SHARED_CACHE_KEY = 'btc-rates';
 const SHARED_LOCK_KEY = 'btc-rates-refresh';
+const FIAT_SHARED_CACHE_KEY = 'btc-rates-fiat';
+const FIAT_SHARED_LOCK_KEY = 'btc-rates-fiat-refresh';
 
 let memoryCache = null;
+let fiatMemoryCache = null;
 
 class ExternalApiError extends Error {
   constructor(source, message) {
@@ -67,6 +72,11 @@ function sanitizeBtcUsd(value) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
+function sanitizeFxRate(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
 function isValidRatesPayload(payload) {
   return (
     payload
@@ -80,6 +90,26 @@ function isValidRatesPayload(payload) {
 
 function isPayloadFresh(payload, nowMs = Date.now()) {
   if (!isValidRatesPayload(payload)) return false;
+  const nextUpdate = parseIsoDate(payload.next_update_at);
+  if (!nextUpdate) return false;
+  return nowMs < nextUpdate.getTime();
+}
+
+function isValidFiatPayload(payload) {
+  return Boolean(
+    payload
+      && typeof payload === 'object'
+      && typeof payload.updated_at === 'string'
+      && typeof payload.next_update_at === 'string'
+      && typeof payload.source_provider === 'string'
+      && payload.rates
+      && typeof payload.rates === 'object'
+      && Object.keys(payload.rates).length > 0,
+  );
+}
+
+function isFiatPayloadFresh(payload, nowMs = Date.now()) {
+  if (!isValidFiatPayload(payload)) return false;
   const nextUpdate = parseIsoDate(payload.next_update_at);
   if (!nextUpdate) return false;
   return nowMs < nextUpdate.getTime();
@@ -149,10 +179,153 @@ function getSharedTtlSeconds(now = Date.now()) {
   return Math.max(10, Math.floor(ttlMs / 1000));
 }
 
+function getFiatSharedTtlSeconds(now = Date.now()) {
+  const next = now + FIAT_REFRESH_MS;
+  const ttlMs = Math.max(10 * 60_000, next - now + 10 * 60_000);
+  return Math.max(600, Math.floor(ttlMs / 1000));
+}
+
+function buildFiatPayload(rates, {
+  sourceProvider = 'frankfurter',
+  sourceUrl = FRANKFURTER_USD_URL,
+} = {}) {
+  const now = Date.now();
+  return {
+    updated_at: normalizeTimestamp(new Date(now)),
+    next_update_at: normalizeTimestamp(new Date(now + FIAT_REFRESH_MS)),
+    source_provider: sourceProvider,
+    source_url: sourceUrl,
+    rates,
+  };
+}
+
+function deriveFiatPayloadFromBtcRatesPayload(payload) {
+  const btcUsd = sanitizeBtcUsd(payload?.btc_usd);
+  if (!btcUsd || !payload?.rates || typeof payload.rates !== 'object') return null;
+
+  const normalizedRates = { USD: 1 };
+  Object.entries(payload.rates).forEach(([code, value]) => {
+    const safeValue = sanitizeFxRate(value);
+    if (!safeValue) return;
+    const currencyCode = String(code).toUpperCase();
+    if (currencyCode === 'USD') {
+      normalizedRates.USD = 1;
+      return;
+    }
+    normalizedRates[currencyCode] = safeValue / btcUsd;
+  });
+
+  return buildFiatPayload(normalizedRates, {
+    sourceProvider: 'derived_from_cached_btc_rates',
+    sourceUrl: FRANKFURTER_USD_URL,
+  });
+}
+
+async function fetchUsdFxFromFrankfurter() {
+  const payload = await fetchJsonWithTimeout(FRANKFURTER_USD_URL, 'frankfurter');
+  const upstreamRates = payload?.rates;
+  if (!upstreamRates || typeof upstreamRates !== 'object') {
+    throw new ExternalApiError('frankfurter', 'Invalid Frankfurter FX payload');
+  }
+
+  const rates = { USD: 1 };
+  Object.entries(upstreamRates).forEach(([code, value]) => {
+    const safeValue = sanitizeFxRate(value);
+    if (!safeValue) return;
+    rates[String(code).toUpperCase()] = safeValue;
+  });
+
+  if (Object.keys(rates).length <= 1) {
+    throw new ExternalApiError('frankfurter', 'Frankfurter returned no fiat FX rates');
+  }
+
+  return rates;
+}
+
+async function updateFiatRates() {
+  const rates = await fetchUsdFxFromFrankfurter();
+  const payload = buildFiatPayload(rates);
+  fiatMemoryCache = payload;
+  await cacheSetJson(FIAT_SHARED_CACHE_KEY, payload, { ttlSeconds: getFiatSharedTtlSeconds() });
+  return payload;
+}
+
+async function getFiatRates({ forceFresh = false } = {}) {
+  if (!forceFresh && isFiatPayloadFresh(fiatMemoryCache)) {
+    return fiatMemoryCache;
+  }
+
+  if (!forceFresh && !fiatMemoryCache) {
+    const shared = await cacheGetJson(FIAT_SHARED_CACHE_KEY);
+    if (isValidFiatPayload(shared)) {
+      fiatMemoryCache = shared;
+    }
+  }
+
+  if (!forceFresh && isFiatPayloadFresh(fiatMemoryCache)) {
+    return fiatMemoryCache;
+  }
+
+  const refreshed = await withCacheLock(
+    FIAT_SHARED_LOCK_KEY,
+    async () => updateFiatRates(),
+    { ttlSeconds: 20, waitMs: 3000, pollMs: 120 },
+  ).catch(() => null);
+
+  if (isValidFiatPayload(refreshed)) {
+    return refreshed;
+  }
+
+  const shared = await cacheGetJson(FIAT_SHARED_CACHE_KEY);
+  if (isValidFiatPayload(shared)) {
+    fiatMemoryCache = shared;
+    return shared;
+  }
+
+  if (isValidFiatPayload(fiatMemoryCache)) {
+    return fiatMemoryCache;
+  }
+
+  return await updateFiatRates();
+}
+
+function buildMergedRates(spotUsd, fiatPayload) {
+  const merged = { USD: Number(spotUsd.toFixed(2)) };
+  Object.entries(fiatPayload?.rates || {}).forEach(([code, fxRate]) => {
+    const safeRate = sanitizeFxRate(fxRate);
+    if (!safeRate) return;
+    if (String(code).toUpperCase() === 'USD') {
+      merged.USD = Number(spotUsd.toFixed(2));
+      return;
+    }
+    const converted = spotUsd * safeRate;
+    merged[String(code).toUpperCase()] = Number(converted >= 1 ? converted.toFixed(2) : converted.toFixed(6));
+  });
+  return merged;
+}
+
 export async function updateBtcRates() {
   const basePayload = isValidRatesPayload(memoryCache) ? memoryCache : null;
 
-  const spot = await fetchSpotFromBinance(basePayload);
+  const [spot, fiat] = await Promise.all([
+    fetchSpotFromBinance(basePayload),
+    getFiatRates().catch(async (error) => {
+      const shared = await cacheGetJson(FIAT_SHARED_CACHE_KEY);
+      if (isValidFiatPayload(shared)) {
+        fiatMemoryCache = shared;
+        return shared;
+      }
+      if (isValidFiatPayload(fiatMemoryCache)) {
+        return fiatMemoryCache;
+      }
+      const derived = deriveFiatPayloadFromBtcRatesPayload(basePayload);
+      if (isValidFiatPayload(derived)) {
+        fiatMemoryCache = derived;
+        return derived;
+      }
+      throw error;
+    }),
+  ]);
 
   const now = Date.now();
   const payload = {
@@ -162,10 +335,13 @@ export async function updateBtcRates() {
     btc_change_24h_pct: Number.isFinite(spot.change24h) ? Number(spot.change24h.toFixed(3)) : null,
     source_btc: spot.sourceLabel,
     source_btc_url: spot.sourceUrl,
+    source_fiat: fiat.source_provider,
+    source_fiat_url: fiat.source_url,
     refresh_policy: {
       spot_interval_ms: SPOT_REFRESH_MS,
+      fiat_interval_ms: FIAT_REFRESH_MS,
     },
-    rates: { USD: Number(spot.btcUsd.toFixed(2)) },
+    rates: buildMergedRates(spot.btcUsd, fiat),
   };
 
   memoryCache = payload;
@@ -199,33 +375,29 @@ export async function getBtcRates({ forceFresh = false } = {}) {
     SHARED_LOCK_KEY,
     async () => updateBtcRates(),
     { ttlSeconds: 20, waitMs: 3000, pollMs: 120 },
-  );
+  ).catch(() => null);
 
   if (isValidRatesPayload(refreshed)) {
     return refreshed;
   }
 
-  try {
-    const shared = await cacheGetJson(SHARED_CACHE_KEY);
-    if (isValidRatesPayload(shared)) {
-      memoryCache = shared;
-      if (!forceFresh || isPayloadFresh(shared)) return shared;
-    }
-
-    return await updateBtcRates();
-  } catch (error) {
-    if (memoryCache && isValidRatesPayload(memoryCache)) {
-      return memoryCache;
-    }
-
-    const disk = await readDiskCache();
-    if (disk) {
-      memoryCache = disk;
-      return disk;
-    }
-
-    throw error;
+  const shared = await cacheGetJson(SHARED_CACHE_KEY);
+  if (isValidRatesPayload(shared)) {
+    memoryCache = shared;
+    return shared;
   }
+
+  if (memoryCache && isValidRatesPayload(memoryCache)) {
+    return memoryCache;
+  }
+
+  const disk = await readDiskCache();
+  if (disk) {
+    memoryCache = disk;
+    return disk;
+  }
+
+  return await updateBtcRates();
 }
 
 export { ExternalApiError };

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { fetchJson } from '../../lib/api.js';
 
 function parseThreshold(label) {
   const match = String(label || '').match(/[\d,]+/);
@@ -44,10 +45,7 @@ export default function S14_TransactionCount() {
 
     const load = async () => {
       try {
-        const res = await fetch('/api/s14/addresses-richer');
-        if (!res.ok) return;
-
-        const payload = await res.json();
+        const payload = await fetchJson('/api/s14/addresses-richer', { timeout: 8000 });
         const rows = toChartData(payload);
         if (!active || !rows.length) return;
 

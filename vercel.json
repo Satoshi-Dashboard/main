@@ -9,6 +9,21 @@
   },
   "redirects": [
     {
+      "source": "/bitcoin-dashboard",
+      "destination": "/landingpage",
+      "permanent": true
+    },
+    {
+      "source": "/bitcoin-dashboard/blog/(.*)",
+      "destination": "/landingpage/blog/$1",
+      "permanent": true
+    },
+    {
+      "source": "/bitcoin-dashboard/blog",
+      "destination": "/landingpage/blog",
+      "permanent": true
+    },
+    {
       "source": "/module/s01-bitcoin-overview",
       "destination": "/",
       "permanent": true

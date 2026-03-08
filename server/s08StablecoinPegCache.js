@@ -44,6 +44,17 @@ function isFresh(payload, nowMs = Date.now()) {
   return nowMs < next.getTime();
 }
 
+function stalePayload(payload, reason) {
+  if (!payload || typeof payload !== 'object') return null;
+  const updated = parseIsoDate(payload.updated_at);
+  return {
+    ...payload,
+    is_fallback: true,
+    fallback_note: reason,
+    stale_age_ms: updated ? Math.max(0, Date.now() - updated.getTime()) : null,
+  };
+}
+
 function isCoingeckoListPayload(payload) {
   return Boolean(
     payload
@@ -248,6 +259,8 @@ function buildDetailPayload(id, data) {
     next_update_at: normalizeTimestamp(new Date(now + DETAIL_REFRESH_MS)),
     source_provider: 'coingecko',
     source_url: DETAIL_URL(id),
+    is_fallback: false,
+    fallback_note: null,
     data,
   };
 }
@@ -356,11 +369,12 @@ export async function getS08StablecoinList() {
   const shared = await cacheGetJson(LIST_CACHE_KEY);
   if (isCoingeckoListPayload(shared)) {
     listMemory = shared;
-    return shared;
+    if (isFresh(shared)) return shared;
+    return stalePayload(shared, 'Serving stale stablecoin list while shared refresh completes');
   }
 
   if (isCoingeckoListPayload(listMemory)) {
-    return listMemory;
+    return stalePayload(listMemory, 'Serving in-memory stale stablecoin list while shared refresh completes');
   }
 
   return await refreshList();
@@ -392,11 +406,12 @@ export async function getS08StablecoinLivePrices() {
   const shared = await cacheGetJson(LIVE_CACHE_KEY);
   if (isCoingeckoLivePayload(shared)) {
     livePriceMemory = shared;
-    return shared;
+    if (isFresh(shared)) return shared;
+    return stalePayload(shared, 'Serving stale stablecoin prices while shared refresh completes');
   }
 
   if (isCoingeckoLivePayload(livePriceMemory)) {
-    return livePriceMemory;
+    return stalePayload(livePriceMemory, 'Serving in-memory stale stablecoin prices while shared refresh completes');
   }
 
   return await refreshLivePrices();
@@ -446,11 +461,12 @@ export async function getS08StablecoinDetail(id) {
   const shared = await cacheGetJson(`s08:stablecoin:detail:${stableId}`);
   if (shared && typeof shared === 'object' && shared.data) {
     detailMemory.set(stableId, shared);
-    return shared;
+    if (isFresh(shared)) return shared;
+    return stalePayload(shared, 'Serving stale stablecoin detail while shared refresh completes');
   }
 
   if (cached && cached.data) {
-    return cached;
+    return stalePayload(cached, 'Serving in-memory stale stablecoin detail while shared refresh completes');
   }
 
   return await refreshDetail(stableId);

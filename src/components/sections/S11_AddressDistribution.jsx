@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { fetchJson } from '../../lib/api.js';
 
 const MODULE_COLORS = {
   '--bg-main': '#0B0B0B',
@@ -115,9 +116,7 @@ export default function S11_AddressDistribution() {
 
     const load = async () => {
       try {
-        const response = await fetch('/api/s10/btc-distribution');
-        if (!response.ok) return;
-        const payload = await response.json();
+        const payload = await fetchJson('/api/s10/btc-distribution', { timeout: 8000 });
         if (!active || !Array.isArray(payload?.distribution)) return;
         const mapped = mapDistributionToTiers(payload.distribution);
         if (mapped.length) setTiers(mapped);

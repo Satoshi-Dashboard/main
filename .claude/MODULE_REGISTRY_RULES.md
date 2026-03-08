@@ -15,6 +15,7 @@ These rules apply to any change in:
    - slugs must follow `sNN-...`
 5. If any module order/identity changes, ensure footer/pagination still shows unambiguous module identity.
 6. Footer page indicator must reflect module code numbering (derived from `code`/`slug`), not array index.
+7. Do not trust legacy component filenames/constants as live module identity; `src/config/modules.js` is authoritative.
 
 ## Required verification
 
@@ -23,6 +24,10 @@ After changing module registry/order:
 1. Run `npm run build`.
 2. Confirm navigation works for previous and next controls.
 3. Confirm footer shows module identity clearly (`module.code` + position).
+4. Re-check `src/config/moduleSEO.js` keys/titles/descriptions for affected modules.
+5. Re-check `src/config/moduleDataMeta.js` keys and module-specific strip/overlay behavior for affected modules.
+6. Re-check `UNDER_CONSTRUCTION_SLUGS` and any module-specific shell logic in `src/pages/ModulePage.jsx`.
+7. Confirm no unintended module reindexing changed unrelated slugs/codes.
 
 ## Cross-domain guardrail (mandatory)
 
@@ -30,3 +35,4 @@ Even when changes are not directly editing `src/config/modules.js`, agents must 
 
 - Source of truth: `src/config/modules.js` (`MODULE_DEFS`, generated `code`, generated `slug`).
 - Never assume module index from chat history in multi-agent sessions.
+- Never assume live module identity from legacy file names like `S08_*`, `S09b_*`, or similar historical numbering.

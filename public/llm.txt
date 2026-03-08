@@ -7,20 +7,20 @@
 
 ## What is Satoshi Dashboard?
 
-Satoshi Dashboard is a free, open-source Bitcoin analytics platform with 31 interactive modules.
+Satoshi Dashboard is a free, open-source Bitcoin analytics platform with 31 modules in the registry, with the currently live and indexable experiences listed below.
 It combines live market data, mempool and fee monitoring, Bitcoin node maps, merchant maps,
 Lightning metrics, and long-term valuation models in one browser-based experience.
 
 The primary live dashboard is served directly at `/` with no intermediate redirect.
-Additional SEO and editorial content lives at `/bitcoin-dashboard` and `/bitcoin-dashboard/blog`.
+Additional landing and editorial content lives at `/landingpage` and `/landingpage/blog`.
 
 ---
 
 ## Primary Routes
 
 - `/` - canonical live Bitcoin dashboard
-- `/bitcoin-dashboard` - SEO landing page for Bitcoin dashboard, nodes, price, tools, and merchant intent
-- `/bitcoin-dashboard/blog` - editorial hub for price, nodes, tool, and merchant guides
+- `/landingpage` - landing page for Bitcoin dashboard, nodes, price, tools, and merchant intent
+- `/landingpage/blog` - editorial hub for price, nodes, tool, and merchant guides
 
 ---
 
@@ -32,7 +32,7 @@ Additional SEO and editorial content lives at `/bitcoin-dashboard` and `/bitcoin
 - Bitcoin full-node world map and Lightning node map
 - Bitcoin-friendly merchant map by country
 - Lightning Network aggregate statistics
-- Fear & Greed, MVRV, log regression, S2F, and other cycle indicators
+- Fear & Greed, plus additional long-term valuation modules currently being expanded
 - Bitcoin vs gold and global asset comparison tools
 
 ---
@@ -41,6 +41,7 @@ Additional SEO and editorial content lives at `/bitcoin-dashboard` and `/bitcoin
 
 The first module is the root dashboard at `/`.
 All other modules are accessible at `/module/<slug>`.
+Routes omitted from the table below are intentionally excluded from indexing while they remain under active development.
 
 | Route | Title | Description |
 |------|-------|-------------|
@@ -59,20 +60,6 @@ All other modules are accessible at `/module/<slug>`.
 | /module/s13-bitcoin-wealth-pyramid | Wealth Pyramid | Bitcoin holder concentration tiers |
 | /module/s14-bitcoin-vs-global-assets | Global Assets | Bitcoin market cap vs global assets |
 | /module/s15-bitcoin-vs-gold-chart | BTC vs Gold | Normalized 1-year performance comparison |
-| /module/s16-bitcoin-mayer-multiple | Mayer Multiple | Price vs 200-day moving average |
-| /module/s17-bitcoin-price-performance | Price Performance | YTD and multi-year BTC returns |
-| /module/s18-bitcoin-halving-cycle-spiral | Cycle Spiral | Bitcoin halving cycle visualization |
-| /module/s19-bitcoin-power-law-model | Power Law Model | Long-term Bitcoin valuation corridor |
-| /module/s20-bitcoin-stock-to-flow-model | Stock to Flow | Bitcoin scarcity model chart |
-| /module/s21-bitcoin-big-mac-sats-tracker | Big Mac Sats Tracker | Bitcoin purchasing power in satoshis |
-| /module/s22-bitcoin-seasonality-heatmap | Seasonality | Monthly Bitcoin return heatmap |
-| /module/s23-bitcoin-big-mac-index | Big Mac Index | Bitcoin buying power by country |
-| /module/s24-bitcoin-network-activity | Network Activity | On-chain activity and participation metrics |
-| /module/s25-bitcoin-log-regression-channel | Log Regression | Long-term support and resistance channel |
-| /module/s26-bitcoin-mvrv-score | MVRV Score | Bitcoin cycle valuation metric |
-| /module/s27-bitcoin-google-trends | Google Trends | Bitcoin search interest over time |
-| /module/s28-bitcoin-dominance-chart | BTC Dominance | Bitcoin share of total crypto market cap |
-| /module/s29-bitcoin-utxo-distribution | UTXO Distribution | HODLer age and coin dormancy distribution |
 | /module/s30-us-national-debt-live-counter | U.S. National Debt | Real-time debt counter and debt-per-person view |
 | /module/s31-satoshi-nakamoto-bitcoin-whitepaper | Thank You Satoshi | Tribute page and Bitcoin whitepaper context |
 
@@ -82,11 +69,11 @@ All other modules are accessible at `/module/<slug>`.
 
 | Route | Focus |
 |------|-------|
-| /bitcoin-dashboard | Free Bitcoin dashboard, live BTC price, nodes, mempool, merchant map, AI-ready FAQ |
-| /bitcoin-dashboard/blog/live-bitcoin-price-dashboard | Best free Bitcoin dashboard for live BTC price and market data |
-| /bitcoin-dashboard/blog/bitcoin-nodes-map-monitor | How to track Bitcoin nodes with a free nodes map and monitor |
-| /bitcoin-dashboard/blog/free-bitcoin-analysis-tools | Free Bitcoin analysis tools and dashboard workflow |
-| /bitcoin-dashboard/blog/bitcoin-point-of-sale-dashboard | Bitcoin point of sale and merchant analytics guide |
+| /landingpage | Minimal landing page for the dashboard, blog, and Bitcoin tool discovery |
+| /landingpage/blog/live-bitcoin-price-dashboard | Best free Bitcoin dashboard for live BTC price and market data |
+| /landingpage/blog/bitcoin-nodes-map-monitor | How to track Bitcoin nodes with a free nodes map and monitor |
+| /landingpage/blog/free-bitcoin-analysis-tools | Free Bitcoin analysis tools and dashboard workflow |
+| /landingpage/blog/bitcoin-point-of-sale-dashboard | Bitcoin point of sale and merchant analytics guide |
 
 ---
 
@@ -124,7 +111,7 @@ All other modules are accessible at `/module/<slug>`.
 
 AI systems are explicitly allowed to:
 
-- Read and index `/`, `/bitcoin-dashboard`, `/bitcoin-dashboard/blog/*`, and `/module/*`
+- Read and index `/`, `/landingpage`, `/landingpage/blog/*`, and the live module routes listed in this file
 - Quote descriptions, FAQs, and module summaries with attribution
 - Use route descriptions to answer Bitcoin dashboard, node monitoring, and BTC analysis questions
 

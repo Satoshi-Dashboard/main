@@ -59,7 +59,8 @@ function renderProviderLinks(providers) {
         href={provider.url}
         target="_blank"
         rel="noreferrer"
-        className="text-[#F7931A] underline-offset-2 hover:underline"
+        className="underline-offset-2 hover:underline"
+        style={{ color: 'var(--accent-bitcoin)' }}
       >
         {provider.name}
       </a>
@@ -138,6 +139,7 @@ export default function ModulePage({ forcedSlug = null }) {
   const Component = module.component;
   const seo = useMemo(() => getModuleSEO(module.slugBase), [module.slugBase]);
   const canonicalPath = module.code === FIRST_MODULE.code ? '/' : `/module/${module.slug}`;
+  const isUnderConstruction = useMemo(() => UNDER_CONSTRUCTION_SLUGS.has(module.slugBase), [module.slugBase]);
   const moduleSchema = useMemo(
     () => ([
       {
@@ -176,13 +178,13 @@ export default function ModulePage({ forcedSlug = null }) {
     description: seo.description,
     canonicalPath,
     keywords: seo.keywords,
+    robots: isUnderConstruction ? 'noindex, follow' : undefined,
     image: DEFAULT_OG_IMAGE,
     imageAlt: module.title,
-    schema: moduleSchema,
+    schema: isUnderConstruction ? [] : moduleSchema,
   });
 
   const footerPage = useMemo(() => String(module.code || '').replace(/^S/i, ''), [module.code]);
-  const isUnderConstruction = useMemo(() => UNDER_CONSTRUCTION_SLUGS.has(module.slugBase), [module.slugBase]);
   const footerTotal = useMemo(
     () => MODULES.reduce((max, item) => {
       const n = Number(String(item.code || '').match(/\d+/)?.[0] || 0);
@@ -366,7 +368,7 @@ export default function ModulePage({ forcedSlug = null }) {
   };
 
   return (
-    <main className="player-shell relative h-dvh w-screen overflow-hidden bg-[#111111]">
+    <main className="player-shell relative h-dvh w-screen overflow-hidden bg-[color:var(--bg-primary)]">
       {/* ── TOP BAR ── */}
       <div className="absolute inset-x-0 top-0 z-40 flex h-14 items-center justify-between gap-3 border-b border-white/[0.06] bg-[#0d0d0d]/95 px-3 backdrop-blur-sm sm:h-14 sm:px-4 lg:h-12 lg:px-5">
         {/* Project logo */}
@@ -389,7 +391,7 @@ export default function ModulePage({ forcedSlug = null }) {
             type="button"
             onClick={() => setDonateOpen(true)}
             className="flex items-center gap-1 rounded-[3px] px-2 py-[4px] font-mono text-[11px] font-black tracking-[0.14em] transition hover:opacity-80"
-            style={{ background: '#F7C948', color: '#000' }}
+            style={{ background: 'var(--accent-warning)', color: '#111111' }}
           >
             ♥ DONATE
           </button>
@@ -419,7 +421,7 @@ export default function ModulePage({ forcedSlug = null }) {
         >
           {showAbsoluteMetaCard && (
             <div className="pointer-events-none absolute right-2 top-2 z-30 sm:right-3 sm:top-3 lg:hidden">
-              <div className="pointer-events-auto rounded-md border border-white/10 bg-[#0f0f0f]/88 px-3 py-2 text-right font-mono text-[11px] tracking-wide text-[#9a9a9a] shadow-[0_8px_28px_rgba(0,0,0,0.38)] backdrop-blur-sm sm:text-[12px]">
+              <div className="pointer-events-auto rounded-md border border-white/10 bg-black/85 px-3 py-2 text-right font-mono text-[11px] tracking-wide shadow-[0_8px_28px_rgba(0,0,0,0.38)] backdrop-blur-sm sm:text-[12px]" style={{ color: 'var(--text-secondary)' }}>
                 <div>
                   <span>src: </span>
                   {renderProviderLinks(moduleMeta.providers)}
@@ -437,7 +439,7 @@ export default function ModulePage({ forcedSlug = null }) {
                   {moduleMeta.stripTitle || module.title}
                 </div>
               ) : <div />}
-              <div className="text-right font-mono text-[11px] tracking-wide text-[#7c7c7c]">
+              <div className="text-right font-mono text-[11px] tracking-wide" style={{ color: 'var(--text-secondary)' }}>
                 <div>
                   <span>src: </span>
                   {renderProviderLinks(moduleMeta.providers)}
@@ -468,17 +470,17 @@ export default function ModulePage({ forcedSlug = null }) {
                     WebkitBackdropFilter: 'blur(8px)',
                   }}
                 >
-                  <Hammer size={26} style={{ color: '#F7931A', opacity: 0.85 }} />
+                  <Hammer size={26} style={{ color: 'var(--accent-bitcoin)', opacity: 0.85 }} />
                   <div>
                     <div
                       className="font-bold text-white tracking-widest uppercase"
-                      style={{ fontSize: '0.7rem', letterSpacing: '0.22em' }}
+                      style={{ fontSize: 'var(--fs-tag)', letterSpacing: '0.22em' }}
                     >
                       Under Construction
                     </div>
                     <div
-                      className="mt-1 text-white/35"
-                      style={{ fontSize: '0.65rem', letterSpacing: '0.08em' }}
+                      className="mt-1"
+                      style={{ fontSize: 'var(--fs-micro)', letterSpacing: '0.08em', color: 'var(--text-secondary)' }}
                     >
                       Coming soon
                     </div>
@@ -490,7 +492,7 @@ export default function ModulePage({ forcedSlug = null }) {
 
           {showBottomMeta && (
             <div className="flex flex-none justify-end px-3 pb-24 pt-3 sm:px-4">
-              <div className="text-right font-mono text-[11px] tracking-wide text-[#7c7c7c]">
+              <div className="text-right font-mono text-[11px] tracking-wide" style={{ color: 'var(--text-secondary)' }}>
                 <div>
                   <span>src: </span>
                   {renderProviderLinks(moduleMeta.providers)}
@@ -509,7 +511,8 @@ export default function ModulePage({ forcedSlug = null }) {
         <button
           type="button"
           onClick={() => setIsPlaying((v) => !v)}
-          className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 text-white/60 transition hover:border-[#F7931A]/60 hover:text-[#F7931A] sm:h-10 sm:w-10 lg:h-7 lg:w-7"
+          className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 text-white/60 transition hover:text-[color:var(--accent-bitcoin)] sm:h-10 sm:w-10 lg:h-7 lg:w-7"
+          style={{ '--tw-border-opacity': 1, borderColor: 'rgba(255,255,255,0.2)' }}
           aria-label={isPlaying ? 'Pause' : 'Play'}
         >
           {isPlaying ? <Pause size={16} /> : <Play size={16} />}
@@ -518,8 +521,9 @@ export default function ModulePage({ forcedSlug = null }) {
         {/* Branding */}
         <Link
           to={SEO_HUB_PATH}
-          className="absolute left-1/2 top-1/2 flex max-w-[42vw] -translate-x-1/2 -translate-y-1/2 items-center justify-center text-center text-[9px] tracking-[0.18em] text-white/24 transition-colors hover:text-white/60 sm:max-w-[34vw] sm:text-[10px] lg:max-w-none lg:text-[11px]"
-          aria-label="Open Bitcoin SEO hub"
+          className="absolute left-1/2 top-1/2 flex max-w-[42vw] -translate-x-1/2 -translate-y-1/2 items-center justify-center text-center tracking-[0.18em] text-white/24 transition-colors hover:text-white/60 sm:max-w-[34vw] lg:max-w-none"
+          style={{ fontSize: 'var(--fs-tag)' }}
+          aria-label="Open landing page"
         >
           satoshi-dashboard
         </Link>

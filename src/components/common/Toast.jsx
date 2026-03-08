@@ -22,7 +22,12 @@ export const ToastProvider = ({ children }) => {
         {toasts.map(toast => (
           <div
             key={toast.id}
-            className="bg-gray-900 border border-yellow-500/50 text-yellow-50 px-4 py-3 rounded text-sm font-mono shadow-lg pointer-events-auto flex items-center gap-3"
+            className="pointer-events-auto flex items-center gap-3 rounded px-4 py-3 text-sm font-mono shadow-lg"
+            style={{
+              background: 'rgba(18,18,26,0.96)',
+              border: '1px solid rgba(247,147,26,0.45)',
+              color: 'var(--text-primary)',
+            }}
           >
             <span>{toast.message}</span>
             <button

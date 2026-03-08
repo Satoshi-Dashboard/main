@@ -31,16 +31,16 @@ export default function BitcoinDonationQr({ value, size = 144, className = '' })
 
   return (
     <div
-      className={`overflow-hidden rounded-xl border border-[#F7931A]/20 bg-white p-2 shadow-[0_8px_24px_rgba(0,0,0,0.28)] ${className}`.trim()}
-      style={{ width: size + 16, minWidth: size + 16, minHeight: size + 16 }}
+      className={`overflow-hidden rounded-xl bg-white p-2 shadow-[0_8px_24px_rgba(0,0,0,0.28)] ${className}`.trim()}
+      style={{ width: size + 16, minWidth: size + 16, minHeight: size + 16, border: '1px solid rgba(247,147,26,0.2)' }}
       aria-label="Bitcoin donation QR"
     >
       {svgMarkup ? (
         <div dangerouslySetInnerHTML={{ __html: svgMarkup }} />
       ) : (
         <div
-          className="flex items-center justify-center bg-white text-center font-mono text-[#111111]"
-          style={{ width: size, height: size, fontSize: 'var(--fs-micro)' }}
+          className="flex items-center justify-center bg-white text-center font-mono"
+          style={{ color: 'var(--bg-primary)', width: size, height: size, fontSize: 'var(--fs-micro)' }}
         >
           Loading QR...
         </div>

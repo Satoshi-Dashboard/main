@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { fetchJson } from '../../lib/api.js';
 
 const REFRESH_MS = 1_800_000;
 
@@ -87,9 +88,7 @@ export default function S15_WealthPyramid() {
 
     const load = async () => {
       try {
-        const response = await fetch('/api/s14/addresses-richer');
-        if (!response.ok) return;
-        const payload = await response.json();
+        const payload = await fetchJson('/api/s14/addresses-richer', { timeout: 8000 });
         if (!active) return;
 
         setTiers((prev) => buildTiers(payload, prev));

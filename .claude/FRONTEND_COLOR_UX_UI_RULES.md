@@ -8,12 +8,12 @@ Source basis: analysis of the first 11 active modules in `src/config/modules.js`
 - S03 Multi-Currency
 - S04 Mempool Gauge
 - S05 Long-Term Trend
-- S06 (code S06) Nodes Map (`S08_NodesMap.jsx`)
-- S07 (code S07) Lightning Network (`S09_LightningNetwork.jsx`)
-- S08 (code S08) Stablecoin Peg Health (`S09b_StablecoinPegHealth.jsx`)
-- S09 (code S09) Fear & Greed (`S10_FearGreedIndex.jsx`)
-- S10 (code S10) Address Distribution (`S11_AddressDistribution.jsx`)
-- S11 (code S11) Wealth Pyramid (`S15_WealthPyramid.jsx`)
+- S06 Nodes Map (`S08_NodesMap.jsx` legacy filename)
+- S07 Lightning Nodes Map (`S08b_LightningNodesMap.jsx` legacy filename)
+- S08 BTC Map Business Density (`S08c_BtcMapBusinessesMap.jsx` legacy filename)
+- S09 Lightning Network (`S09_LightningNetwork.jsx`)
+- S10 Stablecoin Peg Health (`S09b_StablecoinPegHealth.jsx` legacy filename)
+- S11 Fear & Greed (`S10_FearGreedIndex.jsx` legacy filename)
 
 ## Core principle
 
@@ -29,6 +29,13 @@ Before applying any frontend UX/UI change that references module numbers, slugs,
 2. Do not rely on prior chat memory for module identity/order in multi-agent workflows.
 3. Verify the targeted module slug/code still match the requested module before editing.
 4. Re-check mapping after edits to ensure no unintended module index/slug drift occurred.
+
+## Source of truth rule (mandatory)
+
+1. `src/config/modules.js` is the only source of truth for live module identity/order.
+2. Do not infer live module code/order from component filenames or variable names.
+3. Legacy filenames/constants may not match current live codes (for example `S21_NodeVersions` renders the live `Big Mac Sats Tracker` module, and `S29_ThankYouSatoshi` renders the live closing module).
+4. When frontend copy, metadata, or labels mention a module by number/title/slug, verify against generated `MODULES`, not legacy component names.
 
 ## Responsive-first policy (mandatory)
 
@@ -165,10 +172,14 @@ When creating any new frontend module, agents must follow the project example pa
 3. Include loading skeleton states before data is available (no hardcoded fake final values).
 4. Use token-first colors (`var(--...)`) for repeated UI roles; avoid raw hex unless strongly justified.
 5. Preserve title/status hierarchy:
-   - title uses brand role
-   - status uses semantic colors (green/red/yellow)
-   - metadata uses neutral gray role
-6. New modules are non-compliant if they skip this example baseline.
+    - title uses brand role
+    - status uses semantic colors (green/red/yellow)
+    - metadata uses neutral gray role
+6. New modules must integrate with the current player shell behavior:
+   - confirm metadata strip behavior in `src/config/moduleDataMeta.js`
+   - confirm SEO metadata in `src/config/moduleSEO.js`
+   - confirm responsive/top/bottom overlay behavior in `src/pages/ModulePage.jsx`
+7. New modules are non-compliant if they skip this example baseline.
 
 ## Frontend language rule (mandatory)
 

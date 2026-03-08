@@ -57,12 +57,12 @@ export default function UniqueVisitorsCounter({ compact = false }) {
 
   if (compact) {
     return (
-      <div className="bg-gray-800/40 rounded p-3 border border-[#F7931A]/30 text-center">
-        <div className="mb-1 flex items-center justify-center gap-1 text-[11px] uppercase tracking-widest text-[#f4be7f]">
-          <RefreshCw size={11} className="animate-spin text-[#F7931A]" />
+      <div className="rounded p-3 text-center" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(247,147,26,0.3)' }}>
+        <div className="mb-1 flex items-center justify-center gap-1 text-[11px] uppercase tracking-widest" style={{ color: 'var(--accent-bitcoin)' }}>
+          <RefreshCw size={11} className="animate-spin" style={{ color: 'var(--accent-bitcoin)' }} />
           Unique Visits
         </div>
-        <div className="font-mono font-bold tabular-nums text-yellow-50" style={{ fontSize: 'var(--fs-body)' }}>
+        <div className="font-mono font-bold tabular-nums" style={{ fontSize: 'var(--fs-body)', color: 'var(--text-primary)' }}>
           {isLoading ? '--' : displayValue}
         </div>
       </div>
@@ -70,16 +70,16 @@ export default function UniqueVisitorsCounter({ compact = false }) {
   }
 
   return (
-    <div className="rounded-lg border border-[#F7931A]/35 bg-gradient-to-br from-[#F7931A]/12 to-[#F7931A]/5 p-4">
+    <div className="rounded-lg p-4" style={{ border: '1px solid rgba(247,147,26,0.35)', background: 'linear-gradient(135deg, rgba(247,147,26,0.12), rgba(247,147,26,0.05))' }}>
       <div className="flex items-center justify-between gap-3">
         <div>
-          <div className="text-[11px] uppercase tracking-[0.18em] text-[#f4be7f]">Unique Visitors</div>
-          <div className="mt-1 font-mono text-2xl font-bold tabular-nums text-yellow-50">
+          <div className="text-[11px] uppercase tracking-[0.18em]" style={{ color: 'var(--accent-bitcoin)' }}>Unique Visitors</div>
+          <div className="mt-1 font-mono text-2xl font-bold tabular-nums" style={{ color: 'var(--text-primary)' }}>
             {isLoading ? '--' : displayValue}
           </div>
         </div>
-        <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[#F7931A]/40 bg-[#F7931A]/15">
-          <Users size={18} className="text-[#F7931A]" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-full" style={{ border: '1px solid rgba(247,147,26,0.4)', background: 'rgba(247,147,26,0.15)' }}>
+          <Users size={18} style={{ color: 'var(--accent-bitcoin)' }} />
         </div>
       </div>
     </div>

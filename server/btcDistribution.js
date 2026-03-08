@@ -161,6 +161,15 @@ function needsRefresh(payload, now = Date.now()) {
   }
 }
 
+function stalePayload(payload, reason) {
+  if (!isValidPayload(payload)) return null;
+  return {
+    ...payload,
+    isFallback: true,
+    fallbackNote: reason,
+  };
+}
+
 function formatTotalBtc(value) {
   if (Number.isInteger(value)) return String(value);
   return String(Number(value.toFixed(8)));
@@ -226,6 +235,8 @@ export async function updateBtcDistributionCache() {
     source: SOURCE_NAME,
     updatedAt,
     nextUpdateAt,
+    isFallback: false,
+    fallbackNote: null,
     distribution,
   };
 
@@ -264,17 +275,22 @@ export async function getBtcDistributionPayload() {
     return refreshed;
   }
 
-  try {
-    const sharedCache = await cacheGetJson(SHARED_CACHE_KEY);
-    if (isValidPayload(sharedCache)) {
-      memoryCache = sharedCache;
-      if (!needsRefresh(sharedCache)) return sharedCache;
-    }
+  const sharedCache = await cacheGetJson(SHARED_CACHE_KEY);
+  if (isValidPayload(sharedCache)) {
+    memoryCache = sharedCache;
+    if (!needsRefresh(sharedCache)) return sharedCache;
+    return stalePayload(sharedCache, 'Serving stale distribution while shared refresh completes');
+  }
 
+  if (memoryCache && isValidPayload(memoryCache)) {
+    return stalePayload(memoryCache, 'Serving in-memory stale distribution while shared refresh completes');
+  }
+
+  try {
     return await updateBtcDistributionCache();
   } catch (error) {
     if (memoryCache && isValidPayload(memoryCache)) {
-      return memoryCache;
+      return stalePayload(memoryCache, `Serving in-memory stale distribution while refresh recovers (${error instanceof Error ? error.message : 'unknown error'})`);
     }
     throw error;
   }
@@ -291,6 +307,8 @@ export async function getBtcDistributionStatus() {
     source: payload.source,
     updatedAt: payload.updatedAt,
     nextUpdateAt: payload.nextUpdateAt,
+    isFallback: Boolean(payload.isFallback),
+    fallbackNote: payload.fallbackNote || null,
     rows: payload.distribution.length,
   };
 }

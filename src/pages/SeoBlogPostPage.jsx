@@ -11,10 +11,7 @@ function buildFaqSchema(post) {
     mainEntity: post.faq.map((item) => ({
       '@type': 'Question',
       name: item.question,
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: item.answer,
-      },
+      acceptedAnswer: { '@type': 'Answer', text: item.answer },
     })),
   };
 }
@@ -30,20 +27,13 @@ function buildBlogSchema(post) {
     mainEntityOfPage: absoluteUrl(getBlogPostPath(post.slug)),
     url: absoluteUrl(getBlogPostPath(post.slug)),
     image: DEFAULT_OG_IMAGE,
-    author: {
-      '@type': 'Organization',
-      name: 'Satoshi Dashboard',
-    },
+    author: { '@type': 'Organization', name: 'Satoshi Dashboard' },
     publisher: {
       '@type': 'Organization',
       name: 'Satoshi Dashboard',
-      logo: {
-        '@type': 'ImageObject',
-        url: `${SITE_URL}/logo.svg`,
-      },
+      logo: { '@type': 'ImageObject', url: `${SITE_URL}/logo.svg` },
     },
     keywords: post.keywords.join(', '),
-    articleSection: post.sections.map((section) => section.heading),
   };
 }
 
@@ -52,24 +42,9 @@ function buildBreadcrumbSchema(post) {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
-      {
-        '@type': 'ListItem',
-        position: 1,
-        name: 'SEO Hub',
-        item: absoluteUrl(SEO_HUB_PATH),
-      },
-      {
-        '@type': 'ListItem',
-        position: 2,
-        name: 'Blog',
-        item: absoluteUrl(SEO_BLOG_PATH),
-      },
-      {
-        '@type': 'ListItem',
-        position: 3,
-        name: post.title,
-        item: absoluteUrl(getBlogPostPath(post.slug)),
-      },
+      { '@type': 'ListItem', position: 1, name: 'Landing', item: absoluteUrl(SEO_HUB_PATH) },
+      { '@type': 'ListItem', position: 2, name: 'Blog', item: absoluteUrl(SEO_BLOG_PATH) },
+      { '@type': 'ListItem', position: 3, name: post.title, item: absoluteUrl(getBlogPostPath(post.slug)) },
     ],
   };
 }
@@ -90,129 +65,125 @@ export default function SeoBlogPostPage() {
     schema: post ? [buildBlogSchema(activePost), buildFaqSchema(activePost), buildBreadcrumbSchema(activePost)] : [],
   });
 
-  if (!post) {
-    return <Navigate to={SEO_BLOG_PATH} replace />;
-  }
+  if (!post) return <Navigate to={SEO_BLOG_PATH} replace />;
 
-  const relatedModules = post.relatedModuleCodes
-    .map((code) => MODULES_BY_CODE[code])
-    .filter(Boolean);
+  const relatedModules = post.relatedModuleCodes.map((code) => MODULES_BY_CODE[code]).filter(Boolean);
   const relatedPosts = BLOG_POSTS.filter((item) => item.slug !== post.slug).slice(0, 2);
 
   return (
     <SeoChrome>
       <article className="mx-auto max-w-4xl">
-        <div className="rounded-[28px] border border-white/8 bg-[linear-gradient(135deg,rgba(247,147,26,0.12),rgba(255,255,255,0.03)_55%,rgba(0,0,0,0.2))] px-5 py-8 sm:px-8 sm:py-10">
-          <div className="flex flex-wrap items-center gap-3 font-mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--accent-bitcoin)] sm:text-[12px]">
-            <Link to={SEO_HUB_PATH} className="hover:text-white">SEO Hub</Link>
-            <span className="text-white/30">/</span>
-            <Link to={SEO_BLOG_PATH} className="hover:text-white">Blog</Link>
-            <span className="text-white/30">/</span>
+        <header className="border-b border-white/8 pb-12 sm:pb-14 lg:pb-16">
+          <div className="flex flex-wrap items-center gap-3 font-mono text-[11px] uppercase tracking-[0.18em] text-white/42 sm:text-[12px]">
+            <Link to={SEO_HUB_PATH} className="transition hover:text-white">Landing</Link>
+            <span>/</span>
+            <Link to={SEO_BLOG_PATH} className="transition hover:text-white">Blog</Link>
+            <span>/</span>
             <span>{post.readTime}</span>
           </div>
-          <h1 className="mt-4 font-mono text-[clamp(1.9rem,4.5vw,3.4rem)] leading-tight text-white">{post.title}</h1>
-          <p className="mt-5 text-[15px] leading-8 text-white/76 sm:text-[16px]">{post.metaDescription}</p>
-          <div className="mt-6 flex flex-wrap gap-2">
+
+          <h1 className="mt-5 font-mono text-[clamp(2rem,5vw,4rem)] leading-[1.05] text-white">{post.title}</h1>
+          <p className="mt-6 max-w-3xl text-[16px] leading-8 text-white/66 sm:text-[18px]">{post.metaDescription}</p>
+
+          <div className="mt-6 flex flex-wrap gap-x-4 gap-y-2 text-[12px] text-white/40">
             {post.keywords.map((keyword) => (
-              <span key={keyword} className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-[12px] text-white/62">
-                {keyword}
-              </span>
+              <span key={keyword}>{keyword}</span>
             ))}
           </div>
-        </div>
+        </header>
 
-        <div className="mt-8 rounded-[24px] border border-white/8 bg-[#101018]/92 p-6 sm:p-8">
+        <section className="border-b border-white/8 py-10 sm:py-12 lg:py-14">
           {post.intro.map((paragraph) => (
-            <p key={paragraph} className="text-[15px] leading-8 text-white/72 sm:text-[16px] [&:not(:first-child)]:mt-5">
+            <p key={paragraph} className="text-[16px] leading-8 text-white/68 [&:not(:first-child)]:mt-5">
               {paragraph}
             </p>
           ))}
 
-          <div className="mt-8 rounded-[22px] border border-[color:var(--border-active)] bg-[rgba(247,147,26,0.08)] p-5">
-            <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-[color:var(--accent-bitcoin)] sm:text-[12px]">
-              {post.snippetTitle}
-            </div>
-            <p className="mt-3 text-[15px] leading-8 text-white/82 sm:text-[16px]">{post.snippetText}</p>
+          <div className="mt-8 border-l-2 border-[color:var(--accent-bitcoin)] pl-5">
+            <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--accent-bitcoin)]">{post.snippetTitle}</div>
+            <p className="mt-3 text-[16px] leading-8 text-white/80">{post.snippetText}</p>
           </div>
+        </section>
 
-          <div className="mt-10 space-y-10">
+        <section className="py-10 sm:py-12 lg:py-14">
+          <div className="space-y-12">
             {post.sections.map((section) => (
-              <section key={section.heading}>
-                <h2 className="font-mono text-[1.35rem] text-white sm:text-[1.55rem]">{section.heading}</h2>
+              <section key={section.heading} className="border-b border-white/8 pb-10 last:border-b-0 last:pb-0">
+                <h2 className="font-mono text-[1.45rem] text-white sm:text-[1.7rem]">{section.heading}</h2>
                 {section.paragraphs?.map((paragraph) => (
-                  <p key={paragraph} className="mt-4 text-[15px] leading-8 text-white/72 sm:text-[16px]">
+                  <p key={paragraph} className="mt-4 text-[15px] leading-8 text-white/66 sm:text-[16px]">
                     {paragraph}
                   </p>
                 ))}
                 {section.subheading ? <h3 className="mt-6 font-mono text-[1.05rem] text-white">{section.subheading}</h3> : null}
                 {section.subparagraphs?.map((paragraph) => (
-                  <p key={paragraph} className="mt-3 text-[15px] leading-8 text-white/72 sm:text-[16px]">
+                  <p key={paragraph} className="mt-3 text-[15px] leading-8 text-white/66 sm:text-[16px]">
                     {paragraph}
                   </p>
                 ))}
                 {section.bullets?.length ? (
-                  <ul className="mt-5 grid gap-3 sm:grid-cols-2">
+                  <div className="mt-5 grid gap-3 sm:grid-cols-2">
                     {section.bullets.map((bullet) => (
-                      <li key={bullet} className="rounded-[18px] border border-white/8 bg-black/18 px-4 py-3 text-[14px] leading-7 text-white/68">
+                      <div key={bullet} className="border-t border-white/8 pt-3 text-[14px] leading-7 text-white/58">
                         {bullet}
-                      </li>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 ) : null}
               </section>
             ))}
           </div>
-        </div>
+        </section>
 
-        <section className="mt-8 rounded-[24px] border border-white/8 bg-[#101018]/92 p-6 sm:p-8">
-          <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-[color:var(--accent-bitcoin)] sm:text-[12px]">
-            Related live modules
-          </div>
-          <h2 className="mt-3 font-mono text-[1.4rem] text-white">Open the exact module after reading</h2>
-          <div className="mt-6 grid gap-4 sm:grid-cols-2">
-            {relatedModules.map((module) => (
-              <Link key={module.code} to={getModulePath(module)} className="rounded-[20px] border border-white/8 bg-black/18 p-5 transition hover:border-[color:var(--border-active)]">
-                <div className="font-mono text-[11px] uppercase tracking-[0.2em] text-[color:var(--accent-bitcoin)] sm:text-[12px]">
-                  {module.code}
-                </div>
-                <div className="mt-2 font-mono text-[1rem] text-white">{module.title}</div>
-                <div className="mt-2 text-[14px] text-white/60">Go from explanation to live data.</div>
-              </Link>
-            ))}
+        <section className="border-t border-white/8 py-10 sm:py-12 lg:py-14">
+          <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_280px]">
+            <div>
+              <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--accent-bitcoin)]">Related modules</div>
+              <h2 className="mt-3 font-mono text-[1.35rem] text-white">Go from article to live data.</h2>
+              <div className="mt-6 divide-y divide-white/8 border-t border-white/8">
+                {relatedModules.map((module) => (
+                  <Link key={module.code} to={getModulePath(module)} className="grid gap-3 py-5 transition hover:text-[color:var(--accent-bitcoin)] md:grid-cols-[80px_minmax(0,1fr)]">
+                    <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-white/42">{module.code}</div>
+                    <div>
+                      <div className="font-mono text-[1rem] text-white">{module.title}</div>
+                      <div className="mt-2 text-[14px] leading-7 text-white/56">Open the module directly after reading the explainer.</div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            <aside className="border-t border-white/8 pt-6 lg:border-l lg:border-t-0 lg:pt-0 lg:pl-8">
+              <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--accent-bitcoin)]">FAQ</div>
+              <div className="mt-5 space-y-5">
+                {post.faq.map((item) => (
+                  <article key={item.question} className="border-t border-white/8 pt-4">
+                    <h3 className="font-mono text-[0.95rem] text-white">{item.question}</h3>
+                    <p className="mt-2 text-[14px] leading-7 text-white/58">{item.answer}</p>
+                  </article>
+                ))}
+              </div>
+            </aside>
           </div>
         </section>
 
-        <section className="mt-8 rounded-[24px] border border-white/8 bg-[#101018]/92 p-6 sm:p-8">
-          <div className="font-mono text-[11px] uppercase tracking-[0.22em] text-[color:var(--accent-bitcoin)] sm:text-[12px]">
-            FAQ
-          </div>
-          <h2 className="mt-3 font-mono text-[1.4rem] text-white">Quick answers for search and AI engines</h2>
-          <div className="mt-6 grid gap-4 lg:grid-cols-3">
-            {post.faq.map((item) => (
-              <article key={item.question} className="rounded-[20px] border border-white/8 bg-black/18 p-5">
-                <h3 className="font-mono text-[0.98rem] text-white">{item.question}</h3>
-                <p className="mt-3 text-[14px] leading-7 text-white/68">{item.answer}</p>
+        <section className="border-t border-white/8 py-10 sm:py-12 lg:py-14">
+          <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--accent-bitcoin)]">More reading</div>
+          <div className="mt-6 divide-y divide-white/8 border-t border-white/8">
+            {relatedPosts.map((item) => (
+              <article key={item.slug} className="grid gap-4 py-6 md:grid-cols-[minmax(0,1fr)_160px] md:items-start">
+                <div>
+                  <h2 className="font-mono text-[1.1rem] text-white">{item.title}</h2>
+                  <p className="mt-3 text-[14px] leading-7 text-white/60">{item.excerpt}</p>
+                </div>
+                <div className="md:text-right">
+                  <Link to={getBlogPostPath(item.slug)} className="border-b border-[color:var(--accent-bitcoin)] pb-1 text-[12px] uppercase tracking-[0.18em] text-[color:var(--accent-bitcoin)] transition hover:text-white">
+                    Read next
+                  </Link>
+                </div>
               </article>
             ))}
           </div>
-        </section>
-
-        <section className="mt-8 grid gap-4 lg:grid-cols-2">
-          {relatedPosts.map((item) => (
-            <article key={item.slug} className="rounded-[24px] border border-white/8 bg-[#101018]/92 p-6">
-              <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--accent-bitcoin)] sm:text-[12px]">
-                Related article
-              </div>
-              <h2 className="mt-3 font-mono text-[1.1rem] text-white">{item.title}</h2>
-              <p className="mt-3 text-[14px] leading-7 text-white/70">{item.excerpt}</p>
-              <Link
-                to={getBlogPostPath(item.slug)}
-                className="mt-5 inline-flex rounded-full border border-[color:var(--border-active)] bg-[rgba(247,147,26,0.14)] px-4 py-2 font-mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--accent-bitcoin)] transition hover:bg-[rgba(247,147,26,0.22)] sm:text-[12px]"
-              >
-                Read next article
-              </Link>
-            </article>
-          ))}
         </section>
       </article>
     </SeoChrome>

@@ -116,6 +116,15 @@ function needsRefresh(payload, now = Date.now()) {
   }
 }
 
+function stalePayload(payload, reason) {
+  if (!isValidPayload(payload)) return null;
+  return {
+    ...payload,
+    isFallback: true,
+    fallbackNote: reason,
+  };
+}
+
 function quote(value) {
   return String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 }
@@ -176,6 +185,8 @@ export async function updateBtcAddressesRicherCache() {
     source: SOURCE_NAME,
     updatedAt,
     nextUpdateAt,
+    isFallback: false,
+    fallbackNote: null,
     richerThan,
   };
 
@@ -214,17 +225,22 @@ export async function getBtcAddressesRicherPayload() {
     return refreshed;
   }
 
-  try {
-    const sharedCache = await cacheGetJson(SHARED_CACHE_KEY);
-    if (isValidPayload(sharedCache)) {
-      memoryCache = sharedCache;
-      if (!needsRefresh(sharedCache)) return sharedCache;
-    }
+  const sharedCache = await cacheGetJson(SHARED_CACHE_KEY);
+  if (isValidPayload(sharedCache)) {
+    memoryCache = sharedCache;
+    if (!needsRefresh(sharedCache)) return sharedCache;
+    return stalePayload(sharedCache, 'Serving stale richer-than data while shared refresh completes');
+  }
 
+  if (memoryCache && isValidPayload(memoryCache)) {
+    return stalePayload(memoryCache, 'Serving in-memory stale richer-than data while shared refresh completes');
+  }
+
+  try {
     return await updateBtcAddressesRicherCache();
   } catch (error) {
     if (memoryCache && isValidPayload(memoryCache)) {
-      return memoryCache;
+      return stalePayload(memoryCache, `Serving in-memory stale richer-than data while refresh recovers (${error instanceof Error ? error.message : 'unknown error'})`);
     }
     throw error;
   }
@@ -241,6 +257,8 @@ export async function getBtcAddressesRicherStatus() {
     source: payload.source,
     updatedAt: payload.updatedAt,
     nextUpdateAt: payload.nextUpdateAt,
+    isFallback: Boolean(payload.isFallback),
+    fallbackNote: payload.fallbackNote || null,
     rows: payload.richerThan.length,
   };
 }

@@ -3,6 +3,7 @@
 // Fallback to bounding-box mask if network unavailable
 
 import { useEffect, useRef, useState } from 'react';
+import { fetchJson } from '../../lib/api.js';
 import { fetchMultiCurrencyBtc } from '../../services/priceApi';
 
 // ─── Currency data ──────────────────────────────────────────────────────────────
@@ -103,9 +104,7 @@ const TEX_W = 2048, TEX_H = 1024;
 // Draw GeoJSON land polygons onto an offscreen canvas → ImageData for fast lookup
 async function buildLandTexture() {
   // Natural Earth 110m land polygons (public domain, ~60 KB)
-  const resp = await fetch('/api/public/geo/land', { cache: 'no-store' });
-  if (!resp.ok) throw new Error('fetch failed');
-  const payload = await resp.json();
+  const payload = await fetchJson('/api/public/geo/land', { timeout: 10000, cache: 'no-store' });
   const geojson = payload?.data || payload;
 
   const oc = document.createElement('canvas');

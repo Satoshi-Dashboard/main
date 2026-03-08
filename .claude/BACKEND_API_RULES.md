@@ -27,6 +27,7 @@ Before applying any backend/API change that references modules by number, slug, 
 2. Do not trust prior chat memory for module identity/order; always use current registry as source of truth.
 3. If touching frontend calls to `/api/*` for a specific module, verify that module slug/code still match the intended target.
 4. In final verification, re-check that no unintended module reindexing happened.
+5. Do not infer live module identity from legacy component filenames/constants; use generated `MODULES` only.
 
 ## Architecture baseline (current)
 
@@ -44,6 +45,7 @@ Before applying any backend/API change that references modules by number, slug, 
 4. `refresh` routes must pass `requireRefreshToken`.
 5. Return stable JSON shapes; add fields without removing current ones.
 6. Use controlled error responses (`4xx/5xx`) with concise error messages.
+7. Keep frontend callers on relative `/api/...` paths so local dev proxying and Vercel rewrites continue to work.
 
 ## Rules for data fetching and cache
 
@@ -95,14 +97,26 @@ This is a strict global rule for every external API integration (new or existing
 2. Never log secrets or tokens.
 3. Keep visitor/IP handling hashed and minimal.
 
+## Vercel/runtime compatibility (mandatory)
+
+1. Keep new backend behavior compatible with `api/index.js` as the serverless entrypoint.
+2. If adding new upstream origins, review `vercel.json` headers and `Content-Security-Policy` to ensure required `connect-src`, `img-src`, `font-src`, or other directives remain valid.
+3. Do not convert frontend API calls to absolute production URLs unless the owner explicitly requests it.
+4. Re-check `vercel.json` rewrites whenever route structure changes.
+
 ## Testing/verification checklist (required)
 
 After backend/API changes, run:
 
 1. `node --check server/app.js`
 2. `npm run build`
-3. Smoke test these endpoints:
+3. Verify serverless compatibility assumptions still match `api/index.js` and `vercel.json`.
+4. Smoke test these endpoints:
    - `/api/btc/rates`
+   - `/api/s03/multi-currency/status`
+   - `/api/s08/stablecoins`
+   - `/api/public/fear-greed`
+   - `/api/visitors/stats`
    - `/api/bitnodes/cache/status`
    - `/api/s10/btc-distribution/status`
    - `/api/s14/addresses-richer/status`

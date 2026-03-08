@@ -153,7 +153,7 @@ function AssetCard({ asset }) {
           {/* full name (dimmed) */}
           <div
             className="font-mono leading-tight text-white/35 truncate"
-            style={{ fontSize: 'clamp(9px, 0.9vw, 11px)' }}
+            style={{ fontSize: 'var(--fs-tag)' }}
             title={asset.fullName}
           >
             {asset.fullName}

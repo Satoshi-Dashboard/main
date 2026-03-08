@@ -1,12 +1,18 @@
 const INTERNAL_PROVIDER = {
   name: 'Satoshi Dashboard',
-  url: 'https://satoshidashboard.com/bitcoin-dashboard',
+  url: 'https://satoshidashboard.com/landingpage',
 };
 
 const DEFAULT_META = {
   providers: [INTERNAL_PROVIDER],
   refreshMinutes: 24 * 60,
   showSharedStrip: true,
+};
+
+const UNDER_CONSTRUCTION_META = {
+  providers: [],
+  refreshLabel: 'in development',
+  showSharedStrip: false,
 };
 
 const MODULE_DATA_META = {
@@ -93,21 +99,47 @@ const MODULE_DATA_META = {
     providers: [{ name: 'CoinGecko', url: 'https://www.coingecko.com/en/api' }],
     refreshMinutes: 60,
   },
+  'bitcoin-mayer-multiple': {
+    ...UNDER_CONSTRUCTION_META,
+  },
   'bitcoin-price-performance': {
-    providers: [{ name: 'CoinGecko', url: 'https://www.coingecko.com/en/api' }],
-    refreshMinutes: 60,
+    ...UNDER_CONSTRUCTION_META,
+  },
+  'bitcoin-halving-cycle-spiral': {
+    ...UNDER_CONSTRUCTION_META,
+  },
+  'bitcoin-power-law-model': {
+    ...UNDER_CONSTRUCTION_META,
+  },
+  'bitcoin-stock-to-flow-model': {
+    ...UNDER_CONSTRUCTION_META,
   },
   'bitcoin-big-mac-sats-tracker': {
-    providers: [
-      { name: 'Binance', url: 'https://api.binance.com' },
-      { name: 'Alternative.me', url: 'https://alternative.me' },
-      { name: 'The Economist', url: 'https://github.com/TheEconomist/big-mac-data' },
-    ],
-    refreshLabel: 'annual index',
+    ...UNDER_CONSTRUCTION_META,
+  },
+  'bitcoin-seasonality-heatmap': {
+    ...UNDER_CONSTRUCTION_META,
   },
   'bitcoin-big-mac-index': {
-    providers: [{ name: 'CoinGecko', url: 'https://www.coingecko.com/en/api' }],
-    refreshMinutes: 60,
+    ...UNDER_CONSTRUCTION_META,
+  },
+  'bitcoin-network-activity': {
+    ...UNDER_CONSTRUCTION_META,
+  },
+  'bitcoin-log-regression-channel': {
+    ...UNDER_CONSTRUCTION_META,
+  },
+  'bitcoin-mvrv-score': {
+    ...UNDER_CONSTRUCTION_META,
+  },
+  'bitcoin-google-trends': {
+    ...UNDER_CONSTRUCTION_META,
+  },
+  'bitcoin-dominance-chart': {
+    ...UNDER_CONSTRUCTION_META,
+  },
+  'bitcoin-utxo-distribution': {
+    ...UNDER_CONSTRUCTION_META,
   },
   'us-national-debt-live-counter': {
     providers: [

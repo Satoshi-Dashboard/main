@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { fetchJson } from '../../lib/api.js';
 
 // US Median Home Price (Census / NAR approximate) — roughly $420,000
 const HOME_USD = 420000;
@@ -25,9 +26,7 @@ export default function S17_PricePerformance() {
   useEffect(() => {
     (async () => {
       try {
-        const r = await fetch('/api/btc/rates', { cache: 'no-store' });
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        const j = await r.json();
+        const j = await fetchJson('/api/btc/rates', { timeout: 8000, cache: 'no-store' });
         setBtcPrice(Number(j?.btc_usd));
       } catch {
         setBtcPrice(84000);

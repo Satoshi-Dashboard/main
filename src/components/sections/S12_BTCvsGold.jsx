@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { fetchJson } from '../../lib/api.js';
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip,
   ResponsiveContainer, Legend,
@@ -28,9 +29,7 @@ export default function S12_BTCvsGold() {
   useEffect(() => {
     (async () => {
       try {
-        const r = await fetch('/api/public/coingecko/bitcoin-market-chart?days=365', { cache: 'no-store' });
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        const payload = await r.json();
+        const payload = await fetchJson('/api/public/coingecko/bitcoin-market-chart?days=365', { timeout: 8000, cache: 'no-store' });
         const json = payload?.data || payload;
         const caps = json.market_caps;
         const merged = caps

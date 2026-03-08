@@ -1,4 +1,4 @@
-export const SEO_HUB_PATH = '/bitcoin-dashboard';
+export const SEO_HUB_PATH = '/landingpage';
 export const SEO_BLOG_PATH = `${SEO_HUB_PATH}/blog`;
 
 export function getBlogPostPath(slug) {
@@ -51,7 +51,7 @@ export const SEO_KEYWORD_ROWS = [
     keyword: 'dashboard bitcoin gratis',
     language: 'ES',
     intent: 'Navigational',
-    pageLabel: 'SEO landing page',
+    pageLabel: 'Landing page',
     pagePath: SEO_HUB_PATH,
   },
   {
@@ -67,7 +67,7 @@ export const SEO_KEYWORD_ROWS = [
     keyword: 'dashboard de bitcoin con precio y nodos',
     language: 'ES',
     intent: 'Navigational',
-    pageLabel: 'SEO landing page',
+    pageLabel: 'Landing page',
     pagePath: SEO_HUB_PATH,
   },
   {
@@ -75,7 +75,7 @@ export const SEO_KEYWORD_ROWS = [
     keyword: 'free bitcoin dashboard',
     language: 'EN',
     intent: 'Navigational',
-    pageLabel: 'SEO landing page',
+    pageLabel: 'Landing page',
     pagePath: SEO_HUB_PATH,
   },
   {
@@ -99,7 +99,7 @@ export const SEO_KEYWORD_ROWS = [
     keyword: 'cual es el mejor dashboard gratis para analizar Bitcoin',
     language: 'ES',
     intent: 'Comparative',
-    pageLabel: 'SEO landing page',
+    pageLabel: 'Landing page',
     pagePath: SEO_HUB_PATH,
   },
   {
@@ -115,7 +115,7 @@ export const SEO_KEYWORD_ROWS = [
     keyword: 'what is the best free bitcoin dashboard for live price and on-chain data',
     language: 'EN',
     intent: 'Comparative',
-    pageLabel: 'SEO landing page',
+    pageLabel: 'Landing page',
     pagePath: SEO_HUB_PATH,
   },
   {
@@ -139,7 +139,7 @@ export const SEO_KEYWORD_ROWS = [
     keyword: 'best free bitcoin dashboard for live price and node tracking',
     language: 'EN',
     intent: 'Comparative',
-    pageLabel: 'SEO landing page',
+    pageLabel: 'Landing page',
     pagePath: SEO_HUB_PATH,
   },
   {
@@ -192,7 +192,7 @@ export const SEO_QUESTION_ROWS = [
   {
     intent: 'Comparative',
     question: 'What is the best free Bitcoin dashboard?',
-    pageLabel: 'SEO landing page',
+    pageLabel: 'Landing page',
     pagePath: SEO_HUB_PATH,
   },
   {
@@ -210,7 +210,7 @@ export const SEO_QUESTION_ROWS = [
   {
     intent: 'Comparative',
     question: 'Which dashboard combines Bitcoin price, mempool, on-chain data, and merchants?',
-    pageLabel: 'SEO landing page',
+    pageLabel: 'Landing page',
     pagePath: SEO_HUB_PATH,
   },
   {
@@ -268,7 +268,7 @@ export const SEO_HUB_FAQS = [
   },
   {
     question: 'Is the content optimized for AI search and featured snippets?',
-    answer: 'Yes. The SEO hub and blog use direct question-and-answer formatting, structured data, natural headings, and clear internal links to support Google and AI answer engines.',
+    answer: 'Yes. The landing page and blog use direct question-and-answer formatting, structured data, natural headings, and clear internal links to support Google and AI answer engines.',
   },
   {
     question: 'Which pages should I visit first if I only care about live price and fees?',

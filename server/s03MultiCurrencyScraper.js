@@ -417,10 +417,20 @@ export async function getS03MultiCurrencyPayload({ forceFresh = false } = {}) {
       SHARED_LOCK_KEY,
       async () => refreshS03MultiCurrencyPayload(),
       { ttlSeconds: 30, waitMs: 3500, pollMs: 140 },
-    );
+    ).catch(() => null);
 
     if (isValidPayload(refreshed)) {
       basePayload = refreshed;
+    }
+  }
+
+  if (!basePayload) {
+    const shared = await cacheGetJson(SHARED_CACHE_KEY);
+    if (isValidPayload(shared)) {
+      memoryCache = shared;
+      basePayload = stalePayload(shared, 'Serving stale cache while shared refresh completes');
+    } else if (isValidPayload(memoryCache)) {
+      basePayload = stalePayload(memoryCache, 'Serving in-memory stale cache while shared refresh completes');
     }
   }
 

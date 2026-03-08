@@ -335,6 +335,16 @@ export async function getS13GlobalAssetsPayload({ forceFresh = false } = {}) {
     return refreshed;
   }
 
+  const sharedAfterLock = await cacheGetJson(SHARED_CACHE_KEY);
+  if (isValidPayload(sharedAfterLock)) {
+    memoryCache = sharedAfterLock;
+    return stalePayload(sharedAfterLock, 'Serving stale snapshot while shared refresh completes');
+  }
+
+  if (isValidPayload(memoryCache)) {
+    return stalePayload(memoryCache, 'Serving in-memory stale snapshot while shared refresh completes');
+  }
+
   try {
     return await refreshS13GlobalAssetsPayload();
   } catch (error) {

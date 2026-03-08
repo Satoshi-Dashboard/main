@@ -76,6 +76,13 @@ function deleteLocalCache(key) {
   localCache.delete(key);
 }
 
+function normalizeRemoteTtlSeconds(value) {
+  const ttl = Number(value);
+  if (!Number.isFinite(ttl)) return null;
+  if (ttl <= 0) return null;
+  return Math.max(1, Math.floor(ttl));
+}
+
 export async function cacheSetJson(key, value, { ttlSeconds } = {}) {
   const namespaced = withPrefix(key);
   const encoded = JSON.stringify(value);
@@ -106,7 +113,10 @@ export async function cacheGetJson(key) {
   const remote = await remoteCommand(['GET', namespaced]);
   if (!remote.ok || typeof remote.result !== 'string') return null;
 
-  setLocalCache(namespaced, remote.result, null);
+  const remoteTtl = await remoteCommand(['TTL', namespaced]);
+  if (remoteTtl.ok) {
+    setLocalCache(namespaced, remote.result, normalizeRemoteTtlSeconds(remoteTtl.result));
+  }
 
   try {
     return JSON.parse(remote.result);

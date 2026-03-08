@@ -533,16 +533,39 @@ async function getFeed(feedKey, fetchData, validateData = validateObject) {
     return refreshed;
   }
 
+  const sharedAfterLock = await cacheGetJson(feedDef.cacheKey);
+  if (validateData(sharedAfterLock?.data)) {
+    memCache.set(feedDef.cacheKey, sharedAfterLock);
+    if (isFreshPayload(sharedAfterLock)) {
+      return sharedAfterLock;
+    }
+    return stalePayload(
+      sharedAfterLock,
+      'Serving stale payload while shared refresh completes',
+    );
+  }
+
+  const staleSource = validateData(shared?.data)
+    ? shared
+    : (validateData(fromMemory?.data) ? fromMemory : null);
+
+  if (staleSource) {
+    return stalePayload(
+      staleSource,
+      'Serving stale payload while upstream refresh lock settles',
+    );
+  }
+
   try {
     return await refreshFeed(feedKey, fetchData);
   } catch (error) {
-    const staleSource = validateData(shared?.data)
+    const staleFallback = validateData(shared?.data)
       ? shared
       : (validateData(fromMemory?.data) ? fromMemory : null);
 
-    if (staleSource) {
+    if (staleFallback) {
       return stalePayload(
-        staleSource,
+        staleFallback,
         `Serving stale payload while upstream refresh recovers (${error instanceof Error ? error.message : 'unknown error'})`,
       );
     }

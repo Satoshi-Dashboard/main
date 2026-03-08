@@ -358,7 +358,7 @@ export default function S08c_BtcMapBusinessesMap() {
           <div className="hidden flex-wrap items-center gap-2 text-white/65 lg:flex">
             <span className="rounded border border-white/10 bg-white/[0.03] px-1.5 py-0.5">
               src:{' '}
-              <a href="https://btcmap.org" target="_blank" rel="noreferrer" style={{ color: UI_COLORS.greenSoft, textDecoration: 'none' }}>
+              <a href="https://btcmap.org" target="_blank" rel="noreferrer" style={{ color: 'var(--accent-bitcoin)', textDecoration: 'none' }}>
                 BTC Map
               </a>
             </span>

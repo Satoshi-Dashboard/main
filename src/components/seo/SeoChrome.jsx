@@ -3,76 +3,68 @@ import { SEO_BLOG_PATH, SEO_HUB_PATH } from '../../config/seoContent';
 
 const NAV_LINKS = [
   { to: '/', label: 'Dashboard' },
-  { to: SEO_HUB_PATH, label: 'SEO Hub' },
+  { to: SEO_HUB_PATH, label: 'Landing' },
   { to: SEO_BLOG_PATH, label: 'Blog' },
 ];
 
 function navClassName({ isActive }) {
   return [
-    'rounded-full border px-3 py-1.5 text-[11px] uppercase tracking-[0.18em] transition sm:text-[12px]',
+    'border-b pb-1 text-[12px] tracking-[0.16em] uppercase transition',
     isActive
-      ? 'border-[color:var(--border-active)] bg-[rgba(247,147,26,0.14)] text-[color:var(--accent-bitcoin)]'
-      : 'border-white/10 bg-white/[0.03] text-white/65 hover:border-white/20 hover:text-white',
+      ? 'border-[color:var(--accent-bitcoin)] text-white'
+      : 'border-transparent text-white/56 hover:text-white',
   ].join(' ');
 }
 
 export default function SeoChrome({ children }) {
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#09090d] text-[color:var(--text-primary)]">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(247,147,26,0.2),transparent_38%),radial-gradient(circle_at_bottom_right,rgba(255,255,255,0.08),transparent_28%)]" />
-      <div className="pointer-events-none absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px)] [background-size:32px_32px]" />
+    <div className="min-h-screen bg-[var(--bg-primary)] text-[color:var(--text-primary)]">
+      <div className="mx-auto max-w-6xl px-5 sm:px-6 lg:px-8">
+        <header className="border-b border-white/8 py-5 sm:py-6">
+          <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+            <div className="space-y-2">
+              <Link to="/" className="inline-flex items-center gap-3 text-white transition hover:opacity-90">
+                <img src="/logo.svg" alt="Satoshi Dashboard" className="h-8 w-auto" />
+                <span className="font-mono text-[13px] uppercase tracking-[0.22em] text-[color:var(--accent-bitcoin)]">
+                  Satoshi Dashboard
+                </span>
+              </Link>
+              <p className="max-w-2xl text-[14px] leading-7 text-white/58 sm:text-[15px]">
+                A minimal editorial layer for search traffic, product context, and article discovery.
+              </p>
+            </div>
 
-      <header className="sticky top-0 z-30 border-b border-white/8 bg-[#0b0b10]/85 backdrop-blur-xl">
-        <div className="relative mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6">
-          <Link to="/" className="flex items-center gap-3 text-white transition-opacity hover:opacity-90">
-            <img src="/logo.svg" alt="Satoshi Dashboard" className="h-7 w-auto sm:h-8" />
+            <nav className="flex flex-wrap items-center gap-5">
+              {NAV_LINKS.map((item) => (
+                <NavLink key={item.to} to={item.to} className={navClassName} end={item.to === '/'}>
+                  {item.label}
+                </NavLink>
+              ))}
+            </nav>
+          </div>
+        </header>
+
+        <main className="py-10 sm:py-12 lg:py-14">{children}</main>
+
+        <footer className="border-t border-white/8 py-6 sm:py-8">
+          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
-              <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[color:var(--accent-bitcoin)] sm:text-[11px]">
-                Satoshi Dashboard
+              <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--accent-bitcoin)]">
+                Editorial routes
               </div>
-              <div className="font-mono text-[11px] text-white/55 sm:text-[12px]">SEO Hub & editorial routes</div>
+              <p className="mt-2 max-w-2xl text-[13px] leading-6 text-white/54 sm:text-[14px]">
+                Clean pages for discovery, then direct paths back into the live Bitcoin dashboard and modules.
+              </p>
             </div>
-          </Link>
 
-          <nav className="flex flex-wrap items-center gap-2">
-            {NAV_LINKS.map((item) => (
-              <NavLink key={item.to} to={item.to} className={navClassName} end={item.to === '/'}>
-                {item.label}
-              </NavLink>
-            ))}
-          </nav>
-        </div>
-      </header>
-
-      <main className="relative mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:py-14">{children}</main>
-
-      <footer className="relative border-t border-white/8 bg-[#0b0b10]/90">
-        <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-6 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <div className="font-mono text-[11px] uppercase tracking-[0.2em] text-[color:var(--accent-bitcoin)] sm:text-[12px]">
-              Organic acquisition flow
+            <div className="flex flex-wrap gap-5 text-[12px] uppercase tracking-[0.16em] text-white/58">
+              <Link to="/" className="transition hover:text-white">Open dashboard</Link>
+              <Link to={SEO_HUB_PATH} className="transition hover:text-white">Open landing</Link>
+              <Link to={SEO_BLOG_PATH} className="transition hover:text-white">Read blog</Link>
             </div>
-            <p className="mt-1 max-w-2xl text-[13px] leading-6 text-white/68 sm:text-[14px]">
-              These pages target informational and conversational Bitcoin searches, then route qualified traffic back to the live dashboard and modules.
-            </p>
           </div>
-
-          <div className="flex flex-wrap gap-3">
-            <Link
-              to="/"
-              className="rounded-full border border-[color:var(--border-active)] bg-[rgba(247,147,26,0.14)] px-4 py-2 font-mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--accent-bitcoin)] transition hover:bg-[rgba(247,147,26,0.2)] sm:text-[12px]"
-            >
-              Open live dashboard
-            </Link>
-            <Link
-              to={SEO_BLOG_PATH}
-              className="rounded-full border border-white/12 bg-white/[0.03] px-4 py-2 font-mono text-[11px] uppercase tracking-[0.18em] text-white/72 transition hover:border-white/20 hover:text-white sm:text-[12px]"
-            >
-              Read the blog
-            </Link>
-          </div>
-        </div>
-      </footer>
+        </footer>
+      </div>
     </div>
   );
 }

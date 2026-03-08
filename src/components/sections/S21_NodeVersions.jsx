@@ -291,11 +291,11 @@ export default function S21_NodeVersions() {
             letterSpacing: '0.02em',
           }}
         >
-          Big Mac BTC Index
+          Big Mac Sats Tracker
         </div>
 
         <div style={{ marginTop: 8, fontFamily: 'monospace', fontSize: 'var(--fs-tag)', color: '#5f5f5f' }}>
-          <span style={{ color: '#4a4a4a', marginRight: '0.6rem' }}>Índice anual</span>
+          <span style={{ color: '#4a4a4a', marginRight: '0.6rem' }}>Annual index</span>
           CSV source:{' '}
           <a
             href="https://github.com/TheEconomist/big-mac-data"

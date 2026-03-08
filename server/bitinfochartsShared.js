@@ -157,7 +157,7 @@ export async function getBitinfochartsHtmlPayload() {
   const shared = await cacheGetJson(SHARED_HTML_CACHE_KEY);
   if (isValidHtmlPayload(shared)) {
     memoryHtmlCache = shared;
-    if (!needsRefresh(shared)) return shared;
+    return shared;
   }
 
   if (isValidHtmlPayload(memoryHtmlCache)) {

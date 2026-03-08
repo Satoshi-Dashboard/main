@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { fetchJson } from '../../lib/api.js';
 
 const EMPTY_DATA = {
   value: null,
@@ -133,9 +134,7 @@ export default function S10_FearGreedIndex() {
 
     const load = async () => {
       try {
-        const res = await fetch('/api/public/fear-greed?limit=31');
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const payload = await res.json();
+        const payload = await fetchJson('/api/public/fear-greed?limit=31', { timeout: 8000 });
         const json = payload?.data || payload;
         if (!active || !Array.isArray(json?.data)) return;
         const e = json.data;
