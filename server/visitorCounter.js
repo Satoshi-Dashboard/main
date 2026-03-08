@@ -15,7 +15,7 @@ function getDefaultState() {
     totalHits: 0,
     createdAt: now,
     updatedAt: now,
-    seenIpHashes: new Set(),
+    seenVisitorHashes: new Set(),
   };
 }
 
@@ -29,14 +29,15 @@ function toRuntimeState(raw) {
     return fallback;
   }
 
-  const seenIpHashes = new Set(
-    Array.isArray(raw.seenIpHashes)
-      ? raw.seenIpHashes.filter((value) => typeof value === 'string' && value.length > 0)
-      : [],
+  const seenVisitorHashes = new Set(
+    [
+      ...(Array.isArray(raw.seenVisitorHashes) ? raw.seenVisitorHashes : []),
+      ...(Array.isArray(raw.seenIpHashes) ? raw.seenIpHashes : []),
+    ].filter((value) => typeof value === 'string' && value.length > 0),
   );
 
   const uniqueFromFile = parseNumber(raw.uniqueVisitors, 0);
-  const uniqueVisitors = Math.max(uniqueFromFile, seenIpHashes.size);
+  const uniqueVisitors = Math.max(uniqueFromFile, seenVisitorHashes.size);
   const totalHits = Math.max(parseNumber(raw.totalHits, uniqueVisitors), uniqueVisitors);
 
   return {
@@ -44,7 +45,7 @@ function toRuntimeState(raw) {
     totalHits,
     createdAt: typeof raw.createdAt === 'string' ? raw.createdAt : fallback.createdAt,
     updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : fallback.updatedAt,
-    seenIpHashes,
+    seenVisitorHashes,
   };
 }
 
@@ -54,7 +55,7 @@ function toStoredState(state) {
     totalHits: state.totalHits,
     createdAt: state.createdAt,
     updatedAt: state.updatedAt,
-    seenIpHashes: [...state.seenIpHashes],
+    seenVisitorHashes: [...state.seenVisitorHashes],
   };
 }
 
@@ -83,19 +84,16 @@ async function persistState(state) {
   await writeQueue;
 }
 
-function normalizeIp(value) {
+function normalizeVisitorId(value) {
   const raw = String(value || '').trim();
-  if (!raw) return 'unknown';
-
-  const first = raw.split(',')[0].trim();
-  if (!first) return 'unknown';
-  if (first === '::1') return '127.0.0.1';
-  if (first.startsWith('::ffff:')) return first.slice(7);
-  return first;
+  if (!/^[A-Za-z0-9_-]{16,128}$/.test(raw)) {
+    return null;
+  }
+  return raw;
 }
 
-function hashIp(ip) {
-  return createHash('sha256').update(`${HASH_SALT}:${ip}`).digest('hex');
+function hashVisitorId(visitorId) {
+  return createHash('sha256').update(`${HASH_SALT}:${visitorId}`).digest('hex');
 }
 
 function getPublicPayload(state, isNewVisitor = false) {
@@ -107,37 +105,21 @@ function getPublicPayload(state, isNewVisitor = false) {
   };
 }
 
-export function extractClientIp(req) {
-  const forwardedFor = req.headers['x-forwarded-for'];
-  if (typeof forwardedFor === 'string' && forwardedFor.trim()) {
-    return normalizeIp(forwardedFor);
-  }
-  if (Array.isArray(forwardedFor) && forwardedFor.length > 0) {
-    return normalizeIp(forwardedFor[0]);
+export async function trackVisitorById(visitorId) {
+  const normalizedVisitorId = normalizeVisitorId(visitorId);
+  if (!normalizedVisitorId) {
+    throw new Error('Invalid visitor identifier');
   }
 
-  const realIp = req.headers['x-real-ip'];
-  if (typeof realIp === 'string' && realIp.trim()) {
-    return normalizeIp(realIp);
-  }
-  if (Array.isArray(realIp) && realIp.length > 0) {
-    return normalizeIp(realIp[0]);
-  }
-
-  return normalizeIp(req.socket?.remoteAddress || req.ip);
-}
-
-export async function trackVisitorByIp(ip) {
   const state = await getState();
-  const normalizedIp = normalizeIp(ip);
-  const ipHash = hashIp(normalizedIp);
+  const visitorHash = hashVisitorId(normalizedVisitorId);
 
   state.totalHits += 1;
 
-  const isNewVisitor = !state.seenIpHashes.has(ipHash);
+  const isNewVisitor = !state.seenVisitorHashes.has(visitorHash);
   if (isNewVisitor) {
-    state.seenIpHashes.add(ipHash);
-    state.uniqueVisitors = state.seenIpHashes.size;
+    state.seenVisitorHashes.add(visitorHash);
+    state.uniqueVisitors = state.seenVisitorHashes.size;
   }
 
   state.updatedAt = new Date().toISOString();

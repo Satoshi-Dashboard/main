@@ -3,7 +3,6 @@ import { Copy, Github } from 'lucide-react';
 
 const DONATION_ADDRESS = 'BC1QC2GD3YN8DTLMZG4UW786MFN085WE69F60V4R6F';
 const DONATION_URI = `bitcoin:${DONATION_ADDRESS}`;
-const DONATION_QR_URL = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=8&data=${encodeURIComponent(DONATION_URI)}`;
 const THANKS_FONT_STACK = "'SF Pro Display', 'Helvetica Neue', Arial, sans-serif";
 
 const THANK_YOU_MESSAGES = [
@@ -243,11 +242,12 @@ export default function S29_ThankYouSatoshi({ onOpenDonate }) {
                     style={{ fontSize: 'var(--fs-micro)' }}
                   >
                     <Copy size={14} className="mr-1.5" />
-                    <span>click to copy</span>
+                    <span>Click to copy</span>
                   </span>
                   <span
-                    className="absolute right-2 top-1/2 -translate-y-1/2 font-mono text-[10px]"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 font-mono"
                     style={{
+                      fontSize: 'var(--fs-tag)',
                       color: copied ? 'var(--accent-green)' : 'var(--text-primary)',
                       opacity: copied ? 1 : 0.6,
                     }}
@@ -256,22 +256,26 @@ export default function S29_ThankYouSatoshi({ onOpenDonate }) {
                   </span>
                 </button>
 
-                {/* QR thumbnail - opens global donate modal */}
+                {/* Wallet CTA - opens the shared donation modal */}
                 <button
                   type="button"
                   onClick={onOpenDonate}
-                  className="shrink-0 rounded border border-white/15 bg-white/5 p-1 transition-transform duration-300 hover:scale-105"
-                  title="Open donation"
-                  aria-label="Open donation"
+                  className="shrink-0 rounded border border-white/15 bg-white/5 px-4 py-3 font-mono text-white transition-transform duration-300 hover:scale-105"
+                  style={{ fontSize: 'var(--fs-caption)' }}
+                  title="Open donation options"
+                  aria-label="Open donation options"
                 >
-                  <img
-                    src={DONATION_QR_URL}
-                    alt="Bitcoin donation QR"
-                    className="h-20 w-20 rounded sm:h-24 sm:w-24"
-                    loading="lazy"
-                  />
+                  Donation options
                 </button>
               </div>
+
+              <a
+                href={DONATION_URI}
+                className="mt-3 inline-flex items-center justify-center rounded border border-[#F7931A]/25 bg-[#F7931A]/10 px-4 py-2 font-mono text-white transition hover:border-[#F7931A]/45 hover:bg-[#F7931A]/14"
+                style={{ fontSize: 'var(--fs-caption)' }}
+              >
+                Open wallet
+              </a>
 
               {/* GitHub link */}
               <a

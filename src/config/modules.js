@@ -1,32 +1,36 @@
-import S01_BitcoinOverview from '../components/sections/S01_BitcoinOverview';
-import S02_PriceChart from '../components/sections/S02_PriceChart';
-import S03_MultiCurrencyBoard from '../components/sections/S03_MultiCurrencyBoard';
-import S04_MempoolGauge from '../components/sections/S04_MempoolGauge';
-import S05_LongTermTrend from '../components/sections/S05_LongTermTrend';
-import S08_NodesMap from '../components/sections/S08_NodesMap';
-import S08b_LightningNodesMap from '../components/sections/S08b_LightningNodesMap';
-import S09_LightningNetwork from '../components/sections/S09_LightningNetwork';
-import S09b_StablecoinPegHealth from '../components/sections/S09b_StablecoinPegHealth';
-import S10_FearGreedIndex from '../components/sections/S10_FearGreedIndex';
-import S11_AddressDistribution from '../components/sections/S11_AddressDistribution';
-import S12_BTCvsGold from '../components/sections/S12_BTCvsGold';
-import S13_GlobalAssetsTreemap from '../components/sections/S13_GlobalAssetsTreemap';
-import S15_WealthPyramid from '../components/sections/S15_WealthPyramid';
-import S16_MayerMultiple from '../components/sections/S16_MayerMultiple';
-import S17_PricePerformance from '../components/sections/S17_PricePerformance';
-import S18_CycleSpiral from '../components/sections/S18_CycleSpiral';
-import S19_PowerLawModel from '../components/sections/S19_PowerLawModel';
-import S20_StockToFlow from '../components/sections/S20_StockToFlow';
-import S21_NodeVersions from '../components/sections/S21_NodeVersions';
-import S22_SeasonalityHeatmap from '../components/sections/S22_SeasonalityHeatmap';
-import S23_BigMacIndex from '../components/sections/S23_BigMacIndex';
-import S24_NetworkActivity from '../components/sections/S24_NetworkActivity';
-import S25_LogRegression from '../components/sections/S25_LogRegression';
-import S26_MVRVScore from '../components/sections/S26_MVRVScore';
-import S27_GoogleTrends from '../components/sections/S27_GoogleTrends';
-import S28_BTCDominance from '../components/sections/S28_BTCDominance';
-import S29_UTXODistribution from '../components/sections/S29_UTXODistribution';
-import S29_ThankYouSatoshi from '../components/sections/S29_ThankYouSatoshi';
+import { lazy } from 'react';
+
+const S01_BitcoinOverview = lazy(() => import('../components/sections/S01_BitcoinOverview'));
+const S02_PriceChart = lazy(() => import('../components/sections/S02_PriceChart'));
+const S03_MultiCurrencyBoard = lazy(() => import('../components/sections/S03_MultiCurrencyBoard'));
+const S04_MempoolGauge = lazy(() => import('../components/sections/S04_MempoolGauge'));
+const S05_LongTermTrend = lazy(() => import('../components/sections/S05_LongTermTrend'));
+const S08_NodesMap = lazy(() => import('../components/sections/S08_NodesMap'));
+const S08b_LightningNodesMap = lazy(() => import('../components/sections/S08b_LightningNodesMap'));
+const S08c_BtcMapBusinessesMap = lazy(() => import('../components/sections/S08c_BtcMapBusinessesMap'));
+const S09_LightningNetwork = lazy(() => import('../components/sections/S09_LightningNetwork'));
+const S09b_StablecoinPegHealth = lazy(() => import('../components/sections/S09b_StablecoinPegHealth'));
+const S10_FearGreedIndex = lazy(() => import('../components/sections/S10_FearGreedIndex'));
+const S11_AddressDistribution = lazy(() => import('../components/sections/S11_AddressDistribution'));
+const S12_BTCvsGold = lazy(() => import('../components/sections/S12_BTCvsGold'));
+const S13_GlobalAssetsTreemap = lazy(() => import('../components/sections/S13_GlobalAssetsTreemap'));
+const S15_WealthPyramid = lazy(() => import('../components/sections/S15_WealthPyramid'));
+const S16_MayerMultiple = lazy(() => import('../components/sections/S16_MayerMultiple'));
+const S17_PricePerformance = lazy(() => import('../components/sections/S17_PricePerformance'));
+const S18_CycleSpiral = lazy(() => import('../components/sections/S18_CycleSpiral'));
+const S19_PowerLawModel = lazy(() => import('../components/sections/S19_PowerLawModel'));
+const S20_StockToFlow = lazy(() => import('../components/sections/S20_StockToFlow'));
+const S21_NodeVersions = lazy(() => import('../components/sections/S21_NodeVersions'));
+const S22_SeasonalityHeatmap = lazy(() => import('../components/sections/S22_SeasonalityHeatmap'));
+const S23_BigMacIndex = lazy(() => import('../components/sections/S23_BigMacIndex'));
+const S24_NetworkActivity = lazy(() => import('../components/sections/S24_NetworkActivity'));
+const S25_LogRegression = lazy(() => import('../components/sections/S25_LogRegression'));
+const S26_MVRVScore = lazy(() => import('../components/sections/S26_MVRVScore'));
+const S27_GoogleTrends = lazy(() => import('../components/sections/S27_GoogleTrends'));
+const S28_BTCDominance = lazy(() => import('../components/sections/S28_BTCDominance'));
+const S29_UTXODistribution = lazy(() => import('../components/sections/S29_UTXODistribution'));
+const S30_USNationalDebt = lazy(() => import('../components/sections/S30_USNationalDebt'));
+const S29_ThankYouSatoshi = lazy(() => import('../components/sections/S29_ThankYouSatoshi'));
 
 const MODULE_DEFS = [
   { slugBase: 'bitcoin-overview', title: 'Bitcoin Overview', component: S01_BitcoinOverview },
@@ -36,6 +40,7 @@ const MODULE_DEFS = [
   { slugBase: 'long-term-trend', title: 'Long-Term Trend', component: S05_LongTermTrend },
   { slugBase: 'nodes-map', title: 'Nodes Map', component: S08_NodesMap },
   { slugBase: 'lightning-nodes-map', title: 'Lightning Nodes Map', component: S08b_LightningNodesMap },
+  { slugBase: 'btcmap-business-density', title: 'BTC Map Business Density', component: S08c_BtcMapBusinessesMap },
   { slugBase: 'lightning-network', title: 'Lightning Network', component: S09_LightningNetwork },
   { slugBase: 'stablecoin-peg', title: 'Stablecoin Peg Health', component: S09b_StablecoinPegHealth },
   { slugBase: 'fear-greed', title: 'Fear & Greed', component: S10_FearGreedIndex },
@@ -57,6 +62,7 @@ const MODULE_DEFS = [
   { slugBase: 'google-trends', title: 'Google Trends', component: S27_GoogleTrends },
   { slugBase: 'btc-dominance', title: 'BTC Dominance', component: S28_BTCDominance },
   { slugBase: 'utxo-distribution', title: 'UTXO Distribution', component: S29_UTXODistribution },
+  { slugBase: 'us-national-debt', title: 'U.S. National Debt', component: S30_USNationalDebt },
   { slugBase: 'thank-you-satoshi', title: 'Thank You Satoshi', component: S29_ThankYouSatoshi },
 ];
 

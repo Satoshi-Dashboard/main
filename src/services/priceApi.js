@@ -5,6 +5,8 @@
  *   - Multi-currency: internal /api/s03/multi-currency
  */
 
+import { fetchJson } from '../lib/api.js';
+
 const SPOT_CACHE_MS = 10_000;
 
 let spotMemoryCache = {
@@ -27,19 +29,6 @@ function writeSpotCache(payload, now = Date.now()) {
   return payload;
 }
 
-// ── Generic timed fetch ──────────────────────────────────────────────────────
-async function get(url, ms = 8000) {
-  const ctrl = new AbortController();
-  const tid  = setTimeout(() => ctrl.abort(), ms);
-  try {
-    const r = await fetch(url, { signal: ctrl.signal });
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    return r.json();
-  } finally {
-    clearTimeout(tid);
-  }
-}
-
 // ── Spot price + 24h change + market cap + supply ───────────────────────────
 /**
  * Returns { usd, change24h, marketCap, supply, source } or null if every source fails.
@@ -50,7 +39,7 @@ export async function fetchBtcSpot() {
   if (cached) return cached;
 
   try {
-    const cache = await get('/api/btc/rates');
+    const cache = await fetchJson('/api/btc/rates', { timeout: 8000 });
     const usd = Number(cache?.btc_usd);
     const change24h = Number(cache?.btc_change_24h_pct ?? 0);
 
@@ -89,7 +78,7 @@ function toChartPoint(ts, price) {
 export async function fetchBtcHistory(days) {
   try {
     const safeDays = [7, 30, 90, 365].includes(Number(days)) ? Number(days) : 365;
-    const payload = await get(`/api/public/binance/btc-history?days=${safeDays}`);
+    const payload = await fetchJson(`/api/public/binance/btc-history?days=${safeDays}`, { timeout: 8000 });
     const rows = Array.isArray(payload?.data) ? payload.data : payload;
     if (Array.isArray(rows) && rows.length > 1) {
       return rows.map((row) => toChartPoint(Number(row.ts), Number(row.price)))
@@ -112,7 +101,7 @@ export async function fetchMultiCurrencyBtc(currencyCodes) {
     : [];
 
   try {
-    const cache = await get('/api/s03/multi-currency');
+    const cache = await fetchJson('/api/s03/multi-currency', { timeout: 8000 });
     const rates = cache?.rates;
     const changes = cache?.changes_24h_pct;
 

@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { fetchJson } from '../../lib/api.js';
 
 const REFRESH_MS = 60 * 60 * 1000;
 
@@ -186,33 +188,28 @@ function AssetCard({ asset }) {
 
 /* ── Main component ───────────────────────────────────────────── */
 export default function S13_GlobalAssetsTreemap() {
-  const [payload,  setPayload]  = useState(null);
-  const [error,    setError]    = useState(null);
-  const [loading,  setLoading]  = useState(true);
-  const load = useCallback(async () => {
-    try {
-      const response = await fetch('/api/s13/global-assets', { cache: 'no-store' });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      setPayload(await response.json());
-      setError(null);
-    } catch {
-      if (!payload) setError('Global asset values are temporarily unavailable.');
-    } finally {
-      setLoading(false);
-    }
-  }, [payload]);
-
-  useEffect(() => {
-    load();
-    const timer = setInterval(load, REFRESH_MS);
-    return () => clearInterval(timer);
-  }, [load]);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const { data: payload, isLoading } = useQuery({
+    queryKey: ['global-assets'],
+    queryFn: async () => {
+      try {
+        const response = await fetchJson('/api/s13/global-assets', { cache: 'no-store' });
+        setLoadFailed(false);
+        return response;
+      } catch (error) {
+        setLoadFailed(true);
+        throw error;
+      }
+    },
+    refetchInterval: REFRESH_MS,
+  });
 
   const assetData = useMemo(() => normalizeAssetData(payload), [payload]);
+  const error = loadFailed ? 'Global asset values are temporarily unavailable.' : null;
 
   return (
     <div className="flex h-full w-full flex-col bg-[#111111] p-2 sm:p-3 lg:p-4">
-      {loading ? (
+      {isLoading ? (
         <div className="skeleton h-full w-full rounded-md" />
       ) : assetData.length > 0 ? (
         <div className="flex h-full flex-col gap-2 sm:gap-3">

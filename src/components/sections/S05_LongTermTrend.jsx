@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { fetchJson } from '../../lib/api.js';
 
 const UI_COLORS = {
   brand: 'var(--accent-bitcoin)',
@@ -294,9 +295,7 @@ export default function S05_LongTermTrend() {
 
     const load = async () => {
       try {
-        const response = await fetch('/api/public/mempool/live', { cache: 'no-store' });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const payload = await response.json();
+        const payload = await fetchJson('/api/public/mempool/live', { cache: 'no-store' });
         if (!active) return;
 
         const live = payload?.data || {};

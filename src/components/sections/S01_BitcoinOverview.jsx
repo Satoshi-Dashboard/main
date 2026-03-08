@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { fetchJson } from '../../lib/api.js';
 import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts';
 import { fmt } from '../../utils/formatters';
 import { fetchBtcSpot } from '../../services/priceApi';
@@ -289,11 +290,9 @@ export default function S01_BitcoinOverview() {
       try {
         const [spot, overviewRes] = await Promise.all([
           fetchBtcSpot(),
-          fetch('/api/public/mempool/overview'),
+          fetchJson('/api/public/mempool/overview'),
         ]);
-
-        if (!overviewRes.ok) throw new Error(`HTTP ${overviewRes.status}`);
-        const overviewPayload = await overviewRes.json();
+        const overviewPayload = overviewRes;
         const overview = overviewPayload?.data || {};
         const diff = overview.difficulty || {};
         const fees = overview.fees || {};

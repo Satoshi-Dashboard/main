@@ -17,3 +17,4 @@ For OpenCode, Codex, Claude, and any automated coding agent:
 13. For any new frontend user-facing text, use English by default unless the owner explicitly requests another language.
 14. Before any code change (addition, modification, or deletion), verify the planned implementation remains compatible with Vercel deployment.
 15. After finishing each code change, re-verify that the project can still be deployed on Vercel without issues.
+16. Before any project analysis, audit, or improvement review, first inspect `README.md`, `package.json`, `src/config/modules.js`, and any relevant policy files in `.claude/`; then report findings prioritized by impact, risk, and effort.

@@ -37,6 +37,7 @@ import {
 } from './s13GlobalAssetsCache.js';
 import {
   getBinanceBtcHistoryPayload,
+  getBtcMapBusinessesByCountryPayload,
   getCoingeckoBitcoinMarketChartPayload,
   getCountriesGeoPayload,
   getFearGreedPayload,
@@ -45,11 +46,14 @@ import {
   getMempoolLivePayload,
   getMempoolOverviewPayload,
   getS21BigMacSatsPayload,
+  getUsNationalDebtPayload,
   PublicFeedError,
 } from './publicDataFeeds.js';
-import { extractClientIp, getVisitorStats, trackVisitorByIp } from './visitorCounter.js';
+import { getVisitorStats, trackVisitorById } from './visitorCounter.js';
 
 const REFRESH_API_TOKEN = String(process.env.REFRESH_API_TOKEN || '');
+const IS_PRODUCTION = ['production', 'preview'].includes(String(process.env.VERCEL_ENV || '').toLowerCase())
+  || String(process.env.NODE_ENV || '').toLowerCase() === 'production';
 
 function asyncRoute(handler) {
   return async (req, res) => {
@@ -118,13 +122,18 @@ function sendPublicFeedError(res, error) {
 
 function requireRefreshToken(req, res, next) {
   if (!REFRESH_API_TOKEN) {
+    if (IS_PRODUCTION) {
+      res.status(403).json({ error: 'Refresh endpoints require REFRESH_API_TOKEN in production' });
+      return;
+    }
     next();
     return;
   }
 
   const tokenFromHeader = req.headers['x-refresh-token'];
-  const tokenFromQuery = req.query?.token;
-  const token = String(tokenFromHeader || tokenFromQuery || '');
+  const authHeader = String(req.headers.authorization || '');
+  const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+  const token = String(tokenFromHeader || bearerToken || '');
 
   if (token !== REFRESH_API_TOKEN) {
     res.status(401).json({ error: 'Unauthorized refresh request' });
@@ -136,6 +145,17 @@ function requireRefreshToken(req, res, next) {
 
 export function createApp() {
   const app = express();
+
+  app.disable('x-powered-by');
+  app.set('trust proxy', true);
+  app.use(express.json({ limit: '8kb' }));
+  app.use((req, res, next) => {
+    res.set('Referrer-Policy', 'no-referrer');
+    res.set('X-Content-Type-Options', 'nosniff');
+    res.set('X-Frame-Options', 'DENY');
+    res.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    next();
+  });
 
   app.get('/api/bitnodes/cache', asyncRoute(async (_req, res) => {
     setDataCacheHeaders(res, { sMaxAge: 21600, swr: 3600 });
@@ -368,6 +388,16 @@ export function createApp() {
     }
   }));
 
+  app.get('/api/public/btcmap/businesses-by-country', asyncRoute(async (_req, res) => {
+    setDataCacheHeaders(res, { sMaxAge: 3600, swr: 21600 });
+    try {
+      const payload = await getBtcMapBusinessesByCountryPayload();
+      res.json(payload);
+    } catch (error) {
+      sendPublicFeedError(res, error);
+    }
+  }));
+
   app.get('/api/public/coingecko/bitcoin-market-chart', asyncRoute(async (req, res) => {
     setDataCacheHeaders(res, { sMaxAge: 120, swr: 600 });
     try {
@@ -400,17 +430,36 @@ export function createApp() {
     }
   }));
 
+  app.get('/api/public/us-national-debt', asyncRoute(async (_req, res) => {
+    setDataCacheHeaders(res, { sMaxAge: 300, swr: 900 });
+    try {
+      const payload = await getUsNationalDebtPayload();
+      res.json(payload);
+    } catch (error) {
+      sendPublicFeedError(res, error);
+    }
+  }));
+
   app.get('/api/visitors/stats', asyncRoute(async (_req, res) => {
     setNoStoreHeaders(res);
     const payload = await getVisitorStats();
     res.json(payload);
   }));
 
-  app.get('/api/visitors/track', asyncRoute(async (req, res) => {
+  app.post('/api/visitors/track', asyncRoute(async (req, res) => {
     setNoStoreHeaders(res);
-    const ip = extractClientIp(req);
-    const payload = await trackVisitorByIp(ip);
+    const visitorId = String(req.body?.visitorId || req.headers['x-visitor-id'] || '');
+    if (!/^[A-Za-z0-9_-]{16,128}$/.test(visitorId)) {
+      res.status(400).json({ error: 'visitorId must be 16-128 URL-safe characters' });
+      return;
+    }
+    const payload = await trackVisitorById(visitorId);
     res.json(payload);
+  }));
+
+  app.get('/api/visitors/track', asyncRoute(async (_req, res) => {
+    setNoStoreHeaders(res);
+    res.status(405).json({ error: 'Use POST /api/visitors/track' });
   }));
 
   app.get('/api/s10/btc-distribution.js', asyncRoute(async (_req, res) => {

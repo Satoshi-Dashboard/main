@@ -1,7 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { RefreshCw, Users } from 'lucide-react';
+import { fetchJson, postJson } from '../../lib/api.js';
 
 const TRACKED_SESSION_KEY = 'satoshi-unique-visitor-tracked';
+const VISITOR_ID_KEY = 'satoshi-visitor-id';
 
 const formatVisitorCount = (value) => {
   if (!Number.isFinite(value) || value < 0) return '--';
@@ -9,56 +12,48 @@ const formatVisitorCount = (value) => {
 };
 
 export default function UniqueVisitorsCounter({ compact = false }) {
-  const [visitorCount, setVisitorCount] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['visitor-stats'],
+    queryFn: () => fetchJson('/api/visitors/stats'),
+    refetchInterval: 300_000,
+    staleTime: 60_000,
+  });
 
   useEffect(() => {
-    let isActive = true;
+    const getVisitorId = () => {
+      const existing = localStorage.getItem(VISITOR_ID_KEY);
+      if (existing) return existing;
 
-    const fetchVisitorPayload = async (url) => {
-      const response = await fetch(url);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      return response.json();
-    };
+      const created = typeof globalThis.crypto?.randomUUID === 'function'
+        ? globalThis.crypto.randomUUID().replace(/-/g, '')
+        : `${Date.now()}${Math.random().toString(36).slice(2)}`;
 
-    const applyPayload = (payload) => {
-      const uniqueVisitors = Number(payload?.uniqueVisitors);
-      if (!isActive || !Number.isFinite(uniqueVisitors) || uniqueVisitors < 0) return;
-      setVisitorCount(Math.floor(uniqueVisitors));
-      setIsLoading(false);
+      localStorage.setItem(VISITOR_ID_KEY, created);
+      return created;
     };
 
     const initCounter = async () => {
-      try {
-        const hasTracked = sessionStorage.getItem(TRACKED_SESSION_KEY) === '1';
-        const endpoint = hasTracked ? '/api/visitors/stats' : '/api/visitors/track';
-        const payload = await fetchVisitorPayload(endpoint);
-        if (!hasTracked) {
-          sessionStorage.setItem(TRACKED_SESSION_KEY, '1');
-        }
-        applyPayload(payload);
-      } catch {
-        if (isActive) setIsLoading(false);
-      }
-    };
+      const hasTracked = Boolean(sessionStorage.getItem(TRACKED_SESSION_KEY));
+      if (hasTracked) return;
 
-    const refreshStats = async () => {
       try {
-        const payload = await fetchVisitorPayload('/api/visitors/stats');
-        applyPayload(payload);
+        sessionStorage.setItem(TRACKED_SESSION_KEY, 'pending');
+        await postJson('/api/visitors/track', { visitorId: getVisitorId() });
+        sessionStorage.setItem(TRACKED_SESSION_KEY, '1');
+        queryClient.invalidateQueries({ queryKey: ['visitor-stats'] });
       } catch {
+        sessionStorage.removeItem(TRACKED_SESSION_KEY);
         return;
       }
     };
 
     initCounter();
-    const timer = setInterval(refreshStats, 300_000);
+  }, [queryClient]);
 
-    return () => {
-      isActive = false;
-      clearInterval(timer);
-    };
-  }, []);
+  const visitorCount = Number(data?.uniqueVisitors);
+  const displayValue = Number.isFinite(visitorCount) ? formatVisitorCount(visitorCount) : '--';
 
   if (compact) {
     return (
@@ -68,7 +63,7 @@ export default function UniqueVisitorsCounter({ compact = false }) {
           Unique Visits
         </div>
         <div className="font-mono font-bold tabular-nums text-yellow-50" style={{ fontSize: 'var(--fs-body)' }}>
-          {isLoading ? '--' : formatVisitorCount(visitorCount)}
+          {isLoading ? '--' : displayValue}
         </div>
       </div>
     );
@@ -80,7 +75,7 @@ export default function UniqueVisitorsCounter({ compact = false }) {
         <div>
           <div className="text-[11px] uppercase tracking-[0.18em] text-[#f4be7f]">Unique Visitors</div>
           <div className="mt-1 font-mono text-2xl font-bold tabular-nums text-yellow-50">
-            {isLoading ? '--' : formatVisitorCount(visitorCount)}
+            {isLoading ? '--' : displayValue}
           </div>
         </div>
         <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[#F7931A]/40 bg-[#F7931A]/15">

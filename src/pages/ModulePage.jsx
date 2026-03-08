@@ -9,7 +9,23 @@ const AUTOPLAY_MS = 9000;
 
 const DONATION_ADDRESS = 'BC1QC2GD3YN8DTLMZG4UW786MFN085WE69F60V4R6F';
 const DONATION_URI = `bitcoin:${DONATION_ADDRESS}`;
-const DONATION_QR_URL = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=8&data=${encodeURIComponent(DONATION_URI)}`;
+const SITE_URL = 'https://satoshidashboard.com';
+const UNDER_CONSTRUCTION_SLUGS = new Set([
+  'mayer-multiple',
+  'price-performance',
+  'cycle-spiral',
+  'power-law-model',
+  'stock-to-flow',
+  'node-versions',
+  'seasonality',
+  'big-mac-index',
+  'network-activity',
+  'log-regression',
+  'mvrv-score',
+  'google-trends',
+  'btc-dominance',
+  'utxo-distribution',
+]);
 
 function getCadenceLabel(meta) {
   if (meta?.refreshLabel) return meta.refreshLabel;
@@ -117,6 +133,7 @@ export default function ModulePage() {
   // Helps JS-capable crawlers (Googlebot, Bingbot) index per-module content.
   useEffect(() => {
     const seo = getModuleSEO(module.slugBase);
+    const canonicalUrl = `${SITE_URL}/module/${module.slug}`;
     document.title = seo.title;
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) metaDesc.setAttribute('content', seo.description);
@@ -124,13 +141,18 @@ export default function ModulePage() {
     if (ogTitle) ogTitle.setAttribute('content', seo.title);
     const ogDesc = document.querySelector('meta[property="og:description"]');
     if (ogDesc) ogDesc.setAttribute('content', seo.description);
-  }, [module.slugBase]);
+    const ogUrl = document.querySelector('meta[property="og:url"]');
+    if (ogUrl) ogUrl.setAttribute('content', canonicalUrl);
+    const twitterTitle = document.querySelector('meta[name="twitter:title"]');
+    if (twitterTitle) twitterTitle.setAttribute('content', seo.title);
+    const twitterDesc = document.querySelector('meta[name="twitter:description"]');
+    if (twitterDesc) twitterDesc.setAttribute('content', seo.description);
+    const canonical = document.querySelector('link[rel="canonical"]');
+    if (canonical) canonical.setAttribute('href', canonicalUrl);
+  }, [module.slug, module.slugBase]);
 
   const footerPage = useMemo(() => String(module.code || '').replace(/^S/i, ''), [module.code]);
-  const isUnderConstruction = useMemo(() => {
-    const n = parseInt(String(module.code || '').replace(/^S/i, ''), 10);
-    return n >= 15 && n <= 28;
-  }, [module.code]);
+  const isUnderConstruction = useMemo(() => UNDER_CONSTRUCTION_SLUGS.has(module.slugBase), [module.slugBase]);
   const footerTotal = useMemo(
     () => MODULES.reduce((max, item) => {
       const n = Number(String(item.code || '').match(/\d+/)?.[0] || 0);
@@ -409,13 +431,13 @@ export default function ModulePage() {
                       className="font-bold text-white tracking-widest uppercase"
                       style={{ fontSize: '0.7rem', letterSpacing: '0.22em' }}
                     >
-                      En Construcción
+                      Under Construction
                     </div>
                     <div
                       className="mt-1 text-white/35"
                       style={{ fontSize: '0.65rem', letterSpacing: '0.08em' }}
                     >
-                      Próximamente disponible
+                      Coming soon
                     </div>
                   </div>
                 </div>
@@ -495,21 +517,16 @@ export default function ModulePage() {
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
-            aria-label="Bitcoin donation QR"
-          >
+              aria-label="Bitcoin donation options"
+            >
             <div
               className="text-center font-mono"
               style={{ color: 'var(--accent-bitcoin)', fontSize: 'var(--fs-label)' }}
             >
-              Scan to Donate
+              Support the Dashboard
             </div>
-            <div className="mt-3 flex justify-center">
-              <img
-                src={DONATION_QR_URL}
-                alt="Bitcoin donation QR code"
-                className="h-56 w-56 max-w-full rounded border border-white/15 bg-white p-2"
-                loading="lazy"
-              />
+            <div className="mt-3 rounded border border-white/10 bg-white/[0.03] px-3 py-3 text-center font-mono text-white/75" style={{ fontSize: 'var(--fs-caption)' }}>
+              Local donation actions only. No third-party QR requests.
             </div>
             <button
               type="button"
@@ -525,10 +542,17 @@ export default function ModulePage() {
               {donateCopied ? '✓ Copied!' : (
                 <>
                   <span className="block truncate group-hover/addr:hidden">{DONATION_ADDRESS}</span>
-                  <span className="hidden group-hover/addr:block text-white/60">click to copy</span>
+                  <span className="hidden group-hover/addr:block text-white/60">Click to copy</span>
                 </>
               )}
             </button>
+            <a
+              href={DONATION_URI}
+              className="mt-3 flex w-full items-center justify-center rounded border border-[#F7931A]/25 bg-[#F7931A]/10 py-2 font-mono text-white transition hover:border-[#F7931A]/45 hover:bg-[#F7931A]/14"
+              style={{ fontSize: 'var(--fs-caption)' }}
+            >
+              Open Wallet
+            </a>
             <button
               type="button"
               onClick={() => setDonateOpen(false)}

@@ -1,49 +1,58 @@
 # Satoshi Dashboard
 
-Bitcoin analytics dashboard built with React + Vite, with a local/serverless API layer for cached market and on-chain data.
+Bitcoin analytics dashboard built with React + Vite, backed by an Express/serverless API layer that caches market, macro, and on-chain data for a single-module player experience.
 
 ## Current project state
 
-- Active frontend module registry: **28 modules** (single-module player experience).
-- Frontend route model: `BrowserRouter` with `/module/:slug` as primary navigation.
+- Active frontend module registry: **31 modules**.
+- Primary navigation: `BrowserRouter` + `/module/:slug`.
+- Frontend shell behavior: single-module player with previous/next controls, autoplay, keyboard navigation, fullscreen toggle, donation modal, and per-module SEO metadata.
 - Backend/API model: Express app in `server/app.js`, local entry in `server/index.js`, serverless entry in `api/index.js`.
-- Cache strategy: request-time refresh + stale fallback + lock protection (local + optional shared KV).
-- Deployment target: Vercel (API rewrite + SPA rewrites via `vercel.json`).
+- Cache strategy: request-time refresh + stale fallback + lock protection, with local memory cache and optional shared KV/Upstash Redis.
+- Deployment target: Vercel (`vercel.json` rewrites SPA routes and `/api/*` to the serverless entry).
 
 ## Tech stack
 
 - React 19
+- React Router 7
 - Vite 7
 - Tailwind CSS 4
 - Recharts
 - Framer Motion
-- Express
+- Express 4
+- Leaflet / React Leaflet
+- D3
 
 ## Project architecture
 
 ### Frontend
 
 - App shell and routing: `src/App.jsx`, `src/main.jsx`
-- Module player page: `src/pages/ModulePage.jsx`
-- Module registry and identity rules: `src/config/modules.js`
-- Design tokens and global styles: `src/index.css`
-- Data helpers: `src/services/priceApi.js`
+- Single-module player page: `src/pages/ModulePage.jsx`
+- Module registry and generated codes/slugs: `src/config/modules.js`
+- Module data-provider metadata: `src/config/moduleDataMeta.js`
+- Module SEO metadata: `src/config/moduleSEO.js`
+- Shared BTC and history helpers: `src/services/priceApi.js`
+- Global styles and tokens: `src/index.css`
 
-### Backend/API
+### Backend / API
 
-- API routes and contracts: `server/app.js`
+- API routes: `server/app.js`
 - Local API runtime: `server/index.js`
 - Vercel serverless entry: `api/index.js`
-- Shared/local runtime cache and lock layer: `server/runtimeCache.js`
-- BTC rates pipeline: `btcRates.js`
+- Shared/local cache and lock layer: `server/runtimeCache.js`
+- BTC spot + fiat conversion pipeline: `btcRates.js`
+- Public cached feeds: `server/publicDataFeeds.js`
+- S03 multi-currency scraper: `server/s03MultiCurrencyScraper.js`
+- S08 stablecoin cache: `server/s08StablecoinPegCache.js`
+- BitInfoCharts-backed pipelines: `server/btcDistribution.js`, `server/btcAddressesRicher.js`, `server/bitinfochartsShared.js`
 - Bitnodes cache pipeline: `server/bitnodesCache.js`
-- BTC distribution scraper: `server/btcDistribution.js`
-- Addresses richer scraper: `server/btcAddressesRicher.js`
-- Unique visitor counter: `server/visitorCounter.js`
+- S13 global assets scraper: `server/s13GlobalAssetsCache.js`
+- Visitor counter: `server/visitorCounter.js`
 
-## Active module registry (S01-S28)
+## Frontend module registry (S01-S31)
 
-Module codes/slugs are generated from array order in `src/config/modules.js`.
+Module codes and slugs are generated from array order in `src/config/modules.js`. Component filenames still contain some legacy numbering and do not always match generated module codes one-to-one.
 
 | Code | Title |
 | --- | --- |
@@ -53,88 +62,89 @@ Module codes/slugs are generated from array order in `src/config/modules.js`.
 | S04 | Mempool Gauge |
 | S05 | Long-Term Trend |
 | S06 | Nodes Map |
-| S07 | Lightning Network |
-| S08 | Stablecoin Peg Health |
-| S09 | Fear & Greed |
-| S10 | Address Distribution |
-| S11 | Wealth Pyramid |
-| S12 | Global Assets |
-| S13 | BTC vs Gold |
-| S14 | Mayer Multiple |
-| S15 | Price Performance |
-| S16 | Cycle Spiral |
-| S17 | Power Law Model |
-| S18 | Stock to Flow |
-| S19 | Big Mac Sats Tracker |
-| S20 | Seasonality |
-| S21 | Big Mac Index |
-| S22 | Network Activity |
-| S23 | Log Regression |
-| S24 | MVRV Score |
-| S25 | Google Trends |
-| S26 | BTC Dominance |
-| S27 | UTXO Distribution |
-| S28 | Thank You Satoshi |
+| S07 | Lightning Nodes Map |
+| S08 | BTC Map Business Density |
+| S09 | Lightning Network |
+| S10 | Stablecoin Peg Health |
+| S11 | Fear & Greed |
+| S12 | Address Distribution |
+| S13 | Wealth Pyramid |
+| S14 | Global Assets |
+| S15 | BTC vs Gold |
+| S16 | Mayer Multiple |
+| S17 | Price Performance |
+| S18 | Cycle Spiral |
+| S19 | Power Law Model |
+| S20 | Stock to Flow |
+| S21 | Big Mac Sats Tracker |
+| S22 | Seasonality |
+| S23 | Big Mac Index |
+| S24 | Network Activity |
+| S25 | Log Regression |
+| S26 | MVRV Score |
+| S27 | Google Trends |
+| S28 | BTC Dominance |
+| S29 | UTXO Distribution |
+| S30 | U.S. National Debt |
+| S31 | Thank You Satoshi |
 
-Note: some component filenames keep legacy names and do not necessarily match generated module codes one-to-one.
+## Module implementation note
 
-## Live data coverage
+- The registry contains 31 navigable modules.
+- In the current player UI, the under-construction overlay is now tied to a slug allowlist in `src/pages/ModulePage.jsx` so adding/reordering modules does not accidentally hide the wrong screens.
+- `S31` remains reachable as the closing tribute screen.
 
-Currently wired live/external data modules:
+## Live / external data coverage
 
-- `S01` Bitcoin Overview: Binance/CoinGecko spot + mempool.space + Alternative.me
-- `S02` Price Chart: `/api/public/binance/btc-history` (cache-first Binance daily history)
-- `S03` Multi-Currency: `/api/s03/multi-currency` Investing single-currency-crosses (USD) scrape + BTC anchor from `/api/btc/rates` + `/api/public/geo/land`
+Currently wired live or scraped data modules:
+
+- `S01` Bitcoin Overview: `/api/btc/rates` + `/api/public/mempool/overview` + `/api/public/fear-greed`
+- `S02` Price Chart: `/api/public/binance/btc-history`
+- `S03` Multi-Currency: `/api/s03/multi-currency` + `/api/public/geo/land`
 - `S04` Mempool Gauge: `/api/public/mempool/overview`
-- `S05` Long-Term Trend: `/api/public/mempool/live` (cache-first polling snapshot)
-- `S06` Nodes Map: `/api/bitnodes/cache` + `/api/public/geo/countries` (Bitnodes primary, scrape fallback)
-- `S07` Lightning Network: spot feed via `priceApi`
-- `S08` Stablecoin Peg Health: CoinGecko stablecoins market API
-- `S09` Fear & Greed: `/api/public/fear-greed`
-- `S10` Address Distribution: `/api/s10/btc-distribution`
-- `S11` Wealth Pyramid: `/api/s14/addresses-richer`
-- `S13` Global Assets: `/api/s13/global-assets` Newhedge global asset values scrape
-- `S14` BTC vs Gold: `/api/public/coingecko/bitcoin-market-chart`
-- `S15` Price Performance: `/api/btc/rates`
-- `S19` Big Mac Sats Tracker: `/api/public/s21/big-mac-sats-data` (BTC spot cache + Binance history + Economist CSV)
-- `S21` Big Mac Index: `/api/btc/rates`
+- `S05` Long-Term Trend: `/api/public/mempool/live`
+- `S06` Nodes Map: `/api/bitnodes/cache` + `/api/public/geo/countries`
+- `S07` Lightning Nodes Map: `/api/public/lightning/world`
+- `S08` BTC Map Business Density: `/api/public/btcmap/businesses-by-country` + `/api/public/geo/countries`
+- `S09` Lightning Network: BTC spot feed via `src/services/priceApi.js`
+- `S10` Stablecoin Peg Health: `/api/s08/stablecoins`, `/api/s08/stablecoins/live-prices`, `/api/s08/stablecoin/:id`
+- `S11` Fear & Greed: `/api/public/fear-greed`
+- `S12` Address Distribution: `/api/s10/btc-distribution`
+- `S13` Wealth Pyramid: `/api/s14/addresses-richer`
+- `S14` Global Assets: `/api/s13/global-assets`
+- `S15` BTC vs Gold: `/api/public/coingecko/bitcoin-market-chart`
+- `S17` Price Performance: `/api/btc/rates`
+- `S21` Big Mac Sats Tracker: `/api/public/s21/big-mac-sats-data`
+- `S23` Big Mac Index: `/api/btc/rates`
+- `S30` U.S. National Debt: `/api/public/us-national-debt`
 
-Browser clients use internal `/api/*` routes for upstream reads so provider request budgets are enforced server-side via shared cache + single-flight refresh.
-
-Other modules currently render from local/generated data in frontend code.
+Other modules currently render from local/generated frontend data.
 
 ## API endpoints
 
-Global refresh governance:
+Global behavior:
 
-- External providers are accessed with cache-first single-flight refresh policy (many readers, minimal upstream calls).
-- Per-provider refresh windows must respect provider cadence and safe request budgets, not only hard limits.
-- Effective refresh time uses the stricter boundary between local safe interval and provider freshness window.
+- Upstream providers are accessed through cache-first single-flight refresh logic.
+- When an upstream call fails, the API can serve stale cached data with fallback metadata.
+- Refresh endpoints require `REFRESH_API_TOKEN` in production and accept the token via `x-refresh-token` header (or `Authorization: Bearer ...`).
 
 ### BTC rates
 
 - `GET /api/btc/rates`
 - `GET /api/btc/rates/:currency`
-- `GET /api/btc/refresh` (token-protectable)
+- `GET /api/btc/refresh`
 
-Behavior notes:
+Notes:
 
-- Near-live spot cadence (target): ~5 seconds per shared refresh window.
-- Spot source priority: Binance.com (`ticker/24hr`) -> CoinGecko fallback.
-- CoinGecko fallback is throttled with local safety interval to avoid over-requesting.
-- Fiat conversion source (Frankfurter) is cached separately with slower cadence (hours), then combined with fresh spot.
+- Near-live refresh window around 5 seconds.
+- Spot source priority: Binance -> CoinGecko fallback.
+- Fiat conversion source is cached separately and merged into the BTC spot payload.
 
-### S03 multi-currency scraper
+### S03 multi-currency
 
 - `GET /api/s03/multi-currency`
 - `GET /api/s03/multi-currency/status`
-- `GET /api/s03/multi-currency/refresh` (token-protectable)
-
-Behavior notes:
-
-- Scrapes Investing single-currency-crosses table (`/currencies/single-currency-crosses?currency=usd`) with a 30-second refresh window.
-- Uses BTC anchor from `/api/btc/rates` (Binance primary) for USD and combines it with Investing scraped USD quote pairs for non-USD conversions.
-- Applies cache-first single-flight refresh with stale fallback when upstream scrape fails.
+- `GET /api/s03/multi-currency/refresh`
 
 ### S08 stablecoin peg cache
 
@@ -142,69 +152,35 @@ Behavior notes:
 - `GET /api/s08/stablecoins/live-prices`
 - `GET /api/s08/stablecoin/:id`
 
-Behavior notes:
-
-- Stablecoin metadata/list is cached from CoinGecko markets endpoint (stablecoins category) with cache-first single-flight and a strict 60s refresh window (1 upstream request/minute max).
-- Peg deviation uses `/api/s08/stablecoins/live-prices`, derived from the same shared CoinGecko cache window (no extra upstream endpoint hit).
-- Historical 14d series payload per coin id is sourced from CoinGecko `market_chart` and normalized to the existing `data.tokens` contract.
-- List payload keeps backward-compatible fields and adds richer CoinGecko metrics (rank, 24h range/change, volume, FDV, ATH/ATL, supplies, image, timestamps) when available.
-
-### S13 global assets snapshot
+### S13 global assets
 
 - `GET /api/s13/global-assets`
 - `GET /api/s13/global-assets/status`
-- `GET /api/s13/global-assets/refresh` (token-protectable)
-
-Behavior notes:
-
-- Scrapes Newhedge global asset values page (`/bitcoin/global-asset-values`) and extracts the "Latest Global Asset Values snapshot" card.
-- Uses cache-first single-flight refresh with a strict 1-hour window (safe budget: 24 provider refreshes/day).
-- Returns additive operational metadata (`is_fallback`, `fallback_note`, `stale_age_ms`) when stale cache is served after transient scrape errors.
+- `GET /api/s13/global-assets/refresh`
 
 ### Bitnodes cache
 
 - `GET /api/bitnodes/cache`
 - `GET /api/bitnodes/cache/status`
-- `GET /api/bitnodes/cache/refresh` (token-protectable)
+- `GET /api/bitnodes/cache/refresh`
 
-Behavior notes:
+Notes:
 
-- Primary source is Bitnodes snapshot API.
-- If Bitnodes API is unavailable/rate-limited, backend falls back to Bitnodes countries modal scraping (`/nodes/`).
-- Bitnodes scrape fallback enforces a minimum refresh interval of ~10 minutes.
-- Fallback response adds `source_provider`, `is_fallback`, and `fallback_note` fields.
-- Payload includes `data.network_breakdown` (Nodes, IPv4, IPv6, .onion, Full, Pruned with percentages).
-- Breakdown is computed from Bitnodes API snapshot when available; otherwise from Bitnodes `/nodes/` scrape summary.
+- Primary source: Bitnodes snapshot API.
+- Fallback source: Bitnodes `/nodes/` scraping.
 
-### BTC distribution (BitInfoCharts)
+### BitInfoCharts-backed data
 
 - `GET /api/s10/btc-distribution`
 - `GET /api/s10/btc-distribution.js`
 - `GET /api/s10/btc-distribution/status`
-- `GET /api/s10/btc-distribution/refresh` (token-protectable)
-
-Behavior notes:
-
-- Uses shared BitInfoCharts HTML source cache with 30-minute cadence.
-- Avoids duplicate upstream refreshes when S10 and S14 request the same source window.
-
-### Addresses richer (BitInfoCharts)
-
+- `GET /api/s10/btc-distribution/refresh`
 - `GET /api/s14/addresses-richer`
 - `GET /api/s14/addresses-richer.js`
 - `GET /api/s14/addresses-richer/status`
-- `GET /api/s14/addresses-richer/refresh` (token-protectable)
+- `GET /api/s14/addresses-richer/refresh`
 
-Behavior notes:
-
-- Shares the same 30-minute BitInfoCharts source-refresh window used by S10.
-
-### Visitors
-
-- `GET /api/visitors/stats`
-- `GET /api/visitors/track`
-
-### Public shared feeds (cache-first)
+### Public shared feeds
 
 - `GET /api/public/mempool/overview`
 - `GET /api/public/mempool/live`
@@ -212,18 +188,35 @@ Behavior notes:
 - `GET /api/public/geo/countries`
 - `GET /api/public/geo/land`
 - `GET /api/public/lightning/world`
+- `GET /api/public/btcmap/businesses-by-country`
 - `GET /api/public/coingecko/bitcoin-market-chart?days=365`
 - `GET /api/public/binance/btc-history?days=7|30|90|365`
 - `GET /api/public/s21/big-mac-sats-data`
+- `GET /api/public/us-national-debt`
+
+### Visitors
+
+- `GET /api/visitors/stats`
+- `POST /api/visitors/track`
+
+Notes:
+
+- Visitor tracking uses an anonymous browser-generated visitor ID instead of raw IP-based uniqueness.
+- The frontend sends the identifier once per session and the backend stores only a salted hash.
 
 ## Environment variables
 
 - `API_PORT` (default `8787`)
-- `REFRESH_API_TOKEN` (optional, protects refresh endpoints)
-- `VISITOR_COUNTER_SALT` (optional, hashes visitor IPs)
+- `API_HOST` (default `0.0.0.0`)
+- `API_PROXY_TARGET` (optional, Vite dev proxy target; default `http://127.0.0.1:8787`)
+- `REFRESH_API_TOKEN` (required in production if refresh endpoints should stay enabled)
+- `VISITOR_COUNTER_SALT` (optional, salts anonymous visitor ID hashes)
 - `CACHE_KEY_PREFIX` (optional shared-cache key namespace)
 - `KV_REST_API_URL` / `KV_REST_API_TOKEN` (optional shared KV)
 - `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` (optional shared KV aliases)
+- `SCRAPER_BASE_URL` (optional scraper proxy base URL, defaults to `https://api.zatobox.io`)
+
+Copy `.env.example` to a local `.env` file when needed.
 
 ## Local development
 
@@ -245,9 +238,21 @@ Useful scripts:
 - `npm run dev:ui` -> Vite UI only
 - `npm run dev:api` -> API only
 - `npm run start` -> API only (production-like local)
+- `npm run start:api` -> API only
 - `npm run build` -> production build
 - `npm run preview` -> preview build
 - `npm run lint` -> ESLint
+
+Notes:
+
+- Vite proxies `/api` requests from the frontend dev server to the API server using `API_PROXY_TARGET` (defaults to `http://127.0.0.1:8787`).
+- `vite.config.js` ignores generated cache JSON files to reduce unnecessary reload noise during development.
+- Shared KV is strongly recommended on Vercel to avoid per-instance cache drift.
+
+## SEO / PWA assets
+
+- Base metadata lives in `index.html` and is refined per module via `src/config/moduleSEO.js`.
+- Public assets include `robots.txt`, `sitemap.xml`, `llm.txt`, `site.webmanifest`, icons, and Open Graph preview images.
 
 ## Deployment (Vercel)
 
@@ -255,13 +260,12 @@ Useful scripts:
 
 - `/api/*` -> `api/index.js`
 - `/module/*` -> `index.html`
-- fallback `/*` -> `index.html`
+- non-file routes -> `index.html`
 
-This keeps serverless API and client-side routing compatible in one deployment.
+Notes:
 
-Function runtime region:
-
-- `api/index.js` is pinned to Vercel region `fra1` in `vercel.json` to keep Binance-backed server-side calls outside US regions.
+- The Vercel function is pinned to region `fra1`.
+- This keeps serverless API routes and SPA routing compatible in one deployment.
 
 ## Agent policy files
 
@@ -272,10 +276,10 @@ Function runtime region:
 
 ## Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Commit with clear messages
-4. Push and open a pull request
+1. Fork the repository.
+2. Create a feature branch.
+3. Commit with clear messages.
+4. Push and open a pull request.
 
 ## License
 

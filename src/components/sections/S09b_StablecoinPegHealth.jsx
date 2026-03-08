@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { fetchJson } from '../../lib/api.js';
 
 /* ─── Whitelist: 6 most recognized USD stablecoins ─────────── */
 const WHITELIST = ['USDT', 'USDC', 'DAI', 'FDUSD', 'PYUSD', 'USDS'];
@@ -577,9 +578,7 @@ export default function S09b_StablecoinPegHealth() {
   /* ── Fetch + filter to whitelist ── */
   const load = useCallback(async () => {
     try {
-      const r = await fetch('/api/s08/stablecoins');
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      const payload = await r.json();
+      const payload = await fetchJson('/api/s08/stablecoins');
       const d = payload?.data && Array.isArray(payload.data.peggedAssets)
         ? payload.data
         : payload;
@@ -617,9 +616,7 @@ export default function S09b_StablecoinPegHealth() {
 
   const loadLivePegPrices = useCallback(async () => {
     try {
-      const r = await fetch('/api/s08/stablecoins/live-prices');
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      const payload = await r.json();
+      const payload = await fetchJson('/api/s08/stablecoins/live-prices');
       const prices = payload?.prices_by_symbol && typeof payload.prices_by_symbol === 'object'
         ? payload.prices_by_symbol
         : {};
@@ -666,9 +663,7 @@ export default function S09b_StablecoinPegHealth() {
   const onVisible = useCallback(async (id, cb) => {
     if (sparkCache.current[id]) { cb(sparkCache.current[id]); return; }
     try {
-      const r = await fetch(`/api/s08/stablecoin/${id}`);
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      const payload = await r.json();
+      const payload = await fetchJson(`/api/s08/stablecoin/${id}`);
       const d = payload?.data && typeof payload.data === 'object'
         ? payload.data
         : payload;
