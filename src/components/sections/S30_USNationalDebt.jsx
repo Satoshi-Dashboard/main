@@ -44,13 +44,19 @@ function getToneStyles(tone) {
 
 function HeroFigure({ value }) {
   const groups = useMemo(() => splitCurrencyGroups(value), [value]);
+  const fontSize = useMemo(() => {
+    const digits = String(Math.round(Number(value) || 0)).length;
+    if (digits >= 14) return 'clamp(2.9rem, 5.8vw, 6.25rem)';
+    if (digits >= 13) return 'clamp(3.2rem, 6.4vw, 6.7rem)';
+    return 'clamp(3.4rem, 6.8vw, 7.1rem)';
+  }, [value]);
 
   return (
     <div
-      className="tabular-nums flex flex-wrap items-center justify-center gap-x-[0.16em] gap-y-1 font-mono font-semibold leading-[0.88] text-white"
+      className="tabular-nums flex items-center justify-center font-mono font-semibold leading-[0.9] text-white max-[1100px]:flex-wrap"
       style={{
-        fontSize: 'calc(var(--fs-display) * 1.06)',
-        letterSpacing: '-0.08em',
+        fontSize,
+        letterSpacing: '-0.075em',
       }}
     >
       {groups.map((group, index) => (
@@ -65,7 +71,7 @@ function HeroFigure({ value }) {
 function StatCard({ label, value, helper, accent = 'var(--text-primary)', featured = false }) {
   return (
     <article
-      className="rounded-[24px] border border-white/10 bg-white/[0.03] p-4 text-left sm:p-5"
+      className="rounded-[24px] border border-white/10 bg-white/[0.03] p-4 text-left sm:p-5 2xl:p-6"
       style={{ boxShadow: featured ? '0 24px 60px rgba(0, 0, 0, 0.22)' : 'none' }}
     >
       <div
@@ -82,7 +88,7 @@ function StatCard({ label, value, helper, accent = 'var(--text-primary)', featur
         className="mt-3 font-mono font-semibold tabular-nums"
         style={{
           color: accent,
-          fontSize: featured ? 'var(--fs-hero)' : 'var(--fs-title)',
+          fontSize: featured ? 'clamp(2rem, 2.1vw, 2.9rem)' : 'clamp(1.45rem, 1.45vw, 2.05rem)',
           letterSpacing: '-0.05em',
           lineHeight: 0.95,
         }}
@@ -103,7 +109,7 @@ function StatCard({ label, value, helper, accent = 'var(--text-primary)', featur
 
 function RateCard({ label, value, toneColor }) {
   return (
-    <article className="rounded-[22px] border border-white/10 bg-white/[0.025] p-4 text-left sm:p-5">
+    <article className="rounded-[22px] border border-white/10 bg-white/[0.025] p-4 text-left sm:p-5 2xl:p-4">
       <div className="mb-3 flex items-center gap-2">
         <span className="h-1.5 w-1.5 rounded-full" style={{ background: toneColor, opacity: 0.8 }} />
         <span
@@ -119,7 +125,7 @@ function RateCard({ label, value, toneColor }) {
       </div>
       <div
         className="font-mono font-semibold tabular-nums text-white"
-        style={{ fontSize: 'var(--fs-title)', letterSpacing: '-0.04em', lineHeight: 0.95 }}
+        style={{ fontSize: 'clamp(1.3rem, 1.2vw, 1.85rem)', letterSpacing: '-0.04em', lineHeight: 0.95 }}
       >
         {value}
       </div>
@@ -141,12 +147,12 @@ function LoadingState() {
       </div>
       <div className="skeleton mt-6 h-8 w-72 rounded-full sm:h-10 sm:w-96" />
       <div className="skeleton mt-3 h-4 w-64 rounded-full sm:w-72" />
-      <div className="mt-8 grid w-full gap-4 lg:grid-cols-3">
+      <div className="mt-6 grid w-full gap-4 lg:grid-cols-3">
         {Array.from({ length: 3 }).map((_, index) => (
           <div key={index} className="skeleton min-h-[180px] rounded-[24px]" />
         ))}
       </div>
-      <div className="mt-6 grid w-full gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="mt-5 grid w-full gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
         {Array.from({ length: 6 }).map((_, index) => (
           <div key={index} className="skeleton min-h-[128px] rounded-[22px]" />
         ))}
@@ -236,10 +242,15 @@ export default function S30_USNationalDebt() {
   );
   const rateCards = useMemo(() => buildUsDebtRateCards(model), [model]);
   const liveVerb = Number(model?.rate_per_second) < 0 ? 'reduced every second' : 'added every second';
+  const projectedDebtPerPerson = useMemo(() => {
+    const population = Number(model?.population);
+    if (!Number.isFinite(population) || population <= 0) return model?.debt_per_person;
+    return projectedTotal / population;
+  }, [model?.debt_per_person, model?.population, projectedTotal]);
 
   if (loading && !model) {
     return (
-      <div className="relative flex h-full w-full overflow-y-auto bg-[var(--bg-primary)] px-4 py-5 sm:px-6 lg:px-10 lg:py-8">
+      <div className="relative flex h-full w-full overflow-y-auto bg-[var(--bg-primary)] px-4 py-5 sm:px-6 lg:px-10 lg:py-8 2xl:overflow-hidden">
         <LoadingState />
       </div>
     );
@@ -247,16 +258,16 @@ export default function S30_USNationalDebt() {
 
   if (!model) {
     return (
-      <div className="relative flex h-full w-full overflow-y-auto bg-[var(--bg-primary)] px-4 py-5 sm:px-6 lg:px-10 lg:py-8">
+      <div className="relative flex h-full w-full overflow-y-auto bg-[var(--bg-primary)] px-4 py-5 sm:px-6 lg:px-10 lg:py-8 2xl:overflow-hidden">
         <ErrorState message={error} onRetry={() => load({ force: true })} />
       </div>
     );
   }
 
   return (
-    <div className="relative flex h-full w-full overflow-y-auto bg-[var(--bg-primary)]">
-      <div className="relative mx-auto flex w-full max-w-[1480px] flex-col px-4 py-5 sm:px-6 sm:py-6 lg:px-10 lg:py-8 xl:px-14 xl:py-10">
-        <div className="mx-auto flex w-full max-w-[1240px] flex-1 flex-col items-center justify-center text-center">
+    <div className="relative flex h-full w-full overflow-y-auto bg-[var(--bg-primary)] 2xl:overflow-hidden">
+      <div className="relative mx-auto flex h-full w-full max-w-[1720px] flex-col px-4 py-4 sm:px-6 sm:py-5 lg:px-10 lg:py-6 xl:px-12 2xl:px-16 2xl:py-7">
+        <div className="mx-auto flex h-full w-full max-w-[1520px] flex-1 flex-col items-center justify-between text-center">
           <header className="flex w-full max-w-[980px] flex-col items-center gap-4">
             <div className="flex flex-wrap items-center justify-center gap-3">
               <span
@@ -294,11 +305,11 @@ export default function S30_USNationalDebt() {
             </div>
           </header>
 
-          <section className="mt-7 w-full max-w-[1120px]">
+          <section className="mt-5 w-full max-w-[1460px] px-1 2xl:px-0">
             <HeroFigure value={projectedTotal} />
           </section>
 
-          <section className="mt-6 flex w-full max-w-[920px] flex-col items-center gap-2">
+          <section className="mt-4 flex w-full max-w-[980px] flex-col items-center gap-2">
             <div
               className="inline-flex flex-wrap items-center justify-center gap-2 rounded-full border px-4 py-2 font-mono tabular-nums"
               style={{
@@ -313,18 +324,18 @@ export default function S30_USNationalDebt() {
             </div>
             <div
               className="flex flex-wrap items-center justify-center gap-2 font-mono tabular-nums"
-              style={{ fontSize: 'var(--fs-heading)', color: 'var(--text-primary)' }}
+              style={{ fontSize: 'clamp(1.1rem, 1vw, 1.45rem)', color: 'var(--text-primary)' }}
             >
               <span>{formatUsdWhole(Math.abs(Number(model.rate_per_second) || 0))}</span>
               <span style={{ color: 'var(--text-secondary)' }}>{liveVerb}</span>
             </div>
           </section>
 
-          <section className="mt-8 grid w-full gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,0.9fr)_minmax(0,0.9fr)]">
+          <section className="mt-5 grid w-full gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,0.95fr)_minmax(0,0.95fr)]">
             <StatCard
               label="DEBT PER PERSON"
-              value={formatUsdWhole(model.debt_per_person)}
-              helper={`Estimated share of national debt per U.S. resident. Based on total national debt divided by the latest U.S. population estimate (${formatNumberCompact(model.population)} residents).`}
+              value={formatUsdWhole(projectedDebtPerPerson)}
+              helper={`Estimated share of national debt per U.S. resident. Moves in step with the national counter using the latest population estimate (${formatNumberCompact(model.population)} residents).`}
               accent="var(--text-primary)"
               featured
             />
@@ -342,14 +353,14 @@ export default function S30_USNationalDebt() {
             />
           </section>
 
-          <section className="mt-8 w-full">
+          <section className="mt-5 w-full">
             <div
               className="mb-3 text-center font-mono uppercase"
               style={{ color: 'var(--text-secondary)', fontSize: 'var(--fs-tag)', letterSpacing: '0.22em' }}
             >
-              RATE OF INCREASE
+              RATE OF INCREASE  📈
             </div>
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
               {rateCards.map((card) => (
                 <RateCard
                   key={card.label}
@@ -361,7 +372,7 @@ export default function S30_USNationalDebt() {
             </div>
           </section>
 
-          <footer className="mt-8 w-full rounded-[24px] border border-white/10 bg-black/25 px-4 py-4 text-left sm:px-5 sm:py-5">
+          <footer className="mt-5 w-full rounded-[24px] border border-white/10 bg-black/25 px-4 py-4 text-left sm:px-5 sm:py-4">
             <div className="grid gap-4 lg:grid-cols-3">
               <div>
                 <div className="font-mono uppercase" style={{ color: 'var(--accent-bitcoin)', fontSize: 'var(--fs-tag)', letterSpacing: '0.18em' }}>
