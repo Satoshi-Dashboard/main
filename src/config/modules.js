@@ -33,37 +33,37 @@ const S30_USNationalDebt = lazy(() => import('../components/sections/S30_USNatio
 const S29_ThankYouSatoshi = lazy(() => import('../components/sections/S29_ThankYouSatoshi'));
 
 const MODULE_DEFS = [
-  { slugBase: 'bitcoin-overview', title: 'Bitcoin Overview', component: S01_BitcoinOverview },
-  { slugBase: 'price-chart', title: 'Price Chart', component: S02_PriceChart },
-  { slugBase: 'multi-currency', title: 'Multi-Currency', component: S03_MultiCurrencyBoard },
-  { slugBase: 'mempool-gauge', title: 'Mempool Gauge', component: S04_MempoolGauge },
-  { slugBase: 'long-term-trend', title: 'Long-Term Trend', component: S05_LongTermTrend },
-  { slugBase: 'nodes-map', title: 'Nodes Map', component: S08_NodesMap },
-  { slugBase: 'lightning-nodes-map', title: 'Lightning Nodes Map', component: S08b_LightningNodesMap },
-  { slugBase: 'btcmap-business-density', title: 'BTC Map Business Density', component: S08c_BtcMapBusinessesMap },
-  { slugBase: 'lightning-network', title: 'Lightning Network', component: S09_LightningNetwork },
-  { slugBase: 'stablecoin-peg', title: 'Stablecoin Peg Health', component: S09b_StablecoinPegHealth },
-  { slugBase: 'fear-greed', title: 'Fear & Greed', component: S10_FearGreedIndex },
-  { slugBase: 'address-distribution', title: 'Address Distribution', component: S11_AddressDistribution },
-  { slugBase: 'wealth-pyramid', title: 'Wealth Pyramid', component: S15_WealthPyramid },
-  { slugBase: 'global-assets', title: 'Global Assets', component: S13_GlobalAssetsTreemap },
-  { slugBase: 'btc-vs-gold', title: 'BTC vs Gold', component: S12_BTCvsGold },
-  { slugBase: 'mayer-multiple', title: 'Mayer Multiple', component: S16_MayerMultiple },
-  { slugBase: 'price-performance', title: 'Price Performance', component: S17_PricePerformance },
-  { slugBase: 'cycle-spiral', title: 'Cycle Spiral', component: S18_CycleSpiral },
-  { slugBase: 'power-law-model', title: 'Power Law Model', component: S19_PowerLawModel },
-  { slugBase: 'stock-to-flow', title: 'Stock to Flow', component: S20_StockToFlow },
-  { slugBase: 'node-versions', title: 'Big Mac Sats Tracker', component: S21_NodeVersions },
-  { slugBase: 'seasonality', title: 'Seasonality', component: S22_SeasonalityHeatmap },
-  { slugBase: 'big-mac-index', title: 'Big Mac Index', component: S23_BigMacIndex },
-  { slugBase: 'network-activity', title: 'Network Activity', component: S24_NetworkActivity },
-  { slugBase: 'log-regression', title: 'Log Regression', component: S25_LogRegression },
-  { slugBase: 'mvrv-score', title: 'MVRV Score', component: S26_MVRVScore },
-  { slugBase: 'google-trends', title: 'Google Trends', component: S27_GoogleTrends },
-  { slugBase: 'btc-dominance', title: 'BTC Dominance', component: S28_BTCDominance },
-  { slugBase: 'utxo-distribution', title: 'UTXO Distribution', component: S29_UTXODistribution },
-  { slugBase: 'us-national-debt', title: 'U.S. National Debt', component: S30_USNationalDebt },
-  { slugBase: 'thank-you-satoshi', title: 'Thank You Satoshi', component: S29_ThankYouSatoshi },
+  { slugBase: 'bitcoin-price-market-overview', title: 'Bitcoin Overview', component: S01_BitcoinOverview },
+  { slugBase: 'bitcoin-price-chart-live', title: 'Price Chart', component: S02_PriceChart },
+  { slugBase: 'bitcoin-price-multi-currency', title: 'Multi-Currency', component: S03_MultiCurrencyBoard },
+  { slugBase: 'bitcoin-mempool-fees', title: 'Mempool Gauge', component: S04_MempoolGauge },
+  { slugBase: 'bitcoin-mempool-trend', title: 'Long-Term Trend', component: S05_LongTermTrend },
+  { slugBase: 'bitcoin-nodes-world-map', title: 'Nodes Map', component: S08_NodesMap },
+  { slugBase: 'lightning-nodes-world-map', title: 'Lightning Nodes Map', component: S08b_LightningNodesMap },
+  { slugBase: 'bitcoin-merchant-map', title: 'BTC Map Business Density', component: S08c_BtcMapBusinessesMap },
+  { slugBase: 'lightning-network-stats', title: 'Lightning Network', component: S09_LightningNetwork },
+  { slugBase: 'stablecoin-peg-tracker', title: 'Stablecoin Peg Health', component: S09b_StablecoinPegHealth },
+  { slugBase: 'bitcoin-fear-greed-index', title: 'Fear & Greed', component: S10_FearGreedIndex },
+  { slugBase: 'bitcoin-address-distribution', title: 'Address Distribution', component: S11_AddressDistribution },
+  { slugBase: 'bitcoin-wealth-pyramid', title: 'Wealth Pyramid', component: S15_WealthPyramid },
+  { slugBase: 'bitcoin-vs-global-assets', title: 'Global Assets', component: S13_GlobalAssetsTreemap },
+  { slugBase: 'bitcoin-vs-gold-chart', title: 'BTC vs Gold', component: S12_BTCvsGold },
+  { slugBase: 'bitcoin-mayer-multiple', title: 'Mayer Multiple', component: S16_MayerMultiple },
+  { slugBase: 'bitcoin-price-performance', title: 'Price Performance', component: S17_PricePerformance },
+  { slugBase: 'bitcoin-halving-cycle-spiral', title: 'Cycle Spiral', component: S18_CycleSpiral },
+  { slugBase: 'bitcoin-power-law-model', title: 'Power Law Model', component: S19_PowerLawModel },
+  { slugBase: 'bitcoin-stock-to-flow-model', title: 'Stock to Flow', component: S20_StockToFlow },
+  { slugBase: 'bitcoin-big-mac-sats-tracker', title: 'Big Mac Sats Tracker', component: S21_NodeVersions },
+  { slugBase: 'bitcoin-seasonality-heatmap', title: 'Seasonality', component: S22_SeasonalityHeatmap },
+  { slugBase: 'bitcoin-big-mac-index', title: 'Big Mac Index', component: S23_BigMacIndex },
+  { slugBase: 'bitcoin-network-activity', title: 'Network Activity', component: S24_NetworkActivity },
+  { slugBase: 'bitcoin-log-regression-channel', title: 'Log Regression', component: S25_LogRegression },
+  { slugBase: 'bitcoin-mvrv-score', title: 'MVRV Score', component: S26_MVRVScore },
+  { slugBase: 'bitcoin-google-trends', title: 'Google Trends', component: S27_GoogleTrends },
+  { slugBase: 'bitcoin-dominance-chart', title: 'BTC Dominance', component: S28_BTCDominance },
+  { slugBase: 'bitcoin-utxo-distribution', title: 'UTXO Distribution', component: S29_UTXODistribution },
+  { slugBase: 'us-national-debt-live-counter', title: 'U.S. National Debt', component: S30_USNationalDebt },
+  { slugBase: 'satoshi-nakamoto-bitcoin-whitepaper', title: 'Thank You Satoshi', component: S29_ThankYouSatoshi },
 ];
 
 const toCode = (index) => `S${String(index + 1).padStart(2, '0')}`;
@@ -109,4 +109,50 @@ function assertModuleRegistry(modules) {
 
 assertModuleRegistry(MODULES);
 
+export const FIRST_MODULE = MODULES[0];
 export const MODULES_BY_SLUG = Object.fromEntries(MODULES.map((module) => [module.slug, module]));
+export const MODULES_BY_CODE = Object.fromEntries(MODULES.map((module) => [module.code, module]));
+
+const LEGACY_MODULE_SLUGS = [
+  's01-bitcoin-overview',
+  's02-price-chart',
+  's03-multi-currency',
+  's04-mempool-gauge',
+  's05-long-term-trend',
+  's06-nodes-map',
+  's07-lightning-nodes-map',
+  's08-btcmap-business-density',
+  's09-lightning-network',
+  's10-stablecoin-peg',
+  's11-fear-greed',
+  's12-address-distribution',
+  's13-wealth-pyramid',
+  's14-global-assets',
+  's15-btc-vs-gold',
+  's16-mayer-multiple',
+  's17-price-performance',
+  's18-cycle-spiral',
+  's19-power-law-model',
+  's20-stock-to-flow',
+  's21-node-versions',
+  's22-seasonality',
+  's23-big-mac-index',
+  's24-network-activity',
+  's25-log-regression',
+  's26-mvrv-score',
+  's27-google-trends',
+  's28-btc-dominance',
+  's29-utxo-distribution',
+  's30-us-national-debt',
+  's31-thank-you-satoshi',
+];
+
+export const LEGACY_MODULE_REDIRECTS = Object.fromEntries(
+  LEGACY_MODULE_SLUGS.map((slug, index) => [slug, index === 0 ? '/' : `/module/${MODULES[index].slug}`]),
+);
+
+export function getModulePath(moduleOrCode) {
+  const module = typeof moduleOrCode === 'string' ? MODULES_BY_CODE[moduleOrCode] : moduleOrCode;
+  if (!module) return '/';
+  return module.code === FIRST_MODULE.code ? '/' : `/module/${module.slug}`;
+}

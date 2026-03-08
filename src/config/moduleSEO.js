@@ -1,151 +1,172 @@
 /**
- * moduleSEO.js
- * Per-module SEO metadata: title suffix and meta description.
- * Used by ModulePage.jsx to update document.title and the meta description tag
- * on every module navigation, improving crawlability for JS-capable bots.
- *
- * Keys must match the module's `slugBase` in modules.js.
+ * Per-module SEO metadata keyed by `slugBase` from modules.js.
+ * Each entry defines a unique title, description, and keyword set.
  */
 
 const MODULE_SEO = {
-  'bitcoin-overview': {
-    title: 'Bitcoin Overview — Live Price, Market Cap & Network Stats',
-    description: 'Real-time Bitcoin price, market cap, 24h volume, block height, hashrate, and Fear & Greed Index in a single view. Data from Binance, mempool.space, and Alternative.me.',
+  'bitcoin-price-market-overview': {
+    title: 'Bitcoin Dashboard - Live BTC Price, Market Cap & Network Stats',
+    description: 'Track live Bitcoin price, market cap, 24h volume, block height, hashrate, and Fear & Greed in one free Bitcoin dashboard built for fast market analysis.',
+    keywords: ['bitcoin dashboard', 'live bitcoin price', 'btc market cap', 'bitcoin network stats'],
   },
-  'price-chart': {
-    title: 'Bitcoin Price Chart — BTC/USD OHLC Candlestick',
-    description: 'Interactive Bitcoin price chart with OHLC candlesticks for 7-day, 30-day, 90-day, and 1-year timeframes. Powered by Binance historical data.',
+  'bitcoin-price-chart-live': {
+    title: 'Bitcoin Price Chart Live - BTC/USD Candlestick Dashboard',
+    description: 'View a live Bitcoin price chart with BTC/USD candlesticks across 7-day, 30-day, 90-day, and 1-year timeframes for fast trend analysis.',
+    keywords: ['bitcoin price chart', 'btc usd chart', 'live bitcoin chart', 'bitcoin candlestick chart'],
   },
-  'multi-currency': {
-    title: 'Bitcoin Price in 30+ Currencies — Multi-Currency Board',
-    description: 'Live Bitcoin price converted into 30+ world currencies updated every 30 seconds. EUR, GBP, JPY, BRL, ARS, and more.',
+  'bitcoin-price-multi-currency': {
+    title: 'Bitcoin Price by Currency - Live BTC Exchange Dashboard',
+    description: 'Compare live Bitcoin price in 30+ global currencies including EUR, GBP, JPY, BRL, and ARS with fast refresh intervals.',
+    keywords: ['bitcoin price in usd', 'bitcoin price in eur', 'bitcoin multi currency', 'btc exchange rates'],
   },
-  'mempool-gauge': {
-    title: 'Bitcoin Mempool Gauge — Congestion & Fee Rates',
-    description: 'Real-time Bitcoin mempool congestion gauge with pending transaction count, recommended fee rates (sat/vB), and estimated confirmation times from mempool.space.',
+  'bitcoin-mempool-fees': {
+    title: 'Bitcoin Mempool Fees - Live Fee Rates & Congestion Gauge',
+    description: 'Monitor Bitcoin mempool congestion, pending transactions, recommended fee rates, and confirmation pressure in one live mempool gauge.',
+    keywords: ['bitcoin mempool fees', 'bitcoin fee tracker', 'mempool gauge', 'btc pending transactions'],
   },
-  'long-term-trend': {
-    title: 'Bitcoin Long-Term Mempool Trend — Fee & Size History',
-    description: 'Long-term trend chart of Bitcoin mempool size and fee rates. Track network congestion patterns over weeks and months with live data from mempool.space.',
+  'bitcoin-mempool-trend': {
+    title: 'Bitcoin Mempool Trend - Long-Term Fees & Pending Tx',
+    description: 'Analyze long-term Bitcoin mempool behavior with fee trend history, congestion patterns, and network pressure across longer time windows.',
+    keywords: ['bitcoin mempool trend', 'bitcoin fee history', 'mempool congestion chart', 'btc fee trend'],
   },
-  'nodes-map': {
-    title: 'Bitcoin Full Nodes World Map — Network Distribution',
-    description: 'Geographic world map of reachable Bitcoin full nodes by country. Tracks network decentralization across 100+ countries using Bitnodes data.',
+  'bitcoin-nodes-world-map': {
+    title: 'Bitcoin Nodes Map - Full Nodes by Country',
+    description: 'Explore a Bitcoin nodes map showing reachable full nodes by country to evaluate network distribution and decentralization worldwide.',
+    keywords: ['bitcoin nodes map', 'bitcoin full nodes', 'btc nodes by country', 'how many bitcoin nodes'],
   },
-  'lightning-nodes-map': {
-    title: 'Lightning Network Nodes World Map',
-    description: 'Interactive world map showing the geographic distribution of Bitcoin Lightning Network routing nodes. Data sourced from mempool.space.',
+  'lightning-nodes-world-map': {
+    title: 'Lightning Nodes Map - Global Bitcoin LN Nodes',
+    description: 'See where Lightning Network routing nodes are located worldwide with a global Lightning nodes map optimized for BTC network research.',
+    keywords: ['lightning nodes map', 'lightning network nodes', 'bitcoin ln nodes', 'lightning map'],
   },
-  'btcmap-business-density': {
-    title: 'BTC Map Business Density — Bitcoin Merchants by Country',
-    description: 'World map of Bitcoin-friendly businesses by country using BTC Map place data. Compare merchant density, country coverage, and verified business counts.',
+  'bitcoin-merchant-map': {
+    title: 'Bitcoin Merchant Map - BTC Businesses by Country',
+    description: 'Discover Bitcoin-friendly businesses by country with a merchant map that highlights adoption hotspots, store density, and BTC acceptance coverage.',
+    keywords: ['bitcoin merchant map', 'bitcoin businesses map', 'btc merchants', 'bitcoin point of sale map'],
   },
-  'lightning-network': {
-    title: 'Lightning Network Stats — Channels, Capacity & Nodes',
-    description: 'Live Bitcoin Lightning Network statistics: total channels, network capacity in BTC, active node count, and growth trends from mempool.space.',
+  'lightning-network-stats': {
+    title: 'Lightning Network Stats - Channels, Capacity & Nodes',
+    description: 'Track live Lightning Network capacity, channel count, and active nodes to monitor Bitcoin payment infrastructure growth.',
+    keywords: ['lightning network stats', 'lightning capacity', 'lightning channels', 'bitcoin payment network'],
   },
-  'stablecoin-peg': {
-    title: 'Stablecoin Peg Health — USDT, USDC, DAI Tracker',
-    description: 'Real-time peg deviation tracker for major stablecoins (USDT, USDC, DAI, BUSD, and more). Monitor de-peg risk with live CoinGecko market data.',
+  'stablecoin-peg-tracker': {
+    title: 'Stablecoin Peg Tracker - USDT, USDC & DAI Health',
+    description: 'Monitor live peg deviation for USDT, USDC, DAI, BUSD, and other stablecoins to spot stability risks and off-peg events fast.',
+    keywords: ['stablecoin peg tracker', 'usdt peg', 'usdc peg', 'stablecoin health'],
   },
-  'fear-greed': {
-    title: 'Bitcoin Fear & Greed Index — Daily Sentiment Tracker',
-    description: 'Current Bitcoin Fear & Greed Index (0–100) with 7-day and 30-day historical chart. Extreme Fear signals potential buying opportunity; Extreme Greed signals risk.',
+  'bitcoin-fear-greed-index': {
+    title: 'Bitcoin Fear & Greed Index - Daily Sentiment Tracker',
+    description: 'Check the current Bitcoin Fear & Greed Index with recent history to understand whether market sentiment is in fear, greed, or a neutral zone.',
+    keywords: ['bitcoin fear and greed index', 'btc sentiment', 'fear greed tracker', 'bitcoin market sentiment'],
   },
-  'address-distribution': {
-    title: 'Bitcoin Address Distribution by Balance',
-    description: 'How many Bitcoin addresses hold specific BTC balance ranges? On-chain distribution chart from micro-holders to whales, sourced from BitInfoCharts.',
+  'bitcoin-address-distribution': {
+    title: 'Bitcoin Address Distribution - Holders by Balance',
+    description: 'Review Bitcoin address distribution by balance range to see how BTC supply is spread from micro-holders to whales.',
+    keywords: ['bitcoin address distribution', 'btc holders by balance', 'bitcoin whales', 'on chain distribution'],
   },
-  'wealth-pyramid': {
-    title: 'Bitcoin Wealth Pyramid — Holder Distribution',
-    description: 'Visual wealth pyramid showing how many Bitcoin addresses hold each tier of BTC — from micro-holders to whales. BitInfoCharts on-chain data.',
+  'bitcoin-wealth-pyramid': {
+    title: 'Bitcoin Wealth Pyramid - BTC Holder Tiers',
+    description: 'Visualize Bitcoin holder concentration with a wealth pyramid showing BTC ownership tiers from small stackers to large whales.',
+    keywords: ['bitcoin wealth pyramid', 'bitcoin holders', 'btc ownership tiers', 'bitcoin wealth distribution'],
   },
-  'global-assets': {
-    title: 'Global Assets Treemap — Bitcoin vs Gold, Equities & More',
-    description: 'Interactive treemap comparing Bitcoin\'s market cap against global assets: gold, S&P 500, real estate, and leading companies. Powered by Newhedge data.',
+  'bitcoin-vs-global-assets': {
+    title: 'Bitcoin vs Global Assets - Market Cap Treemap',
+    description: 'Compare Bitcoin market capitalization against gold, major equities, real estate, and other global assets in an interactive treemap.',
+    keywords: ['bitcoin vs gold market cap', 'bitcoin global assets', 'bitcoin treemap', 'btc market cap comparison'],
   },
-  'btc-vs-gold': {
-    title: 'Bitcoin vs Gold — 1-Year Performance Comparison',
-    description: 'Normalized price performance chart of Bitcoin versus gold over the last 12 months. See how BTC compares to the traditional store of value.',
+  'bitcoin-vs-gold-chart': {
+    title: 'Bitcoin vs Gold Chart - 1-Year Performance',
+    description: 'Compare Bitcoin and gold performance over the last year with a normalized chart for macro and store-of-value analysis.',
+    keywords: ['bitcoin vs gold', 'btc vs gold chart', 'bitcoin gold performance', 'store of value comparison'],
   },
-  'mayer-multiple': {
-    title: 'Mayer Multiple — Bitcoin Price vs 200-Day Moving Average',
-    description: 'Current Bitcoin Mayer Multiple (price ÷ 200-day MA) with overbought and oversold thresholds. A key cycle indicator for long-term Bitcoin investors.',
+  'bitcoin-mayer-multiple': {
+    title: 'Bitcoin Mayer Multiple - Price vs 200-Day Average',
+    description: 'Track the Bitcoin Mayer Multiple to compare current BTC price with its 200-day moving average and spot historical overbought or oversold zones.',
+    keywords: ['bitcoin mayer multiple', 'btc 200 day moving average', 'bitcoin cycle indicator', 'mayer multiple chart'],
   },
-  'price-performance': {
-    title: 'Bitcoin Price Performance — YTD & Multi-Year Returns',
-    description: 'Bitcoin\'s year-to-date and multi-year price performance expressed in multiple currencies. Track BTC returns against fiat depreciation.',
+  'bitcoin-price-performance': {
+    title: 'Bitcoin Price Performance - YTD & Multi-Year Returns',
+    description: 'Review Bitcoin price performance across year-to-date and multi-year windows to compare BTC returns against fiat erosion.',
+    keywords: ['bitcoin price performance', 'btc returns', 'bitcoin ytd performance', 'bitcoin multi year returns'],
   },
-  'cycle-spiral': {
-    title: 'Bitcoin Cycle Spiral — 4-Year Halving Cycles',
-    description: 'Polar spiral chart visualizing Bitcoin\'s 4-year halving market cycles. Compare current cycle progression to all previous cycles.',
+  'bitcoin-halving-cycle-spiral': {
+    title: 'Bitcoin Halving Cycle Spiral - 4-Year Market Cycles',
+    description: 'Visualize Bitcoin halving cycles in a spiral chart to compare the current market phase with prior 4-year cycle behavior.',
+    keywords: ['bitcoin halving cycle', 'bitcoin cycle spiral', 'btc halving chart', 'bitcoin four year cycle'],
   },
-  'power-law-model': {
-    title: 'Bitcoin Power Law Model — Fair Value Corridor',
-    description: 'Bitcoin price plotted against the Power Law long-term fair-value corridor. Identify when BTC is trading cheap or expensive on a logarithmic scale.',
+  'bitcoin-power-law-model': {
+    title: 'Bitcoin Power Law Model - Fair Value Corridor',
+    description: 'Analyze Bitcoin against the Power Law fair value corridor to see when BTC trades near long-term support or upper valuation bands.',
+    keywords: ['bitcoin power law model', 'btc fair value', 'bitcoin valuation corridor', 'power law bitcoin'],
   },
-  'stock-to-flow': {
-    title: 'Bitcoin Stock-to-Flow Model — S2F Chart',
-    description: 'Bitcoin Stock-to-Flow (S2F) model chart with actual price overlay. S2F measures Bitcoin\'s scarcity — the ratio doubles after every halving.',
+  'bitcoin-stock-to-flow-model': {
+    title: 'Bitcoin Stock-to-Flow Model - S2F Price Chart',
+    description: 'Study the Bitcoin Stock-to-Flow model with actual BTC price overlay to understand scarcity-driven cycle analysis after each halving.',
+    keywords: ['bitcoin stock to flow', 'bitcoin s2f', 'stock to flow model', 'bitcoin scarcity model'],
   },
-  'node-versions': {
-    title: 'Big Mac Sats Tracker — Bitcoin Purchasing Power',
-    description: 'How many satoshis does a Big Mac cost today vs historically? Track Bitcoin\'s real-world purchasing power over time using The Economist\'s Big Mac Index.',
+  'bitcoin-big-mac-sats-tracker': {
+    title: 'Big Mac Sats Tracker - Bitcoin Purchasing Power',
+    description: 'See how many satoshis are needed to buy a Big Mac today and compare Bitcoin purchasing power against historical price changes.',
+    keywords: ['big mac sats tracker', 'bitcoin purchasing power', 'sats value', 'bitcoin real world purchasing power'],
   },
-  'seasonality': {
-    title: 'Bitcoin Seasonality Heatmap — Monthly Returns',
-    description: 'Bitcoin monthly return heatmap showing historical seasonal patterns by month and year. Identify recurring bullish and bearish months in BTC market cycles.',
+  'bitcoin-seasonality-heatmap': {
+    title: 'Bitcoin Seasonality Heatmap - Monthly Returns',
+    description: 'Review Bitcoin monthly return patterns in a seasonality heatmap to spot stronger and weaker months across historical cycles.',
+    keywords: ['bitcoin seasonality', 'bitcoin monthly returns', 'btc heatmap', 'bitcoin seasonal trends'],
   },
-  'big-mac-index': {
-    title: 'Big Mac Index — Bitcoin Purchasing Power by Country',
-    description: 'How many Big Macs can one Bitcoin buy in each country? An intuitive comparison of Bitcoin\'s purchasing power using The Economist\'s Big Mac Index.',
+  'bitcoin-big-mac-index': {
+    title: 'Bitcoin Big Mac Index - BTC Buying Power by Country',
+    description: 'Compare Bitcoin buying power across countries with a Big Mac Index style view that converts local burger prices into BTC terms.',
+    keywords: ['bitcoin big mac index', 'btc purchasing power by country', 'bitcoin buying power', 'bitcoin big mac'],
   },
-  'network-activity': {
-    title: 'Bitcoin Network Activity — Transactions & Active Addresses',
-    description: 'Daily on-chain Bitcoin transaction count, active addresses, and block size chart. Monitor the health and adoption of the Bitcoin network over time.',
+  'bitcoin-network-activity': {
+    title: 'Bitcoin Network Activity - Transactions & Active Addresses',
+    description: 'Track Bitcoin network activity through transaction count, active addresses, and on-chain participation signals over time.',
+    keywords: ['bitcoin network activity', 'active bitcoin addresses', 'bitcoin transactions chart', 'btc on chain activity'],
   },
-  'log-regression': {
-    title: 'Bitcoin Log Regression Channel — Support & Resistance',
-    description: 'Bitcoin price plotted against a logarithmic regression channel. The channel\'s upper and lower bands act as dynamic overbought and oversold zones.',
+  'bitcoin-log-regression-channel': {
+    title: 'Bitcoin Log Regression Channel - Long-Term Support',
+    description: 'Use the Bitcoin log regression channel to study long-term price support, resistance, and cycle extremes on a logarithmic scale.',
+    keywords: ['bitcoin log regression', 'bitcoin support resistance', 'btc regression channel', 'bitcoin long term model'],
   },
-  'mvrv-score': {
-    title: 'Bitcoin MVRV Score — Market Value vs Realized Value',
-    description: 'MVRV ratio compares Bitcoin\'s market cap to its realized cap. MVRV above 3.5 has historically marked cycle tops; below 1 has marked cycle bottoms.',
+  'bitcoin-mvrv-score': {
+    title: 'Bitcoin MVRV Score - Market Cycle Valuation',
+    description: 'Measure Bitcoin market cycle valuation with the MVRV score to identify historical undervaluation zones and overheated tops.',
+    keywords: ['bitcoin mvrv score', 'btc valuation', 'market value realized value', 'bitcoin cycle tops'],
   },
-  'google-trends': {
-    title: 'Bitcoin Google Trends — Search Interest Over Time',
-    description: 'Google Trends data for "Bitcoin" search interest worldwide. High search interest historically correlates with Bitcoin price peaks and public attention spikes.',
+  'bitcoin-google-trends': {
+    title: 'Bitcoin Google Trends - Search Interest Over Time',
+    description: 'Compare Bitcoin search interest over time with Google Trends to spot attention spikes, retail hype, and broader public demand.',
+    keywords: ['bitcoin google trends', 'bitcoin search interest', 'btc trends', 'google trends bitcoin'],
   },
-  'btc-dominance': {
-    title: 'Bitcoin Dominance — BTC Share of Crypto Market Cap',
-    description: 'Bitcoin\'s percentage share of the total cryptocurrency market capitalization over time. Rising dominance often signals a Bitcoin-led market; declining may indicate altcoin season.',
+  'bitcoin-dominance-chart': {
+    title: 'Bitcoin Dominance Chart - BTC Share of Crypto Market',
+    description: 'Track Bitcoin dominance to see how much of the total crypto market cap belongs to BTC during risk-on and risk-off periods.',
+    keywords: ['bitcoin dominance chart', 'btc dominance', 'bitcoin market share', 'crypto market dominance'],
   },
-  'utxo-distribution': {
-    title: 'Bitcoin UTXO Distribution — HODLer Age Analysis',
-    description: 'Age distribution of unspent Bitcoin transaction outputs (UTXOs). Long-held UTXOs indicate HODLing behavior; short-held indicate active spending and trading.',
+  'bitcoin-utxo-distribution': {
+    title: 'Bitcoin UTXO Distribution - HODLer Age Analysis',
+    description: 'Analyze Bitcoin UTXO age distribution to understand HODL behavior, coin dormancy, and changing conviction across the network.',
+    keywords: ['bitcoin utxo distribution', 'bitcoin hodler age', 'btc utxo age', 'coin dormancy bitcoin'],
   },
-  'us-national-debt': {
-    title: 'U.S. National Debt — Real-Time Counter, Per Person & Rate of Increase',
-    description: 'Track the United States national debt with a projected real-time counter, debt-per-person metric, and rate-of-increase cards powered by U.S. Treasury FiscalData and U.S. Census population estimates.',
+  'us-national-debt-live-counter': {
+    title: 'U.S. National Debt Live Counter - Real-Time Tracker',
+    description: 'Monitor the U.S. national debt with a real-time counter, debt-per-person estimate, and rate-of-increase cards powered by public data.',
+    keywords: ['us national debt live counter', 'national debt tracker', 'debt per person', 'real time debt counter'],
   },
-  'thank-you-satoshi': {
-    title: 'Thank You Satoshi — Bitcoin Whitepaper & Origins',
-    description: 'A tribute to Satoshi Nakamoto, the pseudonymous creator of Bitcoin. Includes a link to the original Bitcoin whitepaper published on October 31, 2008.',
+  'satoshi-nakamoto-bitcoin-whitepaper': {
+    title: 'Satoshi Nakamoto & Bitcoin Whitepaper - Tribute Page',
+    description: 'Visit a tribute page to Satoshi Nakamoto with context on the Bitcoin whitepaper, the project mission, and the roots of the dashboard.',
+    keywords: ['satoshi nakamoto', 'bitcoin whitepaper', 'thank you satoshi', 'bitcoin origins'],
   },
 };
 
 const DEFAULT_SEO = {
-  title: 'Satoshi Dashboard — Real-Time Bitcoin Analytics & On-Chain Metrics',
-  description: 'Free Bitcoin analytics dashboard with live price, mempool, on-chain metrics, Fear & Greed, MVRV, Stock-to-Flow, Lightning Network, BTC Map merchant density, and 31 interactive modules.',
+  title: 'Bitcoin Dashboard & Live BTC Price | Satoshi Dashboard',
+  description: 'Free Bitcoin dashboard with live BTC price, mempool, nodes, on-chain metrics, Lightning stats, merchant maps, and 31 analytics modules.',
+  keywords: ['bitcoin dashboard', 'live btc price', 'bitcoin analytics', 'free bitcoin tools'],
 };
 
-/**
- * Returns the SEO metadata for a given module slugBase.
- * Falls back to default site-wide metadata if not found.
- *
- * @param {string} slugBase - The module's slugBase (e.g. 'bitcoin-overview')
- * @returns {{ title: string, description: string }}
- */
 export function getModuleSEO(slugBase) {
   return MODULE_SEO[slugBase] || DEFAULT_SEO;
 }

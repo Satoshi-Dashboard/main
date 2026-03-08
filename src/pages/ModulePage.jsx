@@ -1,30 +1,37 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Hammer, Maximize2, Minimize2, Pause, Play, SkipBack, SkipForward } from 'lucide-react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import BitcoinDonationQr from '../components/common/BitcoinDonationQr';
-import { MODULES, MODULES_BY_SLUG } from '../config/modules';
+import {
+  FIRST_MODULE,
+  getModulePath,
+  LEGACY_MODULE_REDIRECTS,
+  MODULES,
+  MODULES_BY_SLUG,
+} from '../config/modules';
 import { getModuleDataMeta } from '../config/moduleDataMeta';
 import { getModuleSEO } from '../config/moduleSEO';
+import { SEO_HUB_PATH } from '../config/seoContent';
+import { absoluteUrl, DEFAULT_OG_IMAGE, usePageSEO } from '../lib/usePageSEO';
 
 const AUTOPLAY_MS = 9000;
 
 const DONATION_ADDRESS = 'BC1QC2GD3YN8DTLMZG4UW786MFN085WE69F60V4R6F';
-const SITE_URL = 'https://satoshidashboard.com';
 const UNDER_CONSTRUCTION_SLUGS = new Set([
-  'mayer-multiple',
-  'price-performance',
-  'cycle-spiral',
-  'power-law-model',
-  'stock-to-flow',
-  'node-versions',
-  'seasonality',
-  'big-mac-index',
-  'network-activity',
-  'log-regression',
-  'mvrv-score',
-  'google-trends',
-  'btc-dominance',
-  'utxo-distribution',
+  'bitcoin-mayer-multiple',
+  'bitcoin-price-performance',
+  'bitcoin-halving-cycle-spiral',
+  'bitcoin-power-law-model',
+  'bitcoin-stock-to-flow-model',
+  'bitcoin-big-mac-sats-tracker',
+  'bitcoin-seasonality-heatmap',
+  'bitcoin-big-mac-index',
+  'bitcoin-network-activity',
+  'bitcoin-log-regression-channel',
+  'bitcoin-mvrv-score',
+  'bitcoin-google-trends',
+  'bitcoin-dominance-chart',
+  'bitcoin-utxo-distribution',
 ]);
 
 function getCadenceLabel(meta) {
@@ -117,39 +124,62 @@ function LiveClock() {
   );
 }
 
-export default function ModulePage() {
+export default function ModulePage({ forcedSlug = null }) {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const activeSlug = forcedSlug || slug;
 
   const currentIndex = useMemo(() => {
-    const index = MODULES.findIndex((m) => m.slug === slug);
+    const index = MODULES.findIndex((m) => m.slug === activeSlug);
     return index >= 0 ? index : 0;
-  }, [slug]);
+  }, [activeSlug]);
 
-  const module = MODULES_BY_SLUG[slug] || MODULES[currentIndex];
+  const module = MODULES_BY_SLUG[activeSlug] || MODULES[currentIndex];
   const Component = module.component;
+  const seo = useMemo(() => getModuleSEO(module.slugBase), [module.slugBase]);
+  const canonicalPath = module.code === FIRST_MODULE.code ? '/' : `/module/${module.slug}`;
+  const moduleSchema = useMemo(
+    () => ([
+      {
+        '@context': 'https://schema.org',
+        '@type': 'WebPage',
+        name: seo.title,
+        description: seo.description,
+        url: absoluteUrl(canonicalPath),
+        isPartOf: 'https://satoshidashboard.com/',
+        primaryImageOfPage: DEFAULT_OG_IMAGE,
+      },
+      {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          {
+            '@type': 'ListItem',
+            position: 1,
+            name: 'Dashboard',
+            item: 'https://satoshidashboard.com/',
+          },
+          {
+            '@type': 'ListItem',
+            position: 2,
+            name: module.title,
+            item: absoluteUrl(canonicalPath),
+          },
+        ],
+      },
+    ]),
+    [canonicalPath, module.title, seo.description, seo.title],
+  );
 
-  // Update document title and meta description on each module change.
-  // Helps JS-capable crawlers (Googlebot, Bingbot) index per-module content.
-  useEffect(() => {
-    const seo = getModuleSEO(module.slugBase);
-    const canonicalUrl = `${SITE_URL}/module/${module.slug}`;
-    document.title = seo.title;
-    const metaDesc = document.querySelector('meta[name="description"]');
-    if (metaDesc) metaDesc.setAttribute('content', seo.description);
-    const ogTitle = document.querySelector('meta[property="og:title"]');
-    if (ogTitle) ogTitle.setAttribute('content', seo.title);
-    const ogDesc = document.querySelector('meta[property="og:description"]');
-    if (ogDesc) ogDesc.setAttribute('content', seo.description);
-    const ogUrl = document.querySelector('meta[property="og:url"]');
-    if (ogUrl) ogUrl.setAttribute('content', canonicalUrl);
-    const twitterTitle = document.querySelector('meta[name="twitter:title"]');
-    if (twitterTitle) twitterTitle.setAttribute('content', seo.title);
-    const twitterDesc = document.querySelector('meta[name="twitter:description"]');
-    if (twitterDesc) twitterDesc.setAttribute('content', seo.description);
-    const canonical = document.querySelector('link[rel="canonical"]');
-    if (canonical) canonical.setAttribute('href', canonicalUrl);
-  }, [module.slug, module.slugBase]);
+  usePageSEO({
+    title: seo.title,
+    description: seo.description,
+    canonicalPath,
+    keywords: seo.keywords,
+    image: DEFAULT_OG_IMAGE,
+    imageAlt: module.title,
+    schema: moduleSchema,
+  });
 
   const footerPage = useMemo(() => String(module.code || '').replace(/^S/i, ''), [module.code]);
   const isUnderConstruction = useMemo(() => UNDER_CONSTRUCTION_SLUGS.has(module.slugBase), [module.slugBase]);
@@ -245,7 +275,7 @@ export default function ModulePage() {
 
     resetScroll();
     requestAnimationFrame(resetScroll);
-  }, [slug, isResponsiveViewport]);
+  }, [activeSlug, isResponsiveViewport]);
 
   useEffect(() => {
     if (!showSharedMeta || !Number.isFinite(cadenceMs) || cadenceMs <= 0) return undefined;
@@ -256,20 +286,33 @@ export default function ModulePage() {
   }, [showSharedMeta, cadenceMs]);
 
   useEffect(() => {
+    if (!slug) return;
+
+    if (slug === FIRST_MODULE.slug) {
+      navigate('/', { replace: true });
+      return;
+    }
+
+    const legacyRedirect = LEGACY_MODULE_REDIRECTS[slug];
+    if (legacyRedirect) {
+      navigate(legacyRedirect, { replace: true });
+      return;
+    }
+
     if (!MODULES_BY_SLUG[slug]) {
-      navigate(`/module/${MODULES[0].slug}`, { replace: true });
+      navigate('/', { replace: true });
     }
   }, [slug, navigate]);
 
   const goToModule = useCallback(
     (index) => {
-      navigate(`/module/${MODULES[getWrappedIndex(index)].slug}`);
+      navigate(getModulePath(MODULES[getWrappedIndex(index)]));
     },
     [navigate],
   );
 
   const goToHomeModule = useCallback(() => {
-    navigate(`/module/${MODULES[0].slug}`);
+    navigate('/');
   }, [navigate]);
 
   useEffect(() => {
@@ -473,14 +516,13 @@ export default function ModulePage() {
         </button>
 
         {/* Branding */}
-        <a
-          href="https://github.com/Satoshi-Dashboard"
-          target="_blank"
-          rel="noreferrer"
-          className="absolute left-1/2 -translate-x-1/2 hidden text-[11px] tracking-[0.2em] text-white/20 transition-colors hover:text-white/50 lg:block"
+        <Link
+          to={SEO_HUB_PATH}
+          className="absolute left-1/2 top-1/2 flex max-w-[42vw] -translate-x-1/2 -translate-y-1/2 items-center justify-center text-center text-[9px] tracking-[0.18em] text-white/24 transition-colors hover:text-white/60 sm:max-w-[34vw] sm:text-[10px] lg:max-w-none lg:text-[11px]"
+          aria-label="Open Bitcoin SEO hub"
         >
           satoshi-dashboard
-        </a>
+        </Link>
 
         {/* Pagination */}
         <div className="flex items-center gap-1.5 text-white/50 sm:gap-2">

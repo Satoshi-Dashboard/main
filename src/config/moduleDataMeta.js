@@ -1,6 +1,6 @@
 const INTERNAL_PROVIDER = {
   name: 'Satoshi Dashboard',
-  url: 'https://github.com/Satoshi-Dashboard/main',
+  url: 'https://satoshidashboard.com/bitcoin-dashboard',
 };
 
 const DEFAULT_META = {
@@ -10,7 +10,7 @@ const DEFAULT_META = {
 };
 
 const MODULE_DATA_META = {
-  'bitcoin-overview': {
+  'bitcoin-price-market-overview': {
     providers: [
       { name: 'Binance', url: 'https://api.binance.com' },
       { name: 'mempool.space', url: 'https://mempool.space' },
@@ -18,11 +18,11 @@ const MODULE_DATA_META = {
     ],
     refreshSeconds: 30,
   },
-  'price-chart': {
+  'bitcoin-price-chart-live': {
     providers: [{ name: 'Binance', url: 'https://api.binance.com' }],
     refreshLabel: 'on load',
   },
-  'multi-currency': {
+  'bitcoin-price-multi-currency': {
     providers: [
       { name: 'Investing', url: 'https://www.investing.com/currencies/single-currency-crosses?currency=usd' },
       { name: 'Binance', url: 'https://api.binance.com' },
@@ -31,28 +31,28 @@ const MODULE_DATA_META = {
     desktopOverlayInModule: true,
     showSharedStripOnResponsive: false,
   },
-  'mempool-gauge': {
+  'bitcoin-mempool-fees': {
     providers: [{ name: 'mempool.space', url: 'https://mempool.space' }],
     refreshSeconds: 30,
   },
-  'long-term-trend': {
+  'bitcoin-mempool-trend': {
     providers: [{ name: 'mempool.space', url: 'https://mempool.space' }],
     refreshLabel: 'live',
     desktopOverlayInModule: true,
   },
-  'nodes-map': {
+  'bitcoin-nodes-world-map': {
     providers: [
       { name: 'Bitnodes', url: 'https://bitnodes.io' },
     ],
     refreshRangeLabel: '10 min - 12 h',
     showSharedStrip: false,
   },
-  'lightning-nodes-map': {
+  'lightning-nodes-world-map': {
     providers: [{ name: 'mempool.space', url: 'https://mempool.space' }],
     refreshMinutes: 1,
     showSharedStrip: false,
   },
-  'btcmap-business-density': {
+  'bitcoin-merchant-map': {
     providers: [
       { name: 'BTC Map', url: 'https://btcmap.org' },
       { name: 'Natural Earth', url: 'https://www.naturalearthdata.com/' },
@@ -60,44 +60,44 @@ const MODULE_DATA_META = {
     refreshMinutes: 360,
     showSharedStrip: false,
   },
-  'lightning-network': {
+  'lightning-network-stats': {
     providers: [{ name: 'Binance', url: 'https://api.binance.com' }],
     refreshSeconds: 15,
   },
-  'stablecoin-peg': {
+  'stablecoin-peg-tracker': {
     providers: [{ name: 'CoinGecko', url: 'https://www.coingecko.com/en/api' }],
     refreshMinutes: 2,
     sharedMetaAbsoluteCard: true,
   },
-  'fear-greed': {
+  'bitcoin-fear-greed-index': {
     providers: [{ name: 'Alternative.me', url: 'https://alternative.me/crypto/fear-and-greed-index/' }],
     refreshLabel: 'daily update',
   },
-  'address-distribution': {
+  'bitcoin-address-distribution': {
     providers: [{ name: 'BitInfoCharts', url: 'https://bitinfocharts.com' }],
     refreshMinutes: 30,
     showSharedStrip: false,
   },
-  'wealth-pyramid': {
+  'bitcoin-wealth-pyramid': {
     providers: [{ name: 'BitInfoCharts', url: 'https://bitinfocharts.com' }],
     refreshMinutes: 30,
     showSharedStrip: false,
   },
-  'global-assets': {
+  'bitcoin-vs-global-assets': {
     providers: [{ name: 'Newhedge', url: 'https://newhedge.io/bitcoin/global-asset-values' }],
     refreshMinutes: 60,
     showTitleInStrip: true,
     stripTitle: 'Total Global Asset Values',
   },
-  'btc-vs-gold': {
+  'bitcoin-vs-gold-chart': {
     providers: [{ name: 'CoinGecko', url: 'https://www.coingecko.com/en/api' }],
     refreshMinutes: 60,
   },
-  'price-performance': {
+  'bitcoin-price-performance': {
     providers: [{ name: 'CoinGecko', url: 'https://www.coingecko.com/en/api' }],
     refreshMinutes: 60,
   },
-  'node-versions': {
+  'bitcoin-big-mac-sats-tracker': {
     providers: [
       { name: 'Binance', url: 'https://api.binance.com' },
       { name: 'Alternative.me', url: 'https://alternative.me' },
@@ -105,18 +105,18 @@ const MODULE_DATA_META = {
     ],
     refreshLabel: 'annual index',
   },
-  'big-mac-index': {
+  'bitcoin-big-mac-index': {
     providers: [{ name: 'CoinGecko', url: 'https://www.coingecko.com/en/api' }],
     refreshMinutes: 60,
   },
-  'us-national-debt': {
+  'us-national-debt-live-counter': {
     providers: [
       { name: 'U.S. Treasury FiscalData', url: 'https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/debt_to_penny' },
       { name: 'U.S. Census ACS', url: 'https://api.census.gov/data/2024/acs/acs1?get=NAME,B01003_001E&for=us:1' },
     ],
     refreshMinutes: 15,
   },
-  'thank-you-satoshi': {
+  'satoshi-nakamoto-bitcoin-whitepaper': {
     showSharedStrip: false,
   },
 };
