@@ -1,6 +1,6 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { cacheGetJson, cacheSetJson, withCacheLock } from './server/runtimeCache.js';
+import { cacheGetJson, cacheSetJson, withCacheLock } from './server/shared/runtimeCache.js';
 
 const CACHE_FILE = path.resolve(process.cwd(), 'btc_rates_cache.json');
 
@@ -8,12 +8,13 @@ const BINANCE_BTC_24H_URLS = [
   'https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT',
   'https://api.binance.us/api/v3/ticker/24hr?symbol=BTCUSDT',
 ];
-const FRANKFURTER_USD_URL = 'https://api.frankfurter.app/latest?from=USD';
+const INVESTING_USD_CROSSES_URL = 'https://www.investing.com/currencies/single-currency-crosses?currency=usd';
+const SCRAPER_BASE_URL = String(process.env.SCRAPER_BASE_URL || 'https://api.zatobox.io').trim();
 
 const FETCH_TIMEOUT_MS = 10_000;
 
 const SPOT_REFRESH_MS = 5_000;
-const FIAT_REFRESH_MS = 60 * 60_000;
+const FIAT_REFRESH_MS = 30_000;
 
 const SHARED_CACHE_KEY = 'btc-rates';
 const SHARED_LOCK_KEY = 'btc-rates-refresh';
@@ -75,6 +76,108 @@ function sanitizeBtcUsd(value) {
 function sanitizeFxRate(value) {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function stripHtml(value) {
+  return String(value || '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;|&#160;/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function parseNumber(value) {
+  const cleaned = stripHtml(value)
+    .replace(/,/g, '')
+    .replace(/%/g, '')
+    .replace(/\+/g, '')
+    .replace(/\s+/g, '');
+  const parsed = Number(cleaned);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function invertPairRate(pairPrice) {
+  if (!Number.isFinite(pairPrice) || pairPrice <= 0) return null;
+  return 1 / pairPrice;
+}
+
+function parseUsdQuotesFromInvestingHtml(html) {
+  const rows = {};
+  const rowRegex = /<tr[^>]*class="[^"]*dynamic-table-v2_row__[^"]*"[^>]*>([\s\S]*?)<\/tr>/gi;
+  let match = rowRegex.exec(html);
+
+  while (match) {
+    const rowHtml = match[1] || '';
+    const titleMatch = rowHtml.match(/<a[^>]*title="([^"]+)"/i);
+    if (!titleMatch) {
+      match = rowRegex.exec(html);
+      continue;
+    }
+
+    const title = String(titleMatch[1] || '').toUpperCase();
+    const titleParts = title.match(/^([A-Z]{3})\/([A-Z]{3})$/);
+    if (!titleParts) {
+      match = rowRegex.exec(html);
+      continue;
+    }
+
+    const base = titleParts[1];
+    const quote = titleParts[2];
+    if (base !== 'USD' && quote !== 'USD') {
+      match = rowRegex.exec(html);
+      continue;
+    }
+
+    const code = base === 'USD' ? quote : base;
+    const priceMatch = rowHtml.match(/dynamic-table-v2_col-other[^>]*>\s*(?:<span[^>]*>)?\s*([+-]?\d[\d,.]*)\s*(?:<\/span>)?\s*<\/td>/i);
+    const pairPrice = parseNumber(priceMatch?.[1]);
+    if (!Number.isFinite(pairPrice) || pairPrice <= 0) {
+      match = rowRegex.exec(html);
+      continue;
+    }
+
+    const usdQuote = base === 'USD' ? pairPrice : invertPairRate(pairPrice);
+    if (Number.isFinite(usdQuote) && usdQuote > 0) {
+      rows[code] = usdQuote;
+    }
+
+    match = rowRegex.exec(html);
+  }
+
+  return Object.fromEntries(
+    Object.entries(rows)
+      .filter(([, value]) => Number.isFinite(value) && value > 0)
+      .sort((a, b) => a[0].localeCompare(b[0])),
+  );
+}
+
+async function fetchTextWithTimeout(url, source, headers = {}) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        Accept: 'text/html, text/plain;q=0.9, */*;q=0.5',
+        ...headers,
+      },
+    });
+
+    if (!response.ok) {
+      throw new ExternalApiError(source, `HTTP ${response.status}`);
+    }
+
+    return await response.text();
+  } catch (error) {
+    if (error instanceof ExternalApiError) throw error;
+    if (error?.name === 'AbortError') {
+      throw new ExternalApiError(source, 'Request timeout');
+    }
+    throw new ExternalApiError(source, error instanceof Error ? error.message : String(error));
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 function isValidRatesPayload(payload) {
@@ -186,8 +289,8 @@ function getFiatSharedTtlSeconds(now = Date.now()) {
 }
 
 function buildFiatPayload(rates, {
-  sourceProvider = 'frankfurter',
-  sourceUrl = FRANKFURTER_USD_URL,
+  sourceProvider = 'investing',
+  sourceUrl = INVESTING_USD_CROSSES_URL,
 } = {}) {
   const now = Date.now();
   return {
@@ -217,34 +320,50 @@ function deriveFiatPayloadFromBtcRatesPayload(payload) {
 
   return buildFiatPayload(normalizedRates, {
     sourceProvider: 'derived_from_cached_btc_rates',
-    sourceUrl: FRANKFURTER_USD_URL,
+    sourceUrl: INVESTING_USD_CROSSES_URL,
   });
 }
 
-async function fetchUsdFxFromFrankfurter() {
-  const payload = await fetchJsonWithTimeout(FRANKFURTER_USD_URL, 'frankfurter');
-  const upstreamRates = payload?.rates;
-  if (!upstreamRates || typeof upstreamRates !== 'object') {
-    throw new ExternalApiError('frankfurter', 'Invalid Frankfurter FX payload');
+async function fetchUsdFxFromInvesting() {
+  let html = null;
+  let sourceProvider = 'investing';
+  let sourceUrl = INVESTING_USD_CROSSES_URL;
+
+  if (SCRAPER_BASE_URL) {
+    const proxyUrl = `${SCRAPER_BASE_URL}/api/scrape/investing-currencies`;
+    try {
+      const payload = await fetchJsonWithTimeout(proxyUrl, 'investing');
+      if (typeof payload?.html === 'string' && payload.html.length > 500) {
+        html = payload.html;
+        sourceProvider = 'investing-zatobox';
+        sourceUrl = proxyUrl;
+      }
+    } catch {
+      html = null;
+    }
   }
 
-  const rates = { USD: 1 };
-  Object.entries(upstreamRates).forEach(([code, value]) => {
-    const safeValue = sanitizeFxRate(value);
-    if (!safeValue) return;
-    rates[String(code).toUpperCase()] = safeValue;
-  });
+  if (!html) {
+    html = await fetchTextWithTimeout(INVESTING_USD_CROSSES_URL, 'investing', {
+      'User-Agent': 'satoshi-dashboard/1.0 (+btc-rates-investing)',
+    });
+  }
+
+  const rates = {
+    USD: 1,
+    ...parseUsdQuotesFromInvestingHtml(html),
+  };
 
   if (Object.keys(rates).length <= 1) {
-    throw new ExternalApiError('frankfurter', 'Frankfurter returned no fiat FX rates');
+    throw new ExternalApiError('investing', 'Investing returned no USD cross FX rates');
   }
 
-  return rates;
+  return { rates, sourceProvider, sourceUrl };
 }
 
 async function updateFiatRates() {
-  const rates = await fetchUsdFxFromFrankfurter();
-  const payload = buildFiatPayload(rates);
+  const { rates, sourceProvider, sourceUrl } = await fetchUsdFxFromInvesting();
+  const payload = buildFiatPayload(rates, { sourceProvider, sourceUrl });
   fiatMemoryCache = payload;
   await cacheSetJson(FIAT_SHARED_CACHE_KEY, payload, { ttlSeconds: getFiatSharedTtlSeconds() });
   return payload;

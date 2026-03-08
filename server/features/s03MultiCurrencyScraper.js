@@ -1,5 +1,5 @@
 import { cacheGetJson, cacheSetJson, withCacheLock } from '../shared/runtimeCache.js';
-import { getBtcRates } from '../btcRates.js';
+import { getBtcRates } from '../../btcRates.js';
 
 const SOURCE_URL = 'https://www.investing.com/currencies/single-currency-crosses?currency=usd';
 const SCRAPER_BASE_URL = String(process.env.SCRAPER_BASE_URL || 'https://api.zatobox.io').trim();

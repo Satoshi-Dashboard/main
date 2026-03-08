@@ -1,5 +1,5 @@
 import { cacheGetJson, cacheSetJson, withCacheLock } from './runtimeCache.js';
-import { getBtcRates } from '../btcRates.js';
+import { getBtcRates } from '../../btcRates.js';
 
 const FETCH_TIMEOUT_MS = 12_000;
 const DAY_MS = 86_400_000;
