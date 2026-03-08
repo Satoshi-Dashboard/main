@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Copy, Github } from 'lucide-react';
+import BitcoinDonationQr from '../common/BitcoinDonationQr';
 
 const DONATION_ADDRESS = 'BC1QC2GD3YN8DTLMZG4UW786MFN085WE69F60V4R6F';
-const DONATION_URI = `bitcoin:${DONATION_ADDRESS}`;
 const THANKS_FONT_STACK = "'SF Pro Display', 'Helvetica Neue', Arial, sans-serif";
 
 const THANK_YOU_MESSAGES = [
@@ -62,7 +62,7 @@ const PRINCIPLES = [
 const GENESIS_HASH = '000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f';
 const WHITEPAPER = 'A purely peer-to-peer electronic cash system would allow online payments to be sent directly from one party to another without going through a financial institution.';
 
-export default function S29_ThankYouSatoshi({ onOpenDonate }) {
+export default function S29_ThankYouSatoshi() {
   const [copied, setCopied] = useState(false);
   const [thanksIndex, setThanksIndex] = useState(0);
   const [thanksVisible, setThanksVisible] = useState(true);
@@ -221,8 +221,7 @@ export default function S29_ThankYouSatoshi({ onOpenDonate }) {
                 If this website is useful to you consider donating to this wallet.
               </p>
 
-              <div className="mt-4 flex items-start gap-3">
-                {/* address - clickable to copy */}
+              <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-start">
                 <button
                   type="button"
                   onClick={onCopyAddress}
@@ -256,26 +255,10 @@ export default function S29_ThankYouSatoshi({ onOpenDonate }) {
                   </span>
                 </button>
 
-                {/* Wallet CTA - opens the shared donation modal */}
-                <button
-                  type="button"
-                  onClick={onOpenDonate}
-                  className="shrink-0 rounded border border-white/15 bg-white/5 px-4 py-3 font-mono text-white transition-transform duration-300 hover:scale-105"
-                  style={{ fontSize: 'var(--fs-caption)' }}
-                  title="Open donation options"
-                  aria-label="Open donation options"
-                >
-                  Donation options
-                </button>
+                <div className="flex shrink-0 flex-col items-center self-center sm:self-start">
+                  <BitcoinDonationQr value={DONATION_ADDRESS} size={112} />
+                </div>
               </div>
-
-              <a
-                href={DONATION_URI}
-                className="mt-3 inline-flex items-center justify-center rounded border border-[#F7931A]/25 bg-[#F7931A]/10 px-4 py-2 font-mono text-white transition hover:border-[#F7931A]/45 hover:bg-[#F7931A]/14"
-                style={{ fontSize: 'var(--fs-caption)' }}
-              >
-                Open wallet
-              </a>
 
               {/* GitHub link */}
               <a

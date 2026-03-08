@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Hammer, Maximize2, Minimize2, Pause, Play, SkipBack, SkipForward } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
+import BitcoinDonationQr from '../components/common/BitcoinDonationQr';
 import { MODULES, MODULES_BY_SLUG } from '../config/modules';
 import { getModuleDataMeta } from '../config/moduleDataMeta';
 import { getModuleSEO } from '../config/moduleSEO';
@@ -8,7 +9,6 @@ import { getModuleSEO } from '../config/moduleSEO';
 const AUTOPLAY_MS = 9000;
 
 const DONATION_ADDRESS = 'BC1QC2GD3YN8DTLMZG4UW786MFN085WE69F60V4R6F';
-const DONATION_URI = `bitcoin:${DONATION_ADDRESS}`;
 const SITE_URL = 'https://satoshidashboard.com';
 const UNDER_CONSTRUCTION_SLUGS = new Set([
   'mayer-multiple',
@@ -525,8 +525,13 @@ export default function ModulePage() {
             >
               Support the Dashboard
             </div>
-            <div className="mt-3 rounded border border-white/10 bg-white/[0.03] px-3 py-3 text-center font-mono text-white/75" style={{ fontSize: 'var(--fs-caption)' }}>
-              Local donation actions only. No third-party QR requests.
+            <div className="mt-4 flex justify-center">
+              <div className="flex flex-col items-center gap-3">
+                <BitcoinDonationQr value={DONATION_ADDRESS} size={176} />
+                <div className="text-center font-mono text-white/65" style={{ fontSize: 'var(--fs-caption)' }}>
+                  Scan to donate BTC
+                </div>
+              </div>
             </div>
             <button
               type="button"
@@ -546,13 +551,6 @@ export default function ModulePage() {
                 </>
               )}
             </button>
-            <a
-              href={DONATION_URI}
-              className="mt-3 flex w-full items-center justify-center rounded border border-[#F7931A]/25 bg-[#F7931A]/10 py-2 font-mono text-white transition hover:border-[#F7931A]/45 hover:bg-[#F7931A]/14"
-              style={{ fontSize: 'var(--fs-caption)' }}
-            >
-              Open Wallet
-            </a>
             <button
               type="button"
               onClick={() => setDonateOpen(false)}
