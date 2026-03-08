@@ -72,7 +72,6 @@ function StatCard({ label, value, helper, accent = 'var(--text-primary)', featur
   return (
     <article
       className="rounded-[24px] border border-white/10 bg-white/[0.03] p-4 text-left sm:p-5 2xl:p-6"
-      style={{ boxShadow: featured ? '0 24px 60px rgba(0, 0, 0, 0.22)' : 'none' }}
     >
       <div
         className="font-mono uppercase"
@@ -265,7 +264,7 @@ export default function S30_USNationalDebt() {
   }
 
   return (
-    <div className="relative flex h-full w-full overflow-y-auto bg-[var(--bg-primary)] 2xl:overflow-hidden">
+    <div className="relative flex h-full w-full overflow-y-auto 2xl:overflow-hidden" style={{ backgroundColor: 'var(--bg-primary)' }}>
       <div className="relative mx-auto flex h-full w-full max-w-[1720px] flex-col px-4 py-4 sm:px-6 sm:py-5 lg:px-10 lg:py-6 xl:px-12 2xl:px-16 2xl:py-7">
         <div className="mx-auto flex h-full w-full max-w-[1520px] flex-1 flex-col items-center justify-between text-center">
           <header className="flex w-full max-w-[980px] flex-col items-center gap-4">
@@ -358,7 +357,7 @@ export default function S30_USNationalDebt() {
               className="mb-3 text-center font-mono uppercase"
               style={{ color: 'var(--text-secondary)', fontSize: 'var(--fs-tag)', letterSpacing: '0.22em' }}
             >
-              RATE OF INCREASE  📈
+              RATE OF INCREASE
             </div>
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
               {rateCards.map((card) => (
@@ -372,50 +371,19 @@ export default function S30_USNationalDebt() {
             </div>
           </section>
 
-          <footer className="mt-5 w-full rounded-[24px] border border-white/10 bg-black/25 px-4 py-4 text-left sm:px-5 sm:py-4">
-            <div className="grid gap-4 lg:grid-cols-3">
-              <div>
-                <div className="font-mono uppercase" style={{ color: 'var(--accent-bitcoin)', fontSize: 'var(--fs-tag)', letterSpacing: '0.18em' }}>
-                  Source
-                </div>
-                <div className="mt-2 font-mono leading-relaxed" style={{ color: 'var(--text-secondary)', fontSize: 'var(--fs-micro)' }}>
-                  U.S. Treasury FiscalData Debt to the Penny and U.S. Census ACS 1-Year population estimate.
-                </div>
-              </div>
-
-              <div>
-                <div className="font-mono uppercase" style={{ color: 'var(--accent-bitcoin)', fontSize: 'var(--fs-tag)', letterSpacing: '0.18em' }}>
-                  Methodology
-                </div>
-                <div className="mt-2 font-mono leading-relaxed" style={{ color: 'var(--text-secondary)', fontSize: 'var(--fs-micro)' }}>
-                  {model.methodology?.interpolation || 'Projected real-time interpolation from recent official Treasury observations.'}
-                </div>
-              </div>
-
-              <div>
-                <div className="font-mono uppercase" style={{ color: 'var(--accent-bitcoin)', fontSize: 'var(--fs-tag)', letterSpacing: '0.18em' }}>
-                  Update cadence
-                </div>
-                <div className="mt-2 font-mono leading-relaxed" style={{ color: 'var(--text-secondary)', fontSize: 'var(--fs-micro)' }}>
-                  Official cache refreshes every 15 minutes. Counter motion updates each second in-session between official prints.
-                </div>
-              </div>
+          {(payload?.is_fallback || payload?.fallback_note || error) ? (
+            <div
+              className="mt-5 w-full rounded-2xl border px-3 py-2 font-mono text-left"
+              style={{
+                color: 'var(--accent-warning)',
+                fontSize: 'var(--fs-micro)',
+                borderColor: 'rgba(255,215,0,0.18)',
+                background: 'rgba(255,215,0,0.06)',
+              }}
+            >
+              {payload?.fallback_note || error}
             </div>
-
-            {(payload?.is_fallback || payload?.fallback_note || error) ? (
-              <div
-                className="mt-4 rounded-2xl border px-3 py-2 font-mono"
-                style={{
-                  color: 'var(--accent-warning)',
-                  fontSize: 'var(--fs-micro)',
-                  borderColor: 'rgba(255,215,0,0.18)',
-                  background: 'rgba(255,215,0,0.06)',
-                }}
-              >
-                {payload?.fallback_note || error}
-              </div>
-            ) : null}
-          </footer>
+          ) : null}
         </div>
       </div>
     </div>

@@ -589,15 +589,6 @@ function createBbox() {
   };
 }
 
-function createBboxFromPoint(lon, lat) {
-  return {
-    minLon: lon,
-    minLat: lat,
-    maxLon: lon,
-    maxLat: lat,
-  };
-}
-
 function updateBbox(bbox, lon, lat) {
   bbox.minLon = Math.min(bbox.minLon, lon);
   bbox.minLat = Math.min(bbox.minLat, lat);
