@@ -186,3 +186,4 @@ When creating any new frontend module, agents must follow the project example pa
 1. All new user-facing text added to frontend must be in English.
 2. Do not introduce new Spanish (or other language) labels unless the owner explicitly requests multilingual/localized behavior.
 3. If updating an existing mixed-language area, new copy must still default to English unless instructed otherwise.
+4. Owner-approved exception: `src/components/sections/live/S31_ThankYouSatoshi.jsx` may rotate the single phrase "Thank you, Satoshi Nakamoto" in major world languages; do not expand that area with any other multilingual copy unless the owner explicitly asks.

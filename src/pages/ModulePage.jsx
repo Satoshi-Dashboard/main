@@ -521,7 +521,7 @@ export default function ModulePage({ forcedSlug = null }) {
         {/* Branding */}
         <Link
           to={SEO_HUB_PATH}
-          className="absolute left-1/2 top-1/2 flex max-w-[42vw] -translate-x-1/2 -translate-y-1/2 items-center justify-center text-center tracking-[0.18em] text-white/24 transition-colors hover:text-white/60 sm:max-w-[34vw] lg:max-w-none"
+          className="absolute left-1/2 top-1/2 hidden max-w-[34vw] -translate-x-1/2 -translate-y-1/2 items-center justify-center text-center tracking-[0.18em] text-white/24 transition-colors hover:text-white/60 sm:flex lg:max-w-none"
           style={{ fontSize: 'var(--fs-tag)' }}
           aria-label="Open landing page"
         >
