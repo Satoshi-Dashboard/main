@@ -13,8 +13,36 @@ import { getModuleDataMeta } from '../config/moduleDataMeta';
 import { getModuleSEO } from '../config/moduleSEO';
 import { SEO_HUB_PATH } from '../config/seoContent';
 import { absoluteUrl, DEFAULT_OG_IMAGE, usePageSEO } from '../lib/usePageSEO';
+import { fetchBtcSpot } from '../services/priceApi';
 
-const AUTOPLAY_MS = 9000;
+const MARKET_AUDIO_POLL_MS = 15_000;
+const MARKET_AUDIO_HISTORY_MS = 20 * 60 * 1000;
+const MARKET_AUDIO_TRACKS = {
+  down: 'gEQHhMNxr3Q',
+  up: 'EFDMum1vs7Q',
+  stable: 'bGDWDeZPW2Y',
+};
+
+const MARKET_AUDIO_THEMES = {
+  down: {
+    color: 'var(--accent-red)',
+    borderColor: 'rgba(255,71,87,0.42)',
+    glow: '0 0 24px rgba(255,71,87,0.28)',
+    label: 'Bearish soundtrack ready',
+  },
+  up: {
+    color: 'var(--accent-green)',
+    borderColor: 'rgba(0,216,151,0.42)',
+    glow: '0 0 24px rgba(0,216,151,0.24)',
+    label: 'Bullish soundtrack ready',
+  },
+  stable: {
+    color: 'var(--text-secondary)',
+    borderColor: 'rgba(255,255,255,0.2)',
+    glow: 'none',
+    label: 'Sideways soundtrack ready',
+  },
+};
 
 const DONATION_ADDRESS = 'BC1QC2GD3YN8DTLMZG4UW786MFN085WE69F60V4R6F';
 const UNDER_CONSTRUCTION_SLUGS = new Set([
@@ -95,6 +123,46 @@ function getCadenceMs(meta) {
   if (Number.isFinite(minutes) && minutes > 0) return Math.round(minutes * 60 * 1000);
 
   return null;
+}
+
+function buildYoutubeEmbedUrl(videoId) {
+  if (!videoId) return '';
+
+  const params = new URLSearchParams({
+    autoplay: '1',
+    controls: '0',
+    disablekb: '1',
+    fs: '0',
+    iv_load_policy: '3',
+    loop: '1',
+    modestbranding: '1',
+    playsinline: '1',
+    playlist: videoId,
+    rel: '0',
+  });
+
+  return `https://www.youtube.com/embed/${videoId}?${params.toString()}`;
+}
+
+function classifyMarketAudioMood(spot, samples) {
+  const change24h = Number(spot?.change24h ?? 0);
+  if (Number.isFinite(change24h) && change24h <= -2) return 'down';
+  if (Number.isFinite(change24h) && change24h >= 2) return 'up';
+
+  const validSamples = Array.isArray(samples)
+    ? samples.filter((sample) => Number.isFinite(sample?.usd) && sample.usd > 0)
+    : [];
+
+  if (validSamples.length < 2) return 'stable';
+
+  const first = validSamples[0].usd;
+  const last = validSamples[validSamples.length - 1].usd;
+  const prices = validSamples.map((sample) => sample.usd);
+  const shortTermChange = ((last - first) / first) * 100;
+  const rangePct = ((Math.max(...prices) - Math.min(...prices)) / first) * 100;
+
+  if (Math.abs(shortTermChange) <= 0.35 && rangePct <= 0.9) return 'stable';
+  return 'stable';
 }
 
 const getWrappedIndex = (index) => {
@@ -194,10 +262,13 @@ export default function ModulePage({ forcedSlug = null }) {
   );
 
   const [isPlaying, setIsPlaying] = useState(false);
+  const [marketAudioMood, setMarketAudioMood] = useState('stable');
+  const [marketAudioSpot, setMarketAudioSpot] = useState(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [donateOpen, setDonateOpen] = useState(false);
   const [donateCopied, setDonateCopied] = useState(false);
   const [metaLastAtMs, setMetaLastAtMs] = useState(() => Date.now());
+  const marketSamplesRef = useRef([]);
 
   const onCopyDonation = async () => {
     try {
@@ -341,10 +412,34 @@ export default function ModulePage({ forcedSlug = null }) {
   }, [currentIndex, goToModule]);
 
   useEffect(() => {
-    if (!isPlaying) return undefined;
-    const timer = setInterval(() => goToModule(currentIndex + 1), AUTOPLAY_MS);
-    return () => clearInterval(timer);
-  }, [isPlaying, currentIndex, goToModule]);
+    let active = true;
+
+    const loadMarketAudioState = async () => {
+      try {
+        const spot = await fetchBtcSpot();
+        if (!active || !spot || !Number.isFinite(spot.usd) || spot.usd <= 0) return;
+
+        const now = Date.now();
+        const nextSamples = [...marketSamplesRef.current, { ts: now, usd: spot.usd }]
+          .filter((sample) => now - sample.ts <= MARKET_AUDIO_HISTORY_MS)
+          .slice(-120);
+
+        marketSamplesRef.current = nextSamples;
+        setMarketAudioSpot(spot);
+        setMarketAudioMood(classifyMarketAudioMood(spot, nextSamples));
+      } catch {
+        // Keep previous soundtrack state if spot refresh fails.
+      }
+    };
+
+    loadMarketAudioState();
+    const timer = setInterval(loadMarketAudioState, MARKET_AUDIO_POLL_MS);
+
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, []);
 
   useEffect(() => {
     const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
@@ -367,8 +462,32 @@ export default function ModulePage({ forcedSlug = null }) {
     }
   };
 
+  const marketAudioTheme = MARKET_AUDIO_THEMES[marketAudioMood] || MARKET_AUDIO_THEMES.stable;
+  const activeTrackId = MARKET_AUDIO_TRACKS[marketAudioMood] || MARKET_AUDIO_TRACKS.stable;
+  const activePlayerSrc = useMemo(
+    () => (isPlaying ? buildYoutubeEmbedUrl(activeTrackId) : ''),
+    [activeTrackId, isPlaying],
+  );
+  const marketAudioChangeLabel = Number.isFinite(marketAudioSpot?.change24h)
+    ? `${marketAudioSpot.change24h >= 0 ? '+' : ''}${marketAudioSpot.change24h.toFixed(2)}% 24h`
+    : 'Waiting for BTC trend';
+  const marketAudioAriaLabel = isPlaying
+    ? `Pause market soundtrack. ${marketAudioTheme.label}. ${marketAudioChangeLabel}.`
+    : `Play market soundtrack. ${marketAudioTheme.label}. ${marketAudioChangeLabel}.`;
+
   return (
     <main className="player-shell relative h-dvh w-screen overflow-hidden bg-[color:var(--bg-primary)]">
+      <div className="pointer-events-none absolute h-0 w-0 overflow-hidden opacity-0" aria-hidden="true">
+        {activePlayerSrc ? (
+          <iframe
+            key={activeTrackId}
+            title="Market soundtrack"
+            src={activePlayerSrc}
+            allow="autoplay; encrypted-media"
+          />
+        ) : null}
+      </div>
+
       {/* ── TOP BAR ── */}
       <div className="absolute inset-x-0 top-0 z-40 flex h-14 items-center justify-between gap-3 border-b border-white/[0.06] bg-[#0d0d0d]/95 px-3 backdrop-blur-sm sm:h-14 sm:px-4 lg:h-12 lg:px-5">
         {/* Project logo */}
@@ -511,9 +630,15 @@ export default function ModulePage({ forcedSlug = null }) {
         <button
           type="button"
           onClick={() => setIsPlaying((v) => !v)}
-          className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 text-white/60 transition hover:text-[color:var(--accent-bitcoin)] sm:h-10 sm:w-10 lg:h-7 lg:w-7"
-          style={{ '--tw-border-opacity': 1, borderColor: 'rgba(255,255,255,0.2)' }}
-          aria-label={isPlaying ? 'Pause' : 'Play'}
+          className="flex h-11 w-11 items-center justify-center rounded-full border transition duration-300 hover:scale-[1.03] sm:h-10 sm:w-10 lg:h-7 lg:w-7"
+          style={{
+            color: marketAudioTheme.color,
+            borderColor: marketAudioTheme.borderColor,
+            boxShadow: isPlaying ? marketAudioTheme.glow : 'none',
+            background: isPlaying ? 'rgba(255,255,255,0.04)' : 'transparent',
+          }}
+          aria-label={marketAudioAriaLabel}
+          title={marketAudioAriaLabel}
         >
           {isPlaying ? <Pause size={16} /> : <Play size={16} />}
         </button>
