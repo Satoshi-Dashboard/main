@@ -52,6 +52,14 @@ const MODULE_DATA_META = {
     refreshMinutes: 1,
     showSharedStrip: false,
   },
+  'btcmap-business-density': {
+    providers: [
+      { name: 'BTC Map', url: 'https://btcmap.org' },
+      { name: 'Natural Earth', url: 'https://www.naturalearthdata.com/' },
+    ],
+    refreshMinutes: 360,
+    showSharedStrip: false,
+  },
   'lightning-network': {
     providers: [{ name: 'Binance', url: 'https://api.binance.com' }],
     refreshSeconds: 15,
@@ -100,6 +108,13 @@ const MODULE_DATA_META = {
   'big-mac-index': {
     providers: [{ name: 'CoinGecko', url: 'https://www.coingecko.com/en/api' }],
     refreshMinutes: 60,
+  },
+  'us-national-debt': {
+    providers: [
+      { name: 'U.S. Treasury FiscalData', url: 'https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/debt_to_penny' },
+      { name: 'U.S. Census ACS', url: 'https://api.census.gov/data/2024/acs/acs1?get=NAME,B01003_001E&for=us:1' },
+    ],
+    refreshMinutes: 15,
   },
   'thank-you-satoshi': {
     showSharedStrip: false,

@@ -36,8 +36,11 @@ const BTC_FORMATTER = new Intl.NumberFormat('en-US', {
 });
 
 function getFeatureCountryCode(feature) {
-  const code = feature?.properties?.ISO_A2 || feature?.properties?.iso_a2 || feature?.properties?.['ISO3166-1-Alpha-2'];
-  return String(code || '').toUpperCase();
+  const primary = String(feature?.properties?.ISO_A2 || feature?.properties?.iso_a2 || feature?.properties?.['ISO3166-1-Alpha-2'] || '').toUpperCase();
+  const fallback = String(feature?.properties?.ISO_A2_EH || '').toUpperCase();
+  if (/^[A-Z]{2}$/.test(primary)) return primary;
+  if (/^[A-Z]{2}$/.test(fallback)) return fallback;
+  return primary || fallback;
 }
 
 function getFeatureCountryName(feature, idx) {

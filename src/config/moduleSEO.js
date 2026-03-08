@@ -36,6 +36,10 @@ const MODULE_SEO = {
     title: 'Lightning Network Nodes World Map',
     description: 'Interactive world map showing the geographic distribution of Bitcoin Lightning Network routing nodes. Data sourced from mempool.space.',
   },
+  'btcmap-business-density': {
+    title: 'BTC Map Business Density — Bitcoin Merchants by Country',
+    description: 'World map of Bitcoin-friendly businesses by country using BTC Map place data. Compare merchant density, country coverage, and verified business counts.',
+  },
   'lightning-network': {
     title: 'Lightning Network Stats — Channels, Capacity & Nodes',
     description: 'Live Bitcoin Lightning Network statistics: total channels, network capacity in BTC, active node count, and growth trends from mempool.space.',
@@ -120,6 +124,10 @@ const MODULE_SEO = {
     title: 'Bitcoin UTXO Distribution — HODLer Age Analysis',
     description: 'Age distribution of unspent Bitcoin transaction outputs (UTXOs). Long-held UTXOs indicate HODLing behavior; short-held indicate active spending and trading.',
   },
+  'us-national-debt': {
+    title: 'U.S. National Debt — Real-Time Counter, Per Person & Rate of Increase',
+    description: 'Track the United States national debt with a projected real-time counter, debt-per-person metric, and rate-of-increase cards powered by U.S. Treasury FiscalData and U.S. Census population estimates.',
+  },
   'thank-you-satoshi': {
     title: 'Thank You Satoshi — Bitcoin Whitepaper & Origins',
     description: 'A tribute to Satoshi Nakamoto, the pseudonymous creator of Bitcoin. Includes a link to the original Bitcoin whitepaper published on October 31, 2008.',
@@ -128,7 +136,7 @@ const MODULE_SEO = {
 
 const DEFAULT_SEO = {
   title: 'Satoshi Dashboard — Real-Time Bitcoin Analytics & On-Chain Metrics',
-  description: 'Free Bitcoin analytics dashboard with live price, mempool, on-chain metrics, Fear & Greed, MVRV, Stock-to-Flow, Lightning Network, and 29 interactive modules.',
+  description: 'Free Bitcoin analytics dashboard with live price, mempool, on-chain metrics, Fear & Greed, MVRV, Stock-to-Flow, Lightning Network, BTC Map merchant density, and 31 interactive modules.',
 };
 
 /**
