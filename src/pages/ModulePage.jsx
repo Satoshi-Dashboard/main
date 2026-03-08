@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Maximize2, Minimize2, Pause, Play, SkipBack, SkipForward } from 'lucide-react';
+import { Hammer, Maximize2, Minimize2, Pause, Play, SkipBack, SkipForward } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { MODULES, MODULES_BY_SLUG } from '../config/modules';
 import { getModuleDataMeta } from '../config/moduleDataMeta';
@@ -127,6 +127,10 @@ export default function ModulePage() {
   }, [module.slugBase]);
 
   const footerPage = useMemo(() => String(module.code || '').replace(/^S/i, ''), [module.code]);
+  const isUnderConstruction = useMemo(() => {
+    const n = parseInt(String(module.code || '').replace(/^S/i, ''), 10);
+    return n >= 15 && n <= 28;
+  }, [module.code]);
   const footerTotal = useMemo(
     () => MODULES.reduce((max, item) => {
       const n = Number(String(item.code || '').match(/\d+/)?.[0] || 0);
@@ -362,7 +366,12 @@ export default function ModulePage() {
           )}
 
           {showTopMeta && (
-            <div className="flex flex-none justify-end px-2 py-1 sm:px-3 lg:px-4">
+            <div className="flex flex-none items-center justify-between px-2 py-1 sm:px-3 lg:px-4">
+              {moduleMeta?.showTitleInStrip ? (
+                <div style={{ color: 'var(--accent-bitcoin)', fontFamily: 'monospace', fontSize: 'var(--fs-subtitle)', fontWeight: 700 }}>
+                  {moduleMeta.stripTitle || module.title}
+                </div>
+              ) : <div />}
               <div className="text-right font-mono text-[11px] tracking-wide text-[#7c7c7c]">
                 <div>
                   <span>src: </span>
@@ -373,8 +382,45 @@ export default function ModulePage() {
               </div>
             </div>
           )}
-          <div className={`min-h-0 ${showBottomMeta ? 'min-h-full flex-none' : 'flex-1'}`}>
+          <div className={`relative min-h-0 ${showBottomMeta ? 'min-h-full flex-none' : 'flex-1'}`}>
             <Component onOpenDonate={() => setDonateOpen(true)} />
+            {isUnderConstruction && (
+              <div
+                className="absolute inset-0 z-20 flex items-center justify-center"
+                style={{
+                  backdropFilter: 'blur(8px) saturate(130%)',
+                  WebkitBackdropFilter: 'blur(8px) saturate(130%)',
+                  background: 'rgba(6, 6, 10, 0.32)',
+                }}
+              >
+                <div
+                  className="flex flex-col items-center gap-4 rounded-2xl px-10 py-9 text-center"
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.055)',
+                    border: '1px solid rgba(255, 255, 255, 0.11)',
+                    boxShadow: '0 32px 80px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.08)',
+                    backdropFilter: 'blur(8px)',
+                    WebkitBackdropFilter: 'blur(8px)',
+                  }}
+                >
+                  <Hammer size={26} style={{ color: '#F7931A', opacity: 0.85 }} />
+                  <div>
+                    <div
+                      className="font-bold text-white tracking-widest uppercase"
+                      style={{ fontSize: '0.7rem', letterSpacing: '0.22em' }}
+                    >
+                      En Construcción
+                    </div>
+                    <div
+                      className="mt-1 text-white/35"
+                      style={{ fontSize: '0.65rem', letterSpacing: '0.08em' }}
+                    >
+                      Próximamente disponible
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {showBottomMeta && (
@@ -405,7 +451,14 @@ export default function ModulePage() {
         </button>
 
         {/* Branding */}
-        <span className="hidden text-[11px] tracking-[0.2em] text-white/20 lg:block">satoshi-dashboard</span>
+        <a
+          href="https://github.com/Satoshi-Dashboard"
+          target="_blank"
+          rel="noreferrer"
+          className="absolute left-1/2 -translate-x-1/2 hidden text-[11px] tracking-[0.2em] text-white/20 transition-colors hover:text-white/50 lg:block"
+        >
+          satoshi-dashboard
+        </a>
 
         {/* Pagination */}
         <div className="flex items-center gap-1.5 text-white/50 sm:gap-2">

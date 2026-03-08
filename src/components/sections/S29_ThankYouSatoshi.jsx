@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Copy } from 'lucide-react';
+import { Copy, Github } from 'lucide-react';
 
 const DONATION_ADDRESS = 'BC1QC2GD3YN8DTLMZG4UW786MFN085WE69F60V4R6F';
 const DONATION_URI = `bitcoin:${DONATION_ADDRESS}`;
@@ -272,6 +272,18 @@ export default function S29_ThankYouSatoshi({ onOpenDonate }) {
                   />
                 </button>
               </div>
+
+              {/* GitHub link */}
+              <a
+                href="https://github.com/Satoshi-Dashboard"
+                target="_blank"
+                rel="noreferrer"
+                className="mt-3 flex items-center gap-2 font-mono transition-opacity hover:opacity-80"
+                style={{ color: 'var(--text-secondary)', fontSize: 'var(--fs-caption)' }}
+              >
+                <Github size={14} />
+                <span>github.com/Satoshi-Dashboard</span>
+              </a>
             </article>
 
           </div>

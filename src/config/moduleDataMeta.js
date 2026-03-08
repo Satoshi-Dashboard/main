@@ -78,6 +78,8 @@ const MODULE_DATA_META = {
   'global-assets': {
     providers: [{ name: 'Newhedge', url: 'https://newhedge.io/bitcoin/global-asset-values' }],
     refreshMinutes: 60,
+    showTitleInStrip: true,
+    stripTitle: 'Total Global Asset Values',
   },
   'btc-vs-gold': {
     providers: [{ name: 'CoinGecko', url: 'https://www.coingecko.com/en/api' }],

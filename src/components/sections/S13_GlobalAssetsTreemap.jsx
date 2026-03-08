@@ -216,8 +216,8 @@ export default function S13_GlobalAssetsTreemap() {
         <div className="skeleton h-full w-full rounded-md" />
       ) : assetData.length > 0 ? (
         <div className="flex h-full flex-col gap-2 sm:gap-3">
-          {/* title */}
-          <div className="font-mono font-bold tracking-wide text-white/70" style={{ fontSize: 'clamp(11px, 1.1vw, 13px)' }}>
+          {/* title — mobile/tablet only; desktop renders it in the shared top strip */}
+          <div className="block lg:hidden" style={{ color: 'var(--accent-bitcoin)', fontFamily: 'monospace', fontSize: 'var(--fs-subtitle)', fontWeight: 700 }}>
             Total Global Asset Values
           </div>
 
