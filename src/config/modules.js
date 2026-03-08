@@ -1,36 +1,36 @@
 import { lazy } from 'react';
 
-const S01_BitcoinOverview = lazy(() => import('../components/sections/S01_BitcoinOverview'));
-const S02_PriceChart = lazy(() => import('../components/sections/S02_PriceChart'));
-const S03_MultiCurrencyBoard = lazy(() => import('../components/sections/S03_MultiCurrencyBoard'));
-const S04_MempoolGauge = lazy(() => import('../components/sections/S04_MempoolGauge'));
-const S05_LongTermTrend = lazy(() => import('../components/sections/S05_LongTermTrend'));
-const S08_NodesMap = lazy(() => import('../components/sections/S08_NodesMap'));
-const S08b_LightningNodesMap = lazy(() => import('../components/sections/S08b_LightningNodesMap'));
-const S08c_BtcMapBusinessesMap = lazy(() => import('../components/sections/S08c_BtcMapBusinessesMap'));
-const S09_LightningNetwork = lazy(() => import('../components/sections/S09_LightningNetwork'));
-const S09b_StablecoinPegHealth = lazy(() => import('../components/sections/S09b_StablecoinPegHealth'));
-const S10_FearGreedIndex = lazy(() => import('../components/sections/S10_FearGreedIndex'));
-const S11_AddressDistribution = lazy(() => import('../components/sections/S11_AddressDistribution'));
-const S12_BTCvsGold = lazy(() => import('../components/sections/S12_BTCvsGold'));
-const S13_GlobalAssetsTreemap = lazy(() => import('../components/sections/S13_GlobalAssetsTreemap'));
-const S15_WealthPyramid = lazy(() => import('../components/sections/S15_WealthPyramid'));
-const S16_MayerMultiple = lazy(() => import('../components/sections/S16_MayerMultiple'));
-const S17_PricePerformance = lazy(() => import('../components/sections/S17_PricePerformance'));
-const S18_CycleSpiral = lazy(() => import('../components/sections/S18_CycleSpiral'));
-const S19_PowerLawModel = lazy(() => import('../components/sections/S19_PowerLawModel'));
-const S20_StockToFlow = lazy(() => import('../components/sections/S20_StockToFlow'));
-const S21_NodeVersions = lazy(() => import('../components/sections/S21_NodeVersions'));
-const S22_SeasonalityHeatmap = lazy(() => import('../components/sections/S22_SeasonalityHeatmap'));
-const S23_BigMacIndex = lazy(() => import('../components/sections/S23_BigMacIndex'));
-const S24_NetworkActivity = lazy(() => import('../components/sections/S24_NetworkActivity'));
-const S25_LogRegression = lazy(() => import('../components/sections/S25_LogRegression'));
-const S26_MVRVScore = lazy(() => import('../components/sections/S26_MVRVScore'));
-const S27_GoogleTrends = lazy(() => import('../components/sections/S27_GoogleTrends'));
-const S28_BTCDominance = lazy(() => import('../components/sections/S28_BTCDominance'));
-const S29_UTXODistribution = lazy(() => import('../components/sections/S29_UTXODistribution'));
-const S30_USNationalDebt = lazy(() => import('../components/sections/S30_USNationalDebt'));
-const S29_ThankYouSatoshi = lazy(() => import('../components/sections/S29_ThankYouSatoshi'));
+const S01_BitcoinOverview = lazy(() => import('../components/sections/live/S01_BitcoinOverview'));
+const S02_PriceChart = lazy(() => import('../components/sections/live/S02_PriceChart'));
+const S03_MultiCurrencyBoard = lazy(() => import('../components/sections/live/S03_MultiCurrencyBoard'));
+const S04_MempoolGauge = lazy(() => import('../components/sections/live/S04_MempoolGauge'));
+const S05_LongTermTrend = lazy(() => import('../components/sections/live/S05_LongTermTrend'));
+const S06_NodesMap = lazy(() => import('../components/sections/live/S06_NodesMap'));
+const S07_LightningNodesMap = lazy(() => import('../components/sections/live/S07_LightningNodesMap'));
+const S08_BtcMapBusinessesMap = lazy(() => import('../components/sections/live/S08_BtcMapBusinessesMap'));
+const S09_LightningNetwork = lazy(() => import('../components/sections/live/S09_LightningNetwork'));
+const S10_StablecoinPegHealth = lazy(() => import('../components/sections/live/S10_StablecoinPegHealth'));
+const S11_FearGreedIndex = lazy(() => import('../components/sections/live/S11_FearGreedIndex'));
+const S12_AddressDistribution = lazy(() => import('../components/sections/live/S12_AddressDistribution'));
+const S13_WealthPyramid = lazy(() => import('../components/sections/live/S13_WealthPyramid'));
+const S14_GlobalAssetsTreemap = lazy(() => import('../components/sections/live/S14_GlobalAssetsTreemap'));
+const S15_BTCvsGold = lazy(() => import('../components/sections/live/S15_BTCvsGold'));
+const S16_MayerMultiple = lazy(() => import('../components/sections/under-construction/S16_MayerMultiple'));
+const S17_PricePerformance = lazy(() => import('../components/sections/under-construction/S17_PricePerformance'));
+const S18_CycleSpiral = lazy(() => import('../components/sections/under-construction/S18_CycleSpiral'));
+const S19_PowerLawModel = lazy(() => import('../components/sections/under-construction/S19_PowerLawModel'));
+const S20_StockToFlow = lazy(() => import('../components/sections/under-construction/S20_StockToFlow'));
+const S21_BigMacSatsTracker = lazy(() => import('../components/sections/under-construction/S21_BigMacSatsTracker'));
+const S22_SeasonalityHeatmap = lazy(() => import('../components/sections/under-construction/S22_SeasonalityHeatmap'));
+const S23_BigMacIndex = lazy(() => import('../components/sections/under-construction/S23_BigMacIndex'));
+const S24_NetworkActivity = lazy(() => import('../components/sections/under-construction/S24_NetworkActivity'));
+const S25_LogRegression = lazy(() => import('../components/sections/under-construction/S25_LogRegression'));
+const S26_MVRVScore = lazy(() => import('../components/sections/under-construction/S26_MVRVScore'));
+const S27_GoogleTrends = lazy(() => import('../components/sections/under-construction/S27_GoogleTrends'));
+const S28_BTCDominance = lazy(() => import('../components/sections/under-construction/S28_BTCDominance'));
+const S29_UTXODistribution = lazy(() => import('../components/sections/under-construction/S29_UTXODistribution'));
+const S30_USNationalDebt = lazy(() => import('../components/sections/live/S30_USNationalDebt'));
+const S31_ThankYouSatoshi = lazy(() => import('../components/sections/live/S31_ThankYouSatoshi'));
 
 const MODULE_DEFS = [
   { slugBase: 'bitcoin-price-market-overview', title: 'Bitcoin Overview', component: S01_BitcoinOverview },
@@ -38,22 +38,22 @@ const MODULE_DEFS = [
   { slugBase: 'bitcoin-price-multi-currency', title: 'Multi-Currency', component: S03_MultiCurrencyBoard },
   { slugBase: 'bitcoin-mempool-fees', title: 'Mempool Gauge', component: S04_MempoolGauge },
   { slugBase: 'bitcoin-mempool-trend', title: 'Long-Term Trend', component: S05_LongTermTrend },
-  { slugBase: 'bitcoin-nodes-world-map', title: 'Nodes Map', component: S08_NodesMap },
-  { slugBase: 'lightning-nodes-world-map', title: 'Lightning Nodes Map', component: S08b_LightningNodesMap },
-  { slugBase: 'bitcoin-merchant-map', title: 'BTC Map Business Density', component: S08c_BtcMapBusinessesMap },
+  { slugBase: 'bitcoin-nodes-world-map', title: 'Nodes Map', component: S06_NodesMap },
+  { slugBase: 'lightning-nodes-world-map', title: 'Lightning Nodes Map', component: S07_LightningNodesMap },
+  { slugBase: 'bitcoin-merchant-map', title: 'BTC Map Business Density', component: S08_BtcMapBusinessesMap },
   { slugBase: 'lightning-network-stats', title: 'Lightning Network', component: S09_LightningNetwork },
-  { slugBase: 'stablecoin-peg-tracker', title: 'Stablecoin Peg Health', component: S09b_StablecoinPegHealth },
-  { slugBase: 'bitcoin-fear-greed-index', title: 'Fear & Greed', component: S10_FearGreedIndex },
-  { slugBase: 'bitcoin-address-distribution', title: 'Address Distribution', component: S11_AddressDistribution },
-  { slugBase: 'bitcoin-wealth-pyramid', title: 'Wealth Pyramid', component: S15_WealthPyramid },
-  { slugBase: 'bitcoin-vs-global-assets', title: 'Global Assets', component: S13_GlobalAssetsTreemap },
-  { slugBase: 'bitcoin-vs-gold-chart', title: 'BTC vs Gold', component: S12_BTCvsGold },
+  { slugBase: 'stablecoin-peg-tracker', title: 'Stablecoin Peg Health', component: S10_StablecoinPegHealth },
+  { slugBase: 'bitcoin-fear-greed-index', title: 'Fear & Greed', component: S11_FearGreedIndex },
+  { slugBase: 'bitcoin-address-distribution', title: 'Address Distribution', component: S12_AddressDistribution },
+  { slugBase: 'bitcoin-wealth-pyramid', title: 'Wealth Pyramid', component: S13_WealthPyramid },
+  { slugBase: 'bitcoin-vs-global-assets', title: 'Global Assets', component: S14_GlobalAssetsTreemap },
+  { slugBase: 'bitcoin-vs-gold-chart', title: 'BTC vs Gold', component: S15_BTCvsGold },
   { slugBase: 'bitcoin-mayer-multiple', title: 'Mayer Multiple', component: S16_MayerMultiple },
   { slugBase: 'bitcoin-price-performance', title: 'Price Performance', component: S17_PricePerformance },
   { slugBase: 'bitcoin-halving-cycle-spiral', title: 'Cycle Spiral', component: S18_CycleSpiral },
   { slugBase: 'bitcoin-power-law-model', title: 'Power Law Model', component: S19_PowerLawModel },
   { slugBase: 'bitcoin-stock-to-flow-model', title: 'Stock to Flow', component: S20_StockToFlow },
-  { slugBase: 'bitcoin-big-mac-sats-tracker', title: 'Big Mac Sats Tracker', component: S21_NodeVersions },
+  { slugBase: 'bitcoin-big-mac-sats-tracker', title: 'Big Mac Sats Tracker', component: S21_BigMacSatsTracker },
   { slugBase: 'bitcoin-seasonality-heatmap', title: 'Seasonality', component: S22_SeasonalityHeatmap },
   { slugBase: 'bitcoin-big-mac-index', title: 'Big Mac Index', component: S23_BigMacIndex },
   { slugBase: 'bitcoin-network-activity', title: 'Network Activity', component: S24_NetworkActivity },
@@ -63,7 +63,7 @@ const MODULE_DEFS = [
   { slugBase: 'bitcoin-dominance-chart', title: 'BTC Dominance', component: S28_BTCDominance },
   { slugBase: 'bitcoin-utxo-distribution', title: 'UTXO Distribution', component: S29_UTXODistribution },
   { slugBase: 'us-national-debt-live-counter', title: 'U.S. National Debt', component: S30_USNationalDebt },
-  { slugBase: 'satoshi-nakamoto-bitcoin-whitepaper', title: 'Thank You Satoshi', component: S29_ThankYouSatoshi },
+  { slugBase: 'satoshi-nakamoto-bitcoin-whitepaper', title: 'Thank You Satoshi', component: S31_ThankYouSatoshi },
 ];
 
 const toCode = (index) => `S${String(index + 1).padStart(2, '0')}`;

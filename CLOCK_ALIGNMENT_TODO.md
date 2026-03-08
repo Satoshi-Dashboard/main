@@ -26,22 +26,22 @@ Corregir textos que implican "tiempo real" cuando la fuente no lo es.
 |---|---|---|---|
 | S10 FearGreedIndex | `/api/public/fear-greed` | 60s | fetch-once-on-mount (sin setInterval) |
 | S01 BitcoinOverview | `/api/public/mempool/overview` | 15s | 30s (unificar con S04) |
-| S14 TransactionCount | `/api/s14/addresses-richer` | 60s | 1h (3 600 000ms) |
+| S13 TransactionCount | `/api/s13/addresses-richer` | 60s | 1h (3 600 000ms) |
 | S08 NodesMap | `/api/bitnodes/cache` | 60s | 10min (600 000ms) |
 | UniqueVisitorsCounter | `/api/visitors/stats` | 30s | 5min (300 000ms) |
-| S09b Stablecoins (list) | `/api/s08/stablecoins` | 60s | 2min (120 000ms) |
-| S09b Stablecoins (peg) | `/api/s08/stablecoins/live-prices` | 60s | 2min (120 000ms) |
+| S10 Stablecoins (list) | `/api/s10/stablecoins` | 60s | 2min (120 000ms) |
+| S10 Stablecoins (peg) | `/api/s10/stablecoins/live-prices` | 60s | 2min (120 000ms) |
 
 - [ ] **S10** — reemplazar `setInterval(load, 60_000)` por llamada única en mount; no re-polling (dato diario)
 - [ ] **S01** — cambiar `setInterval(load, 15_000)` → `setInterval(load, 30_000)`
 - [ ] **S14** — cambiar `setInterval(load, 60_000)` → `setInterval(load, 3_600_000)`
 - [ ] **S08** — cambiar `setInterval(load, 60_000)` → `setInterval(load, 600_000)`
 - [ ] **UniqueVisitorsCounter** — cambiar `setInterval(refreshStats, 30_000)` → `setInterval(refreshStats, 300_000)`
-- [ ] **S09b (list)** — cambiar `setInterval(load, LIST_REFRESH_MS)` donde `LIST_REFRESH_MS = 60_000` → `120_000`
-- [ ] **S09b (peg)** — cambiar `setInterval(loadLivePegPrices, LIVE_PEG_REFRESH_MS)` donde `LIVE_PEG_REFRESH_MS = 60_000` → `120_000`
+- [ ] **S10 (list)** — cambiar `setInterval(load, LIST_REFRESH_MS)` donde `LIST_REFRESH_MS = 60_000` → `120_000`
+- [ ] **S10 (peg)** — cambiar `setInterval(loadLivePegPrices, LIVE_PEG_REFRESH_MS)` donde `LIVE_PEG_REFRESH_MS = 60_000` → `120_000`
 - [ ] **Eliminar `{ cache: 'no-store' }`** en estos endpoints estables para que el CDN Vercel pueda servir desde el edge:
   - `S10` → `/api/public/fear-greed`
-  - `S10/S14` → `/api/s10/btc-distribution`, `/api/s14/addresses-richer`
+  - `S12/S13` → `/api/s12/btc-distribution`, `/api/s13/addresses-richer`
   - `S08` → `/api/bitnodes/cache`
   - `S21` → `/api/public/s21/big-mac-sats-data`
   - `S03` → `/api/public/geo/land` (fetch inicial, no polling)
@@ -60,11 +60,11 @@ Corregir textos que implican "tiempo real" cuando la fuente no lo es.
 ### Endpoints de cache de scrapers
 
 - [ ] **`s03` multi-currency** — alinear TTL de respuesta HTTP de `10s` → `30s` para coincidir exactamente con el intervalo del scraper Docker
-- [ ] **`s08` stablecoins** — aumentar TTL de respuesta HTTP de `30s` → `120s` para alinear con el refresh real de CoinGecko (~60s + margen)
-- [ ] **`s10` btc-distribution (BitInfoCharts)** — aumentar TTL de respuesta HTTP de `60s` → `3 600s` (1h); datos on-chain cambian cada ~24h
-- [ ] **`s14` addresses-richer (BitInfoCharts)** — aumentar TTL de respuesta HTTP de `60s` → `3 600s` (1h); misma lógica que S10
+- [ ] **`s10` stablecoins** — aumentar TTL de respuesta HTTP de `30s` → `120s` para alinear con el refresh real de CoinGecko (~60s + margen)
+- [ ] **`s12` btc-distribution (BitInfoCharts)** — aumentar TTL de respuesta HTTP de `60s` → `3 600s` (1h); datos on-chain cambian cada ~24h
+- [ ] **`s13` addresses-richer (BitInfoCharts)** — aumentar TTL de respuesta HTTP de `60s` → `3 600s` (1h); misma lógica que S12
 - [ ] **`bitnodes`** — aumentar TTL de respuesta HTTP de `300s` → `21 600s` (6h); alineado con frecuencia real de snapshots de bitnodes.io
-- [ ] **`s13` global-assets** — aumentar TTL de respuesta HTTP de `60s` → `3 600s` (1h); alineado con intervalo del scraper Docker
+- [ ] **`s14` global-assets** — aumentar TTL de respuesta HTTP de `60s` → `3 600s` (1h); alineado con intervalo del scraper Docker
 
 ### Tabla resumen de TTLs backend
 
@@ -74,11 +74,11 @@ Corregir textos que implican "tiempo real" cuando la fuente no lo es.
 | `/api/public/s21/big-mac-sats-data` | refresh 60s | refresh 7 días | Fuente cambia 1 vez/año |
 | `/api/public/geo/*` | 3 600s | 30 días | Datos estáticos GeoJSON |
 | `/api/s03/multi-currency` | 10s HTTP | 30s HTTP | Alinear con scraper 30s |
-| `/api/s08/stablecoins` | 30s HTTP | 120s HTTP | CoinGecko rate limit ~60s |
-| `/api/s10/btc-distribution` | 60s HTTP | 3 600s HTTP | On-chain: cambios cada 24h |
-| `/api/s14/addresses-richer` | 60s HTTP | 3 600s HTTP | On-chain: cambios cada 24h |
+| `/api/s10/stablecoins` | 30s HTTP | 120s HTTP | CoinGecko rate limit ~60s |
+| `/api/s12/btc-distribution` | 60s HTTP | 3 600s HTTP | On-chain: cambios cada 24h |
+| `/api/s13/addresses-richer` | 60s HTTP | 3 600s HTTP | On-chain: cambios cada 24h |
 | `/api/bitnodes/cache` | 300s HTTP | 21 600s HTTP | Snapshots bitnodes cada 6h |
-| `/api/s13/global-assets` | 60s HTTP | 3 600s HTTP | Scraper corre cada 1h |
+| `/api/s14/global-assets` | 60s HTTP | 3 600s HTTP | Scraper corre cada 1h |
 
 ---
 

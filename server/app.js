@@ -4,37 +4,37 @@ import {
   getBitnodesPayload,
   pendingResponse,
   refreshBitnodesCache,
-} from './bitnodesCache.js';
+} from './features/bitnodesCache.js';
 import {
-  getBtcDistributionJs,
-  getBtcDistributionPayload,
-  getBtcDistributionStatus,
+  getS12BtcDistributionJs,
+  getS12BtcDistributionPayload,
+  getS12BtcDistributionStatus,
   updateBtcDistributionCache,
-} from './btcDistribution.js';
+} from './features/s12BtcDistribution.js';
 import {
-  getBtcAddressesRicherJs,
-  getBtcAddressesRicherPayload,
-  getBtcAddressesRicherStatus,
-  updateBtcAddressesRicherCache,
-} from './btcAddressesRicher.js';
+  getS13AddressesRicherJs,
+  getS13AddressesRicherPayload,
+  getS13AddressesRicherStatus,
+  updateS13AddressesRicherCache,
+} from './features/s13AddressesRicher.js';
 import {
   getS03MultiCurrencyPayload,
   getS03MultiCurrencyStatus,
   refreshS03MultiCurrencyPayload,
   S03ScrapeError,
-} from './s03MultiCurrencyScraper.js';
+} from './features/s03MultiCurrencyScraper.js';
 import {
-  getS08StablecoinDetail,
-  getS08StablecoinList,
-  getS08StablecoinLivePrices,
-  S08StablecoinError,
-} from './s08StablecoinPegCache.js';
+  getS10StablecoinDetail,
+  getS10StablecoinList,
+  getS10StablecoinLivePrices,
+  S10StablecoinError,
+} from './features/s10StablecoinPegCache.js';
 import {
-  getS13GlobalAssetsPayload,
-  getS13GlobalAssetsStatus,
-  refreshS13GlobalAssetsPayload,
-  S13GlobalAssetsError,
-} from './s13GlobalAssetsCache.js';
+  getS14GlobalAssetsPayload,
+  getS14GlobalAssetsStatus,
+  refreshS14GlobalAssetsPayload,
+  S14GlobalAssetsError,
+} from './features/s14GlobalAssetsCache.js';
 import {
   getBinanceBtcHistoryPayload,
   getBtcMapBusinessesByCountryPayload,
@@ -48,8 +48,8 @@ import {
   getS21BigMacSatsPayload,
   getUsNationalDebtPayload,
   PublicFeedError,
-} from './publicDataFeeds.js';
-import { getVisitorStats, trackVisitorById } from './visitorCounter.js';
+} from './shared/publicDataFeeds.js';
+import { getVisitorStats, trackVisitorById } from './features/visitorCounter.js';
 
 const REFRESH_API_TOKEN = String(process.env.REFRESH_API_TOKEN || '');
 const IS_PRODUCTION = ['production', 'preview'].includes(String(process.env.VERCEL_ENV || '').toLowerCase())
@@ -80,8 +80,8 @@ function sendBtcError(res, error) {
       res.status(502).json({ error: 'Binance API unavailable' });
       return;
     }
-    if (error.source === 'frankfurter') {
-      res.status(502).json({ error: 'Frankfurter API unavailable' });
+    if (error.source === 'investing') {
+      res.status(502).json({ error: 'Investing FX source unavailable' });
       return;
     }
   }
@@ -96,16 +96,16 @@ function sendS03Error(res, error) {
   res.status(500).json({ error: 'Internal server error' });
 }
 
-function sendS08Error(res, error) {
-  if (error instanceof S08StablecoinError) {
+function sendS10Error(res, error) {
+  if (error instanceof S10StablecoinError) {
     res.status(502).json({ error: error.message });
     return;
   }
   res.status(500).json({ error: 'Internal server error' });
 }
 
-function sendS13Error(res, error) {
-  if (error instanceof S13GlobalAssetsError) {
+function sendS14Error(res, error) {
+  if (error instanceof S14GlobalAssetsError) {
     res.status(502).json({ error: error.message });
     return;
   }
@@ -262,60 +262,70 @@ export function createApp() {
     }
   }));
 
-  app.get('/api/s08/stablecoins', asyncRoute(async (_req, res) => {
+  const sendS10StablecoinList = async (_req, res) => {
     setDataCacheHeaders(res, { sMaxAge: 120, swr: 240 });
     try {
-      const payload = await getS08StablecoinList();
+      const payload = await getS10StablecoinList();
       res.json(payload);
     } catch (error) {
-      sendS08Error(res, error);
+      sendS10Error(res, error);
     }
-  }));
+  };
 
-  app.get('/api/s08/stablecoins/live-prices', asyncRoute(async (_req, res) => {
+  app.get('/api/s10/stablecoins', asyncRoute(sendS10StablecoinList));
+
+  const sendS10StablecoinLivePrices = async (_req, res) => {
     setDataCacheHeaders(res, { sMaxAge: 120, swr: 240 });
     try {
-      const payload = await getS08StablecoinLivePrices();
+      const payload = await getS10StablecoinLivePrices();
       res.json(payload);
     } catch (error) {
-      sendS08Error(res, error);
+      sendS10Error(res, error);
     }
-  }));
+  };
 
-  app.get('/api/s08/stablecoin/:id', asyncRoute(async (req, res) => {
+  app.get('/api/s10/stablecoins/live-prices', asyncRoute(sendS10StablecoinLivePrices));
+
+  const sendS10StablecoinDetail = async (req, res) => {
     setDataCacheHeaders(res, { sMaxAge: 120, swr: 300 });
     try {
-      const payload = await getS08StablecoinDetail(req.params.id);
+      const payload = await getS10StablecoinDetail(req.params.id);
       res.json(payload);
     } catch (error) {
-      sendS08Error(res, error);
+      sendS10Error(res, error);
     }
-  }));
+  };
 
-  app.get('/api/s13/global-assets', asyncRoute(async (_req, res) => {
+  app.get('/api/s10/stablecoin/:id', asyncRoute(sendS10StablecoinDetail));
+
+  const sendS14GlobalAssets = async (_req, res) => {
     setDataCacheHeaders(res, { sMaxAge: 3600, swr: 7200 });
     try {
-      const payload = await getS13GlobalAssetsPayload();
+      const payload = await getS14GlobalAssetsPayload();
       res.json(payload);
     } catch (error) {
-      sendS13Error(res, error);
+      sendS14Error(res, error);
     }
-  }));
+  };
 
-  app.get('/api/s13/global-assets/status', asyncRoute(async (_req, res) => {
+  app.get('/api/s14/global-assets', asyncRoute(sendS14GlobalAssets));
+
+  const sendS14GlobalAssetsStatus = async (_req, res) => {
     setDataCacheHeaders(res, { sMaxAge: 3600, swr: 7200 });
     try {
-      const payload = await getS13GlobalAssetsStatus();
+      const payload = await getS14GlobalAssetsStatus();
       res.json(payload);
     } catch (error) {
-      sendS13Error(res, error);
+      sendS14Error(res, error);
     }
-  }));
+  };
 
-  app.get('/api/s13/global-assets/refresh', requireRefreshToken, asyncRoute(async (_req, res) => {
+  app.get('/api/s14/global-assets/status', asyncRoute(sendS14GlobalAssetsStatus));
+
+  const refreshS14GlobalAssets = async (_req, res) => {
     setNoStoreHeaders(res);
     try {
-      const payload = await refreshS13GlobalAssetsPayload();
+      const payload = await refreshS14GlobalAssetsPayload();
       res.json({
         source: payload.source_provider,
         updatedAt: payload.updated_at,
@@ -323,9 +333,11 @@ export function createApp() {
         assets: payload?.data?.asset_count ?? 0,
       });
     } catch (error) {
-      sendS13Error(res, error);
+      sendS14Error(res, error);
     }
-  }));
+  };
+
+  app.get('/api/s14/global-assets/refresh', requireRefreshToken, asyncRoute(refreshS14GlobalAssets));
 
   app.get('/api/public/mempool/overview', asyncRoute(async (_req, res) => {
     setDataCacheHeaders(res, { sMaxAge: 5, swr: 20 });
@@ -462,40 +474,46 @@ export function createApp() {
     res.status(405).json({ error: 'Use POST /api/visitors/track' });
   }));
 
-  app.get('/api/s10/btc-distribution.js', asyncRoute(async (_req, res) => {
+  const sendS12BtcDistributionJs = async (_req, res) => {
     setDataCacheHeaders(res, { sMaxAge: 3600, swr: 7200 });
     try {
-      const js = await getBtcDistributionJs();
+      const js = await getS12BtcDistributionJs();
       res.type('application/javascript; charset=utf-8').send(js);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       res.status(502).json({ error: `BitInfoCharts unavailable: ${message}` });
     }
-  }));
+  };
 
-  app.get('/api/s10/btc-distribution', asyncRoute(async (_req, res) => {
+  app.get('/api/s12/btc-distribution.js', asyncRoute(sendS12BtcDistributionJs));
+
+  const sendS12BtcDistribution = async (_req, res) => {
     setDataCacheHeaders(res, { sMaxAge: 3600, swr: 7200 });
     try {
-      const payload = await getBtcDistributionPayload();
+      const payload = await getS12BtcDistributionPayload();
       res.json(payload);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       res.status(502).json({ error: `BitInfoCharts unavailable: ${message}` });
     }
-  }));
+  };
 
-  app.get('/api/s10/btc-distribution/status', asyncRoute(async (_req, res) => {
+  app.get('/api/s12/btc-distribution', asyncRoute(sendS12BtcDistribution));
+
+  const sendS12BtcDistributionStatus = async (_req, res) => {
     setDataCacheHeaders(res, { sMaxAge: 3600, swr: 7200 });
     try {
-      const status = await getBtcDistributionStatus();
+      const status = await getS12BtcDistributionStatus();
       res.json(status);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       res.status(502).json({ error: `BitInfoCharts unavailable: ${message}` });
     }
-  }));
+  };
 
-  app.get('/api/s10/btc-distribution/refresh', requireRefreshToken, asyncRoute(async (_req, res) => {
+  app.get('/api/s12/btc-distribution/status', asyncRoute(sendS12BtcDistributionStatus));
+
+  const refreshS12BtcDistribution = async (_req, res) => {
     setNoStoreHeaders(res);
     try {
       const payload = await updateBtcDistributionCache();
@@ -509,45 +527,53 @@ export function createApp() {
       const message = error instanceof Error ? error.message : String(error);
       res.status(502).json({ error: `BitInfoCharts unavailable: ${message}` });
     }
-  }));
+  };
 
-  app.get('/api/s14/addresses-richer.js', asyncRoute(async (_req, res) => {
+  app.get('/api/s12/btc-distribution/refresh', requireRefreshToken, asyncRoute(refreshS12BtcDistribution));
+
+  const sendS13AddressesRicherJs = async (_req, res) => {
     setDataCacheHeaders(res, { sMaxAge: 3600, swr: 7200 });
     try {
-      const js = await getBtcAddressesRicherJs();
+      const js = await getS13AddressesRicherJs();
       res.type('application/javascript; charset=utf-8').send(js);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       res.status(502).json({ error: `BitInfoCharts unavailable: ${message}` });
     }
-  }));
+  };
 
-  app.get('/api/s14/addresses-richer', asyncRoute(async (_req, res) => {
+  app.get('/api/s13/addresses-richer.js', asyncRoute(sendS13AddressesRicherJs));
+
+  const sendS13AddressesRicher = async (_req, res) => {
     setDataCacheHeaders(res, { sMaxAge: 3600, swr: 7200 });
     try {
-      const payload = await getBtcAddressesRicherPayload();
+      const payload = await getS13AddressesRicherPayload();
       res.json(payload);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       res.status(502).json({ error: `BitInfoCharts unavailable: ${message}` });
     }
-  }));
+  };
 
-  app.get('/api/s14/addresses-richer/status', asyncRoute(async (_req, res) => {
+  app.get('/api/s13/addresses-richer', asyncRoute(sendS13AddressesRicher));
+
+  const sendS13AddressesRicherStatus = async (_req, res) => {
     setDataCacheHeaders(res, { sMaxAge: 3600, swr: 7200 });
     try {
-      const status = await getBtcAddressesRicherStatus();
+      const status = await getS13AddressesRicherStatus();
       res.json(status);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       res.status(502).json({ error: `BitInfoCharts unavailable: ${message}` });
     }
-  }));
+  };
 
-  app.get('/api/s14/addresses-richer/refresh', requireRefreshToken, asyncRoute(async (_req, res) => {
+  app.get('/api/s13/addresses-richer/status', asyncRoute(sendS13AddressesRicherStatus));
+
+  const refreshS13AddressesRicher = async (_req, res) => {
     setNoStoreHeaders(res);
     try {
-      const payload = await updateBtcAddressesRicherCache();
+      const payload = await updateS13AddressesRicherCache();
       res.json({
         source: payload.source,
         updatedAt: payload.updatedAt,
@@ -558,7 +584,9 @@ export function createApp() {
       const message = error instanceof Error ? error.message : String(error);
       res.status(502).json({ error: `BitInfoCharts unavailable: ${message}` });
     }
-  }));
+  };
+
+  app.get('/api/s13/addresses-richer/refresh', requireRefreshToken, asyncRoute(refreshS13AddressesRicher));
 
   app.get('/api/bitnodes/cache/refresh', requireRefreshToken, asyncRoute(async (_req, res) => {
     setNoStoreHeaders(res);

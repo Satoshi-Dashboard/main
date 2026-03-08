@@ -8,12 +8,12 @@ Source basis: analysis of the first 11 active modules in `src/config/modules.js`
 - S03 Multi-Currency
 - S04 Mempool Gauge
 - S05 Long-Term Trend
-- S06 Nodes Map (`S08_NodesMap.jsx` legacy filename)
-- S07 Lightning Nodes Map (`S08b_LightningNodesMap.jsx` legacy filename)
-- S08 BTC Map Business Density (`S08c_BtcMapBusinessesMap.jsx` legacy filename)
+- S06 Nodes Map (`S06_NodesMap.jsx`)
+- S07 Lightning Nodes Map (`S07_LightningNodesMap.jsx`)
+- S08 BTC Map Business Density (`S08_BtcMapBusinessesMap.jsx`)
 - S09 Lightning Network (`S09_LightningNetwork.jsx`)
-- S10 Stablecoin Peg Health (`S09b_StablecoinPegHealth.jsx` legacy filename)
-- S11 Fear & Greed (`S10_FearGreedIndex.jsx` legacy filename)
+- S10 Stablecoin Peg Health (`S10_StablecoinPegHealth.jsx`)
+- S11 Fear & Greed (`S11_FearGreedIndex.jsx`)
 
 ## Core principle
 
@@ -34,7 +34,7 @@ Before applying any frontend UX/UI change that references module numbers, slugs,
 
 1. `src/config/modules.js` is the only source of truth for live module identity/order.
 2. Do not infer live module code/order from component filenames or variable names.
-3. Legacy filenames/constants may not match current live codes (for example `S21_NodeVersions` renders the live `Big Mac Sats Tracker` module, and `S29_ThankYouSatoshi` renders the live closing module).
+3. Some under-construction filenames/constants may still lag behind live codes; verify module identity from `src/config/modules.js`, not from component filenames alone.
 4. When frontend copy, metadata, or labels mention a module by number/title/slug, verify against generated `MODULES`, not legacy component names.
 
 ## Responsive-first policy (mandatory)

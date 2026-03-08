@@ -1,15 +1,23 @@
 # Satoshi Dashboard
 
-Bitcoin analytics dashboard built with React + Vite, backed by an Express/serverless API layer that caches market, macro, and on-chain data for a single-module player experience.
+Bitcoin analytics dashboard built with React + Vite and backed by an Express/serverless API layer that caches market, macro, map, and on-chain data for a single-module player experience.
 
 ## Current project state
 
-- Active frontend module registry: **31 modules**.
-- Primary navigation: `BrowserRouter` + `/module/:slug`.
-- Frontend shell behavior: single-module player with previous/next controls, autoplay, keyboard navigation, fullscreen toggle, donation modal, and per-module SEO metadata.
-- Backend/API model: Express app in `server/app.js`, local entry in `server/index.js`, serverless entry in `api/index.js`.
-- Cache strategy: request-time refresh + stale fallback + lock protection, with local memory cache and optional shared KV/Upstash Redis.
-- Deployment target: Vercel (`vercel.json` rewrites SPA routes and `/api/*` to the serverless entry).
+- Frontend module registry: **31 modules** generated from `src/config/modules.js`.
+- Live/indexable module routes: **17** (`S01-S15`, `S30`, `S31`).
+- Under-construction module routes: **14** (`S16-S29`) with a UI overlay and `noindex` robots policy.
+- Primary app routes:
+  - `/` -> first live module (`S01`)
+  - `/module/:slug` -> module player route
+  - `/landingpage` -> SEO hub
+  - `/landingpage/blog` and `/landingpage/blog/:slug` -> blog index and posts
+- Legacy routes such as `/bitcoin-dashboard/*` still redirect to the current route structure.
+- Backend/API runtime:
+  - local entry: `server/index.js`
+  - shared app: `server/app.js`
+  - Vercel serverless entry: `api/index.js`
+- Deployment target: Vercel via `vercel.json` rewrites.
 
 ## Tech stack
 
@@ -22,111 +30,136 @@ Bitcoin analytics dashboard built with React + Vite, backed by an Express/server
 - Express 4
 - Leaflet / React Leaflet
 - D3
+- TanStack React Query
 
-## Project architecture
+## Architecture
 
 ### Frontend
 
 - App shell and routing: `src/App.jsx`, `src/main.jsx`
 - Single-module player page: `src/pages/ModulePage.jsx`
 - Module registry and generated codes/slugs: `src/config/modules.js`
-- Module data-provider metadata: `src/config/moduleDataMeta.js`
+- Live module sections: `src/components/sections/live/`
+- Under-construction module sections: `src/components/sections/under-construction/`
+- Module metadata strip config: `src/config/moduleDataMeta.js`
 - Module SEO metadata: `src/config/moduleSEO.js`
-- Shared BTC and history helpers: `src/services/priceApi.js`
-- Global styles and tokens: `src/index.css`
+- Landing/blog SEO content: `src/config/seoContent.js`
+- Shared API helpers: `src/lib/api.js`, `src/services/priceApi.js`, `src/services/usNationalDebtApi.js`
+- Global design tokens and typography: `src/index.css`
 
 ### Backend / API
 
-- API routes: `server/app.js`
-- Local API runtime: `server/index.js`
-- Vercel serverless entry: `api/index.js`
-- Shared/local cache and lock layer: `server/runtimeCache.js`
+- Route surface: `server/app.js`
+- Shared memory/KV cache and lock layer: `server/shared/runtimeCache.js`
 - BTC spot + fiat conversion pipeline: `btcRates.js`
-- Public cached feeds: `server/publicDataFeeds.js`
-- S03 multi-currency scraper: `server/s03MultiCurrencyScraper.js`
-- S08 stablecoin cache: `server/s08StablecoinPegCache.js`
-- BitInfoCharts-backed pipelines: `server/btcDistribution.js`, `server/btcAddressesRicher.js`, `server/bitinfochartsShared.js`
-- Bitnodes cache pipeline: `server/bitnodesCache.js`
-- S13 global assets scraper: `server/s13GlobalAssetsCache.js`
-- Visitor counter: `server/visitorCounter.js`
+- Shared public feeds: `server/shared/publicDataFeeds.js`
+- Module-specific caches/scrapers:
+  - `server/features/s03MultiCurrencyScraper.js`
+  - `server/features/s10StablecoinPegCache.js`
+  - `server/features/s14GlobalAssetsCache.js`
+  - `server/features/bitnodesCache.js`
+  - `server/shared/bitinfochartsShared.js`
+  - `server/features/s12BtcDistribution.js`
+  - `server/features/s13AddressesRicher.js`
+  - `server/features/visitorCounter.js`
 
-## Frontend module registry (S01-S31)
+### Cache model
 
-Module codes and slugs are generated from array order in `src/config/modules.js`. Component filenames still contain some legacy numbering and do not always match generated module codes one-to-one.
+- Local in-process memory cache first.
+- Optional shared KV / Upstash Redis cache second.
+- Single-flight lock protection via `withCacheLock(...)` for refreshes.
+- Stale payload fallback when upstream refresh fails or another instance is already refreshing.
+- Frontend modules usually keep previous UI state if a refresh request fails.
 
-| Code | Title |
-| --- | --- |
-| S01 | Bitcoin Overview |
-| S02 | Price Chart |
-| S03 | Multi-Currency |
-| S04 | Mempool Gauge |
-| S05 | Long-Term Trend |
-| S06 | Nodes Map |
-| S07 | Lightning Nodes Map |
-| S08 | BTC Map Business Density |
-| S09 | Lightning Network |
-| S10 | Stablecoin Peg Health |
-| S11 | Fear & Greed |
-| S12 | Address Distribution |
-| S13 | Wealth Pyramid |
-| S14 | Global Assets |
-| S15 | BTC vs Gold |
-| S16 | Mayer Multiple |
-| S17 | Price Performance |
-| S18 | Cycle Spiral |
-| S19 | Power Law Model |
-| S20 | Stock to Flow |
-| S21 | Big Mac Sats Tracker |
-| S22 | Seasonality |
-| S23 | Big Mac Index |
-| S24 | Network Activity |
-| S25 | Log Regression |
-| S26 | MVRV Score |
-| S27 | Google Trends |
-| S28 | BTC Dominance |
-| S29 | UTXO Distribution |
-| S30 | U.S. National Debt |
-| S31 | Thank You Satoshi |
+## Module registry (source of truth)
 
-## Module implementation note
+Module codes and slugs are generated from array order in `src/config/modules.js`. Component filenames still contain legacy numbering and are **not** the source of truth.
 
-- The registry contains 31 navigable modules.
-- In the current player UI, the under-construction overlay is now tied to a slug allowlist in `src/pages/ModulePage.jsx` so adding/reordering modules does not accidentally hide the wrong screens.
-- `S31` remains reachable as the closing tribute screen.
+| Code | Title | Route |
+| --- | --- | --- |
+| S01 | Bitcoin Overview | `/` |
+| S02 | Price Chart | `/module/s02-bitcoin-price-chart-live` |
+| S03 | Multi-Currency | `/module/s03-bitcoin-price-multi-currency` |
+| S04 | Mempool Gauge | `/module/s04-bitcoin-mempool-fees` |
+| S05 | Long-Term Trend | `/module/s05-bitcoin-mempool-trend` |
+| S06 | Nodes Map | `/module/s06-bitcoin-nodes-world-map` |
+| S07 | Lightning Nodes Map | `/module/s07-lightning-nodes-world-map` |
+| S08 | BTC Map Business Density | `/module/s08-bitcoin-merchant-map` |
+| S09 | Lightning Network | `/module/s09-lightning-network-stats` |
+| S10 | Stablecoin Peg Health | `/module/s10-stablecoin-peg-tracker` |
+| S11 | Fear & Greed | `/module/s11-bitcoin-fear-greed-index` |
+| S12 | Address Distribution | `/module/s12-bitcoin-address-distribution` |
+| S13 | Wealth Pyramid | `/module/s13-bitcoin-wealth-pyramid` |
+| S14 | Global Assets | `/module/s14-bitcoin-vs-global-assets` |
+| S15 | BTC vs Gold | `/module/s15-bitcoin-vs-gold-chart` |
+| S16 | Mayer Multiple | `/module/s16-bitcoin-mayer-multiple` |
+| S17 | Price Performance | `/module/s17-bitcoin-price-performance` |
+| S18 | Cycle Spiral | `/module/s18-bitcoin-halving-cycle-spiral` |
+| S19 | Power Law Model | `/module/s19-bitcoin-power-law-model` |
+| S20 | Stock to Flow | `/module/s20-bitcoin-stock-to-flow-model` |
+| S21 | Big Mac Sats Tracker | `/module/s21-bitcoin-big-mac-sats-tracker` |
+| S22 | Seasonality | `/module/s22-bitcoin-seasonality-heatmap` |
+| S23 | Big Mac Index | `/module/s23-bitcoin-big-mac-index` |
+| S24 | Network Activity | `/module/s24-bitcoin-network-activity` |
+| S25 | Log Regression | `/module/s25-bitcoin-log-regression-channel` |
+| S26 | MVRV Score | `/module/s26-bitcoin-mvrv-score` |
+| S27 | Google Trends | `/module/s27-bitcoin-google-trends` |
+| S28 | BTC Dominance | `/module/s28-bitcoin-dominance-chart` |
+| S29 | UTXO Distribution | `/module/s29-bitcoin-utxo-distribution` |
+| S30 | U.S. National Debt | `/module/s30-us-national-debt-live-counter` |
+| S31 | Thank You Satoshi | `/module/s31-satoshi-nakamoto-bitcoin-whitepaper` |
 
-## Live / external data coverage
+## Real module data/source table
 
-Currently wired live or scraped data modules:
+### Live and indexable modules
 
-- `S01` Bitcoin Overview: `/api/btc/rates` + `/api/public/mempool/overview` + `/api/public/fear-greed`
-- `S02` Price Chart: `/api/public/binance/btc-history`
-- `S03` Multi-Currency: `/api/s03/multi-currency` + `/api/public/geo/land`
-- `S04` Mempool Gauge: `/api/public/mempool/overview`
-- `S05` Long-Term Trend: `/api/public/mempool/live`
-- `S06` Nodes Map: `/api/bitnodes/cache` + `/api/public/geo/countries`
-- `S07` Lightning Nodes Map: `/api/public/lightning/world`
-- `S08` BTC Map Business Density: `/api/public/btcmap/businesses-by-country` + `/api/public/geo/countries`
-- `S09` Lightning Network: BTC spot feed via `src/services/priceApi.js`
-- `S10` Stablecoin Peg Health: `/api/s08/stablecoins`, `/api/s08/stablecoins/live-prices`, `/api/s08/stablecoin/:id`
-- `S11` Fear & Greed: `/api/public/fear-greed`
-- `S12` Address Distribution: `/api/s10/btc-distribution`
-- `S13` Wealth Pyramid: `/api/s14/addresses-richer`
-- `S14` Global Assets: `/api/s13/global-assets`
-- `S15` BTC vs Gold: `/api/public/coingecko/bitcoin-market-chart`
-- `S17` Price Performance: `/api/btc/rates`
-- `S21` Big Mac Sats Tracker: `/api/public/s21/big-mac-sats-data`
-- `S23` Big Mac Index: `/api/btc/rates`
-- `S30` U.S. National Debt: `/api/public/us-national-debt`
+| Code | Title | Data path in app | Upstream/source priority | Fallback | Reload |
+| --- | --- | --- | --- | --- | --- |
+| S01 | Bitcoin Overview | `fetchBtcSpot()` + `/api/public/mempool/overview` | Spot: Binance -> Binance.US -> cached spot; overview: mempool.space + Alternative.me | Backend stale cache; UI keeps previous values | UI 30s; spot API 5s; overview API 30s |
+| S02 | Price Chart | `fetchBtcSpot()` + `/api/public/binance/btc-history?days=7/30/90/365` | Spot: Binance -> Binance.US -> cached spot; history: Binance -> Binance.US | Backend stale cache; per-range frontend session cache | Spot on mount; history on mount/range change; history API 5m |
+| S03 | Multi-Currency | `/api/s03/multi-currency` + `/api/public/geo/land` | BTC anchor from `/api/btc/rates`; FX: Investing scraper proxy -> direct Investing HTML scrape; land: Natural Earth | Stale shared FX payload; UI keeps previous globe/map state | UI 30s; S03 API 30s; land geo monthly |
+| S04 | Mempool Gauge | `/api/public/mempool/overview` | mempool.space + Alternative.me bundle | Stale cache; UI keeps previous values | UI 30s; API 30s |
+| S05 | Long-Term Trend | `/api/public/mempool/live` | mempool.space blocks + mempool blocks + fees | Stale cache; UI shows reconnecting state and last good payload | UI 10s; API 10s |
+| S06 | Nodes Map | `/api/bitnodes/cache` + `/api/public/geo/countries` | Bitnodes scraper proxy API -> direct Bitnodes API + snapshot -> Bitnodes HTML modal scrape; countries: Natural Earth | HTML modal fallback and stale cache reuse | UI polls 10m; Bitnodes refresh follows next snapshot / fallback scrape throttle; geo monthly |
+| S07 | Lightning Nodes Map | `/api/public/lightning/world` + `/api/public/geo/countries` | mempool.space -> stale shared cache; countries: Natural Earth | Stale cache; UI keeps last payload | UI 60s; API 60s; geo monthly |
+| S08 | BTC Map Business Density | `/api/public/btcmap/businesses-by-country` + `/api/public/geo/countries` | BTC Map places API + Natural Earth country matching | Stale aggregate cache | UI 10m; API 6h; geo monthly |
+| S09 | Lightning Network | `fetchBtcSpot()` | Binance -> Binance.US -> cached spot | Previous UI value / null state if all fail | UI 15s; spot API 5s |
+| S10 | Stablecoin Peg Health | `/api/s10/stablecoins`, `/api/s10/stablecoins/live-prices`, `/api/s10/stablecoin/:id` | CoinGecko markets list -> live prices derived from list -> CoinGecko market chart detail | Stale list/live/detail payloads from memory or KV | UI 2m; list/live API 2m; detail API ~5m |
+| S11 | Fear & Greed | `/api/public/fear-greed?limit=31` | Alternative.me | Stale cache; UI keeps previous local state | UI on mount; API 6h |
+| S12 | Address Distribution | `/api/s12/btc-distribution` | BitInfoCharts scraper proxy/direct HTML via shared parser | Stale shared cache | UI 30m; API 30m |
+| S13 | Wealth Pyramid | `/api/s13/addresses-richer` | BitInfoCharts scraper proxy/direct HTML via shared parser | Stale shared cache | UI 30m; API 30m |
+| S14 | Global Assets | `/api/s14/global-assets` | Scraper proxy -> `r.jina.ai` mirror of Newhedge snapshot | Stale shared cache | UI 60m; API 60m |
+| S15 | BTC vs Gold | `/api/public/coingecko/bitcoin-market-chart?days=365` + local `GOLD_MAP` | CoinGecko BTC market chart; gold comparison is local static map | Local static chart fallback in component if API fails | UI on mount; API 60m |
+| S30 | U.S. National Debt | `/api/public/us-national-debt` | U.S. Treasury Debt to the Penny + latest available U.S. Census ACS year (currentYear-1 down to 2020) | Stale debt/population cache; UI keeps last payload and keeps 1s local interpolation | UI 60s + 1s local tick; debt API 15m; population API 30d |
+| S31 | Thank You Satoshi | local component copy, QR, whitepaper quote | Local static content only | No remote dependency | Static |
 
-Other modules currently render from local/generated frontend data.
+### Under-construction modules (routable, overlaid, and `noindex`)
 
-## API endpoints
+| Code | Title | Status | Data path in app | Real source priority | Fallback | Reload |
+| --- | --- | --- | --- | --- | --- | --- |
+| S16 | Mayer Multiple | Under construction | Local generated mock dataset in component | Local-only synthetic series | n/a | Static |
+| S17 | Price Performance | Under construction | `/api/btc/rates` + local historical constants | BTC spot: Binance -> Binance.US -> cached spot; house-price history is local | Static `84000` BTC fallback in component | UI on mount only |
+| S18 | Cycle Spiral | Under construction | Local halving dates + waypoint price table | Local-only handcrafted cycle data | n/a | Static |
+| S19 | Power Law Model | Under construction | Local regression/model data in component | Local-only model data | n/a | Static |
+| S20 | Stock to Flow | Under construction | Local S2F model data in component | Local-only model data | n/a | Static |
+| S21 | Big Mac Sats Tracker | Under construction | `/api/public/s21/big-mac-sats-data` | Combined feed: `/api/btc/rates` spot (Binance -> Binance.US -> cached spot) + Economist CSV + Binance/Binance.US historical closes | Stale combined cache; UI keeps last payload | UI 5m; combined API 7d; subfeeds 12h-24h |
+| S22 | Seasonality | Under construction | Local monthly heatmap dataset in component | Local-only static dataset | n/a | Static |
+| S23 | Big Mac Index | Under construction | `/api/btc/rates` + local `BIG_MAC_USD` constant | BTC spot: Binance -> Binance.US -> cached spot; burger price is local | Static `84000` BTC fallback in component | UI on mount only |
+| S24 | Network Activity | Under construction | Local market-cap/dominance mock data in component | Local-only synthetic dataset | n/a | Static |
+| S25 | Log Regression | Under construction | Local regression channel dataset in component | Local-only model data | n/a | Static |
+| S26 | MVRV Score | Under construction | Local MVRV-style cycle data in component | Local-only model data | n/a | Static |
+| S27 | Google Trends | Under construction | Local trend dataset in component | Local-only synthetic dataset | n/a | Static |
+| S28 | BTC Dominance | Under construction | Local dominance dataset in component | Local-only dataset | n/a | Static |
+| S29 | UTXO Distribution | Under construction | Local age-bucket dataset in component | Local-only static dataset | n/a | Static |
+
+## API summary
 
 Global behavior:
 
-- Upstream providers are accessed through cache-first single-flight refresh logic.
-- When an upstream call fails, the API can serve stale cached data with fallback metadata.
-- Refresh endpoints require `REFRESH_API_TOKEN` in production and accept the token via `x-refresh-token` header (or `Authorization: Bearer ...`).
+- Upstream providers are wrapped by cache-first single-flight refresh logic.
+- Stale payloads may be served when an upstream refresh fails or another runtime is already refreshing.
+- Refresh endpoints require `REFRESH_API_TOKEN` in production and accept either `x-refresh-token` or `Authorization: Bearer ...`.
+- Frontend callers should stay on relative `/api/...` routes for local dev and Vercel rewrite compatibility.
 
 ### BTC rates
 
@@ -136,9 +169,9 @@ Global behavior:
 
 Notes:
 
-- Near-live refresh window around 5 seconds.
-- Spot source priority: Binance -> CoinGecko fallback.
-- Fiat conversion source is cached separately and merged into the BTC spot payload.
+- Near-live BTC spot cadence: ~5 seconds.
+- Spot priority is now **Binance -> Binance.US -> cached BTC spot**.
+- Fiat factors come from **api.zatobox.io scraping Investing USD crosses** first, then direct Investing HTML scrape, then cached shared fiat data, then factors derived from the last BTC-rates payload when needed.
 
 ### S03 multi-currency
 
@@ -146,17 +179,22 @@ Notes:
 - `GET /api/s03/multi-currency/status`
 - `GET /api/s03/multi-currency/refresh`
 
+Notes:
+
+- Uses `/api/btc/rates` as the BTC/USD anchor.
+- FX factors come from Investing USD crosses via scraper proxy first, direct HTML scrape second.
+
 ### S08 stablecoin peg cache
 
-- `GET /api/s08/stablecoins`
-- `GET /api/s08/stablecoins/live-prices`
-- `GET /api/s08/stablecoin/:id`
+- `GET /api/s10/stablecoins`
+- `GET /api/s10/stablecoins/live-prices`
+- `GET /api/s10/stablecoin/:id`
 
 ### S13 global assets
 
-- `GET /api/s13/global-assets`
-- `GET /api/s13/global-assets/status`
-- `GET /api/s13/global-assets/refresh`
+- `GET /api/s14/global-assets`
+- `GET /api/s14/global-assets/status`
+- `GET /api/s14/global-assets/refresh`
 
 ### Bitnodes cache
 
@@ -166,19 +204,19 @@ Notes:
 
 Notes:
 
-- Primary source: Bitnodes snapshot API.
-- Fallback source: Bitnodes `/nodes/` scraping.
+- Priority: scraper proxy API -> direct Bitnodes API snapshot -> Bitnodes HTML modal scrape.
+- Fallback payloads can switch `source_provider` to `bitnodes_scrape`.
 
 ### BitInfoCharts-backed data
 
-- `GET /api/s10/btc-distribution`
-- `GET /api/s10/btc-distribution.js`
-- `GET /api/s10/btc-distribution/status`
-- `GET /api/s10/btc-distribution/refresh`
-- `GET /api/s14/addresses-richer`
-- `GET /api/s14/addresses-richer.js`
-- `GET /api/s14/addresses-richer/status`
-- `GET /api/s14/addresses-richer/refresh`
+- `GET /api/s12/btc-distribution`
+- `GET /api/s12/btc-distribution.js`
+- `GET /api/s12/btc-distribution/status`
+- `GET /api/s12/btc-distribution/refresh`
+- `GET /api/s13/addresses-richer`
+- `GET /api/s13/addresses-richer.js`
+- `GET /api/s13/addresses-richer/status`
+- `GET /api/s13/addresses-richer/refresh`
 
 ### Public shared feeds
 
@@ -201,22 +239,25 @@ Notes:
 
 Notes:
 
-- Visitor tracking uses an anonymous browser-generated visitor ID instead of raw IP-based uniqueness.
-- The frontend sends the identifier once per session and the backend stores only a salted hash.
+- The frontend generates an anonymous visitor ID and sends it once per session.
+- The backend stores a salted hash only.
+- Storage mode can be:
+  - `shared-kv` when shared cache is configured
+  - `local-file` when running without shared KV
 
 ## Environment variables
 
 - `API_PORT` (default `8787`)
 - `API_HOST` (default `0.0.0.0`)
-- `API_PROXY_TARGET` (optional, Vite dev proxy target; default `http://127.0.0.1:8787`)
-- `REFRESH_API_TOKEN` (required in production if refresh endpoints should stay enabled)
-- `VISITOR_COUNTER_SALT` (optional, salts anonymous visitor ID hashes)
-- `CACHE_KEY_PREFIX` (optional shared-cache key namespace)
-- `KV_REST_API_URL` / `KV_REST_API_TOKEN` (optional shared KV)
+- `API_PROXY_TARGET` (default `http://127.0.0.1:8787`)
+- `REFRESH_API_TOKEN` (recommended for production refresh endpoints)
+- `VISITOR_COUNTER_SALT` (strongly recommended in production for anonymous visitor hashing)
+- `CACHE_KEY_PREFIX` (optional shared-cache namespace)
+- `KV_REST_API_URL` / `KV_REST_API_TOKEN` (optional Vercel KV)
 - `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` (optional shared KV aliases)
 - `SCRAPER_BASE_URL` (optional scraper proxy base URL, defaults to `https://api.zatobox.io`)
 
-Copy `.env.example` to a local `.env` file when needed.
+Copy `.env.example` to `.env` when needed.
 
 ## Local development
 
@@ -237,40 +278,49 @@ Useful scripts:
 - `npm run dev` -> UI + API
 - `npm run dev:ui` -> Vite UI only
 - `npm run dev:api` -> API only
-- `npm run start` -> API only (production-like local)
+- `npm run start` -> API only
 - `npm run start:api` -> API only
 - `npm run build` -> production build
 - `npm run preview` -> preview build
 - `npm run lint` -> ESLint
 
-Notes:
+Development notes:
 
-- Vite proxies `/api` requests from the frontend dev server to the API server using `API_PROXY_TARGET` (defaults to `http://127.0.0.1:8787`).
-- `vite.config.js` ignores generated cache JSON files to reduce unnecessary reload noise during development.
-- Shared KV is strongly recommended on Vercel to avoid per-instance cache drift.
+- Vite proxies `/api` to the API server via `API_PROXY_TARGET`.
+- `vite.config.js` ignores generated cache JSON files to reduce unnecessary reload noise.
+- Shared KV is recommended on Vercel to avoid per-instance cache drift.
+- Shared KV is also recommended for visitor tracking consistency across serverless instances.
 
-## SEO / PWA assets
+## SEO / public assets
 
-- Base metadata lives in `index.html` and is refined per module via `src/config/moduleSEO.js`.
-- Public assets include `robots.txt`, `sitemap.xml`, `llm.txt`, `site.webmanifest`, icons, and Open Graph preview images.
+- Base metadata starts in `index.html` and is refined by `src/lib/usePageSEO.js` and `src/config/moduleSEO.js`.
+- Public SEO assets include:
+  - `public/robots.txt`
+  - `public/sitemap.xml`
+  - `public/llm.txt`
+  - `public/site.webmanifest`
+- Under-construction modules are intentionally excluded from sitemap/LLM indexing and get `noindex, follow` on their page route.
 
 ## Deployment (Vercel)
 
-`vercel.json` rewrites:
+`vercel.json` handles both SPA routes and the API layer:
 
 - `/api/*` -> `api/index.js`
 - `/module/*` -> `index.html`
+- `/landingpage*` -> `index.html`
 - non-file routes -> `index.html`
 
 Notes:
 
-- The Vercel function is pinned to region `fra1`.
-- This keeps serverless API routes and SPA routing compatible in one deployment.
+- The serverless function is pinned to region `fra1`.
+- Vercel deployment stays compatible with the same Express app used locally.
+- If you add new remote origins, update `vercel.json` CSP and related header rules.
 
 ## Agent policy files
 
 - Runtime policy entrypoint: `AGENTS.md`
 - Backend/API strict rules: `.claude/BACKEND_API_RULES.md`
+- Data source/provider strict rules: `.claude/DATA_SOURCE_INTEGRITY_RULES.md`
 - Module registry/order strict rules: `.claude/MODULE_REGISTRY_RULES.md`
 - Frontend color/UX/UI strict rules: `.claude/FRONTEND_COLOR_UX_UI_RULES.md`
 

@@ -34,7 +34,7 @@ Before applying any backend/API change that references modules by number, slug, 
 - API route definitions live in `server/app.js`.
 - Local runtime entrypoint is `server/index.js`.
 - Serverless entrypoint is `api/index.js`.
-- Shared runtime cache layer is `server/runtimeCache.js`.
+- Shared runtime cache layer is `server/shared/runtimeCache.js`.
 - Endpoint refresh policy is request-time with stale fallback + lock.
 
 ## Rules for creating/changing endpoints
@@ -52,7 +52,7 @@ Before applying any backend/API change that references modules by number, slug, 
 1. Use timeout for all external fetches.
 2. Use stale-if-error fallback whenever possible.
 3. Use `withCacheLock(...)` for expensive refresh paths.
-4. Use namespaced cache keys via `server/runtimeCache.js`.
+4. Use namespaced cache keys via `server/shared/runtimeCache.js`.
 5. If KV is unavailable, local fallback must still work.
 
 ## Provider-aware refresh budget policy (mandatory)
@@ -114,12 +114,12 @@ After backend/API changes, run:
 4. Smoke test these endpoints:
    - `/api/btc/rates`
    - `/api/s03/multi-currency/status`
-   - `/api/s08/stablecoins`
+   - `/api/s10/stablecoins`
    - `/api/public/fear-greed`
    - `/api/visitors/stats`
    - `/api/bitnodes/cache/status`
-   - `/api/s10/btc-distribution/status`
-   - `/api/s14/addresses-richer/status`
+   - `/api/s12/btc-distribution/status`
+   - `/api/s13/addresses-richer/status`
 
 ## Documentation updates (required)
 
