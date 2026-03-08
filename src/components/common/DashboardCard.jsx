@@ -94,7 +94,7 @@ export default function DashboardCard({
       const element = document.getElementById(`card-${id}`);
       if (element) {
         const canvas = await html2canvas(element, {
-          backgroundColor: '#0A0A0F',
+          backgroundColor: '#111111',
           scale: 2,
         });
         const link = document.createElement('a');
