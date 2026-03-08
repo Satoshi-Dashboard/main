@@ -255,24 +255,6 @@ export default function S30_USNationalDebt() {
 
   return (
     <div className="relative flex h-full w-full overflow-y-auto bg-[var(--bg-primary)]">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div
-          className="absolute inset-x-0 top-0 h-[38vh]"
-          style={{ background: 'radial-gradient(circle at top, rgba(247,147,26,0.08), transparent 58%)' }}
-        />
-        <div
-          className="absolute inset-x-0 bottom-0 h-[46vh]"
-          style={{ background: 'radial-gradient(circle at bottom, rgba(255,71,87,0.10), transparent 56%)' }}
-        />
-        <div
-          className="absolute inset-0 opacity-[0.05]"
-          style={{
-            backgroundImage: 'linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px)',
-            backgroundSize: '72px 72px',
-          }}
-        />
-      </div>
-
       <div className="relative mx-auto flex w-full max-w-[1480px] flex-col px-4 py-5 sm:px-6 sm:py-6 lg:px-10 lg:py-8 xl:px-14 xl:py-10">
         <div className="mx-auto flex w-full max-w-[1240px] flex-1 flex-col items-center justify-center text-center">
           <header className="flex w-full max-w-[980px] flex-col items-center gap-4">

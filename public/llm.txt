@@ -10,11 +10,11 @@
 ## What is Satoshi Dashboard?
 
 Satoshi Dashboard is a free, open-source, real-time Bitcoin analytics platform.
-It aggregates live market data, on-chain metrics, and macro economic indicators
-from trusted sources (Binance, CoinGecko, mempool.space, Bitnodes, BitInfoCharts,
-Alternative.me, Google Trends) into a single interactive interface.
+It aggregates live market data, on-chain metrics, merchant adoption data, and macro
+economic indicators from trusted sources (Binance, CoinGecko, mempool.space, BTC Map,
+Bitnodes, BitInfoCharts, Alternative.me, Google Trends) into a single interactive interface.
 
-The platform contains 29 modular analytical views, each focused on a specific
+The platform contains 31 modular analytical views, each focused on a specific
 dimension of Bitcoin's health, valuation, and market dynamics.
 
 ---
@@ -34,6 +34,7 @@ dimension of Bitcoin's health, valuation, and market dynamics.
 - **Mempool analytics**: Transaction congestion, fee rates, block weight from mempool.space
 - **On-chain metrics**: UTXO distribution, address wealth distribution, MVRV ratio, Stock-to-Flow
 - **Network health**: Full-node count and geographic distribution via Bitnodes
+- **Merchant adoption**: BTC Map business density by country
 - **Lightning Network**: Channel count, capacity, node count via mempool.space
 - **Macro comparison**: BTC vs Gold performance, Big Mac Index, Power Law model
 - **Sentiment**: Fear & Greed Index (Alternative.me), Google Trends for "Bitcoin"
@@ -56,28 +57,30 @@ Each module is accessible at `/module/<slug>`.
 | s05-long-term-trend | Long-Term Trend | Long-term Bitcoin fee rate and mempool size trend chart |
 | s06-nodes-map | Nodes Map | World map of reachable Bitcoin full nodes by country (Bitnodes data) |
 | s07-lightning-nodes-map | Lightning Nodes Map | Geographic distribution of Lightning Network nodes |
-| s08-lightning-network | Lightning Network | Lightning Network aggregate stats: channels, capacity (BTC), and node count |
-| s09-stablecoin-peg | Stablecoin Peg Health | Real-time peg deviation tracker for major stablecoins vs USD |
-| s10-fear-greed | Fear & Greed Index | Bitcoin Fear & Greed Index with 7-day and 30-day historical chart |
-| s11-address-distribution | Address Distribution | Distribution of Bitcoin addresses by balance range (from BitInfoCharts) |
-| s12-wealth-pyramid | Wealth Pyramid | Visual pyramid of Bitcoin holders by wealth tier |
-| s13-global-assets | Global Assets Treemap | Treemap comparing Bitcoin market cap vs gold, equities, and other global assets |
-| s14-btc-vs-gold | BTC vs Gold | Normalized 1-year performance comparison of Bitcoin against gold |
-| s15-mayer-multiple | Mayer Multiple | Current Mayer Multiple (price / 200-day MA) with overbought/oversold bands |
-| s16-price-performance | Price Performance | Bitcoin YTD and multi-year price performance vs fiat currencies |
-| s17-cycle-spiral | Cycle Spiral | Polar chart visualizing Bitcoin's 4-year halving cycles |
-| s18-power-law-model | Power Law Model | Bitcoin price plotted against the Power Law fair-value corridor |
-| s19-stock-to-flow | Stock to Flow | Bitcoin Stock-to-Flow (S2F) model chart with actual price overlay |
-| s20-node-versions | Big Mac Sats Tracker | How many satoshis does a Big Mac cost? Historical tracker |
-| s21-seasonality | Seasonality Heatmap | Monthly return heatmap showing Bitcoin's historical seasonal patterns |
-| s22-big-mac-index | Big Mac Index | Bitcoin purchasing power expressed as Big Mac equivalent prices by country |
-| s23-network-activity | Network Activity | Daily on-chain transaction count, active addresses, and block sizes |
-| s24-log-regression | Log Regression | Bitcoin price vs logarithmic regression channel (support/resistance) |
-| s25-mvrv-score | MVRV Score | Market Value to Realized Value ratio — identifies cyclical tops and bottoms |
-| s26-google-trends | Google Trends | Google search interest for "Bitcoin" worldwide over time |
-| s27-btc-dominance | BTC Dominance | Bitcoin's share of total cryptocurrency market capitalization |
-| s28-utxo-distribution | UTXO Distribution | Age distribution of unspent transaction outputs (HODLers vs movers) |
-| s29-thank-you-satoshi | Thank You Satoshi | Tribute page with Bitcoin whitepaper link and donation address |
+| s08-btcmap-business-density | BTC Map Business Density | World map of Bitcoin-friendly businesses by country using BTC Map place data |
+| s09-lightning-network | Lightning Network | Lightning Network aggregate stats: channels, capacity (BTC), and node count |
+| s10-stablecoin-peg | Stablecoin Peg Health | Real-time peg deviation tracker for major stablecoins vs USD |
+| s11-fear-greed | Fear & Greed Index | Bitcoin Fear & Greed Index with 7-day and 30-day historical chart |
+| s12-address-distribution | Address Distribution | Distribution of Bitcoin addresses by balance range (from BitInfoCharts) |
+| s13-wealth-pyramid | Wealth Pyramid | Visual pyramid of Bitcoin holders by wealth tier |
+| s14-global-assets | Global Assets Treemap | Treemap comparing Bitcoin market cap vs gold, equities, and other global assets |
+| s15-btc-vs-gold | BTC vs Gold | Normalized 1-year performance comparison of Bitcoin against gold |
+| s16-mayer-multiple | Mayer Multiple | Current Mayer Multiple (price / 200-day MA) with overbought/oversold bands |
+| s17-price-performance | Price Performance | Bitcoin YTD and multi-year price performance vs fiat currencies |
+| s18-cycle-spiral | Cycle Spiral | Polar chart visualizing Bitcoin's 4-year halving cycles |
+| s19-power-law-model | Power Law Model | Bitcoin price plotted against the Power Law fair-value corridor |
+| s20-stock-to-flow | Stock to Flow | Bitcoin Stock-to-Flow (S2F) model chart with actual price overlay |
+| s21-node-versions | Big Mac Sats Tracker | How many satoshis does a Big Mac cost? Historical tracker |
+| s22-seasonality | Seasonality Heatmap | Monthly return heatmap showing Bitcoin's historical seasonal patterns |
+| s23-big-mac-index | Big Mac Index | Bitcoin purchasing power expressed as Big Mac equivalent prices by country |
+| s24-network-activity | Network Activity | Daily on-chain transaction count, active addresses, and block sizes |
+| s25-log-regression | Log Regression | Bitcoin price vs logarithmic regression channel (support/resistance) |
+| s26-mvrv-score | MVRV Score | Market Value to Realized Value ratio - identifies cyclical tops and bottoms |
+| s27-google-trends | Google Trends | Google search interest for "Bitcoin" worldwide over time |
+| s28-btc-dominance | BTC Dominance | Bitcoin's share of total cryptocurrency market capitalization |
+| s29-utxo-distribution | UTXO Distribution | Age distribution of unspent transaction outputs (HODLers vs movers) |
+| s30-us-national-debt | U.S. National Debt | Projected real-time U.S. debt counter with debt-per-person and rate-of-increase metrics |
+| s31-thank-you-satoshi | Thank You Satoshi | Tribute page with Bitcoin whitepaper link and donation address |
 
 ---
 
@@ -87,12 +90,15 @@ Each module is accessible at `/module/<slug>`.
 |--------|----------|
 | Binance API | Live BTC price, OHLC history |
 | CoinGecko API | Market data, stablecoin metrics, BTC vs Gold |
+| BTC Map API | Bitcoin-friendly businesses and merchant density by country |
 | mempool.space | Mempool, fees, Lightning Network, UTXO data |
 | Bitnodes | Full node count and geographic distribution |
 | BitInfoCharts | Address distribution, wealth pyramid |
 | Alternative.me | Fear & Greed Index |
 | Newhedge | Global asset market cap treemap |
 | The Economist | Big Mac Index data (annual) |
+| U.S. Treasury FiscalData | U.S. national debt official debt-to-the-penny series |
+| U.S. Census ACS 1-Year | U.S. population estimate used for debt-per-person calculation |
 | Google Trends | "Bitcoin" search interest |
 
 ---
@@ -157,5 +163,5 @@ A: The mempool (memory pool) is the waiting room for unconfirmed Bitcoin transac
 
 ---
 
-*Last updated: 2026-03-07*
+*Last updated: 2026-03-08*
 *File version: 1.0*

@@ -39,6 +39,10 @@ function formatUsdUnsigned(value, { compact = false } = {}) {
     return WHOLE_USD_FORMATTER.format(Math.round(amount));
   }
 
+  if (amount < 1e6) {
+    return WHOLE_USD_FORMATTER.format(Math.round(amount));
+  }
+
   const parts = toCompactParts(amount);
   if (!parts) {
     return WHOLE_USD_FORMATTER.format(Math.round(amount));
@@ -77,7 +81,10 @@ export function formatNumberCompact(value) {
 }
 
 export function formatDateLabel(value) {
-  const date = new Date(value);
+  const raw = String(value || '');
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(raw)
+    ? new Date(`${raw}T12:00:00Z`)
+    : new Date(value);
   if (!Number.isFinite(date.getTime())) return '—';
   return DATE_FORMATTER.format(date);
 }
