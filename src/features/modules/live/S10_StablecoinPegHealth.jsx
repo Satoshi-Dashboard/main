@@ -366,7 +366,7 @@ function CoinCard({ coin, idx, sparkCache, onVisible }) {
 
       <div className="flex flex-col gap-3 p-4 flex-1">
         {/* Row 1: logo + identity + status */}
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-wrap items-start justify-between gap-3 sm:flex-nowrap sm:items-center">
           <div className="flex items-center gap-3 min-w-0">
             <CoinLogo coinName={coin.name} symbol={coin.symbol} apiImage={coin.image} size={36} />
             <div className="min-w-0">
@@ -378,7 +378,7 @@ function CoinCard({ coin, idx, sparkCache, onVisible }) {
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex flex-shrink-0 items-center gap-2 self-start sm:self-auto">
             <span
               className="font-mono font-bold tabular-nums"
               style={{ fontSize: 'var(--fs-caption)', color: cfg.color }}
@@ -401,8 +401,8 @@ function CoinCard({ coin, idx, sparkCache, onVisible }) {
         </div>
 
         {/* Row 2: price + 24h change + rank */}
-        <div className="flex items-end justify-between gap-3">
-          <div className="min-w-0">
+        <div className="flex flex-wrap items-end justify-between gap-3 sm:flex-nowrap">
+          <div className="min-w-0 flex-1">
             <div
               className="font-mono font-bold text-white tabular-nums leading-none"
               style={{ fontSize: 'var(--fs-section)' }}
@@ -444,7 +444,7 @@ function CoinCard({ coin, idx, sparkCache, onVisible }) {
         </button>
 
         {metricsOpen && (
-          <div className="grid grid-cols-2 gap-2 rounded-lg border border-white/10 bg-[#141414] p-2">
+          <div className="grid grid-cols-1 gap-2 rounded-lg border border-white/10 bg-[#141414] p-2 sm:grid-cols-2">
             <div>
               <div className="font-mono uppercase" style={{ fontSize: 'var(--fs-micro)', color: 'rgba(255,255,255,0.34)' }}>MCap</div>
               <div className="font-mono tabular-nums text-white" style={{ fontSize: 'var(--fs-caption)' }}><AnimatedMetric value={coin.market_cap} variant="usdCompact" inline /></div>
@@ -511,7 +511,7 @@ function CoinCard({ coin, idx, sparkCache, onVisible }) {
         </button>
 
         {detailsOpen && (
-          <div className="grid grid-cols-2 gap-2 rounded-lg border border-white/10 bg-[#101010] p-2">
+          <div className="grid grid-cols-1 gap-2 rounded-lg border border-white/10 bg-[#101010] p-2 sm:grid-cols-2">
             <div>
               <div className="font-mono uppercase" style={{ fontSize: 'var(--fs-micro)', color: 'rgba(255,255,255,0.34)' }}>24h Range</div>
               <div className="font-mono tabular-nums text-white/80" style={{ fontSize: 'var(--fs-caption)' }}>{fmtRange(coin.low_24h, coin.high_24h)}</div>

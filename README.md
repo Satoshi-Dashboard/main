@@ -155,7 +155,7 @@ This section exists on purpose: public readers and contributors should be able t
 | S12 | Address Distribution | `/api/s12/btc-distribution` | BitInfoCharts scraper proxy/direct HTML via shared parser | Stale shared cache | UI 30m; API 30m |
 | S13 | Wealth Pyramid | `/api/s13/addresses-richer` | BitInfoCharts scraper proxy/direct HTML via shared parser | Stale shared cache | UI 30m; API 30m |
 | S14 | Global Assets | `/api/s14/global-assets` | Scraper proxy -> `r.jina.ai` mirror of Newhedge snapshot | Stale shared cache | UI 60m; API 60m |
-| S15 | BTC vs Gold | `/api/public/coingecko/bitcoin-market-chart?days=365` + local `GOLD_MAP` | CoinGecko BTC market chart; gold comparison is local static map | Local static chart fallback in component if API fails | UI on mount; API 60m |
+| S15 | BTC vs Gold | `/api/s15/btc-vs-gold-market-cap` | CoinGecko BTC market chart transformed by backend + local static gold market-cap reference on server | Backend returns transformed comparison payload from cached/stale CoinGecko feed | UI on mount; API 60m |
 | S30 | U.S. National Debt | `/api/public/us-national-debt` | U.S. Treasury Debt to the Penny + latest available U.S. Census ACS year (currentYear-1 down to 2020) | Stale debt/population cache; UI keeps last payload and keeps 1s local interpolation | UI 60s + 1s local tick; debt API 15m; population API 30d |
 | S31 | Thank You Satoshi | Local component copy, QR, whitepaper quote | Local static content only | No remote dependency | Static |
 
@@ -248,6 +248,10 @@ Notes:
 - `GET /api/s13/addresses-richer/status`
 - `GET /api/s13/addresses-richer/refresh`
 
+Notes:
+
+- BitInfoCharts-backed payloads expose the upstream snapshot time separately from the backend check time so frontend metadata can distinguish stale source data from normal refresh polling.
+
 ### Public shared feeds
 
 - `GET /api/public/mempool/overview`
@@ -258,6 +262,7 @@ Notes:
 - `GET /api/public/lightning/world`
 - `GET /api/public/btcmap/businesses-by-country`
 - `GET /api/public/coingecko/bitcoin-market-chart?days=365`
+- `GET /api/s15/btc-vs-gold-market-cap`
 - `GET /api/public/binance/btc-history?days=1|7|30|90|365|1825&interval=5m|15m|30m|1h|1d`
 - `GET /api/public/s21/big-mac-sats-data`
 - `GET /api/public/us-national-debt`
@@ -431,3 +436,11 @@ Satoshi Dashboard is open-source under the MIT License. See `LICENSE.txt`.
 - **Acción Realizada/Corrección:** Se reescribió el README con tono más público y equilibrado, manteniendo las secciones técnicas solicitadas (`Module registry`, `Real module data/source table`, `Under-construction modules`, `API summary`, `Environment variables`) y se alineó la referencia de licencia a MIT.
 - **Nueva/Modificada Regla o Directriz:** El `README.md` debe servir a la vez como portada pública del proyecto y como documento honesto de fuentes, estado de módulos, API y licencia vigente.
 - **Justificación:** Mejora la primera impresión del repositorio, reduce ambiguedad para usuarios no técnicos y evita inconsistencias legales/documentales al publicar el proyecto como open source MIT.
+
+- **Fecha de la Actualización:** `2026-03-09`
+- **Archivo(s) Afectado(s):** `README.md`
+- **Tipo de Evento/Contexto:** Retiro de feature frontend no adoptada
+- **Descripción del Evento Original:** La documentación pública había empezado a mencionar un flujo de export markdown para IA que el owner decidió descartar por baja utilidad antes de consolidarlo como parte del producto.
+- **Acción Realizada/Corrección:** Se eliminó la referencia pública a esa capacidad para que el `README.md` vuelva a reflejar solo funcionalidades activas y deseadas por el owner.
+- **Nueva/Modificada Regla o Directriz:** El `README.md` solo debe promocionar capacidades activas que el owner considera realmente útiles y permanentes en la experiencia del dashboard.
+- **Justificación:** Evita sobreprometer funciones descartadas y mantiene la portada pública alineada con el producto que realmente se quiere ofrecer.

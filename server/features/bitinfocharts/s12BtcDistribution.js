@@ -146,6 +146,7 @@ function isValidPayload(payload) {
     && typeof payload === 'object'
     && typeof payload.source === 'string'
     && typeof payload.updatedAt === 'string'
+    && typeof payload.fetchedAt === 'string'
     && typeof payload.nextUpdateAt === 'string'
     && Array.isArray(payload.distribution)
     && payload.distribution.length > 0
@@ -197,6 +198,7 @@ function toJs(payload) {
   lines.push('const BTC_DISTRIBUTION_META = {');
   lines.push(`  source: "${quote(payload.source)}",`);
   lines.push(`  updatedAt: "${quote(payload.updatedAt)}",`);
+  lines.push(`  fetchedAt: "${quote(payload.fetchedAt)}",`);
   lines.push(`  nextUpdateAt: "${quote(payload.nextUpdateAt)}"`);
   lines.push('};');
   lines.push('');
@@ -229,11 +231,13 @@ export async function updateBtcDistributionCache() {
   const html = sourcePayload.html;
   const distribution = parseDistributionRows(html);
   const updatedAt = sourcePayload.updatedAt || parseFooterTimestamp(html);
+  const fetchedAt = sourcePayload.fetchedAt || formatUtcTimestamp(new Date());
   const nextUpdateAt = sourcePayload.nextUpdateAt || formatUtcTimestamp(new Date(parseUtcTimestamp(updatedAt).getTime() + (30 * 60 * 1000)));
 
   const payload = {
     source: SOURCE_NAME,
     updatedAt,
+    fetchedAt,
     nextUpdateAt,
     isFallback: false,
     fallbackNote: null,
@@ -306,6 +310,7 @@ export async function getS12BtcDistributionStatus() {
   return {
     source: payload.source,
     updatedAt: payload.updatedAt,
+    fetchedAt: payload.fetchedAt,
     nextUpdateAt: payload.nextUpdateAt,
     isFallback: Boolean(payload.isFallback),
     fallbackNote: payload.fallbackNote || null,

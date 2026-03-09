@@ -74,7 +74,7 @@ function formatTopClockTime(utcTimestamp) {
 
 export default function S13_WealthPyramid() {
   const [tiers, setTiers] = useState(() => TIER_TEMPLATE.map((tier) => ({ ...tier, addresses: null })));
-  const [meta, setMeta] = useState({ updatedAt: '', updatedAtLocal: '' });
+  const [meta, setMeta] = useState({ updatedAt: '', updatedAtLocal: '', fetchedAt: '', fetchedAtLocal: '' });
   const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth);
 
   useEffect(() => {
@@ -92,10 +92,12 @@ export default function S13_WealthPyramid() {
         if (!active) return;
 
         setTiers((prev) => buildTiers(payload, prev));
-        if (typeof payload?.updatedAt === 'string') {
+        if (typeof payload?.updatedAt === 'string' || typeof payload?.fetchedAt === 'string') {
           setMeta({
-            updatedAt: payload.updatedAt,
-            updatedAtLocal: formatTopClockTime(payload.updatedAt),
+            updatedAt: payload?.updatedAt || '',
+            updatedAtLocal: formatTopClockTime(payload?.updatedAt),
+            fetchedAt: payload?.fetchedAt || '',
+            fetchedAtLocal: formatTopClockTime(payload?.fetchedAt),
           });
         }
       } catch {
@@ -137,8 +139,9 @@ export default function S13_WealthPyramid() {
                 BitInfoCharts
               </a>
             </div>
-            <div>Auto update: 30m</div>
-            {meta.updatedAtLocal ? <div>Last: {meta.updatedAtLocal}</div> : null}
+            <div>Refresh target: 30m</div>
+            {meta.updatedAtLocal ? <div>Source snapshot: {meta.updatedAtLocal}</div> : null}
+            {meta.fetchedAtLocal ? <div>Last checked: {meta.fetchedAtLocal}</div> : null}
           </div>
         </div>
       </div>

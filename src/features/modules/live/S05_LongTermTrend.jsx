@@ -460,8 +460,8 @@ export default function S05_LongTermTrend() {
                 mempool.space
               </a>
             </div>
-            <div>Auto update: 10s</div>
-            <div>Last: {formatMetaTimestamp(lastUpdatedAt)}</div>
+            <div>Refresh target: 10s</div>
+            <div>Last sync: {formatMetaTimestamp(lastUpdatedAt)}</div>
             </div>
           </div>
         )}

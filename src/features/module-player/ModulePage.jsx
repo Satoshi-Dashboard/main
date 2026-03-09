@@ -46,8 +46,24 @@ const MARKET_AUDIO_THEMES = {
 };
 
 const DONATION_ADDRESS = 'BC1QC2GD3YN8DTLMZG4UW786MFN085WE69F60V4R6F';
-const UNDER_CONSTRUCTION_SLUGS = new Set([
+const NOINDEX_PREVIEW_SLUGS = new Set([
   'bitcoin-mayer-multiple',
+  'bitcoin-price-performance',
+  'bitcoin-halving-cycle-spiral',
+  'bitcoin-power-law-model',
+  'bitcoin-stock-to-flow-model',
+  'bitcoin-big-mac-sats-tracker',
+  'bitcoin-seasonality-heatmap',
+  'bitcoin-big-mac-index',
+  'bitcoin-network-activity',
+  'bitcoin-log-regression-channel',
+  'bitcoin-mvrv-score',
+  'bitcoin-google-trends',
+  'bitcoin-dominance-chart',
+  'bitcoin-utxo-distribution',
+]);
+
+const BLOCKING_OVERLAY_SLUGS = new Set([
   'bitcoin-price-performance',
   'bitcoin-halving-cycle-spiral',
   'bitcoin-power-law-model',
@@ -220,7 +236,8 @@ export default function ModulePage({ forcedSlug = null }) {
   const Component = module.component;
   const seo = useMemo(() => getModuleSEO(module.slugBase), [module.slugBase]);
   const canonicalPath = module.code === FIRST_MODULE.code ? '/' : `/module/${module.slug}`;
-  const isUnderConstruction = useMemo(() => UNDER_CONSTRUCTION_SLUGS.has(module.slugBase), [module.slugBase]);
+  const isNoindexPreview = useMemo(() => NOINDEX_PREVIEW_SLUGS.has(module.slugBase), [module.slugBase]);
+  const hasBlockingOverlay = useMemo(() => BLOCKING_OVERLAY_SLUGS.has(module.slugBase), [module.slugBase]);
   const moduleSchema = useMemo(
     () => ([
       {
@@ -259,10 +276,10 @@ export default function ModulePage({ forcedSlug = null }) {
     description: seo.description,
     canonicalPath,
     keywords: seo.keywords,
-    robots: isUnderConstruction ? 'noindex, follow' : undefined,
+    robots: isNoindexPreview ? 'noindex, follow' : undefined,
     image: DEFAULT_OG_IMAGE,
     imageAlt: module.title,
-    schema: isUnderConstruction ? [] : moduleSchema,
+    schema: isNoindexPreview ? [] : moduleSchema,
   });
 
   const footerPage = useMemo(() => String(module.code || '').replace(/^S/i, ''), [module.code]);
@@ -289,7 +306,6 @@ export default function ModulePage({ forcedSlug = null }) {
       setDonateCopied(true);
       setTimeout(() => setDonateCopied(false), 1400);
     } catch {
-      // Fallback for non-secure contexts (HTTP, non-localhost IPs)
       try {
         const textArea = document.createElement('textarea');
         textArea.value = DONATION_ADDRESS;
@@ -584,7 +600,7 @@ export default function ModulePage({ forcedSlug = null }) {
           )}
           <div className={`relative min-h-0 ${useResponsiveScroll ? 'min-h-full flex-none' : 'flex-1'}`}>
             <Component onOpenDonate={() => setDonateOpen(true)} />
-            {isUnderConstruction && (
+            {hasBlockingOverlay && (
               <div
                 className="absolute inset-0 z-20 flex items-center justify-center"
                 style={{

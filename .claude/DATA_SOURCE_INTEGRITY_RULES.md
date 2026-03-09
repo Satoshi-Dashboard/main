@@ -43,6 +43,7 @@ Use this file to answer, before changing any data flow:
 6. When adding a new data source or changing an existing one, update both tables in this file in the same task.
 7. When changing any `/api/*` contract, keep frontend compatibility unless the owner explicitly asks for a breaking change.
 8. If there is any conflict between agent convenience and this file, this file wins.
+9. Do not present source snapshot time as if it were the same thing as frontend/backend refresh cadence; when both matter, label them separately.
 
 ## Mandatory workflow before data-source changes
 
@@ -81,7 +82,7 @@ This table is intentionally plain-language and owner-friendly.
 | S12 Address Distribution | BTC address distribution | BitInfoCharts, preferably via scraper proxy, otherwise direct shared scrape/parser | About every 30 min | Use stale cached payload | Do not replace BitInfoCharts silently |
 | S13 Wealth Pyramid | Richness tiers / wealth pyramid | BitInfoCharts, preferably via scraper proxy, otherwise direct shared scrape/parser | About every 30 min | Use stale cached payload | Do not replace BitInfoCharts silently |
 | S14 Global Assets | BTC vs global asset values | Newhedge snapshot, preferably via `api.zatobox.io`, otherwise fetched through the `r.jina.ai` mirror | About every 60 min | Use stale cached snapshot | Do not replace Newhedge silently |
-| S15 BTC vs Gold | BTC vs gold comparison | BTC market chart from CoinGecko; gold comparison values are local/static in the frontend | About every 60 min for BTC chart | UI uses local/static fallback behavior if fetch fails | Do not replace CoinGecko silently |
+| S15 BTC vs Gold | BTC vs gold comparison | BTC market chart from CoinGecko; gold comparison values come from a local/static gold market-cap reference transformed on the backend | About every 60 min for BTC chart | Backend serves transformed payload from cached/stale CoinGecko feed | Do not replace CoinGecko silently |
 | S16 Mayer Multiple | Under-construction model page | Local mock/generated data only | Static | No remote fallback needed | Do not document this as live API-driven data |
 | S17 Price Performance | Under-construction comparison page | BTC spot from Binance; rest is local/static data | On load | Component falls back to a baked BTC value if needed | Do not pretend this is fully live data |
 | S18 Cycle Spiral | Under-construction cycle visual | Local handcrafted cycle data | Static | n/a | Do not document as live API data |
@@ -120,7 +121,7 @@ This table mirrors the same intent with implementation details for agents.
 | S12 Address Distribution | `src/features/modules/live/S12_AddressDistribution.jsx` | `/api/s12/btc-distribution` | `SCRAPER_BASE_URL/api/scrape/bitinfocharts-richlist` -> direct BitInfoCharts HTML shared parser | 30 min | Stale shared payload | `server/services/bitinfochartsShared.js`, `server/features/bitinfocharts/s12BtcDistribution.js`, `server/app.js` |
 | S13 Wealth Pyramid | `src/features/modules/live/S13_WealthPyramid.jsx` | `/api/s13/addresses-richer` | `SCRAPER_BASE_URL/api/scrape/bitinfocharts-richlist` -> direct BitInfoCharts HTML shared parser | 30 min | Stale shared payload | `server/services/bitinfochartsShared.js`, `server/features/bitinfocharts/s13AddressesRicher.js`, `server/app.js` |
 | S14 Global Assets | `src/features/modules/live/S14_GlobalAssetsTreemap.jsx` | `/api/s14/global-assets` | `SCRAPER_BASE_URL/api/scrape/newhedge-global-assets` -> `https://r.jina.ai/http://newhedge.io/bitcoin/global-asset-values` | 60 min | Stale snapshot from KV/memory | `server/features/global-assets/s14GlobalAssetsCache.js`, `server/app.js` |
-| S15 BTC vs Gold | `src/features/modules/live/S15_BTCvsGold.jsx` | `/api/public/coingecko/bitcoin-market-chart?days=365` | CoinGecko | 60 min | Component-side local fallback rendering path | `server/services/publicDataFeeds.js`, `src/features/modules/live/S15_BTCvsGold.jsx` |
+| S15 BTC vs Gold | `src/features/modules/live/S15_BTCvsGold.jsx` | `/api/s15/btc-vs-gold-market-cap` | CoinGecko BTC market chart -> backend transform + local static gold market-cap reference | 60 min | Backend payload built from stale/cached CoinGecko feed | `server/services/publicDataFeeds.js`, `server/app.js`, `src/features/modules/live/S15_BTCvsGold.jsx` |
 | S17 Price Performance | `src/features/modules/under-construction/S17_PricePerformance.jsx` | `/api/btc/rates` | Binance -> Binance.US -> cached `btcRates` | On load | Local fallback price `84000` in component | `server/services/btcRates.js`, `src/features/modules/under-construction/S17_PricePerformance.jsx` |
 | S21 Big Mac Sats Tracker | `src/features/modules/under-construction/S21_BigMacSatsTracker.jsx` | `/api/public/s21/big-mac-sats-data` | `/api/btc/rates` spot + Economist CSV + Binance/Binance.US historical close lookups | Combined feed 7d; subfeeds 12h-24h; UI 5 min | Shared stale combined payload | `server/services/publicDataFeeds.js`, `server/services/btcRates.js`, `src/features/modules/under-construction/S21_BigMacSatsTracker.jsx` |
 | S23 Big Mac Index | `src/features/modules/under-construction/S23_BigMacIndex.jsx` | `/api/btc/rates` | Binance -> Binance.US -> cached `btcRates` | On load | Local fallback price `84000` in component | `server/services/btcRates.js`, `src/features/modules/under-construction/S23_BigMacIndex.jsx` |
@@ -165,3 +166,19 @@ That means:
 - **Acción Realizada/Corrección:** Se actualizaron las rutas al layout `src/features`/`src/shared` y `server/core`/`server/services`/`server/features`, y se corrigió la fila del visitor counter para marcarlo como endpoint backend sin consumidor frontend montado.
 - **Nueva/Modificada Regla o Directriz:** Las tablas de integridad deben distinguir entre consumidores frontend realmente montados y endpoints backend disponibles, además de seguir siempre la estructura vigente del repositorio.
 - **Justificación:** Reduce el riesgo de investigar archivos equivocados, asumir flujos inexistentes o alterar la historia de proveedores en el lugar incorrecto.
+
+- **Fecha de la Actualización:** `2026-03-09`
+- **Archivo(s) Afectado(s):** `.claude/DATA_SOURCE_INTEGRITY_RULES.md`
+- **Tipo de Evento/Contexto:** Consolidación backend de comparación S15
+- **Descripción del Evento Original:** `S15` mezclaba CoinGecko con una referencia local de oro directamente en el frontend, lo que dejaba la historia de datos repartida y dificultaba garantizar una API clara para el módulo de comparación.
+- **Acción Realizada/Corrección:** Se movió la transformación `BTC vs Gold Market Cap` al backend con la ruta `/api/s15/btc-vs-gold-market-cap`, preservando CoinGecko como fuente aprobada y la referencia local de oro como complemento interno del servidor.
+- **Nueva/Modificada Regla o Directriz:** Cuando un módulo comparativo combina una fuente aprobada con una referencia local estable, la composición debe preferirse en backend si mejora consistencia del contrato sin cambiar proveedores ni cadencias aprobadas.
+- **Justificación:** Centraliza el flujo real del módulo, evita duplicar lógica de comparación en el cliente y mantiene intacta la intención del owner sobre proveedores y fallback.
+
+- **Fecha de la Actualización:** `2026-03-09`
+- **Archivo(s) Afectado(s):** `.claude/DATA_SOURCE_INTEGRITY_RULES.md`
+- **Tipo de Evento/Contexto:** Corrección de semántica temporal en metadata de módulos
+- **Descripción del Evento Original:** Algunos módulos mostraban un texto del tipo `Auto update: 30m` junto a un `Last:` tomado del snapshot de la fuente, lo que podía hacer pensar que el sistema no refrescaba aunque en realidad la fuente upstream no hubiera publicado un dato nuevo.
+- **Acción Realizada/Corrección:** Se separaron las nociones de `Refresh target`, `Source snapshot` y `Last checked/sync` en frontend y backend, añadiendo timestamps de chequeo reales donde hacía falta.
+- **Nueva/Modificada Regla o Directriz:** Las superficies de metadata temporal deben distinguir explícitamente entre cadencia de chequeo, momento del último chequeo del sistema y fecha del snapshot entregado por la fuente upstream.
+- **Justificación:** Evita diagnósticos falsos de stale data, mejora transparencia operativa y ayuda a detectar si el retraso viene del backend o del proveedor real.

@@ -38,6 +38,7 @@ function isValidHtmlPayload(payload) {
     && typeof payload === 'object'
     && typeof payload.source === 'string'
     && typeof payload.updatedAt === 'string'
+    && typeof payload.fetchedAt === 'string'
     && typeof payload.nextUpdateAt === 'string'
     && typeof payload.html === 'string'
     && payload.html.length > 0
@@ -113,14 +114,18 @@ async function writeSharedPayload(payload) {
 
 export async function refreshBitinfochartsHtml() {
   const html = await fetchHtml();
+  const fetchedAt = formatUtcTimestamp(new Date());
   const updatedAt = parseFooterTimestamp(html);
   const updatedDate = parseUtcTimestamp(updatedAt);
-  const nextUpdateAt = formatUtcTimestamp(new Date(updatedDate.getTime() + NEXT_UPDATE_MS));
+  const fetchedDate = parseUtcTimestamp(fetchedAt);
+  const nextUpdateDate = new Date(Math.max(updatedDate.getTime() + NEXT_UPDATE_MS, fetchedDate.getTime() + NEXT_UPDATE_MS));
+  const nextUpdateAt = formatUtcTimestamp(nextUpdateDate);
 
   const payload = {
     source: SOURCE_NAME,
     html,
     updatedAt,
+    fetchedAt,
     nextUpdateAt,
   };
 

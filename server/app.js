@@ -45,6 +45,7 @@ import {
   getLightningWorldPayload,
   getMempoolLivePayload,
   getMempoolOverviewPayload,
+  getS15BtcVsGoldMarketCapPayload,
   getS21BigMacSatsPayload,
   getUsNationalDebtPayload,
   PublicFeedError,
@@ -415,6 +416,16 @@ export function createApp() {
     try {
       const days = Number(req.query?.days || 365);
       const payload = await getCoingeckoBitcoinMarketChartPayload({ days });
+      res.json(payload);
+    } catch (error) {
+      sendPublicFeedError(res, error);
+    }
+  }));
+
+  app.get('/api/s15/btc-vs-gold-market-cap', asyncRoute(async (_req, res) => {
+    setDataCacheHeaders(res, { sMaxAge: 120, swr: 600 });
+    try {
+      const payload = await getS15BtcVsGoldMarketCapPayload();
       res.json(payload);
     } catch (error) {
       sendPublicFeedError(res, error);

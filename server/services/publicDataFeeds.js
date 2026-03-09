@@ -14,6 +14,16 @@ const BINANCE_KLINES_BASE_URLS = [
   'https://api.binance.com/api/v3/klines',
   'https://api.binance.us/api/v3/klines',
 ];
+const S15_GOLD_MARKET_CAP_MAP = {
+  '2024-06': 15.8, '2024-07': 16.1, '2024-08': 16.6,
+  '2024-09': 17.6, '2024-10': 18.6, '2024-11': 19.4,
+  '2024-12': 20.2, '2025-01': 20.5, '2025-02': 21.0,
+  '2025-03': 21.8, '2025-04': 22.4, '2025-05': 23.0,
+  '2025-06': 23.8, '2025-07': 24.2, '2025-08': 24.5,
+  '2025-09': 24.0, '2025-10': 24.3, '2025-11': 24.6,
+  '2025-12': 25.0, '2026-01': 25.4, '2026-02': 25.8,
+  '2026-03': 26.2,
+};
 
 const memCache = new Map();
 
@@ -1588,6 +1598,53 @@ export async function getCoingeckoBitcoinMarketChartPayload({ days = 365 } = {})
     async () => fetchJsonWithTimeout('https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=365&interval=daily'),
     validateObject,
   );
+}
+
+function getGoldMarketCapForTimestamp(ts) {
+  const date = new Date(ts);
+  const key = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+  return S15_GOLD_MARKET_CAP_MAP[key] ?? 18;
+}
+
+export async function getS15BtcVsGoldMarketCapPayload() {
+  const payload = await getCoingeckoBitcoinMarketChartPayload({ days: 365 });
+  const raw = payload?.data || payload;
+  const marketCaps = Array.isArray(raw?.market_caps) ? raw.market_caps : [];
+
+  const points = marketCaps
+    .filter((entry, index) => index % 3 === 0 && Array.isArray(entry) && entry.length >= 2)
+    .map(([ts, btcMarketCap]) => {
+      const bitcoin = Number((Number(btcMarketCap) / 1e12).toFixed(2));
+      const gold = Number(getGoldMarketCapForTimestamp(ts).toFixed(2));
+      const ratio = gold > 0 ? Number(((bitcoin / gold) * 100).toFixed(2)) : null;
+      const gap = Number((gold - bitcoin).toFixed(2));
+
+      return {
+        ts,
+        date: new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit', timeZone: 'UTC' }),
+        bitcoin,
+        gold,
+        ratio,
+        gap,
+      };
+    })
+    .filter((point) => Number.isFinite(point.bitcoin) && Number.isFinite(point.gold));
+
+  const latest = points.at(-1) || null;
+
+  return {
+    data: {
+      points,
+      latest,
+      gold_reference: 'local_static_map',
+    },
+    updated_at: payload?.updated_at || new Date().toISOString(),
+    next_update_at: payload?.next_update_at || null,
+    source_provider: payload?.source_provider || 'coingecko',
+    comparison_source: 'local_gold_market_cap_map',
+    is_fallback: Boolean(payload?.is_fallback),
+    fallback_note: payload?.fallback_note || null,
+  };
 }
 
 const VALID_HISTORY_INTERVALS = new Set(['5m', '15m', '30m', '1h', '1d']);

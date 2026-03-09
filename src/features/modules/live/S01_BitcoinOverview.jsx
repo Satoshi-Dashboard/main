@@ -348,7 +348,7 @@ export default function S01_BitcoinOverview() {
   );
 
   return (
-    <div className="h-full w-full overflow-y-auto bg-[#111111]">
+    <div className="h-full w-full overflow-visible bg-[#111111] lg:overflow-y-auto">
       <div className="grid h-full min-h-full w-full grid-cols-1 divide-y divide-[#2a2a2a] sm:grid-cols-2 sm:divide-x xl:grid-cols-3">
         {tiles.map((t) => (
           <Tile key={t.label} {...t} />

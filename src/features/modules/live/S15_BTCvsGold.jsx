@@ -1,146 +1,335 @@
-import { useState, useEffect } from 'react';
-import { fetchJson } from '@/shared/lib/api.js';
+import { memo, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import {
-  AreaChart, Area, XAxis, YAxis, Tooltip,
-  ResponsiveContainer, Legend,
+  Area,
+  AreaChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
 } from 'recharts';
+import AnimatedMetric from '@/shared/components/common/AnimatedMetric.jsx';
+import { fetchJson } from '@/shared/lib/api.js';
 
-// Approximate gold market cap historical (monthly, Jun 2024 – Mar 2026)
-const GOLD_MAP = {
-  '2024-06': 15.8, '2024-07': 16.1, '2024-08': 16.6,
-  '2024-09': 17.6, '2024-10': 18.6, '2024-11': 19.4,
-  '2024-12': 20.2, '2025-01': 20.5, '2025-02': 21.0,
-  '2025-03': 21.8, '2025-04': 22.4, '2025-05': 23.0,
-  '2025-06': 23.8, '2025-07': 24.2, '2025-08': 24.5,
-  '2025-09': 24.0, '2025-10': 24.3, '2025-11': 24.6,
-  '2025-12': 25.0, '2026-01': 25.4, '2026-02': 25.8,
-  '2026-03': 26.2,
+const DAY_MS = 86_400_000;
+
+const RANGES = [
+  { label: '3M', days: 90 },
+  { label: '6M', days: 180 },
+  { label: '1Y', days: 365 },
+];
+
+const RANGE_TEXT = {
+  '3M': 'Past 3 Months',
+  '6M': 'Past 6 Months',
+  '1Y': 'Past Year',
 };
 
-function goldFor(ts) {
-  const d = new Date(ts);
-  const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-  return GOLD_MAP[k] ?? 18;
+function ComparisonCursor({ points, height }) {
+  if (!points?.length) return null;
+
+  const x = points[0]?.x;
+  if (!Number.isFinite(x)) return null;
+
+  return (
+    <g>
+      <line x1={x} y1={0} x2={x} y2={height} stroke="rgba(255,255,255,0.16)" strokeWidth={1} />
+      {points.map((point, index) => (
+        <circle
+          key={`${point.dataKey}-${index}`}
+          cx={point.x}
+          cy={point.y}
+          r={index === 0 ? 4 : 3.5}
+          fill={point.dataKey === 'bitcoin' ? 'var(--accent-bitcoin)' : 'rgba(214,214,214,0.95)'}
+          stroke="#111111"
+          strokeWidth={2}
+        />
+      ))}
+    </g>
+  );
+}
+
+function HoverBridge({ active, payload, onHover }) {
+  useLayoutEffect(() => {
+    if (active && payload?.[0]?.payload) {
+      onHover(payload[0].payload);
+      return;
+    }
+    onHover(null);
+  });
+
+  return null;
+}
+
+const ChartSection = memo(function ChartSection({ chartData, showGold, yMin, yMax, onHoverChange }) {
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <AreaChart data={chartData} margin={{ top: 6, right: 4, left: 4, bottom: 2 }}>
+        <defs>
+          <linearGradient id="s15BtcFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--accent-bitcoin)" stopOpacity="0.38" />
+            <stop offset="100%" stopColor="var(--accent-bitcoin)" stopOpacity="0" />
+          </linearGradient>
+          <linearGradient id="s15GoldFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="rgba(210,210,210,0.4)" stopOpacity="0.26" />
+            <stop offset="100%" stopColor="rgba(210,210,210,0.22)" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+
+        <XAxis dataKey="ts" hide />
+        <YAxis domain={[yMin, yMax]} hide />
+
+        <Tooltip
+          content={(props) => <HoverBridge {...props} onHover={onHoverChange} />}
+          cursor={<ComparisonCursor />}
+        />
+
+        {showGold ? (
+          <Area
+            type="monotone"
+            dataKey="gold"
+            stroke="rgba(214,214,214,0.92)"
+            strokeWidth={2}
+            fill="url(#s15GoldFill)"
+            dot={false}
+            activeDot={false}
+            isAnimationActive
+            animationDuration={650}
+            animationEasing="ease-out"
+          />
+        ) : null}
+
+        <Area
+          type="monotone"
+          dataKey="bitcoin"
+          stroke="var(--accent-bitcoin)"
+          strokeWidth={2.3}
+          fill="url(#s15BtcFill)"
+          dot={false}
+          activeDot={false}
+          isAnimationActive
+          animationDuration={700}
+          animationEasing="ease-out"
+        />
+      </AreaChart>
+    </ResponsiveContainer>
+  );
+});
+
+function MetricBox({ label, value, decimals = 2, color = 'var(--text-primary)', suffix = 'T' }) {
+  return (
+    <div className="rounded-xl border border-white/10 px-3 py-3 text-center">
+      <div
+        className="font-mono font-bold uppercase tracking-widest"
+        style={{ fontSize: '0.62rem', color, marginBottom: 5 }}
+      >
+        {label}
+      </div>
+      <div className="font-mono tabular-nums font-semibold text-white" style={{ fontSize: '0.82rem' }}>
+        <AnimatedMetric value={value} variant="number" decimals={decimals} prefix="$" suffix={suffix} inline />
+      </div>
+    </div>
+  );
 }
 
 export default function S15_BTCvsGold() {
-  const [data, setData] = useState([]);
+  const [payload, setPayload] = useState(null);
+  const [activeLabel, setActiveLabel] = useState('1Y');
+  const [loading, setLoading] = useState(true);
+  const [hoverData, setHoverData] = useState(null);
+  const [showGold, setShowGold] = useState(true);
 
   useEffect(() => {
+    let active = true;
+
     (async () => {
       try {
-        const payload = await fetchJson('/api/public/coingecko/bitcoin-market-chart?days=365', { timeout: 8000, cache: 'no-store' });
-        const json = payload?.data || payload;
-        const caps = json.market_caps;
-        const merged = caps
-          .filter((_, i) => i % 3 === 0)
-          .map(([ts, cap]) => ({
-            date: new Date(ts).toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
-            bitcoin: +(cap / 1e12).toFixed(2),
-            gold: goldFor(ts),
-          }));
-        setData(merged);
+        const nextPayload = await fetchJson('/api/s15/btc-vs-gold-market-cap', { timeout: 8000, cache: 'no-store' });
+        if (active) setPayload(nextPayload);
       } catch {
-        // Static fallback
-        const fallback = Object.entries(GOLD_MAP).slice(0, 13).map(([k, gold], i) => ({
-          date: k,
-          bitcoin: +(1.1 + i * 0.09).toFixed(2),
-          gold,
-        }));
-        setData(fallback);
+        if (active) setPayload(null);
+      } finally {
+        if (active) setLoading(false);
       }
     })();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
+  const points = useMemo(() => payload?.data?.points || [], [payload]);
+  const activeRange = RANGES.find((range) => range.label === activeLabel) ?? RANGES.at(-1);
+
+  const chartData = useMemo(() => {
+    if (!points.length) return [];
+    const lastTs = Number(points.at(-1)?.ts);
+    if (!Number.isFinite(lastTs)) return points;
+    const cutoff = lastTs - activeRange.days * DAY_MS;
+    return points.filter((point) => Number(point.ts) >= cutoff);
+  }, [activeRange.days, points]);
+
+  const hasChart = chartData.length > 1;
+  const latestPoint = chartData.at(-1) || payload?.data?.latest || null;
+  const startPoint = chartData[0] || null;
+  const hoveredPoint = hoverData || latestPoint;
+
+  const btcDelta = Number.isFinite(startPoint?.bitcoin) && Number.isFinite(latestPoint?.bitcoin)
+    ? latestPoint.bitcoin - startPoint.bitcoin
+    : null;
+  const btcDeltaPct = Number.isFinite(startPoint?.bitcoin) && startPoint.bitcoin > 0 && Number.isFinite(latestPoint?.bitcoin)
+    ? ((latestPoint.bitcoin - startPoint.bitcoin) / startPoint.bitcoin) * 100
+    : null;
+  const hasDelta = Number.isFinite(btcDelta) && Number.isFinite(btcDeltaPct);
+  const isUp = hasDelta ? btcDelta >= 0 : true;
+
+  const values = useMemo(() => {
+    if (!chartData.length) return [];
+    return chartData.flatMap((point) => (showGold ? [point.bitcoin, point.gold] : [point.bitcoin])).filter(Number.isFinite);
+  }, [chartData, showGold]);
+
+  const high = values.length ? Math.max(...values) : null;
+  const low = values.length ? Math.min(...values) : null;
+  const yPad = high !== null && low !== null ? Math.max((high - low) * 0.08, 0.8) : 1;
+  const yMin = low !== null ? Math.max(0, low - yPad) : 0;
+  const yMax = high !== null ? high + yPad : 1;
+
+  const rangeText = RANGE_TEXT[activeLabel] ?? 'Past Year';
+  const updatedLabel = payload?.updated_at
+    ? new Date(payload.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : null;
+
   return (
-    <div className="flex h-full w-full flex-col bg-[#111111] px-6 pb-6">
-      {/* Title */}
-      <div className="flex-none pt-6 pb-4">
-        <h1
+    <div className="flex h-full w-full flex-col bg-[#111111] px-3.5 pb-3.5 pt-4 sm:px-5 sm:pb-4 sm:pt-5 lg:px-[22px] lg:pb-4 lg:pt-5">
+      <div className="flex flex-shrink-0 flex-col items-start justify-between gap-3 sm:flex-row sm:gap-4">
+        <div className="min-w-0">
+          {!loading && hoveredPoint ? (
+            <>
+              <div className="font-mono font-bold tabular-nums leading-none" style={{ fontSize: 'clamp(1.55rem, 5.6vw, 2.9rem)' }}>
+                <AnimatedMetric value={hoveredPoint.bitcoin} variant="number" decimals={2} prefix="$" suffix="T" inline />
+              </div>
+
+              <div className="mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 font-mono tabular-nums" style={{ fontSize: '0.82rem' }}>
+                {hoverData ? (
+                  <>
+                    <span className="uppercase tracking-wide" style={{ color: 'rgba(255,255,255,0.5)' }}>{hoveredPoint.date}</span>
+                    <span style={{ color: 'rgba(255,255,255,0.38)' }}>
+                      Gold <AnimatedMetric value={hoveredPoint.gold} variant="number" decimals={2} prefix="$" suffix="T" inline />
+                    </span>
+                  </>
+                ) : hasDelta ? (
+                  <>
+                    <span style={{ color: isUp ? 'var(--accent-green)' : 'var(--accent-red)' }}>
+                      <AnimatedMetric value={btcDelta} variant="number" decimals={2} prefix="$" suffix="T" signed inline color={isUp ? 'var(--accent-green)' : 'var(--accent-red)'} />
+                    </span>
+                    <span style={{ color: isUp ? 'var(--accent-green)' : 'var(--accent-red)' }}>
+                      (<AnimatedMetric value={btcDeltaPct} variant="percent" decimals={2} signed inline color={isUp ? 'var(--accent-green)' : 'var(--accent-red)'} />)
+                    </span>
+                    <span style={{ color: 'rgba(255,255,255,0.38)' }}>{rangeText}</span>
+                  </>
+                ) : (
+                  <span style={{ color: 'rgba(255,255,255,0.25)' }}>Loading...</span>
+                )}
+              </div>
+
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono" style={{ fontSize: 'var(--fs-micro)', color: 'var(--text-secondary)' }}>
+                {latestPoint ? (
+                  <>
+                    <span>Gold now <AnimatedMetric value={latestPoint.gold} variant="number" decimals={2} prefix="$" suffix="T" inline color="var(--text-primary)" /></span>
+                    <span className="hidden h-1 w-1 rounded-full bg-white/20 sm:block" />
+                    <span>BTC = <AnimatedMetric value={latestPoint.ratio} variant="percent" decimals={2} inline color="var(--accent-bitcoin)" /> of gold</span>
+                    {updatedLabel ? <><span className="hidden h-1 w-1 rounded-full bg-white/20 sm:block" /><span>Synced {updatedLabel}</span></> : null}
+                  </>
+                ) : null}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="skeleton" style={{ width: 220, height: '2.8rem', borderRadius: 6, marginBottom: 10 }} />
+              <div className="skeleton" style={{ width: 180, height: '1rem', borderRadius: 4 }} />
+            </>
+          )}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setShowGold((value) => !value)}
+          disabled={!hasChart}
+          className="relative flex flex-shrink-0 items-center gap-1.5 self-start pb-1.5 font-mono transition-colors disabled:cursor-not-allowed disabled:opacity-25"
           style={{
-            color: '#F7931A',
-            fontFamily: 'monospace',
-            fontSize: 'var(--fs-subtitle)',
-            fontWeight: 700,
+            fontSize: '0.78rem',
+            fontWeight: showGold ? 700 : 400,
+            color: showGold ? 'white' : 'rgba(255,255,255,0.5)',
+            letterSpacing: '0.05em',
           }}
         >
-          Bitcoin vs. Gold Market Cap
-        </h1>
+          {showGold ? 'Hide Gold' : 'Show Gold'}
+          {showGold ? <span className="absolute bottom-0 left-0 right-0 rounded-full" style={{ height: 2, background: 'white' }} /> : null}
+        </button>
       </div>
 
-      {/* Chart */}
-      <div className="min-h-0 flex-1">
-        {data.length > 0 ? (
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data} margin={{ top: 10, right: 20, left: 30, bottom: 10 }}>
-              <defs>
-                <linearGradient id="goldFill12" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#888" stopOpacity={0.55} />
-                  <stop offset="100%" stopColor="#444" stopOpacity={0.1} />
-                </linearGradient>
-                <linearGradient id="btcFill12" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#F7931A" stopOpacity={0.9} />
-                  <stop offset="100%" stopColor="#c05800" stopOpacity={0.3} />
-                </linearGradient>
-              </defs>
-              <XAxis
-                dataKey="date"
-                stroke="#333"
-                tick={{ fill: '#666', fontSize: 11 }}
-                interval={Math.max(1, Math.floor(data.length / 12))}
-              />
-              <YAxis
-                stroke="#333"
-                tick={{ fill: '#666', fontSize: 11 }}
-                tickFormatter={(v) => `${v}T`}
-                domain={[0, 'dataMax + 2']}
-                label={{
-                  value: 'Market Capitalization (in Trillions)',
-                  angle: -90,
-                  position: 'insideLeft',
-                  fill: '#555',
-                  fontSize: 11,
-                  dx: -14,
+      <div className="min-h-0 flex-1" style={{ margin: '20px -4px 0' }}>
+        {hasChart ? (
+          <ChartSection chartData={chartData} showGold={showGold} yMin={yMin} yMax={yMax} onHoverChange={setHoverData} />
+        ) : (
+          <div className="flex h-full items-end gap-px pb-1">
+            {Array.from({ length: 42 }, (_, index) => (
+              <div
+                key={index}
+                className="skeleton flex-1"
+                style={{
+                  height: `${28 + Math.sin(index * 0.42) * 18 + Math.sin(index * 0.16) * 26}%`,
+                  borderRadius: 2,
                 }}
               />
-              <Tooltip
-                contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #444', borderRadius: 4, fontSize: 12 }}
-                formatter={(v, name) => [`$${v}T`, name === 'gold' ? 'Gold' : 'Bitcoin']}
-                labelStyle={{ color: '#aaa' }}
-              />
-              <Legend
-                formatter={(v) => (
-                  <span style={{ color: v === 'gold' ? '#999' : '#F7931A', fontSize: 12, fontFamily: 'monospace' }}>
-                    {v === 'gold' ? 'Gold' : 'Bitcoin'}
-                  </span>
-                )}
-              />
-              <Area
-                type="monotone"
-                dataKey="gold"
-                stroke="#888"
-                fill="url(#goldFill12)"
-                strokeWidth={2}
-                dot={false}
-                isAnimationActive={false}
-                name="gold"
-              />
-              <Area
-                type="monotone"
-                dataKey="bitcoin"
-                stroke="#F7931A"
-                fill="url(#btcFill12)"
-                strokeWidth={2}
-                dot={false}
-                isAnimationActive={false}
-                name="bitcoin"
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        ) : (
-          <div className="flex h-full items-center justify-center font-mono text-gray-600" style={{ fontSize: 'var(--fs-micro)' }}>
-            Loading…
+            ))}
           </div>
+        )}
+      </div>
+
+      <div className="flex flex-shrink-0 items-center gap-5 overflow-x-auto" style={{ margin: '14px 0 16px', paddingBottom: 2 }}>
+        {RANGES.map(({ label }) => {
+          const isActive = activeLabel === label;
+          return (
+            <button
+              key={label}
+              type="button"
+              onClick={() => setActiveLabel(label)}
+              className="relative flex flex-shrink-0 items-center gap-1.5 pb-1.5 font-mono transition-colors"
+              style={{
+                fontSize: '0.78rem',
+                fontWeight: isActive ? 700 : 400,
+                color: isActive ? 'white' : 'rgba(255,255,255,0.32)',
+                letterSpacing: '0.05em',
+              }}
+            >
+              {label}
+              {isActive ? <span className="absolute bottom-0 left-0 right-0 rounded-full" style={{ height: 2, background: 'white' }} /> : null}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="flex-shrink-0 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        {latestPoint ? (
+          <>
+            <MetricBox label="BTC HIGH" value={Math.max(...chartData.map((point) => point.bitcoin))} color="var(--accent-bitcoin)" />
+            <MetricBox label="GOLD NOW" value={latestPoint.gold} color="rgba(214,214,214,0.9)" />
+            <div className="rounded-xl border border-white/10 px-3 py-3 text-center">
+              <div className="font-mono font-bold uppercase tracking-widest" style={{ fontSize: '0.62rem', color: 'var(--accent-green)', marginBottom: 5 }}>
+                BTC / GOLD
+              </div>
+              <div className="font-mono tabular-nums font-semibold text-white" style={{ fontSize: '0.82rem' }}>
+                <AnimatedMetric value={latestPoint.ratio} variant="percent" decimals={2} inline />
+              </div>
+            </div>
+          </>
+        ) : (
+          [0, 1, 2].map((index) => (
+            <div key={index} className="rounded-xl px-3 py-3" style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
+              <div className="skeleton mb-2" style={{ width: 40, height: '0.65rem', borderRadius: 3 }} />
+              <div className="skeleton" style={{ width: 72, height: '0.9rem', borderRadius: 3 }} />
+            </div>
+          ))
         )}
       </div>
     </div>

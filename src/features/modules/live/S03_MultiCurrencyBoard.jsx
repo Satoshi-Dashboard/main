@@ -568,8 +568,8 @@ export default function S03_MultiCurrencyBoard() {
                   </span>
                 ))}
               </div>
-              <div>Auto update: {Math.round(REFRESH_MS / 1000)}s</div>
-              <div>Last: {formatMetaTimestamp(lastUpdatedAt)}</div>
+              <div>Refresh target: {Math.round(REFRESH_MS / 1000)}s</div>
+              <div>Last sync: {formatMetaTimestamp(lastUpdatedAt)}</div>
             </div>
           )}
         </div>

@@ -203,10 +203,14 @@ When a frontend view shows live or periodically refreshed numeric data, avoid ha
    - Up/down colors should appear as transient animation feedback, not as a permanently stuck post-update color on main values.
 
 6. Do not break third-party counter layout assumptions.
-    - Do not override a counter library's digit line-height/height model with inherited values if it computes digit travel from `font-size`.
-    - If using responsive font tokens (`clamp(...)`, CSS vars), resolve them to a concrete computed pixel font size before passing them to the counter engine.
-    - If that computed size can change with viewport width or responsive emulation, re-measure it on resize so live digits do not overflow, stack, or keep stale dimensions.
-    - If a third-party digit roller remains unstable on narrow phones, prefer a stable non-animated numeric fallback on that breakpoint over shipping broken motion.
+     - Do not override a counter library's digit line-height/height model with inherited values if it computes digit travel from `font-size`.
+     - If using responsive font tokens (`clamp(...)`, CSS vars), resolve them to a concrete computed pixel font size before passing them to the counter engine.
+     - If that computed size can change with viewport width or responsive emulation, re-measure it on resize so live digits do not overflow, stack, or keep stale dimensions.
+     - If a third-party digit roller remains unstable on narrow phones, prefer a stable non-animated numeric fallback on that breakpoint over shipping broken motion.
+
+7. Protect animated metrics with responsive layout slack.
+    - In dense tablet/mobile headers or cards, let rows with live numerals wrap or stack before squeezing the counter into clipped inline space.
+    - Surrounding responsive flex/grid containers must give animated values `min-w-0` and a non-clipping path; if the available width becomes too tight, degrade the numeral to a stable static render.
 
 ## Required verification for frontend color changes
 
@@ -316,3 +320,19 @@ When creating any new frontend module, agents must follow the project example pa
 - **Acción Realizada/Corrección:** Se actualizaron las referencias obligatorias al nuevo layout `src/features/*` y `src/shared/*` sin alterar las reglas semánticas existentes.
 - **Nueva/Modificada Regla o Directriz:** Las validaciones frontend deben apuntar siempre a la jerarquía actual de features y shared, incluyendo el wrapper compartido `src/shared/components/common/AnimatedMetric.jsx`.
 - **Justificación:** Mantiene útiles las reglas de UX/UI y evita que futuras revisiones busquen componentes en rutas heredadas.
+
+- **Fecha de la Actualización:** `2026-03-09`
+- **Archivo(s) Afectado(s):** `.claude/FRONTEND_COLOR_UX_UI_RULES.md`
+- **Tipo de Evento/Contexto:** Corrección responsive en métricas animadas dentro de cards densas
+- **Descripción del Evento Original:** Varios módulos con contadores animados seguían viéndose correctos en desktop, pero en tablet y móvil algunas cifras quedaban apretadas dentro de headers/cards, provocando clipping, mala alineación o una percepción de animación rota cuando el layout no cedía espacio suficiente.
+- **Acción Realizada/Corrección:** Se reforzó la política para exigir slack responsive alrededor de métricas animadas, permitiendo wrap/stack en filas estrechas y degradación a render estático cuando el ancho disponible no soporta el digit roller con fiabilidad.
+- **Nueva/Modificada Regla o Directriz:** Los numerales animados en layouts responsivos deben contar con contenedores que puedan reacomodarse y nunca depender de filas rígidas o clipping; si el espacio se vuelve insuficiente en tablet/móvil, la prioridad es una lectura estable antes que mantener la animación.
+- **Justificación:** Evita repetir regresiones donde la librería del contador es correcta en desktop pero el layout responsive la rompe visualmente en tarjetas compactas y estados de actualización.
+
+- **Fecha de la Actualización:** `2026-03-09`
+- **Archivo(s) Afectado(s):** `.claude/FRONTEND_COLOR_UX_UI_RULES.md`
+- **Tipo de Evento/Contexto:** Retiro de política ligada a feature descartada
+- **Descripción del Evento Original:** Se había añadido una nota específica sobre reutilización de datos para tooling/export frontend durante una implementación que luego fue eliminada por no aportar suficiente valor al producto.
+- **Acción Realizada/Corrección:** Se retiró esa nota específica para no dejar reglas accesorias derivadas de una feature descartada.
+- **Nueva/Modificada Regla o Directriz:** Las reglas frontend deben conservar solo restricciones duraderas y relevantes para el producto vigente, evitando acumular políticas circunstanciales de features eliminadas.
+- **Justificación:** Mantiene el archivo de reglas más limpio, más estable y mejor enfocado en decisiones de UI/UX que siguen vivas en el proyecto.

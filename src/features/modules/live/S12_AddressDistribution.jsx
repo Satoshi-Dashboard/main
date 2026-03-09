@@ -109,7 +109,7 @@ function mapDistributionToTiers(distribution) {
 
 export default function S12_AddressDistribution() {
   const [tiers, setTiers] = useState(FALLBACK_TIERS);
-  const [meta, setMeta] = useState({ updatedAt: '', updatedAtLocal: '' });
+  const [meta, setMeta] = useState({ updatedAt: '', updatedAtLocal: '', fetchedAt: '', fetchedAtLocal: '' });
 
   useEffect(() => {
     let active = true;
@@ -120,10 +120,12 @@ export default function S12_AddressDistribution() {
         if (!active || !Array.isArray(payload?.distribution)) return;
         const mapped = mapDistributionToTiers(payload.distribution);
         if (mapped.length) setTiers(mapped);
-        if (typeof payload?.updatedAt === 'string') {
+        if (typeof payload?.updatedAt === 'string' || typeof payload?.fetchedAt === 'string') {
           setMeta({
-            updatedAt: payload.updatedAt,
-            updatedAtLocal: formatTopClockTime(payload.updatedAt),
+            updatedAt: payload?.updatedAt || '',
+            updatedAtLocal: formatTopClockTime(payload?.updatedAt),
+            fetchedAt: payload?.fetchedAt || '',
+            fetchedAtLocal: formatTopClockTime(payload?.fetchedAt),
           });
         }
       } catch {
@@ -162,8 +164,9 @@ export default function S12_AddressDistribution() {
                 BitInfoCharts
               </a>
             </div>
-            <div>Auto update: 30m</div>
-            {meta.updatedAtLocal ? <div>Last: {meta.updatedAtLocal}</div> : null}
+            <div>Refresh target: 30m</div>
+            {meta.updatedAtLocal ? <div>Source snapshot: {meta.updatedAtLocal}</div> : null}
+            {meta.fetchedAtLocal ? <div>Last checked: {meta.fetchedAtLocal}</div> : null}
           </div>
         </div>
       </div>

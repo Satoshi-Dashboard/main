@@ -215,10 +215,10 @@ export default function S02_PriceChart() {
   const displayPrice = hoverData ? hoverData.price : livePrice;
 
   return (
-    <div className="flex h-full w-full flex-col bg-[#111111]" style={{ padding: '20px 22px 16px' }}>
+    <div className="flex h-full w-full flex-col bg-[#111111] px-3.5 pb-3.5 pt-4 sm:px-5 sm:pb-4 sm:pt-5 lg:px-[22px] lg:pb-4 lg:pt-5">
 
       {/* ── Header ── */}
-      <div className="flex flex-shrink-0 items-start justify-between gap-4">
+      <div className="flex flex-shrink-0 flex-col items-start justify-between gap-3 sm:flex-row sm:gap-4">
         <div className="min-w-0">
           {!hasPrice ? (
             <>
@@ -230,7 +230,7 @@ export default function S02_PriceChart() {
               <div
                 className="font-mono font-bold tabular-nums leading-none"
                 style={{
-                  fontSize: 'clamp(1.9rem, 3.8vw, 2.9rem)',
+                  fontSize: 'clamp(1.55rem, 5.6vw, 2.9rem)',
                 }}
               >
                 <AnimatedMetric value={displayPrice} variant="usd" decimals={2} inline />
@@ -264,7 +264,7 @@ export default function S02_PriceChart() {
           type="button"
           onClick={() => setShowAvgLine(v => !v)}
           disabled={!hasAvg}
-          className="relative flex flex-shrink-0 items-center gap-1.5 pb-1.5 font-mono transition-colors disabled:opacity-25 disabled:cursor-not-allowed"
+          className="relative flex flex-shrink-0 items-center gap-1.5 self-start pb-1.5 font-mono transition-colors disabled:cursor-not-allowed disabled:opacity-25"
           style={{
             fontSize: '0.78rem',
             fontWeight: showAvgLine ? 700 : 400,
@@ -357,7 +357,7 @@ export default function S02_PriceChart() {
       </div>
 
       {/* ── Stat Boxes ── */}
-      <div className="flex-shrink-0 grid grid-cols-3 gap-3">
+      <div className="flex-shrink-0 grid grid-cols-1 gap-3 sm:grid-cols-3">
         {!hasChart || !hasPrice ? (
           [0, 1, 2].map(i => (
             <div key={i} className="rounded-xl px-3 py-3" style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
