@@ -181,6 +181,7 @@ After any color UX/UI modification:
 2. Confirm green/red/yellow semantics still map to positive/negative/warning.
 3. Confirm charts with multiple colors include clear semantic interpretation.
 4. Run `npm run build` and verify no visual regressions in touched modules.
+5. Clear React Hooks dependency warnings (`react-hooks/exhaustive-deps`) in touched frontend files before delivery.
 
 ## New module example rules (mandatory)
 
@@ -216,3 +217,11 @@ When creating any new frontend module, agents must follow the project example pa
 - **Acción Realizada/Corrección:** Se añadió la regla universal como apertura del documento y se creó el historial de automejoras al final.
 - **Nueva/Modificada Regla o Directriz:** Las mejoras o correcciones futuras de color, UX, responsive y copy frontend deben reflejarse también en este registro histórico.
 - **Justificación:** Refuerza la memoria operativa del agente en cambios visuales sensibles y facilita que futuras iteraciones respeten semántica, legibilidad y consistencia.
+
+- **Fecha de la Actualización:** `2026-03-09`
+- **Archivo(s) Afectado(s):** `.claude/FRONTEND_COLOR_UX_UI_RULES.md`
+- **Tipo de Evento/Contexto:** Advertencia de calidad en frontend
+- **Descripción del Evento Original:** Durante la verificación de calidad apareció una advertencia `react-hooks/exhaustive-deps` en `S02_PriceChart.jsx` por una dependencia faltante en un `useEffect`.
+- **Acción Realizada/Corrección:** Se corrigió la dependencia del efecto y se reforzó la checklist frontend para exigir la eliminación de advertencias de hooks en archivos tocados.
+- **Nueva/Modificada Regla o Directriz:** La verificación frontend ahora incluye limpiar advertencias `react-hooks/exhaustive-deps` antes de la entrega.
+- **Justificación:** Reduce riesgos de estados desincronizados y evita entregar cambios que compilan pero dejan advertencias de calidad evitables.

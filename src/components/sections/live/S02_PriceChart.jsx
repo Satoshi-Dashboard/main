@@ -184,7 +184,7 @@ export default function S02_PriceChart() {
       }
     })();
     return () => { active = false; ctrl.abort(); };
-  }, [activeLabel, activeRange.days]);
+  }, [activeLabel, activeRange.days, activeRange.interval]);
 
   /* ── Derived stats ── */
   const hasChart = chartData.length > 0;
