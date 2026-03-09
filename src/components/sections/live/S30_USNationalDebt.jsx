@@ -1,18 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import { fetchUsNationalDebtPayload } from '../../../services/usNationalDebtApi';
+import AnimatedMetric from '../../common/AnimatedMetric';
 import {
   buildUsDebtRateCards,
   formatDateLabel,
   formatDateTimeLabel,
   formatNumberCompact,
-  formatUsdCompact,
-  formatUsdSigned,
-  formatUsdWhole,
   getDebtPressureTone,
   projectCurrencyValue,
   projectSessionDelta,
-  splitCurrencyGroups,
 } from '../../../utils/usNationalDebt';
 
 const DATA_REFRESH_MS = 60_000;
@@ -43,7 +40,6 @@ function getToneStyles(tone) {
 }
 
 function HeroFigure({ value }) {
-  const groups = useMemo(() => splitCurrencyGroups(value), [value]);
   const fontSize = useMemo(() => {
     const digits = String(Math.round(Number(value) || 0)).length;
     if (digits >= 14) return 'clamp(2.9rem, 5.8vw, 6.25rem)';
@@ -59,16 +55,12 @@ function HeroFigure({ value }) {
         letterSpacing: '-0.075em',
       }}
     >
-      {groups.map((group, index) => (
-        <span key={`${group}-${index}`} className="whitespace-nowrap">
-          {index < groups.length - 1 ? `${group},` : group}
-        </span>
-      ))}
+      <AnimatedMetric value={value} variant="usd" decimals={0} />
     </div>
   );
 }
 
-function StatCard({ label, value, helper, accent = 'var(--text-primary)', featured = false }) {
+function StatCard({ label, value, variant = 'number', helper, accent = 'var(--text-primary)', featured = false }) {
   return (
     <article
       className="rounded-[24px] border border-white/10 bg-white/[0.03] p-4 text-left sm:p-5 2xl:p-6"
@@ -91,9 +83,9 @@ function StatCard({ label, value, helper, accent = 'var(--text-primary)', featur
           letterSpacing: '-0.05em',
           lineHeight: 0.95,
         }}
-      >
-        {value}
-      </div>
+        >
+          <AnimatedMetric value={value} variant={variant} />
+        </div>
       {helper ? (
         <div
           className="mt-3 font-mono leading-relaxed"
@@ -126,7 +118,7 @@ function RateCard({ label, value, toneColor }) {
         className="font-mono font-semibold tabular-nums text-white"
         style={{ fontSize: 'clamp(1.3rem, 1.2vw, 1.85rem)', letterSpacing: '-0.04em', lineHeight: 0.95 }}
       >
-        {value}
+        <AnimatedMetric value={value} variant="usdCompact" signed />
       </div>
       <div className="mt-2 font-mono" style={{ color: 'var(--text-tertiary)', fontSize: 'var(--fs-micro)' }}>
         Projected pace
@@ -318,35 +310,38 @@ export default function S30_USNationalDebt() {
                 fontSize: 'var(--fs-body)',
               }}
             >
-              <span>{formatUsdSigned(sinceOpenDelta)}</span>
+              <AnimatedMetric value={sinceOpenDelta} variant="usdCompact" signed inline color={toneStyles.color} />
               <span style={{ color: 'var(--text-secondary)' }}>since you opened this page</span>
             </div>
             <div
               className="flex flex-wrap items-center justify-center gap-2 font-mono tabular-nums"
               style={{ fontSize: 'clamp(1.1rem, 1vw, 1.45rem)', color: 'var(--text-primary)' }}
             >
-              <span>{formatUsdWhole(Math.abs(Number(model.rate_per_second) || 0))}</span>
-              <span style={{ color: 'var(--text-secondary)' }}>{liveVerb}</span>
+               <AnimatedMetric value={Math.abs(Number(model.rate_per_second) || 0)} variant="usd" decimals={0} inline />
+               <span style={{ color: 'var(--text-secondary)' }}>{liveVerb}</span>
             </div>
           </section>
 
           <section className="mt-5 grid w-full gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,0.95fr)_minmax(0,0.95fr)]">
             <StatCard
               label="DEBT PER PERSON"
-              value={formatUsdWhole(projectedDebtPerPerson)}
+              value={projectedDebtPerPerson}
+              variant="usd"
               helper={`Estimated share of national debt per U.S. resident. Moves in step with the national counter using the latest population estimate (${formatNumberCompact(model.population)} residents).`}
               accent="var(--text-primary)"
               featured
             />
             <StatCard
               label="DEBT HELD BY THE PUBLIC"
-              value={formatUsdCompact(model.debt_held_public)}
+              value={model.debt_held_public}
+              variant="usdCompact"
               helper="Market-facing Treasury obligations held outside federal accounts."
               accent={toneColor}
             />
             <StatCard
               label="INTRAGOVERNMENTAL HOLDINGS"
-              value={formatUsdCompact(model.intragovernmental_holdings)}
+              value={model.intragovernmental_holdings}
+              variant="usdCompact"
               helper="Treasury securities held by federal trust funds and government accounts."
               accent="var(--text-primary)"
             />
@@ -360,14 +355,14 @@ export default function S30_USNationalDebt() {
               RATE OF INCREASE
             </div>
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
-              {rateCards.map((card) => (
-                <RateCard
-                  key={card.label}
-                  label={card.label}
-                  value={Number(card.value) < 0 ? formatUsdSigned(card.value, { compact: true }) : formatUsdCompact(card.value)}
-                  toneColor={toneColor}
-                />
-              ))}
+               {rateCards.map((card) => (
+                 <RateCard
+                   key={card.label}
+                   label={card.label}
+                   value={card.value}
+                   toneColor={toneColor}
+                 />
+               ))}
             </div>
           </section>
 

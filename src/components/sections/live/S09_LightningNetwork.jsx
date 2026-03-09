@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { fmt } from '../../../utils/formatters';
 import { fetchBtcSpot } from '../../../services/priceApi';
+import AnimatedMetric from '../../common/AnimatedMetric';
 
 const UI_COLORS = {
   brand: 'var(--accent-bitcoin)',
@@ -111,14 +111,14 @@ export default function S09_LightningNetwork() {
               className="font-mono font-bold text-white tabular-nums"
               style={{ fontSize: 'var(--fs-hero)' }}
             >
-              {fmt.num(sats)}
+              <AnimatedMetric value={sats} variant="number" inline />
             </span>
             {Number.isFinite(data.change) ? (
               <span
                 className="font-mono font-bold"
                 style={{ fontSize: 'var(--fs-subtitle)', color: isUp ? UI_COLORS.positive : UI_COLORS.negative }}
               >
-                {isUp ? '+' : ''}{data.change.toFixed(2)}%&nbsp;{isUp ? '▲' : '▼'}
+                <AnimatedMetric value={data.change} variant="percent" decimals={2} signed inline color={isUp ? UI_COLORS.positive : UI_COLORS.negative} />&nbsp;{isUp ? '▲' : '▼'}
               </span>
             ) : (
               <div className="skeleton" style={{ width: 96, height: '1em' }} />
@@ -149,7 +149,7 @@ export default function S09_LightningNetwork() {
       {/* Sub-info */}
       <div className="flex-shrink-0 px-2 text-center font-mono text-white/25" style={{ fontSize: 'var(--fs-caption)' }}>
         {hasData ? (
-          <>1 BTC = 100,000,000 sats &nbsp;·&nbsp; 1 USD = {fmt.num(sats)} sats</>
+          <>1 BTC = 100,000,000 sats &nbsp;·&nbsp; 1 USD = <AnimatedMetric value={sats} variant="number" inline /> sats</>
         ) : (
           <div className="skeleton" style={{ width: 260, height: '0.9em' }} />
         )}

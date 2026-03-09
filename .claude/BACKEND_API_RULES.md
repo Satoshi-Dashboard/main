@@ -122,6 +122,7 @@ This is a strict global rule for every external API integration (new or existing
 2. If adding new upstream origins, review `vercel.json` headers and `Content-Security-Policy` to ensure required `connect-src`, `img-src`, `font-src`, or other directives remain valid.
 3. Do not convert frontend API calls to absolute production URLs unless the owner explicitly requests it.
 4. Re-check `vercel.json` rewrites whenever route structure changes.
+5. Preserve immutable cache headers only for hashed static assets (for example `/assets/*`); do not apply long-lived cache headers to HTML entry routes or `/api/*` responses.
 
 ## Testing/verification checklist (required)
 
@@ -157,3 +158,11 @@ When backend/API behavior changes:
 - **Acción Realizada/Corrección:** Se añadió la regla universal como apertura del documento y se creó el registro histórico al final para documentar lecciones futuras.
 - **Nueva/Modificada Regla o Directriz:** Todo cambio backend/API debe heredar la regla universal de automejora y registrar en este archivo cualquier ajuste relevante de reglas o conocimiento.
 - **Justificación:** Hace auditable la evolución de la política backend y ayuda a prevenir recaídas en errores de arquitectura, compatibilidad o verificación.
+
+- **Fecha de la Actualización:** `2026-03-09`
+- **Archivo(s) Afectado(s):** `.claude/BACKEND_API_RULES.md`
+- **Tipo de Evento/Contexto:** Optimización segura de Vercel
+- **Descripción del Evento Original:** La política Vercel/runtime no dejaba explícita la diferencia entre cache largo permitido para assets hasheados y cache agresivo no deseado en HTML/API.
+- **Acción Realizada/Corrección:** Se añadió una regla específica para conservar cache inmutable solo en assets estáticos versionados y evitar aplicarlo a entry HTML o respuestas API.
+- **Nueva/Modificada Regla o Directriz:** Las optimizaciones de cache en `vercel.json` deben limitarse a assets hasheados; HTML y `/api/*` deben seguir con estrategias compatibles con deploys frescos y headers por endpoint.
+- **Justificación:** Previene bugs de despliegue donde usuarios reciben bundles o shells obsoletos por una política de cache demasiado amplia.

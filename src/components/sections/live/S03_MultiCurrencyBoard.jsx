@@ -5,6 +5,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { fetchJson } from '../../../lib/api.js';
 import { fetchMultiCurrencyBtc } from '../../../services/priceApi';
+import AnimatedMetric from '../../common/AnimatedMetric';
 
 // ─── Currency data ──────────────────────────────────────────────────────────────
 const BASE_CURRENCY_META = [
@@ -192,9 +193,11 @@ function fmtPrice(price) {
   if (price >= 1_000)     return Math.round(price).toLocaleString('en-US');
   return price.toFixed(2);
 }
-function fmtChange(ch) {
-  if (!Number.isFinite(ch)) return '--';
-  return (ch >= 0 ? '+' : '') + ch.toFixed(2) + '%';
+function CurrencyMetric({ value }) {
+  if (!Number.isFinite(value)) return '--';
+  if (value >= 1_000_000) return <AnimatedMetric value={value} variant="compact" decimals={2} inline />;
+  if (value >= 1_000) return <AnimatedMetric value={value} variant="number" decimals={0} inline />;
+  return <AnimatedMetric value={value} variant="number" decimals={2} inline />;
 }
 
 // ─── Canvas renderer ──────────────────────────────────────────────────────────
@@ -360,7 +363,9 @@ function TickerItem({ code, change }) {
         {up == null ? '•' : (up ? '▲' : '▼')}
       </span>
       <span style={{ color: '#bbb', fontWeight: 700 }}>{code}</span>
-      <span style={{ color: up == null ? UI_COLORS.textTertiary : (up ? UI_COLORS.positive : UI_COLORS.negative) }}>{fmtChange(change)}</span>
+      <span style={{ color: up == null ? UI_COLORS.textTertiary : (up ? UI_COLORS.positive : UI_COLORS.negative) }}>
+        <AnimatedMetric value={change} variant="percent" decimals={2} signed inline color={up == null ? UI_COLORS.textTertiary : (up ? UI_COLORS.positive : UI_COLORS.negative)} />
+      </span>
     </span>
   );
 }
@@ -626,16 +631,16 @@ export default function S03_MultiCurrencyBoard() {
                     ) : (
                       <>
                         <div style={{
-                          color: '#eee', fontFamily: 'monospace',
-                          fontSize: 'var(--fs-micro)', fontWeight: 600,
-                        }}>{fmtPrice(c.price)}</div>
-                        <div style={{
-                          color: up == null ? UI_COLORS.textTertiary : (up ? UI_COLORS.positive : UI_COLORS.negative),
-                          fontFamily: 'monospace',
-                          fontSize: 'var(--fs-tag)',
-                        }}>{fmtChange(c.change)}</div>
-                      </>
-                    )}
+                           color: '#eee', fontFamily: 'monospace',
+                           fontSize: 'var(--fs-micro)', fontWeight: 600,
+                         }}><CurrencyMetric value={c.price} /></div>
+                         <div style={{
+                           color: up == null ? UI_COLORS.textTertiary : (up ? UI_COLORS.positive : UI_COLORS.negative),
+                           fontFamily: 'monospace',
+                           fontSize: 'var(--fs-tag)',
+                         }}><AnimatedMetric value={c.change} variant="percent" decimals={2} signed inline color={up == null ? UI_COLORS.textTertiary : (up ? UI_COLORS.positive : UI_COLORS.negative)} /></div>
+                       </>
+                     )}
                   </div>
                 </div>
               );

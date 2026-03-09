@@ -8,8 +8,8 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { fmt } from '../../../utils/formatters';
 import { fetchBtcSpot, fetchBtcHistory } from '../../../services/priceApi';
+import AnimatedMetric from '../../common/AnimatedMetric';
 
 const RANGES = [
   { label: 'LIVE', days: 1,    interval: '15m', live: true },
@@ -126,25 +126,14 @@ export default function S02_PriceChart() {
   const [livePrice, setLivePrice]     = useState(null);
   const [showAvgLine, setShowAvgLine] = useState(false);
   const [loading, setLoading]         = useState(true);
-  const [priceFlash, setPriceFlash]   = useState(null); // 'up' | 'down' | null
   const [hoverData, setHoverData]     = useState(null); // { price, label } | null
-  const prevPriceRef  = useRef(null);
-  const flashTimerRef = useRef(null);
   const abortRef      = useRef(null);
 
   const activeRange = RANGES.find(r => r.label === activeLabel) ?? RANGES[2];
 
-  /* ── Apply live price with flash animation ── */
+  /* ── Apply live price ── */
   const applyPrice = useCallback((newPrice) => {
     if (!Number.isFinite(newPrice) || newPrice <= 0) return;
-    const prev = prevPriceRef.current;
-    if (prev !== null && newPrice !== prev) {
-      const dir = newPrice > prev ? 'up' : 'down';
-      clearTimeout(flashTimerRef.current);
-      setPriceFlash(dir);
-      flashTimerRef.current = setTimeout(() => setPriceFlash(null), 700);
-    }
-    prevPriceRef.current = newPrice;
     setLivePrice(newPrice);
   }, []);
 
@@ -155,7 +144,7 @@ export default function S02_PriceChart() {
     const id = setInterval(() => {
       fetchBtcSpot().then(s => { if (s && mounted) applyPrice(s.usd); }).catch(() => {});
     }, 10_000);
-    return () => { mounted = false; clearInterval(id); clearTimeout(flashTimerRef.current); };
+    return () => { mounted = false; clearInterval(id); };
   }, [applyPrice]);
 
   /* ── Historical data ── */
@@ -224,11 +213,6 @@ export default function S02_PriceChart() {
 
   /* ── Display values (hover overrides live) ── */
   const displayPrice = hoverData ? hoverData.price : livePrice;
-  const priceColor   = hoverData
-    ? 'white'
-    : priceFlash === 'up'   ? 'var(--accent-green)'
-    : priceFlash === 'down' ? 'var(--accent-red)'
-    : 'white';
 
   return (
     <div className="flex h-full w-full flex-col bg-[#111111]" style={{ padding: '20px 22px 16px' }}>
@@ -247,11 +231,9 @@ export default function S02_PriceChart() {
                 className="font-mono font-bold tabular-nums leading-none"
                 style={{
                   fontSize: 'clamp(1.9rem, 3.8vw, 2.9rem)',
-                  color: priceColor,
-                  transition: hoverData ? 'none' : priceFlash ? 'color 0.1s ease' : 'color 0.6s ease',
                 }}
               >
-                {fmt.usd(displayPrice, 2)}
+                <AnimatedMetric value={displayPrice} variant="usd" decimals={2} inline />
               </div>
 
               <div className="mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 font-mono tabular-nums" style={{ fontSize: '0.82rem' }}>
@@ -262,10 +244,10 @@ export default function S02_PriceChart() {
                 ) : hasChange ? (
                   <>
                     <span style={{ color: isUp ? 'var(--accent-green)' : 'var(--accent-red)' }}>
-                      {isUp ? '+' : ''}{fmt.usd(delta, 2)}
+                      <AnimatedMetric value={delta} variant="usd" decimals={2} signed inline color={isUp ? 'var(--accent-green)' : 'var(--accent-red)'} />
                     </span>
                     <span style={{ color: isUp ? 'var(--accent-green)' : 'var(--accent-red)' }}>
-                      ({isUp ? '+' : ''}{deltaPct.toFixed(2)}%)
+                      (<AnimatedMetric value={deltaPct} variant="percent" decimals={2} signed inline color={isUp ? 'var(--accent-green)' : 'var(--accent-red)'} />)
                     </span>
                     <span style={{ color: 'rgba(255,255,255,0.38)' }}>{rangeText}</span>
                   </>
@@ -385,10 +367,10 @@ export default function S02_PriceChart() {
           ))
         ) : (
           [
-            { label: 'HIGH',    value: fmt.usd(high, 0),                    color: 'var(--accent-green)' },
-            { label: 'AVG BUY', value: hasAvg ? fmt.usd(avgPrice, 0) : '—', color: 'var(--accent-bitcoin)' },
-            { label: 'LOW',     value: fmt.usd(low, 0),                     color: 'var(--accent-red)' },
-          ].map(({ label, value, color }) => (
+              { label: 'HIGH',    value: high,     color: 'var(--accent-green)' },
+              { label: 'AVG BUY', value: hasAvg ? avgPrice : null, color: 'var(--accent-bitcoin)' },
+              { label: 'LOW',     value: low,      color: 'var(--accent-red)' },
+            ].map(({ label, value, color }) => (
             <div
               key={label}
               className="rounded-xl px-3 py-3 text-center"
@@ -404,7 +386,7 @@ export default function S02_PriceChart() {
                 className="font-mono tabular-nums font-semibold text-white"
                 style={{ fontSize: '0.82rem' }}
               >
-                {value}
+                <AnimatedMetric value={value} variant="usd" decimals={0} inline />
               </div>
             </div>
           ))

@@ -171,7 +171,36 @@ Use root tokens from `src/index.css` as source of truth:
    - pair color with icon, label, sign, or pattern for critical states.
 
 3. Mobile + desktop parity:
-   - semantic colors must preserve meaning in responsive states.
+    - semantic colors must preserve meaning in responsive states.
+
+## Live numeric motion (mandatory for live-data UX)
+
+When a frontend view shows live or periodically refreshed numeric data, avoid hard swaps that make the interface feel frozen or abrupt.
+
+1. Animate numeric updates with subtle, context-appropriate motion.
+   - Prefer short fade/slide/count transitions over flashy effects.
+   - Motion should reinforce directionality when meaningful (up vs down), without changing core semantic colors.
+
+2. Keep motion lightweight and readable.
+   - Fast-updating counters should use gentle transitions that do not distract from the value.
+   - Do not cause layout jumps, clipped digits, or reduced legibility on mobile.
+
+3. Motion must match the data context.
+   - High-frequency prices/counters: restrained pulse/slide/count cues.
+   - Slower dashboard refreshes: slightly more noticeable value transitions are acceptable.
+
+4. Prefer the shared animated counter primitive for DOM-rendered numeric updates.
+   - Use `src/components/common/AnimatedMetric.jsx` as the project wrapper.
+   - For numeric transitions, prefer the `react-animated-counter`-based wrapper over ad-hoc text swaps.
+   - If a number is rendered in canvas, SVG text, or third-party map tooltips, use the closest equivalent motion that fits the rendering constraint.
+
+5. Idle live numerals must stay visually stable.
+   - Default resting state for live numeric DOM values should remain neutral/white unless the metric itself is explicitly a semantic delta badge.
+   - Up/down colors should appear as transient animation feedback, not as a permanently stuck post-update color on main values.
+
+6. Do not break third-party counter layout assumptions.
+   - Do not override a counter library's digit line-height/height model with inherited values if it computes digit travel from `font-size`.
+   - If using responsive font tokens (`clamp(...)`, CSS vars), resolve them to a concrete computed pixel font size before passing them to the counter engine.
 
 ## Required verification for frontend color changes
 
@@ -225,3 +254,27 @@ When creating any new frontend module, agents must follow the project example pa
 - **Acción Realizada/Corrección:** Se corrigió la dependencia del efecto y se reforzó la checklist frontend para exigir la eliminación de advertencias de hooks en archivos tocados.
 - **Nueva/Modificada Regla o Directriz:** La verificación frontend ahora incluye limpiar advertencias `react-hooks/exhaustive-deps` antes de la entrega.
 - **Justificación:** Reduce riesgos de estados desincronizados y evita entregar cambios que compilan pero dejan advertencias de calidad evitables.
+
+- **Fecha de la Actualización:** `2026-03-09`
+- **Archivo(s) Afectado(s):** `.claude/FRONTEND_COLOR_UX_UI_RULES.md`
+- **Tipo de Evento/Contexto:** Oportunidad de mejora en UX de datos vivos
+- **Descripción del Evento Original:** Los cambios de precio y métricas vivas podían sentirse demasiado estáticos porque varios números se sustituían sin transición visual.
+- **Acción Realizada/Corrección:** Se añadió una regla explícita para animar actualizaciones numéricas con motion sutil y contextual en vistas de datos vivos.
+- **Nueva/Modificada Regla o Directriz:** Las cifras que cambian por polling o actualización en tiempo real deben usar transiciones ligeras, legibles y acordes a su frecuencia de cambio.
+- **Justificación:** Mejora la percepción de actividad del producto sin sacrificar claridad, rendimiento ni consistencia semántica.
+
+- **Fecha de la Actualización:** `2026-03-09`
+- **Archivo(s) Afectado(s):** `.claude/FRONTEND_COLOR_UX_UI_RULES.md`
+- **Tipo de Evento/Contexto:** Estandarización de animación numérica
+- **Descripción del Evento Original:** La primera implementación de motion numérica usaba una transición personalizada de swap, pero el proyecto necesitaba alinearse con un patrón más consistente de contador animado solicitado por el owner.
+- **Acción Realizada/Corrección:** Se definió el wrapper compartido `src/components/common/AnimatedMetric.jsx` sobre `react-animated-counter` y se añadió la preferencia explícita en la política frontend.
+- **Nueva/Modificada Regla o Directriz:** Las cifras DOM que cambian en tiempo real o por polling deben usar el wrapper compartido basado en `react-animated-counter`, salvo limitaciones de canvas/SVG/tooltips externos.
+- **Justificación:** Centraliza el comportamiento visual de métricas vivas, facilita su reutilización y evita soluciones inconsistentes entre módulos.
+
+- **Fecha de la Actualización:** `2026-03-09`
+- **Archivo(s) Afectado(s):** `.claude/FRONTEND_COLOR_UX_UI_RULES.md`
+- **Tipo de Evento/Contexto:** Corrección de regresión visual en contadores animados
+- **Descripción del Evento Original:** Tras integrar `react-animated-counter`, varios números vivos quedaron cortados o congelados a mitad de movimiento y algunos valores principales se quedaban en color de subida/bajada en reposo.
+- **Acción Realizada/Corrección:** Se ajustó el wrapper compartido para respetar el modelo de altura/line-height del contador, resolver el font-size real en px y forzar un estado visual neutro en reposo para valores principales.
+- **Nueva/Modificada Regla o Directriz:** Los contadores DOM deben permanecer blancos/estables cuando no hay actualización y no deben recibir overrides de line-height heredado que rompan la animación interna de dígitos.
+- **Justificación:** Evita regresiones visuales masivas en módulos live y mantiene la animación como señal breve de actualización en lugar de dejar la UI rota o permanentemente tintada.

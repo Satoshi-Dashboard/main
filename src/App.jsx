@@ -10,8 +10,12 @@ import SeoLandingPage from './pages/SeoLandingPage';
 
 function AppShellFallback() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-950 px-6 text-center font-mono text-sm tracking-[0.18em] text-white/60">
-      Loading module...
+    <div className="flex min-h-screen items-center justify-center bg-gray-950 px-6">
+      <div className="flex w-full max-w-sm flex-col gap-3">
+        <div className="skeleton h-4 w-24 rounded-full self-center" />
+        <div className="skeleton h-24 w-full rounded-3xl" />
+        <div className="skeleton h-4 w-40 rounded-full self-center" />
+      </div>
     </div>
   );
 }

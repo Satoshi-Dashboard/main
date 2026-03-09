@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { fetchJson } from '../../../lib/api.js';
-import { fmt } from '../../../utils/formatters';
+import AnimatedMetric from '../../common/AnimatedMetric';
 
 const MAX_VMEMPOOL = 300; // design max vMB for gauge scale
 
@@ -86,7 +86,7 @@ function FeeTile({ label, value, color = UI_COLORS.brand, loading }) {
         <div className="skeleton" style={{ width: 48, height: '2em' }} />
       ) : (
         <div className="font-mono font-bold tabular-nums" style={{ fontSize: 'var(--fs-title)', color }}>
-          {value}
+          <AnimatedMetric value={value} variant="number" inline />
         </div>
       )}
       <div className="uppercase tracking-[0.2em] text-white/30" style={{ fontSize: 'var(--fs-tag)' }}>{label}</div>
@@ -162,7 +162,7 @@ export default function S04_MempoolGauge() {
             <div className="skeleton" style={{ width: 100, height: '1.8em' }} />
           ) : (
             <div className="font-mono font-bold text-white tabular-nums" style={{ fontSize: 'var(--fs-title)' }}>
-              {fmt.num(mempool.count)}
+              <AnimatedMetric value={mempool.count} variant="number" inline />
             </div>
           )}
           <div className="uppercase tracking-[0.18em]" style={{ fontSize: 'var(--fs-label)', color: UI_COLORS.brand }}>
@@ -177,7 +177,7 @@ export default function S04_MempoolGauge() {
             <div className="skeleton" style={{ width: 80, height: '1.8em' }} />
           ) : (
             <div className="font-mono font-bold text-white tabular-nums" style={{ fontSize: 'var(--fs-title)' }}>
-              {mempool.size} <span className="text-[0.4em] text-white/50">vMB</span>
+              <AnimatedMetric value={mempool.size} variant="number" inline /> <span className="text-[0.4em] text-white/50">vMB</span>
             </div>
           )}
           <div className="uppercase tracking-[0.18em]" style={{ fontSize: 'var(--fs-label)', color: UI_COLORS.brand }}>

@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { fetchJson } from '../../../lib/api.js';
 import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts';
-import { fmt } from '../../../utils/formatters';
 import { fetchBtcSpot } from '../../../services/priceApi';
+import AnimatedMetric from '../../common/AnimatedMetric';
 
 /* ── Circulating supply from protocol constants (no API needed) ── */
 function calculateBitcoinSupply(blockHeight) {
@@ -79,17 +79,14 @@ function MiniDonut({ pct, className = '' }) {
 }
 
 /* ── Generic stat tile ── */
-function Tile({ label, value, accent, source }) {
+function Tile({ label, value, variant = 'number', decimals, suffix, accent, source }) {
   return (
     <div className="flex min-h-[108px] flex-col items-center justify-center bg-[#111111] px-3 py-2 select-none sm:px-4 sm:py-3">
       {value == null ? (
         <div className="skeleton w-3/4" style={{ height: '2.4em' }} />
       ) : (
-        <div
-          className="text-center font-mono font-bold leading-[1] text-white tabular-nums"
-          style={{ fontSize: 'var(--fs-hero)' }}
-        >
-          {value}
+        <div className="text-center font-mono font-bold leading-[1] text-white tabular-nums" style={{ fontSize: 'var(--fs-hero)' }}>
+          <AnimatedMetric value={value} variant={variant} decimals={decimals} suffix={suffix} inline />
           {accent && (
             <span style={{ fontSize: '0.28em', marginLeft: '0.25em', color: UI_COLORS.brand }}>
               {accent}
@@ -122,12 +119,13 @@ function FearGreedTile({ value, classification, history }) {
       {loading ? (
         <div className="skeleton w-3/4" style={{ height: '2.4em' }} />
       ) : (
-        <div
+        <AnimatedMetric
+          value={value}
           className="font-mono font-bold tabular-nums leading-none"
           style={{ fontSize: 'var(--fs-hero)', color }}
-        >
-          {value}
-        </div>
+          variant="number"
+          inline
+        />
       )}
       {loading ? (
         <div className="skeleton w-1/2" style={{ height: '1em' }} />
@@ -184,8 +182,6 @@ function DifficultyTile({ pct, etaBlocks, changeNext, changePrev }) {
   const hasChanges = Number.isFinite(changeNext) && Number.isFinite(changePrev);
   const nextUp = hasChanges ? changeNext >= 0 : null;
   const prevUp = hasChanges ? changePrev >= 0 : null;
-
-  const pctLabel = Number.isFinite(pct) ? `${pct.toFixed(2)}%` : '0.00%';
   return (
     <div className="flex min-h-[160px] flex-col items-center justify-center gap-2 bg-[#111111] px-3 py-3 select-none sm:min-h-[108px] sm:px-4 sm:py-3">
       <div className="hidden w-full items-center justify-center gap-3 sm:flex">
@@ -198,10 +194,10 @@ function DifficultyTile({ pct, etaBlocks, changeNext, changePrev }) {
           ) : (
             <>
               <span className="font-mono" style={{ color: UI_COLORS.negative }}>
-                {nextUp ? '+' : ''}{changeNext.toFixed(2)}% {nextUp ? '▲' : '▼'} Next
+                <AnimatedMetric value={changeNext} variant="percent" decimals={2} signed inline /> {nextUp ? '▲' : '▼'} Next
               </span>
               <span className="font-mono" style={{ color: UI_COLORS.positive }}>
-                {prevUp ? '+' : ''}{changePrev.toFixed(2)}% {prevUp ? '▲' : '▼'} Prev
+                <AnimatedMetric value={changePrev} variant="percent" decimals={2} signed inline /> {prevUp ? '▲' : '▼'} Prev
               </span>
             </>
           )}
@@ -213,12 +209,14 @@ function DifficultyTile({ pct, etaBlocks, changeNext, changePrev }) {
         <div className="relative flex items-center justify-center">
           <MiniDonut pct={pct} className="h-[84px] w-[84px] shrink-0" />
           {!loading && (
-            <span
+            <AnimatedMetric
+              value={pct}
               className="absolute font-mono font-bold tabular-nums text-white"
               style={{ fontSize: 'var(--fs-heading)' }}
-            >
-              {pctLabel}
-            </span>
+              variant="percent"
+              decimals={2}
+              inline
+            />
           )}
         </div>
 
@@ -231,10 +229,10 @@ function DifficultyTile({ pct, etaBlocks, changeNext, changePrev }) {
           ) : (
             <>
               <span className="rounded bg-black/40 px-1.5 py-px font-mono" style={{ color: UI_COLORS.negative }}>
-                {nextUp ? '+' : ''}{changeNext.toFixed(2)}% {nextUp ? '▲' : '▼'} Next
+                <AnimatedMetric value={changeNext} variant="percent" decimals={2} signed inline /> {nextUp ? '▲' : '▼'} Next
               </span>
               <span className="rounded bg-black/40 px-1.5 py-px font-mono" style={{ color: UI_COLORS.positive }}>
-                {prevUp ? '+' : ''}{changePrev.toFixed(2)}% {prevUp ? '▲' : '▼'} Prev
+                <AnimatedMetric value={changePrev} variant="percent" decimals={2} signed inline /> {prevUp ? '▲' : '▼'} Prev
               </span>
             </>
           )}
@@ -245,12 +243,14 @@ function DifficultyTile({ pct, etaBlocks, changeNext, changePrev }) {
         {loading ? (
           <div className="skeleton" style={{ width: '65%', height: '2em', marginTop: '4px' }} />
         ) : (
-          <div
+          <AnimatedMetric
+            value={pct}
             className="font-mono font-bold text-white tabular-nums leading-none"
             style={{ fontSize: 'var(--fs-title)' }}
-          >
-            {pctLabel}
-          </div>
+            variant="percent"
+            decimals={2}
+            inline
+          />
         )}
       </div>
 
@@ -264,12 +264,9 @@ function DifficultyTile({ pct, etaBlocks, changeNext, changePrev }) {
       {loading ? (
         <div className="skeleton" style={{ width: '55%', height: '1em' }} />
       ) : (
-        <div
-          className="font-mono text-center"
-          style={{ fontSize: 'var(--fs-micro)', color: UI_COLORS.textTertiary }}
-        >
-          {fmt.num(etaBlocks)} blocks remaining
-        </div>
+          <div className="font-mono text-center" style={{ fontSize: 'var(--fs-micro)', color: UI_COLORS.textTertiary }}>
+            <AnimatedMetric value={etaBlocks} variant="number" suffix=" blocks remaining" inline />
+          </div>
       )}
     </div>
   );
@@ -336,15 +333,16 @@ export default function S01_BitcoinOverview() {
     () => [
       {
         label: 'BTC/USD',
-        value: stats.price != null ? fmt.usd(stats.price, 0) : null,
+        value: stats.price,
+        variant: 'usd',
         source: sourceLabel(stats.priceSource),
       },
-      { label: 'SATS PER DOLLAR',    value: stats.satsPerDollar != null ? fmt.num(stats.satsPerDollar)                   : null },
-      { label: 'AVG TX FEE (sat/vB)', value: stats.avgTxFee    != null ? fmt.num(stats.avgTxFee)                        : null },
-      { label: 'BLOCK HEIGHT',        value: stats.blockHeight  != null ? fmt.num(stats.blockHeight)                     : null },
-      { label: 'CURRENT HASH RATE',   value: stats.hashRateEh   != null ? fmt.hashRate(stats.hashRateEh * 1e18)          : null },
-      { label: 'NETWORK DIFFICULTY',  value: stats.difficultyT  != null ? `${stats.difficultyT.toFixed(2)} T`            : null },
-      { label: 'CIRCULATING SUPPLY',  value: stats.circulatingSupply != null ? fmt.num(stats.circulatingSupply) : null, accent: '∞/21M' },
+      { label: 'SATS PER DOLLAR', value: stats.satsPerDollar },
+      { label: 'AVG TX FEE (sat/vB)', value: stats.avgTxFee },
+      { label: 'BLOCK HEIGHT', value: stats.blockHeight },
+      { label: 'CURRENT HASH RATE', value: stats.hashRateEh != null ? stats.hashRateEh * 1e18 : null, variant: 'hashrate' },
+      { label: 'NETWORK DIFFICULTY', value: stats.difficultyT, decimals: 2, suffix: ' T' },
+      { label: 'CIRCULATING SUPPLY', value: stats.circulatingSupply, accent: '∞/21M' },
     ],
     [stats],
   );

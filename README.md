@@ -354,6 +354,8 @@ Notes:
 
 - The serverless function is pinned to region `fra1`.
 - Vercel deployment stays compatible with the same Express app used locally.
+- Built assets under `/assets/*` are explicitly served with `Cache-Control: public, max-age=31536000, immutable` so hashed bundles can be cached aggressively at the edge/browser without risking stale HTML.
+- HTML entry routes continue to resolve through rewrites rather than long-lived immutable caching, so new deploys propagate cleanly.
 - If you add new remote origins, update `vercel.json` CSP and related header rules.
 
 ## Agent policy files
@@ -384,3 +386,11 @@ Distributed under the Unlicense. See `LICENSE.txt`.
 - **Acción Realizada/Corrección:** Se insertó la regla universal al inicio del `README.md` y se creó el registro histórico al final para futuras actualizaciones derivadas de errores o mejoras.
 - **Nueva/Modificada Regla o Directriz:** El `README.md` pasa a tratarse como documento de conocimiento operativo sujeto a la política universal de automejora y trazabilidad histórica.
 - **Justificación:** Garantiza que el documento más consultado por agentes mantenga memoria persistente de cambios de conocimiento y no quede fuera del ciclo de aprendizaje continuo.
+
+- **Fecha de la Actualización:** `2026-03-09`
+- **Archivo(s) Afectado(s):** `README.md`
+- **Tipo de Evento/Contexto:** Optimización de despliegue en Vercel
+- **Descripción del Evento Original:** La documentación de despliegue no dejaba explícito cómo se optimizan los assets estáticos para Vercel ni qué debía mantenerse sin cacheo agresivo.
+- **Acción Realizada/Corrección:** Se documentó la política de cacheo inmutable para `/assets/*` y se aclaró que las rutas HTML siguen resolviéndose por rewrites para propagar nuevos deploys sin servir shells obsoletos.
+- **Nueva/Modificada Regla o Directriz:** El `README.md` ahora exige mantener cache largo solo para assets hasheados y preservar HTML/API fuera de esa política.
+- **Justificación:** Ayuda a futuros agentes a optimizar Vercel sin introducir regresiones de cacheo que dejen deploys viejos en producción.

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { fetchJson } from '../../../lib/api.js';
+import AnimatedMetric from '../../common/AnimatedMetric';
 
 /* ─── Whitelist: 6 most recognized USD stablecoins ─────────── */
 const WHITELIST = ['USDT', 'USDC', 'DAI', 'FDUSD', 'PYUSD', 'USDS'];
@@ -23,15 +24,6 @@ function fmtUsd(v, digits = 4) {
   const n = Number(v);
   if (!Number.isFinite(n)) return '—';
   return `$${n.toFixed(digits)}`;
-}
-
-function fmtUsdCompact(v) {
-  const n = Number(v);
-  if (!Number.isFinite(n) || n <= 0) return '—';
-  if (n >= 1e12) return `$${(n / 1e12).toFixed(2)}T`;
-  if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
-  if (n >= 1e6) return `$${(n / 1e6).toFixed(2)}M`;
-  return `$${Math.round(n).toLocaleString()}`;
 }
 
 function fmtSupply(v) {
@@ -392,7 +384,7 @@ function CoinCard({ coin, idx, sparkCache, onVisible }) {
               style={{ fontSize: 'var(--fs-caption)', color: cfg.color }}
               title="Peg deviation"
             >
-              ±{Number.isFinite(devPct) ? devPct.toFixed(3) : '—'}%
+              <AnimatedMetric value={devPct} variant="percent" decimals={3} prefix="±" inline color={cfg.color} />
             </span>
             <span
               className="rounded px-2 py-1 font-mono"
@@ -415,20 +407,20 @@ function CoinCard({ coin, idx, sparkCache, onVisible }) {
               className="font-mono font-bold text-white tabular-nums leading-none"
               style={{ fontSize: 'var(--fs-section)' }}
             >
-              {fmtUsd(currentPrice, 4)}
+              <AnimatedMetric value={currentPrice} variant="usd" decimals={4} inline />
             </div>
             <div className="mt-1 flex items-center gap-2">
               <span
                 className="font-mono tabular-nums"
                 style={{ fontSize: 'var(--fs-caption)', color: pctColor(change24h) }}
               >
-                24h {fmtPct(change24h, 2)}
+                24h <AnimatedMetric value={change24h} variant="percent" decimals={2} signed inline color={pctColor(change24h)} />
               </span>
               <span
                 className="font-mono"
                 style={{ fontSize: 'var(--fs-micro)', color: 'rgba(255,255,255,0.42)' }}
               >
-                rank #{Number.isFinite(Number(coin.market_cap_rank)) ? Number(coin.market_cap_rank) : '—'}
+                rank #<AnimatedMetric value={Number(coin.market_cap_rank)} variant="number" inline />
               </span>
             </div>
           </div>
@@ -455,20 +447,20 @@ function CoinCard({ coin, idx, sparkCache, onVisible }) {
           <div className="grid grid-cols-2 gap-2 rounded-lg border border-white/10 bg-[#141414] p-2">
             <div>
               <div className="font-mono uppercase" style={{ fontSize: 'var(--fs-micro)', color: 'rgba(255,255,255,0.34)' }}>MCap</div>
-              <div className="font-mono tabular-nums text-white" style={{ fontSize: 'var(--fs-caption)' }}>{fmtUsdCompact(coin.market_cap)}</div>
+              <div className="font-mono tabular-nums text-white" style={{ fontSize: 'var(--fs-caption)' }}><AnimatedMetric value={coin.market_cap} variant="usdCompact" inline /></div>
             </div>
             <div>
               <div className="font-mono uppercase" style={{ fontSize: 'var(--fs-micro)', color: 'rgba(255,255,255,0.34)' }}>Volume 24h</div>
-              <div className="font-mono tabular-nums text-white" style={{ fontSize: 'var(--fs-caption)' }}>{fmtUsdCompact(coin.total_volume)}</div>
+              <div className="font-mono tabular-nums text-white" style={{ fontSize: 'var(--fs-caption)' }}><AnimatedMetric value={coin.total_volume} variant="usdCompact" inline /></div>
             </div>
             <div>
               <div className="font-mono uppercase" style={{ fontSize: 'var(--fs-micro)', color: 'rgba(255,255,255,0.34)' }}>FDV</div>
-              <div className="font-mono tabular-nums text-white" style={{ fontSize: 'var(--fs-caption)' }}>{fmtUsdCompact(coin.fully_diluted_valuation)}</div>
+              <div className="font-mono tabular-nums text-white" style={{ fontSize: 'var(--fs-caption)' }}><AnimatedMetric value={coin.fully_diluted_valuation} variant="usdCompact" inline /></div>
             </div>
             <div>
               <div className="font-mono uppercase" style={{ fontSize: 'var(--fs-micro)', color: 'rgba(255,255,255,0.34)' }}>MCap Δ</div>
               <div className="font-mono tabular-nums" style={{ fontSize: 'var(--fs-caption)', color: supplyDeltaColor(marketCapDelta) }}>
-                {marketCapDelta === null ? '—' : `${marketCapDelta > 0 ? '+' : ''}${fmtUsdCompact(Math.abs(marketCapDelta))}`}
+                <AnimatedMetric value={marketCapDelta} variant="usdCompact" signed inline color={supplyDeltaColor(marketCapDelta)} />
               </div>
             </div>
           </div>
@@ -527,7 +519,7 @@ function CoinCard({ coin, idx, sparkCache, onVisible }) {
             <div>
               <div className="font-mono uppercase" style={{ fontSize: 'var(--fs-micro)', color: 'rgba(255,255,255,0.34)' }}>Price Δ 24h</div>
               <div className="font-mono tabular-nums" style={{ fontSize: 'var(--fs-caption)', color: pctColor(coin.price_change_24h) }}>
-                {Number.isFinite(Number(coin.price_change_24h)) ? `${Number(coin.price_change_24h) > 0 ? '+' : ''}${fmtUsd(Number(coin.price_change_24h), 4)}` : '—'}
+                <AnimatedMetric value={Number(coin.price_change_24h)} variant="usd" decimals={4} signed inline color={pctColor(coin.price_change_24h)} />
               </div>
             </div>
             <div>
@@ -696,26 +688,26 @@ export default function S10_StablecoinPegHealth() {
               <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="rounded-lg border border-white/10 bg-[#121212] px-3 py-2">
                   <div className="font-mono uppercase" style={{ fontSize: 'var(--fs-micro)', color: 'var(--text-secondary)' }}>Total Stablecoin MCap</div>
-                  <div className="font-mono text-white tabular-nums" style={{ fontSize: 'var(--fs-heading)' }}>{fmtUsdCompact(summary.totalMcap)}</div>
+                  <div className="font-mono text-white tabular-nums" style={{ fontSize: 'var(--fs-heading)' }}><AnimatedMetric value={summary.totalMcap} variant="usdCompact" inline /></div>
                 </div>
                 <div className="rounded-lg border border-white/10 bg-[#121212] px-3 py-2">
                   <div className="font-mono uppercase" style={{ fontSize: 'var(--fs-micro)', color: 'var(--text-secondary)' }}>Warning Count</div>
                   <div className="font-mono tabular-nums" style={{ fontSize: 'var(--fs-heading)', color: summary.warningCount > 0 ? 'var(--accent-warning)' : 'var(--text-secondary)' }}>
-                    {summary.warningCount}
+                    <AnimatedMetric value={summary.warningCount} variant="number" inline color={summary.warningCount > 0 ? 'var(--accent-warning)' : 'var(--text-secondary)'} />
                   </div>
                 </div>
                 <div className="rounded-lg border border-white/10 bg-[#121212] px-3 py-2">
                   <div className="font-mono uppercase" style={{ fontSize: 'var(--fs-micro)', color: 'var(--text-secondary)' }}>Off Peg Count</div>
                   <div className="font-mono tabular-nums" style={{ fontSize: 'var(--fs-heading)', color: summary.offPegCount > 0 ? 'var(--accent-red)' : 'var(--text-secondary)' }}>
-                    {summary.offPegCount}
+                    <AnimatedMetric value={summary.offPegCount} variant="number" inline color={summary.offPegCount > 0 ? 'var(--accent-red)' : 'var(--text-secondary)'} />
                   </div>
                 </div>
                 <div className="rounded-lg border border-white/10 bg-[#121212] px-3 py-2">
                   <div className="font-mono uppercase" style={{ fontSize: 'var(--fs-micro)', color: 'var(--text-secondary)' }}>Avg Peg Deviation</div>
                   <div className="font-mono tabular-nums text-white" style={{ fontSize: 'var(--fs-heading)' }}>
-                    ±{Number.isFinite(summary.avgDev) ? summary.avgDev.toFixed(3) : '—'}%
+                    <AnimatedMetric value={summary.avgDev} variant="percent" decimals={3} prefix="±" inline />
                   </div>
-              </div>
+                </div>
             </div>
 
             {coinsWithLivePeg.length > 0 ? (
