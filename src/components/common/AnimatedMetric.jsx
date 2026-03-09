@@ -114,6 +114,7 @@ export default function AnimatedMetric({
   color,
   incrementColor = 'var(--accent-green)',
   decrementColor = 'var(--accent-red)',
+  blockAlign = 'center',
 }) {
   const config = buildMetricConfig({ value, variant, decimals, signed, prefix, suffix });
   const wrapperRef = useRef(null);
@@ -122,9 +123,29 @@ export default function AnimatedMetric({
   const textColor = color ?? 'white';
 
   useLayoutEffect(() => {
-    if (!wrapperRef.current || typeof window === 'undefined') return;
-    const computedFontSize = window.getComputedStyle(wrapperRef.current).fontSize;
-    if (computedFontSize) setCounterFontSize(computedFontSize);
+    if (!wrapperRef.current || typeof window === 'undefined') return undefined;
+
+    const node = wrapperRef.current;
+    const updateFontSize = () => {
+      const computedFontSize = window.getComputedStyle(node).fontSize;
+      if (computedFontSize) {
+        setCounterFontSize((current) => (current === computedFontSize ? current : computedFontSize));
+      }
+    };
+
+    updateFontSize();
+
+    const resizeObserver = typeof ResizeObserver === 'function'
+      ? new ResizeObserver(() => updateFontSize())
+      : null;
+
+    resizeObserver?.observe(node);
+    window.addEventListener('resize', updateFontSize);
+
+    return () => {
+      resizeObserver?.disconnect();
+      window.removeEventListener('resize', updateFontSize);
+    };
   }, [style?.fontSize, className, inline]);
 
   if (!config) {
@@ -144,9 +165,10 @@ export default function AnimatedMetric({
         color: textColor,
         display,
         alignItems: 'baseline',
-        justifyContent: inline ? 'flex-start' : 'center',
+        justifyContent: inline ? 'flex-start' : (blockAlign === 'start' ? 'flex-start' : 'center'),
         gap: 0,
         whiteSpace: 'nowrap',
+        maxWidth: '100%',
       }}
     >
       {config.prefix ? <span>{config.prefix}</span> : null}
@@ -159,7 +181,7 @@ export default function AnimatedMetric({
         includeDecimals={config.decimals > 0}
         decimalPrecision={config.decimals}
         includeCommas={config.includeCommas}
-        containerStyles={{ display: 'inline-flex', alignItems: 'baseline', fontFamily: 'inherit', height: counterFontSize }}
+        containerStyles={{ display: 'inline-flex', alignItems: 'baseline', fontFamily: 'inherit', height: counterFontSize, whiteSpace: 'nowrap', flexShrink: 0 }}
         digitStyles={{ fontFamily: 'inherit' }}
       />
       {config.suffix ? <span>{config.suffix}</span> : null}

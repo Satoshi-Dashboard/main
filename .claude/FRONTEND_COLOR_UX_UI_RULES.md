@@ -199,8 +199,9 @@ When a frontend view shows live or periodically refreshed numeric data, avoid ha
    - Up/down colors should appear as transient animation feedback, not as a permanently stuck post-update color on main values.
 
 6. Do not break third-party counter layout assumptions.
-   - Do not override a counter library's digit line-height/height model with inherited values if it computes digit travel from `font-size`.
-   - If using responsive font tokens (`clamp(...)`, CSS vars), resolve them to a concrete computed pixel font size before passing them to the counter engine.
+    - Do not override a counter library's digit line-height/height model with inherited values if it computes digit travel from `font-size`.
+    - If using responsive font tokens (`clamp(...)`, CSS vars), resolve them to a concrete computed pixel font size before passing them to the counter engine.
+    - If that computed size can change with viewport width or responsive emulation, re-measure it on resize so live digits do not overflow, stack, or keep stale dimensions.
 
 ## Required verification for frontend color changes
 
@@ -278,3 +279,11 @@ When creating any new frontend module, agents must follow the project example pa
 - **Acción Realizada/Corrección:** Se ajustó el wrapper compartido para respetar el modelo de altura/line-height del contador, resolver el font-size real en px y forzar un estado visual neutro en reposo para valores principales.
 - **Nueva/Modificada Regla o Directriz:** Los contadores DOM deben permanecer blancos/estables cuando no hay actualización y no deben recibir overrides de line-height heredado que rompan la animación interna de dígitos.
 - **Justificación:** Evita regresiones visuales masivas en módulos live y mantiene la animación como señal breve de actualización en lugar de dejar la UI rota o permanentemente tintada.
+
+- **Fecha de la Actualización:** `2026-03-09`
+- **Archivo(s) Afectado(s):** `.claude/FRONTEND_COLOR_UX_UI_RULES.md`
+- **Tipo de Evento/Contexto:** Corrección responsive en contadores live
+- **Descripción del Evento Original:** En `S30` los contadores podían conservar un `font-size` medido antes del cambio de viewport, lo que en modo responsive/emulación del navegador provocaba dígitos apilados, separación vertical y mala alineación en tarjetas y hero values.
+- **Acción Realizada/Corrección:** Se actualizó el wrapper compartido para re-medir el `font-size` en resize/ResizeObserver y se reforzó el alineado izquierdo de tarjetas donde el layout lo requiere.
+- **Nueva/Modificada Regla o Directriz:** Los contadores animados con tipografías responsive deben recalcular su tamaño real cuando cambia el viewport para mantener una sola línea estable y sin bugs visuales en desktop, tablet, móvil y emulación responsive.
+- **Justificación:** Evita falsos positivos o regresiones reales de responsive en módulos con cifras grandes y mantiene consistencia visual al validar layouts con herramientas de desarrollo y dispositivos reales.

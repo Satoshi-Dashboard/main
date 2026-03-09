@@ -49,7 +49,7 @@ function HeroFigure({ value }) {
 
   return (
     <div
-      className="tabular-nums flex items-center justify-center font-mono font-semibold leading-[0.9] text-white max-[1100px]:flex-wrap"
+      className="tabular-nums flex min-w-0 items-center justify-center font-mono font-semibold leading-[0.9] text-white"
       style={{
         fontSize,
         letterSpacing: '-0.075em',
@@ -76,7 +76,7 @@ function StatCard({ label, value, variant = 'number', helper, accent = 'var(--te
         {label}
       </div>
       <div
-        className="mt-3 font-mono font-semibold tabular-nums"
+        className="mt-3 min-w-0 font-mono font-semibold tabular-nums"
         style={{
           color: accent,
           fontSize: featured ? 'clamp(2rem, 2.1vw, 2.9rem)' : 'clamp(1.45rem, 1.45vw, 2.05rem)',
@@ -84,7 +84,7 @@ function StatCard({ label, value, variant = 'number', helper, accent = 'var(--te
           lineHeight: 0.95,
         }}
         >
-          <AnimatedMetric value={value} variant={variant} />
+          <AnimatedMetric value={value} variant={variant} blockAlign="start" />
         </div>
       {helper ? (
         <div
@@ -115,10 +115,10 @@ function RateCard({ label, value, toneColor }) {
         </span>
       </div>
       <div
-        className="font-mono font-semibold tabular-nums text-white"
+        className="min-w-0 font-mono font-semibold tabular-nums text-white"
         style={{ fontSize: 'clamp(1.3rem, 1.2vw, 1.85rem)', letterSpacing: '-0.04em', lineHeight: 0.95 }}
       >
-        <AnimatedMetric value={value} variant="usdCompact" signed />
+        <AnimatedMetric value={value} variant="usdCompact" signed blockAlign="start" />
       </div>
       <div className="mt-2 font-mono" style={{ color: 'var(--text-tertiary)', fontSize: 'var(--fs-micro)' }}>
         Projected pace
@@ -259,7 +259,7 @@ export default function S30_USNationalDebt() {
     <div className="relative flex h-full w-full overflow-y-auto 2xl:overflow-hidden" style={{ backgroundColor: 'var(--bg-primary)' }}>
       <div className="relative mx-auto flex h-full w-full max-w-[1720px] flex-col px-4 py-4 sm:px-6 sm:py-5 lg:px-10 lg:py-6 xl:px-12 2xl:px-16 2xl:py-7">
         <div className="mx-auto flex h-full w-full max-w-[1520px] flex-1 flex-col items-center justify-between text-center">
-          <header className="flex w-full max-w-[980px] flex-col items-center gap-4">
+          <header className="flex w-full max-w-[980px] flex-col items-center gap-4 max-md:gap-3">
             <div className="flex flex-wrap items-center justify-center gap-3">
               <span
                 className="font-mono uppercase"
@@ -285,7 +285,7 @@ export default function S30_USNationalDebt() {
             </div>
 
             <div
-              className="flex flex-wrap items-center justify-center gap-2 font-mono"
+              className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 font-mono max-md:max-w-[26rem]"
               style={{ color: 'var(--text-secondary)', fontSize: 'var(--fs-micro)' }}
             >
               <span>Official print {formatDateLabel(model.official_record_date)}</span>
@@ -296,13 +296,13 @@ export default function S30_USNationalDebt() {
             </div>
           </header>
 
-          <section className="mt-5 w-full max-w-[1460px] px-1 2xl:px-0">
+          <section className="mt-5 flex w-full max-w-[1460px] justify-center overflow-x-hidden px-1 2xl:px-0">
             <HeroFigure value={projectedTotal} />
           </section>
 
-          <section className="mt-4 flex w-full max-w-[980px] flex-col items-center gap-2">
+          <section className="mt-4 flex w-full max-w-[980px] flex-col items-center gap-2 max-md:gap-3">
             <div
-              className="inline-flex flex-wrap items-center justify-center gap-2 rounded-full border px-4 py-2 font-mono tabular-nums"
+              className="inline-flex max-w-full flex-wrap items-center justify-center gap-2 rounded-[22px] border px-4 py-2 font-mono tabular-nums max-md:px-3 max-md:py-2"
               style={{
                 color: toneStyles.color,
                 borderColor: toneStyles.borderColor,
@@ -314,7 +314,7 @@ export default function S30_USNationalDebt() {
               <span style={{ color: 'var(--text-secondary)' }}>since you opened this page</span>
             </div>
             <div
-              className="flex flex-wrap items-center justify-center gap-2 font-mono tabular-nums"
+              className="flex max-w-full flex-wrap items-center justify-center gap-x-2 gap-y-1 font-mono tabular-nums"
               style={{ fontSize: 'clamp(1.1rem, 1vw, 1.45rem)', color: 'var(--text-primary)' }}
             >
                <AnimatedMetric value={Math.abs(Number(model.rate_per_second) || 0)} variant="usd" decimals={0} inline />
@@ -322,7 +322,7 @@ export default function S30_USNationalDebt() {
             </div>
           </section>
 
-          <section className="mt-5 grid w-full gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,0.95fr)_minmax(0,0.95fr)]">
+          <section className="mt-5 grid w-full gap-4 md:grid-cols-2 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,0.95fr)_minmax(0,0.95fr)]">
             <StatCard
               label="DEBT PER PERSON"
               value={projectedDebtPerPerson}

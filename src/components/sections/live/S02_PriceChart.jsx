@@ -122,14 +122,14 @@ const ChartSection = memo(function ChartSection({
 
 export default function S02_PriceChart() {
   const [chartData, setChartData]     = useState([]);
-  const [activeLabel, setActiveLabel] = useState('1W');
+  const [activeLabel, setActiveLabel] = useState('LIVE');
   const [livePrice, setLivePrice]     = useState(null);
   const [showAvgLine, setShowAvgLine] = useState(false);
   const [loading, setLoading]         = useState(true);
   const [hoverData, setHoverData]     = useState(null); // { price, label } | null
   const abortRef      = useRef(null);
 
-  const activeRange = RANGES.find(r => r.label === activeLabel) ?? RANGES[2];
+  const activeRange = RANGES.find(r => r.label === activeLabel) ?? RANGES[0];
 
   /* ── Apply live price ── */
   const applyPrice = useCallback((newPrice) => {
