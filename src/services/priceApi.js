@@ -60,28 +60,59 @@ export async function fetchBtcSpot() {
   return null;
 }
 
-// ── Historical daily price series ────────────────────────────────────────────
-function toChartPoint(ts, price) {
+// ── Historical price series ──────────────────────────────────────────────────
+function formatAxisLabel(date, days) {
+  if (days === 1) {
+    return date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      hour12: false,
+    });
+  }
+
+  return date
+    .toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' })
+    .replace('/', '.');
+}
+
+function formatTooltipLabel(date, days) {
+  if (days === 1) {
+    return date.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+  }
+
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
+function toChartPoint(ts, price, days) {
+  const date = new Date(ts);
   return {
     ts,
     price,
-    date: new Date(ts)
-      .toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' })
-      .replace('/', '.'),
+    axisLabel: formatAxisLabel(date, days),
+    tooltipLabel: formatTooltipLabel(date, days),
   };
 }
 
 /**
- * Returns array of { ts, price, date } or null if every source fails.
- * @param {number} days - 7 | 30 | 90 | 365
+ * Returns array of { ts, price, axisLabel, tooltipLabel } or null if every source fails.
+ * @param {number} days - 1 | 7 | 30 | 90 | 365
  */
 export async function fetchBtcHistory(days) {
   try {
-    const safeDays = [7, 30, 90, 365].includes(Number(days)) ? Number(days) : 365;
+    const safeDays = [1, 7, 30, 90, 365].includes(Number(days)) ? Number(days) : 365;
     const payload = await fetchJson(`/api/public/binance/btc-history?days=${safeDays}`, { timeout: 8000 });
     const rows = Array.isArray(payload?.data) ? payload.data : payload;
     if (Array.isArray(rows) && rows.length > 1) {
-      return rows.map((row) => toChartPoint(Number(row.ts), Number(row.price)))
+      return rows.map((row) => toChartPoint(Number(row.ts), Number(row.price), safeDays))
         .filter((item) => Number.isFinite(item.ts) && Number.isFinite(item.price) && item.price > 0);
     }
   } catch { /* failed */ }

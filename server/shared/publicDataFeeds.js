@@ -109,6 +109,16 @@ const FEED_DEFS = {
     safeMinuteBudget: 1,
     safeDailyBudget: 120,
   },
+  binanceHistory1: {
+    cacheKey: 'public:binance:btc-history:1',
+    lockKey: 'public:binance:btc-history:1:refresh',
+    refreshMs: 5 * 60_000,
+    sourceProvider: 'binance',
+    sourceUrl: 'https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=24 | https://api.binance.us/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=24',
+    hardMinuteLimit: 1200,
+    safeMinuteBudget: 4,
+    safeDailyBudget: 5760,
+  },
   binanceHistory7: {
     cacheKey: 'public:binance:btc-history:7',
     lockKey: 'public:binance:btc-history:7:refresh',
@@ -1500,6 +1510,7 @@ export async function getCoingeckoBitcoinMarketChartPayload({ days = 365 } = {})
 }
 
 function historyFeedKey(days) {
+  if (days === 1) return 'binanceHistory1';
   if (days === 7) return 'binanceHistory7';
   if (days === 30) return 'binanceHistory30';
   if (days === 90) return 'binanceHistory90';
@@ -1507,8 +1518,10 @@ function historyFeedKey(days) {
 }
 
 export async function getBinanceBtcHistoryPayload({ days = 365 } = {}) {
-  const normalizedDays = [7, 30, 90, 365].includes(Number(days)) ? Number(days) : 365;
+  const normalizedDays = [1, 7, 30, 90, 365].includes(Number(days)) ? Number(days) : 365;
   const key = historyFeedKey(normalizedDays);
+  const interval = normalizedDays === 1 ? '1h' : '1d';
+  const limit = normalizedDays === 1 ? 24 : normalizedDays;
 
   return getFeed(
     key,
@@ -1518,8 +1531,8 @@ export async function getBinanceBtcHistoryPayload({ days = 365 } = {}) {
       for (const base of BINANCE_KLINES_BASE_URLS) {
         const params = new URLSearchParams({
           symbol: 'BTCUSDT',
-          interval: '1d',
-          limit: String(normalizedDays),
+          interval,
+          limit: String(limit),
         });
 
         try {
