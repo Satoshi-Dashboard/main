@@ -1,7 +1,8 @@
 import { Link, Navigate, useParams } from 'react-router-dom';
 import SeoChrome from '@/features/seo/components/SeoChrome.jsx';
 import { getModulePath, MODULES_BY_CODE } from '@/features/module-registry/modules.js';
-import { BLOG_POSTS, getBlogPostBySlug, getBlogPostPath, SEO_BLOG_PATH, SEO_HUB_PATH } from '@/features/seo/content/seoContent.js';
+import { BLOG_POSTS, getBlogPostBySlug } from '@/features/seo/content/seoContent.js';
+import { getBlogPostPath, SEO_BLOG_PATH, SEO_HUB_PATH } from '@/features/seo/content/seoRoutes.js';
 import { absoluteUrl, DEFAULT_OG_IMAGE, SITE_URL, usePageSEO } from '@/shared/hooks/usePageSEO.js';
 
 function buildFaqSchema(post) {

@@ -1,9 +1,6 @@
-export const SEO_HUB_PATH = '/landingpage';
-export const SEO_BLOG_PATH = `${SEO_HUB_PATH}/blog`;
+import { getBlogPostPath, SEO_BLOG_PATH, SEO_HUB_PATH } from '@/features/seo/content/seoRoutes.js';
 
-export function getBlogPostPath(slug) {
-  return `${SEO_BLOG_PATH}/${slug}`;
-}
+export { getBlogPostPath, SEO_BLOG_PATH, SEO_HUB_PATH };
 
 export const SEO_KEYWORD_ROWS = [
   {

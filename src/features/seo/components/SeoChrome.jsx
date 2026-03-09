@@ -1,5 +1,5 @@
 import { Link, NavLink } from 'react-router-dom';
-import { SEO_BLOG_PATH, SEO_HUB_PATH } from '@/features/seo/content/seoContent.js';
+import { SEO_BLOG_PATH, SEO_HUB_PATH } from '@/features/seo/content/seoRoutes.js';
 
 const NAV_LINKS = [
   { to: '/', label: 'Dashboard' },

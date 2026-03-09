@@ -418,6 +418,14 @@ Satoshi Dashboard is open-source under the MIT License. See `LICENSE.txt`.
 
 - **Fecha de la Actualización:** `2026-03-09`
 - **Archivo(s) Afectado(s):** `README.md`
+- **Tipo de Evento/Contexto:** Optimización de rendimiento frontend
+- **Descripción del Evento Original:** El chequeo de velocidad mostró trabajo alto en main thread y JavaScript no usado porque el app shell cargaba rutas/editorial SEO y utilidades opcionales desde el bundle inicial aunque no fueran necesarias en la ruta principal.
+- **Acción Realizada/Corrección:** Se separaron las constantes de rutas SEO en un módulo liviano, se lazy-loadearon las páginas editoriales y el QR de donación, y se eliminó la importación global redundante de Leaflet CSS para que solo cargue en módulos de mapa.
+- **Nueva/Modificada Regla o Directriz:** Las rutas o utilidades no críticas para la pantalla inicial deben mantenerse fuera del bundle principal mediante imports diferidos, y las constantes compartidas de routing no deben depender de archivos de contenido pesado.
+- **Justificación:** Reduce bytes y CPU de arranque sin alterar UX, backend ni comportamiento funcional, y evita que futuras mejoras SEO/editoriales degraden la velocidad de la home.
+
+- **Fecha de la Actualización:** `2026-03-09`
+- **Archivo(s) Afectado(s):** `README.md`
 - **Tipo de Evento/Contexto:** Reescritura pública del README y alineación de licencia
 - **Descripción del Evento Original:** El `README.md` era útil para mantenedores técnicos, pero no explicaba con suficiente claridad al visitante público qué es Satoshi Dashboard, y además seguía declarando una licencia distinta a la deseada por el owner.
 - **Acción Realizada/Corrección:** Se reescribió el README con tono más público y equilibrado, manteniendo las secciones técnicas solicitadas (`Module registry`, `Real module data/source table`, `Under-construction modules`, `API summary`, `Environment variables`) y se alineó la referencia de licencia a MIT.

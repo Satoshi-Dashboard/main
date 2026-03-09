@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Hammer, Maximize2, Minimize2, Pause, Play, SkipBack, SkipForward } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import BitcoinDonationQr from '@/shared/components/common/BitcoinDonationQr.jsx';
 import {
   FIRST_MODULE,
   getModulePath,
@@ -11,9 +10,11 @@ import {
 } from '@/features/module-registry/modules.js';
 import { getModuleDataMeta } from '@/features/module-registry/moduleDataMeta.js';
 import { getModuleSEO } from '@/features/module-registry/moduleSEO.js';
-import { SEO_HUB_PATH } from '@/features/seo/content/seoContent.js';
+import { SEO_HUB_PATH } from '@/features/seo/content/seoRoutes.js';
 import { absoluteUrl, DEFAULT_OG_IMAGE, usePageSEO } from '@/shared/hooks/usePageSEO.js';
 import { fetchBtcSpot } from '@/shared/services/priceApi.js';
+
+const BitcoinDonationQr = lazy(() => import('@/shared/components/common/BitcoinDonationQr.jsx'));
 
 const MARKET_AUDIO_POLL_MS = 15_000;
 const MARKET_AUDIO_HISTORY_MS = 20 * 60 * 1000;
@@ -190,6 +191,18 @@ function LiveClock() {
     <span className="font-mono text-[11px] tracking-wide text-white/50 sm:text-[12px]">
       {dateStr}, {timeStr}
     </span>
+  );
+}
+
+function DonationQrFallback({ size }) {
+  return (
+    <div
+      className="flex items-center justify-center rounded-xl border border-[rgba(247,147,26,0.2)] bg-white p-2 text-center font-mono shadow-[0_8px_24px_rgba(0,0,0,0.28)]"
+      style={{ color: 'var(--bg-primary)', width: size + 16, minWidth: size + 16, minHeight: size + 16, fontSize: 'var(--fs-micro)' }}
+      aria-label="Loading Bitcoin donation QR"
+    >
+      Loading QR...
+    </div>
   );
 }
 
@@ -699,7 +712,9 @@ export default function ModulePage({ forcedSlug = null }) {
             </div>
             <div className="mt-4 flex justify-center">
               <div className="flex flex-col items-center gap-3">
-                <BitcoinDonationQr value={DONATION_ADDRESS} size={176} />
+                <Suspense fallback={<DonationQrFallback size={176} />}>
+                  <BitcoinDonationQr value={DONATION_ADDRESS} size={176} />
+                </Suspense>
                 <div className="text-center font-mono text-white/65" style={{ fontSize: 'var(--fs-caption)' }}>
                   Scan to donate BTC
                 </div>

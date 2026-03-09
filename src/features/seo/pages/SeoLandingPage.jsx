@@ -3,12 +3,11 @@ import SeoChrome from '@/features/seo/components/SeoChrome.jsx';
 import { FIRST_MODULE, getModulePath } from '@/features/module-registry/modules.js';
 import {
   BLOG_POSTS,
-  SEO_BLOG_PATH,
   SEO_HUB_FAQS,
-  SEO_HUB_PATH,
   SEO_KEYWORD_ROWS,
   SEO_QUESTION_ROWS,
 } from '@/features/seo/content/seoContent.js';
+import { SEO_BLOG_PATH, SEO_HUB_PATH } from '@/features/seo/content/seoRoutes.js';
 import { absoluteUrl, DEFAULT_OG_IMAGE, SITE_URL, usePageSEO } from '@/shared/hooks/usePageSEO.js';
 
 const LANDING_TITLE = 'Satoshi Dashboard Landing Page | Bitcoin Price, Nodes, Tools and Blog';

@@ -1,12 +1,13 @@
-import { Suspense } from 'react';
+import { Suspense, lazy } from 'react';
 import { Navigate, Route, Routes, useParams } from 'react-router-dom';
 import { ToastProvider } from '@/shared/components/common/Toast.jsx';
 import { FIRST_MODULE } from '@/features/module-registry/modules.js';
-import { SEO_BLOG_PATH, SEO_HUB_PATH } from '@/features/seo/content/seoContent.js';
+import { SEO_BLOG_PATH, SEO_HUB_PATH } from '@/features/seo/content/seoRoutes.js';
 import ModulePage from '@/features/module-player/ModulePage.jsx';
-import SeoBlogIndexPage from '@/features/seo/pages/SeoBlogIndexPage.jsx';
-import SeoBlogPostPage from '@/features/seo/pages/SeoBlogPostPage.jsx';
-import SeoLandingPage from '@/features/seo/pages/SeoLandingPage.jsx';
+
+const SeoLandingPage = lazy(() => import('@/features/seo/pages/SeoLandingPage.jsx'));
+const SeoBlogIndexPage = lazy(() => import('@/features/seo/pages/SeoBlogIndexPage.jsx'));
+const SeoBlogPostPage = lazy(() => import('@/features/seo/pages/SeoBlogPostPage.jsx'));
 
 function AppShellFallback() {
   return (

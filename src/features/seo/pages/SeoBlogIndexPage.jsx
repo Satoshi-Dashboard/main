@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import SeoChrome from '@/features/seo/components/SeoChrome.jsx';
-import { BLOG_POSTS, getBlogPostPath, SEO_BLOG_PATH, SEO_HUB_PATH } from '@/features/seo/content/seoContent.js';
+import { BLOG_POSTS } from '@/features/seo/content/seoContent.js';
+import { getBlogPostPath, SEO_BLOG_PATH, SEO_HUB_PATH } from '@/features/seo/content/seoRoutes.js';
 import { absoluteUrl, usePageSEO } from '@/shared/hooks/usePageSEO.js';
 
 const BLOG_TITLE = 'Satoshi Dashboard Blog | Bitcoin Price, Nodes, Tools and Merchant Guides';
