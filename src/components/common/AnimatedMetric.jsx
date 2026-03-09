@@ -167,11 +167,13 @@ export default function AnimatedMetric({
         alignItems: 'baseline',
         justifyContent: inline ? 'flex-start' : (blockAlign === 'start' ? 'flex-start' : 'center'),
         gap: 0,
+        lineHeight: 1,
         whiteSpace: 'nowrap',
         maxWidth: '100%',
+        fontVariantNumeric: 'tabular-nums',
       }}
     >
-      {config.prefix ? <span>{config.prefix}</span> : null}
+      {config.prefix ? <span style={{ lineHeight: 1, flexShrink: 0 }}>{config.prefix}</span> : null}
       <AnimatedCounter
         value={config.value}
         color={textColor}
@@ -181,10 +183,10 @@ export default function AnimatedMetric({
         includeDecimals={config.decimals > 0}
         decimalPrecision={config.decimals}
         includeCommas={config.includeCommas}
-        containerStyles={{ display: 'inline-flex', alignItems: 'baseline', fontFamily: 'inherit', height: counterFontSize, whiteSpace: 'nowrap', flexShrink: 0 }}
-        digitStyles={{ fontFamily: 'inherit' }}
+        containerStyles={{ display: 'inline-flex', alignItems: 'baseline', fontFamily: 'inherit', height: counterFontSize, lineHeight: counterFontSize, whiteSpace: 'nowrap', flexShrink: 0, margin: 0, minWidth: 0 }}
+        digitStyles={{ fontFamily: 'inherit', lineHeight: counterFontSize }}
       />
-      {config.suffix ? <span>{config.suffix}</span> : null}
+      {config.suffix ? <span style={{ lineHeight: 1, flexShrink: 0 }}>{config.suffix}</span> : null}
     </span>
   );
 }

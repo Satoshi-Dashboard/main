@@ -147,6 +147,7 @@ const MODULE_DATA_META = {
       { name: 'U.S. Census ACS', url: 'https://api.census.gov/data/2024/acs/acs1?get=NAME,B01003_001E&for=us:1' },
     ],
     refreshMinutes: 15,
+    showSharedStripOnResponsive: false,
   },
   'satoshi-nakamoto-bitcoin-whitepaper': {
     showSharedStrip: false,

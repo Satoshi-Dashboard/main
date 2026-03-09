@@ -42,17 +42,17 @@ function getToneStyles(tone) {
 function HeroFigure({ value }) {
   const fontSize = useMemo(() => {
     const digits = String(Math.round(Number(value) || 0)).length;
-    if (digits >= 14) return 'clamp(2.9rem, 5.8vw, 6.25rem)';
-    if (digits >= 13) return 'clamp(3.2rem, 6.4vw, 6.7rem)';
-    return 'clamp(3.4rem, 6.8vw, 7.1rem)';
+    if (digits >= 15) return 'clamp(1.05rem, 5vw, 4.4rem)';
+    if (digits >= 14) return 'clamp(1.12rem, 5.4vw, 4.8rem)';
+    return 'clamp(1.2rem, 5.8vw, 5.2rem)';
   }, [value]);
 
   return (
     <div
-      className="tabular-nums flex min-w-0 items-center justify-center font-mono font-semibold leading-[0.9] text-white"
+      className="flex w-full min-w-0 items-center justify-center overflow-visible font-mono font-semibold text-white tabular-nums tracking-[-0.03em] sm:tracking-[-0.05em] xl:tracking-[-0.075em]"
       style={{
         fontSize,
-        letterSpacing: '-0.075em',
+        lineHeight: 0.96,
       }}
     >
       <AnimatedMetric value={value} variant="usd" decimals={0} />
@@ -60,10 +60,10 @@ function HeroFigure({ value }) {
   );
 }
 
-function StatCard({ label, value, variant = 'number', helper, accent = 'var(--text-primary)', featured = false }) {
+function StatCard({ label, value, variant = 'number', helper, accent = 'var(--text-primary)', featured = false, className = '' }) {
   return (
     <article
-      className="rounded-[24px] border border-white/10 bg-white/[0.03] p-4 text-left sm:p-5 2xl:p-6"
+      className={`rounded-[24px] border border-white/10 bg-white/[0.03] p-3.5 text-left sm:p-4 lg:p-5 2xl:p-6 ${className}`}
     >
       <div
         className="font-mono uppercase"
@@ -79,9 +79,9 @@ function StatCard({ label, value, variant = 'number', helper, accent = 'var(--te
         className="mt-3 min-w-0 font-mono font-semibold tabular-nums"
         style={{
           color: accent,
-          fontSize: featured ? 'clamp(2rem, 2.1vw, 2.9rem)' : 'clamp(1.45rem, 1.45vw, 2.05rem)',
+          fontSize: featured ? 'clamp(1.45rem, 5vw, 2.5rem)' : 'clamp(1.12rem, 3.5vw, 1.95rem)',
           letterSpacing: '-0.05em',
-          lineHeight: 0.95,
+          lineHeight: 1,
         }}
         >
           <AnimatedMetric value={value} variant={variant} blockAlign="start" />
@@ -100,7 +100,7 @@ function StatCard({ label, value, variant = 'number', helper, accent = 'var(--te
 
 function RateCard({ label, value, toneColor }) {
   return (
-    <article className="rounded-[22px] border border-white/10 bg-white/[0.025] p-4 text-left sm:p-5 2xl:p-4">
+    <article className="rounded-[22px] border border-white/10 bg-white/[0.025] p-3.5 text-left sm:p-4 xl:p-5 2xl:p-4">
       <div className="mb-3 flex items-center gap-2">
         <span className="h-1.5 w-1.5 rounded-full" style={{ background: toneColor, opacity: 0.8 }} />
         <span
@@ -116,7 +116,7 @@ function RateCard({ label, value, toneColor }) {
       </div>
       <div
         className="min-w-0 font-mono font-semibold tabular-nums text-white"
-        style={{ fontSize: 'clamp(1.3rem, 1.2vw, 1.85rem)', letterSpacing: '-0.04em', lineHeight: 0.95 }}
+        style={{ fontSize: 'clamp(1.05rem, 3.6vw, 1.7rem)', letterSpacing: '-0.04em', lineHeight: 1 }}
       >
         <AnimatedMetric value={value} variant="usdCompact" signed blockAlign="start" />
       </div>
@@ -241,7 +241,7 @@ export default function S30_USNationalDebt() {
 
   if (loading && !model) {
     return (
-      <div className="relative flex h-full w-full overflow-y-auto bg-[var(--bg-primary)] px-4 py-5 sm:px-6 lg:px-10 lg:py-8 2xl:overflow-hidden">
+      <div className="relative flex min-h-full w-full bg-[var(--bg-primary)] px-4 py-5 sm:px-6 lg:h-full lg:px-10 lg:py-8 2xl:overflow-hidden">
         <LoadingState />
       </div>
     );
@@ -249,16 +249,16 @@ export default function S30_USNationalDebt() {
 
   if (!model) {
     return (
-      <div className="relative flex h-full w-full overflow-y-auto bg-[var(--bg-primary)] px-4 py-5 sm:px-6 lg:px-10 lg:py-8 2xl:overflow-hidden">
+      <div className="relative flex min-h-full w-full bg-[var(--bg-primary)] px-4 py-5 sm:px-6 lg:h-full lg:px-10 lg:py-8 2xl:overflow-hidden">
         <ErrorState message={error} onRetry={() => load({ force: true })} />
       </div>
     );
   }
 
   return (
-    <div className="relative flex h-full w-full overflow-y-auto 2xl:overflow-hidden" style={{ backgroundColor: 'var(--bg-primary)' }}>
-      <div className="relative mx-auto flex h-full w-full max-w-[1720px] flex-col px-4 py-4 sm:px-6 sm:py-5 lg:px-10 lg:py-6 xl:px-12 2xl:px-16 2xl:py-7">
-        <div className="mx-auto flex h-full w-full max-w-[1520px] flex-1 flex-col items-center justify-between text-center">
+    <div className="relative flex min-h-full w-full overflow-visible bg-[var(--bg-primary)] lg:h-full lg:overflow-hidden">
+      <div className="relative mx-auto flex min-h-full w-full max-w-[1720px] flex-col px-4 py-4 sm:px-5 sm:py-5 lg:h-full lg:px-10 lg:py-6 xl:px-12 2xl:px-16 2xl:py-7">
+        <div className="mx-auto flex w-full max-w-[1520px] flex-col items-center gap-4 text-center sm:gap-5 lg:h-full lg:flex-1 lg:justify-between lg:gap-0">
           <header className="flex w-full max-w-[980px] flex-col items-center gap-4 max-md:gap-3">
             <div className="flex flex-wrap items-center justify-center gap-3">
               <span
@@ -296,11 +296,11 @@ export default function S30_USNationalDebt() {
             </div>
           </header>
 
-          <section className="mt-5 flex w-full max-w-[1460px] justify-center overflow-x-hidden px-1 2xl:px-0">
+          <section className="mt-4 flex w-full max-w-[1460px] justify-center px-0 sm:px-1 2xl:px-0">
             <HeroFigure value={projectedTotal} />
           </section>
 
-          <section className="mt-4 flex w-full max-w-[980px] flex-col items-center gap-2 max-md:gap-3">
+          <section className="flex w-full max-w-[980px] flex-col items-center gap-3">
             <div
               className="inline-flex max-w-full flex-wrap items-center justify-center gap-2 rounded-[22px] border px-4 py-2 font-mono tabular-nums max-md:px-3 max-md:py-2"
               style={{
@@ -322,7 +322,7 @@ export default function S30_USNationalDebt() {
             </div>
           </section>
 
-          <section className="mt-5 grid w-full gap-4 md:grid-cols-2 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,0.95fr)_minmax(0,0.95fr)]">
+          <section className="grid w-full gap-3.5 md:grid-cols-2 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,0.95fr)_minmax(0,0.95fr)] xl:gap-4">
             <StatCard
               label="DEBT PER PERSON"
               value={projectedDebtPerPerson}
@@ -330,6 +330,7 @@ export default function S30_USNationalDebt() {
               helper={`Estimated share of national debt per U.S. resident. Moves in step with the national counter using the latest population estimate (${formatNumberCompact(model.population)} residents).`}
               accent="var(--text-primary)"
               featured
+              className="md:col-span-2 xl:col-span-1"
             />
             <StatCard
               label="DEBT HELD BY THE PUBLIC"
@@ -347,7 +348,7 @@ export default function S30_USNationalDebt() {
             />
           </section>
 
-          <section className="mt-5 w-full">
+          <section className="w-full">
             <div
               className="mb-3 text-center font-mono uppercase"
               style={{ color: 'var(--text-secondary)', fontSize: 'var(--fs-tag)', letterSpacing: '0.22em' }}

@@ -73,7 +73,11 @@ For any new module, new UI content, new element, or update to existing frontend 
    - Prevent clipping/overflow in cards, charts, labels, and controls.
 
 4. Acceptance criteria
-   - Any frontend change is incomplete if tablet/mobile behavior is not addressed.
+    - Any frontend change is incomplete if tablet/mobile behavior is not addressed.
+
+5. One vertical scroll owner on responsive views
+   - Avoid nested mobile/tablet `overflow-y-auto` regions inside modules when the player shell already provides vertical scrolling.
+   - Prefer a single responsive scroll container so tall modules do not clip content, trap gestures, or create fake spacing bugs.
 
 ## Responsive typography hierarchy (mandatory)
 
@@ -287,3 +291,11 @@ When creating any new frontend module, agents must follow the project example pa
 - **Acción Realizada/Corrección:** Se actualizó el wrapper compartido para re-medir el `font-size` en resize/ResizeObserver y se reforzó el alineado izquierdo de tarjetas donde el layout lo requiere.
 - **Nueva/Modificada Regla o Directriz:** Los contadores animados con tipografías responsive deben recalcular su tamaño real cuando cambia el viewport para mantener una sola línea estable y sin bugs visuales en desktop, tablet, móvil y emulación responsive.
 - **Justificación:** Evita falsos positivos o regresiones reales de responsive en módulos con cifras grandes y mantiene consistencia visual al validar layouts con herramientas de desarrollo y dispositivos reales.
+
+- **Fecha de la Actualización:** `2026-03-09`
+- **Archivo(s) Afectado(s):** `.claude/FRONTEND_COLOR_UX_UI_RULES.md`
+- **Tipo de Evento/Contexto:** Corrección de scroll responsive en módulos altos
+- **Descripción del Evento Original:** `S30` combinaba un scroll vertical interno con el scroll responsive del player shell, lo que hacía más evidente cortes, espacios muertos y lectura incómoda en tablet y móvil.
+- **Acción Realizada/Corrección:** Se reforzó la política frontend para mantener un solo contenedor vertical de scroll en responsive y se ajustó el módulo para dejar al shell como dueño del scroll en pantallas estrechas.
+- **Nueva/Modificada Regla o Directriz:** Los módulos altos deben evitar scroll vertical anidado en móvil/tablet cuando el contenedor principal ya gestiona el desplazamiento de la página.
+- **Justificación:** Reduce bugs visuales difíciles de diagnosticar, mejora la interacción táctil y evita que el responsive parezca roto aunque el contenido sea correcto.
