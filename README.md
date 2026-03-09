@@ -19,24 +19,39 @@
 
 ## Satoshi Dashboard
 
-Bitcoin analytics dashboard built with React + Vite and backed by an Express/serverless API layer that caches market, macro, map, and on-chain data for a single-module player experience.
+Satoshi Dashboard is an open-source Bitcoin dashboard built to make complex market, macro, network, and adoption data easier to explore in one place.
+
+It is designed for people who want more than a price ticker: Bitcoin builders, curious newcomers, macro watchers, and anyone who prefers context over noise. The product combines live modules, honest source attribution, and a simple one-module-at-a-time reading experience.
+
+## What Satoshi Dashboard aims to do
+
+- Turn scattered Bitcoin data into a cleaner, guided dashboard experience
+- Show what each module is actually measuring and where the data comes from
+- Preserve source transparency instead of hiding scrapers, fallbacks, or refresh limits
+- Mix live modules with clearly labeled experimental modules that are still being built
+
+## What you can explore today
+
+- Live Bitcoin market modules such as spot price, chart ranges, multi-currency quotes, mempool metrics, Lightning, Bitnodes, BTC Map, and macro comparisons
+- A single-module player flow that lets each topic breathe instead of compressing everything into one overloaded page
+- SEO landing and blog pages that explain the project and route readers into the live dashboard
+- A public-facing API layer that powers the dashboard with cache-aware upstream fetches and stale-safe fallbacks
 
 ## Current project state
 
-- Frontend module registry: **31 modules** generated from `src/features/module-registry/modules.js`.
-- Live/indexable module routes: **17** (`S01-S15`, `S30`, `S31`).
-- Under-construction module routes: **14** (`S16-S29`) with a UI overlay and `noindex` robots policy.
-- Primary app routes:
+- Frontend module registry: **31 modules** generated from `src/features/module-registry/modules.js`
+- Live and indexable module routes: **17** (`S01-S15`, `S30`, `S31`)
+- Under-construction module routes: **14** (`S16-S29`) with a visible overlay and `noindex, follow` policy
+- Primary routes:
   - `/` -> first live module (`S01`)
   - `/module/:slug` -> module player route
   - `/landingpage` -> SEO hub
-  - `/landingpage/blog` and `/landingpage/blog/:slug` -> blog index and posts
-- Legacy routes such as `/bitcoin-dashboard/*` still redirect to the current route structure.
-- Backend/API runtime:
-  - local entry: `server/index.js`
-  - shared app: `server/app.js`
+  - `/landingpage/blog` and `/landingpage/blog/:slug` -> blog index and blog posts
+- Legacy `/bitcoin-dashboard/*` routes still redirect to the current structure
+- Runtime entrypoints:
+  - local API: `server/index.js`
+  - shared Express app: `server/app.js`
   - Vercel serverless entry: `api/index.js`
-- Deployment target: Vercel via `vercel.json` rewrites.
 
 ## Tech stack
 
@@ -44,56 +59,45 @@ Bitcoin analytics dashboard built with React + Vite and backed by an Express/ser
 - React Router 7
 - Vite 7
 - Tailwind CSS 4
+- Express 4
+- TanStack React Query
 - Recharts
 - Framer Motion
-- Express 4
 - Leaflet / React Leaflet
 - D3
-- TanStack React Query
 
-## Architecture
+## Architecture at a glance
 
 ### Frontend
 
 - App shell and routing: `src/App.jsx`, `src/main.jsx`
-- Single-module player page: `src/features/module-player/ModulePage.jsx`
-- Module registry and generated codes/slugs: `src/features/module-registry/modules.js`
-- Live module sections: `src/features/modules/live/`
-- Under-construction module sections: `src/features/modules/under-construction/`
-- Module metadata strip config: `src/features/module-registry/moduleDataMeta.js`
-- Module SEO metadata: `src/features/module-registry/moduleSEO.js`
-- Landing/blog SEO content: `src/features/seo/content/seoContent.js`
-- Shared API helpers: `src/shared/lib/api.js`, `src/shared/services/priceApi.js`, `src/shared/services/usNationalDebtApi.js`
-- Shared UI primitives and hooks: `src/shared/components/common/`, `src/shared/hooks/usePageSEO.js`, `src/shared/lib/queryClient.js`
-- Global design tokens and typography: `src/index.css`
+- Module player shell: `src/features/module-player/ModulePage.jsx`
+- Registry and generated slugs/codes: `src/features/module-registry/modules.js`
+- Live modules: `src/features/modules/live/`
+- Under-construction modules: `src/features/modules/under-construction/`
+- SEO pages and editorial content: `src/features/seo/`
+- Shared UI, hooks, data clients, and utilities: `src/shared/`
 
 ### Backend / API
 
 - Route surface: `server/app.js`
-- Shared memory/KV cache and lock layer: `server/core/runtimeCache.js`
-- BTC spot + fiat conversion pipeline: `server/services/btcRates.js`
-- Shared public feeds: `server/services/publicDataFeeds.js`
-- Module-specific caches/scrapers:
-  - `server/features/multi-currency/s03MultiCurrencyScraper.js`
-  - `server/features/stablecoins/s10StablecoinPegCache.js`
-  - `server/features/global-assets/s14GlobalAssetsCache.js`
-  - `server/features/bitnodes/bitnodesCache.js`
-  - `server/services/bitinfochartsShared.js`
-  - `server/features/bitinfocharts/s12BtcDistribution.js`
-  - `server/features/bitinfocharts/s13AddressesRicher.js`
-  - `server/features/visitors/visitorCounter.js`
+- Shared cache/lock primitives: `server/core/runtimeCache.js`
+- Shared provider pipelines: `server/services/`
+- Module/domain-specific backend logic: `server/features/`
 
 ### Cache model
 
-- Local in-process memory cache first.
-- Optional shared KV / Upstash Redis cache second.
-- Single-flight lock protection via `withCacheLock(...)` for refreshes.
-- Stale payload fallback when upstream refresh fails or another instance is already refreshing.
-- Frontend modules usually keep previous UI state if a refresh request fails.
+- Local in-process memory cache first
+- Optional shared KV / Upstash Redis second
+- Single-flight refresh locking for expensive upstream refreshes
+- Stale payload fallback when a provider fails or a refresh is already in progress
+- Frontend modules usually preserve last good UI state during transient failures
+
+For contributor-facing placement rules and folder ownership, see `PROJECT_STRUCTURE.md`.
 
 ## Module registry (source of truth)
 
-Module codes and slugs are generated from array order in `src/features/module-registry/modules.js`. Component filenames still contain legacy numbering and are **not** the source of truth.
+The module list is generated from array order in `src/features/module-registry/modules.js`. Codes and slugs are derived from that order, which means component filenames are not the final source of truth.
 
 | Code | Title | Route |
 | --- | --- | --- |
@@ -131,6 +135,8 @@ Module codes and slugs are generated from array order in `src/features/module-re
 
 ## Real module data/source table
 
+This section exists on purpose: public readers and contributors should be able to see which modules are truly live, which depend on static/local data, and which providers power the experience.
+
 ### Live and indexable modules
 
 | Code | Title | Data path in app | Upstream/source priority | Fallback | Reload |
@@ -151,9 +157,11 @@ Module codes and slugs are generated from array order in `src/features/module-re
 | S14 | Global Assets | `/api/s14/global-assets` | Scraper proxy -> `r.jina.ai` mirror of Newhedge snapshot | Stale shared cache | UI 60m; API 60m |
 | S15 | BTC vs Gold | `/api/public/coingecko/bitcoin-market-chart?days=365` + local `GOLD_MAP` | CoinGecko BTC market chart; gold comparison is local static map | Local static chart fallback in component if API fails | UI on mount; API 60m |
 | S30 | U.S. National Debt | `/api/public/us-national-debt` | U.S. Treasury Debt to the Penny + latest available U.S. Census ACS year (currentYear-1 down to 2020) | Stale debt/population cache; UI keeps last payload and keeps 1s local interpolation | UI 60s + 1s local tick; debt API 15m; population API 30d |
-| S31 | Thank You Satoshi | local component copy, QR, whitepaper quote | Local static content only | No remote dependency | Static |
+| S31 | Thank You Satoshi | Local component copy, QR, whitepaper quote | Local static content only | No remote dependency | Static |
 
-### Under-construction modules (routable, overlaid, and `noindex`)
+## Under-construction modules (routable, overlaid, and noindex)
+
+These modules are intentionally visible in the product because they communicate the roadmap and future direction of the dashboard. They remain routable, but they ship with an overlay and `noindex, follow` metadata until they are ready to be treated as fully live public pages.
 
 | Code | Title | Status | Data path in app | Real source priority | Fallback | Reload |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -174,12 +182,14 @@ Module codes and slugs are generated from array order in `src/features/module-re
 
 ## API summary
 
+The API layer is part of the product, not an afterthought. It exists to keep the dashboard fast, resilient, and transparent about source behavior.
+
 Global behavior:
 
-- Upstream providers are wrapped by cache-first single-flight refresh logic.
-- Stale payloads may be served when an upstream refresh fails or another runtime is already refreshing.
-- Refresh endpoints require `REFRESH_API_TOKEN` in production and accept either `x-refresh-token` or `Authorization: Bearer ...`.
-- Frontend callers should stay on relative `/api/...` routes for local dev and Vercel rewrite compatibility.
+- Upstream providers are wrapped by cache-first single-flight refresh logic
+- Stale payloads may be served when an upstream refresh fails or another runtime is already refreshing
+- Refresh endpoints require `REFRESH_API_TOKEN` in production and accept either `x-refresh-token` or `Authorization: Bearer ...`
+- Frontend callers stay on relative `/api/...` routes for local development and Vercel rewrite compatibility
 
 ### BTC rates
 
@@ -189,9 +199,9 @@ Global behavior:
 
 Notes:
 
-- Near-live BTC spot cadence: ~5 seconds.
-- Spot priority is now **Binance -> Binance.US -> cached BTC spot**.
-- Fiat factors come from **api.zatobox.io scraping Investing USD crosses** first, then direct Investing HTML scrape, then cached shared fiat data, then factors derived from the last BTC-rates payload when needed.
+- Near-live BTC spot cadence: about 5 seconds
+- Spot priority: **Binance -> Binance.US -> cached BTC spot**
+- Fiat conversion factors: **api.zatobox.io scraping Investing USD crosses** first, then direct Investing HTML scrape, then cached shared fiat data, then factors derived from the last BTC-rates payload when needed
 
 ### S03 multi-currency
 
@@ -201,16 +211,16 @@ Notes:
 
 Notes:
 
-- Uses `/api/btc/rates` as the BTC/USD anchor.
-- FX factors come from Investing USD crosses via scraper proxy first, direct HTML scrape second.
+- Uses `/api/btc/rates` as the BTC/USD anchor
+- FX factors come from Investing USD crosses via scraper proxy first, direct HTML scrape second
 
-### S08 stablecoin peg cache
+### S10 stablecoin cache
 
 - `GET /api/s10/stablecoins`
 - `GET /api/s10/stablecoins/live-prices`
 - `GET /api/s10/stablecoin/:id`
 
-### S13 global assets
+### S14 global assets
 
 - `GET /api/s14/global-assets`
 - `GET /api/s14/global-assets/status`
@@ -224,8 +234,8 @@ Notes:
 
 Notes:
 
-- Priority: scraper proxy API -> direct Bitnodes API snapshot -> Bitnodes HTML modal scrape.
-- Fallback payloads can switch `source_provider` to `bitnodes_scrape`.
+- Priority: scraper proxy API -> direct Bitnodes API snapshot -> Bitnodes HTML modal scrape
+- Fallback payloads can switch `source_provider` to `bitnodes_scrape`
 
 ### BitInfoCharts-backed data
 
@@ -254,7 +264,7 @@ Notes:
 
 #### S02 chart range reference
 
-The Price Chart module (`S02_PriceChart.jsx`) exposes 7 time ranges. Each maps to a `days` + `interval` pair that determines which Binance klines are requested:
+The Price Chart module (`src/features/modules/live/S02_PriceChart.jsx`) exposes 7 time ranges. Each maps to a `days` + `interval` pair that determines which Binance klines are requested.
 
 | Range label | `days` | `interval` | Candles | Cache refresh |
 | --- | --- | --- | --- | --- |
@@ -268,10 +278,9 @@ The Price Chart module (`S02_PriceChart.jsx`) exposes 7 time ranges. Each maps t
 
 Notes:
 
-- Binance enforces a maximum of 1000 candles per request. Ranges that exceed this (5Y = 1825 candles) are fetched with a `startTime`-based pagination loop (2 requests of 1000 + 825).
-- Each combination produces a distinct backend cache key (`public:binance:btc-history:{days}:{interval}`).
-- The frontend keeps a per-session in-memory cache keyed by `{label}_{interval}` to avoid re-fetching on range toggle.
-- LIVE range uses `15m` candles (96 per day) for a compact, readable intraday chart.
+- Binance limits a single response to 1000 candles, so 5Y uses paginated requests
+- Each `days + interval` combination gets its own backend cache key
+- The frontend keeps a per-session in-memory cache keyed by `{label}_{interval}` to reduce repeated range fetches
 
 ### Visitors
 
@@ -280,11 +289,9 @@ Notes:
 
 Notes:
 
-- The backend exposes anonymous visitor endpoints; any client must generate a 16-128 character URL-safe visitor ID before calling `POST /api/visitors/track`.
-- The backend stores a salted hash only.
-- Storage mode can be:
-  - `shared-kv` when shared cache is configured
-  - `local-file` when running without shared KV
+- The backend exposes anonymous visitor endpoints; any client must generate a 16-128 character URL-safe visitor ID before calling `POST /api/visitors/track`
+- The backend stores a salted hash only
+- Storage mode can be `shared-kv` or `local-file`
 
 ## Environment variables
 
@@ -296,7 +303,7 @@ Notes:
 - `CACHE_KEY_PREFIX` (optional shared-cache namespace)
 - `KV_REST_API_URL` / `KV_REST_API_TOKEN` (optional Vercel KV)
 - `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` (optional shared KV aliases)
-- `SCRAPER_BASE_URL` (optional scraper proxy base URL, defaults to `https://api.zatobox.io`)
+- `SCRAPER_BASE_URL` (optional scraper proxy base URL; defaults to `https://api.zatobox.io`)
 
 Copy `.env.example` to `.env` when needed.
 
@@ -327,21 +334,21 @@ Useful scripts:
 
 Development notes:
 
-- Vite proxies `/api` to the API server via `API_PROXY_TARGET`.
-- Frontend alias `@/*` resolves to `src/*` via `vite.config.js` and `jsconfig.json`.
-- `vite.config.js` ignores generated cache JSON files to reduce unnecessary reload noise.
-- Shared KV is recommended on Vercel to avoid per-instance cache drift.
-- Shared KV is also recommended for visitor tracking consistency across serverless instances.
+- Vite proxies `/api` to the API server via `API_PROXY_TARGET`
+- Frontend alias `@/*` resolves to `src/*` via `vite.config.js` and `jsconfig.json`
+- `vite.config.js` ignores generated cache JSON files to reduce unnecessary reload noise
+- Shared KV is recommended on Vercel to avoid per-instance cache drift
+- Shared KV is also recommended for visitor tracking consistency across serverless instances
 
-## SEO / public assets
+## SEO and public assets
 
-- Base metadata starts in `index.html` and is refined by `src/shared/hooks/usePageSEO.js` and `src/features/module-registry/moduleSEO.js`.
+- Base metadata starts in `index.html` and is refined by `src/shared/hooks/usePageSEO.js` and `src/features/module-registry/moduleSEO.js`
 - Public SEO assets include:
   - `public/robots.txt`
   - `public/sitemap.xml`
   - `public/llm.txt`
   - `public/site.webmanifest`
-- Under-construction modules are intentionally excluded from sitemap/LLM indexing and get `noindex, follow` on their page route.
+- Under-construction modules are excluded from sitemap and LLM indexing and ship with `noindex, follow`
 
 ## Deployment (Vercel)
 
@@ -354,31 +361,34 @@ Development notes:
 
 Notes:
 
-- The serverless function is pinned to region `fra1`.
-- Vercel deployment stays compatible with the same Express app used locally.
-- Built assets under `/assets/*` are explicitly served with `Cache-Control: public, max-age=31536000, immutable` so hashed bundles can be cached aggressively at the edge/browser without risking stale HTML.
-- HTML entry routes continue to resolve through rewrites rather than long-lived immutable caching, so new deploys propagate cleanly.
-- If you add new remote origins, update `vercel.json` CSP and related header rules.
+- The serverless function is pinned to region `fra1`
+- Vercel deploys use the same Express app used locally
+- Built assets under `/assets/*` are served with `Cache-Control: public, max-age=31536000, immutable`
+- HTML entry routes continue to resolve through rewrites rather than long-lived immutable caching so new deploys propagate cleanly
+- If you add new remote origins, update `vercel.json` CSP and related header rules
 
-## Agent policy files
+## Maintainer docs
 
-- Runtime policy entrypoint: `AGENTS.md`
-- Backend/API strict rules: `.claude/BACKEND_API_RULES.md`
-- Data source/provider strict rules: `.claude/DATA_SOURCE_INTEGRITY_RULES.md`
-- Module registry/order strict rules: `.claude/MODULE_REGISTRY_RULES.md`
-- Frontend color/UX/UI strict rules: `.claude/FRONTEND_COLOR_UX_UI_RULES.md`
-- Structure guide: `PROJECT_STRUCTURE.md`
+- `PROJECT_STRUCTURE.md` -> folder ownership and placement rules
+- `AGENTS.md` -> runtime policy entrypoint for coding agents
+- `.claude/BACKEND_API_RULES.md` -> backend and API constraints
+- `.claude/DATA_SOURCE_INTEGRITY_RULES.md` -> approved data sources and fallback rules
+- `.claude/MODULE_REGISTRY_RULES.md` -> module order and slug rules
+- `.claude/FRONTEND_COLOR_UX_UI_RULES.md` -> frontend color, responsive, and UX rules
 
 ## Contributing
 
-1. Fork the repository.
-2. Create a feature branch.
-3. Commit with clear messages.
-4. Push and open a pull request.
+Contributions are welcome. If you want to improve data quality, fix UX issues, add a new module, or help complete an under-construction module:
+
+1. Fork the repository
+2. Create a feature branch
+3. Keep source attribution and refresh behavior honest
+4. Run validation locally
+5. Open a pull request with a clear explanation of why the change matters
 
 ## License
 
-Distributed under the Unlicense. See `LICENSE.txt`.
+Satoshi Dashboard is open-source under the MIT License. See `LICENSE.txt`.
 
 ## Registro Histórico de Automejoras y Lecciones Aprendidas
 
@@ -405,3 +415,11 @@ Distributed under the Unlicense. See `LICENSE.txt`.
 - **Acción Realizada/Corrección:** Se actualizaron las rutas de arquitectura, se documentó el alias `@/*`, se añadió la referencia a `PROJECT_STRUCTURE.md` y se corrigió la nota de visitantes para reflejar el estado real del proyecto.
 - **Nueva/Modificada Regla o Directriz:** La documentación principal debe reflejar la estructura vigente y distinguir entre endpoints backend expuestos y consumidores frontend realmente montados.
 - **Justificación:** Mantiene precisa la guía de onboarding y evita que agentes o desarrolladores inspeccionen archivos obsoletos o asuman integraciones inexistentes.
+
+- **Fecha de la Actualización:** `2026-03-09`
+- **Archivo(s) Afectado(s):** `README.md`
+- **Tipo de Evento/Contexto:** Reescritura pública del README y alineación de licencia
+- **Descripción del Evento Original:** El `README.md` era útil para mantenedores técnicos, pero no explicaba con suficiente claridad al visitante público qué es Satoshi Dashboard, y además seguía declarando una licencia distinta a la deseada por el owner.
+- **Acción Realizada/Corrección:** Se reescribió el README con tono más público y equilibrado, manteniendo las secciones técnicas solicitadas (`Module registry`, `Real module data/source table`, `Under-construction modules`, `API summary`, `Environment variables`) y se alineó la referencia de licencia a MIT.
+- **Nueva/Modificada Regla o Directriz:** El `README.md` debe servir a la vez como portada pública del proyecto y como documento honesto de fuentes, estado de módulos, API y licencia vigente.
+- **Justificación:** Mejora la primera impresión del repositorio, reduce ambiguedad para usuarios no técnicos y evita inconsistencias legales/documentales al publicar el proyecto como open source MIT.
