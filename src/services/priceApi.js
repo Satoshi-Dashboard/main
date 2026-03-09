@@ -61,58 +61,62 @@ export async function fetchBtcSpot() {
 }
 
 // ── Historical price series ──────────────────────────────────────────────────
-function formatAxisLabel(date, days) {
-  if (days === 1) {
-    return date.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      hour12: false,
-    });
-  }
+const INTRADAY_INTERVALS = new Set(['5m', '15m', '30m', '1h']);
 
+function formatAxisLabel(date, interval) {
+  if (INTRADAY_INTERVALS.has(interval)) {
+    return date.toLocaleTimeString('en-US', { hour: '2-digit', hour12: false });
+  }
   return date
     .toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' })
     .replace('/', '.');
 }
 
-function formatTooltipLabel(date, days) {
-  if (days === 1) {
+function formatTooltipLabel(date, interval) {
+  if (interval === '5m' || interval === '15m' || interval === '30m') {
     return date.toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
+      month: 'short', day: 'numeric',
+      hour: 'numeric', minute: '2-digit', hour12: true,
     });
   }
-
+  if (interval === '1h') {
+    return date.toLocaleString('en-US', {
+      month: 'short', day: 'numeric',
+      hour: 'numeric', hour12: true,
+    });
+  }
   return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
+    month: 'short', day: 'numeric', year: 'numeric',
   });
 }
 
-function toChartPoint(ts, price, days) {
+function toChartPoint(ts, price, interval) {
   const date = new Date(ts);
   return {
     ts,
     price,
-    axisLabel: formatAxisLabel(date, days),
-    tooltipLabel: formatTooltipLabel(date, days),
+    axisLabel: formatAxisLabel(date, interval),
+    tooltipLabel: formatTooltipLabel(date, interval),
   };
 }
 
 /**
  * Returns array of { ts, price, axisLabel, tooltipLabel } or null if every source fails.
- * @param {number} days - 1 | 7 | 30 | 90 | 365
+ * @param {number} days - 1 | 7 | 30 | 90 | 365 | 1825
+ * @param {string} interval - '5m' | '30m' | '1h' | '1d'
  */
-export async function fetchBtcHistory(days) {
+export async function fetchBtcHistory(days, interval = '1d') {
   try {
-    const safeDays = [1, 7, 30, 90, 365].includes(Number(days)) ? Number(days) : 365;
-    const payload = await fetchJson(`/api/public/binance/btc-history?days=${safeDays}`, { timeout: 8000 });
+    const validDays = [1, 7, 30, 90, 365, 1825].includes(Number(days)) ? Number(days) : 365;
+    const safeInterval = ['5m', '15m', '30m', '1h', '1d'].includes(interval) ? interval : '1d';
+    const payload = await fetchJson(
+      `/api/public/binance/btc-history?days=${validDays}&interval=${safeInterval}`,
+      { timeout: 8000 },
+    );
     const rows = Array.isArray(payload?.data) ? payload.data : payload;
     if (Array.isArray(rows) && rows.length > 1) {
-      return rows.map((row) => toChartPoint(Number(row.ts), Number(row.price), safeDays))
+      return rows
+        .map((row) => toChartPoint(Number(row.ts), Number(row.price), safeInterval))
         .filter((item) => Number.isFinite(item.ts) && Number.isFinite(item.price) && item.price > 0);
     }
   } catch { /* failed */ }

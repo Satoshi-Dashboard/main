@@ -425,7 +425,8 @@ export function createApp() {
     setDataCacheHeaders(res, { sMaxAge: 30, swr: 120 });
     try {
       const days = Number(req.query?.days || 365);
-      const payload = await getBinanceBtcHistoryPayload({ days });
+      const interval = req.query?.interval ?? undefined;
+      const payload = await getBinanceBtcHistoryPayload({ days, interval });
       res.json(payload);
     } catch (error) {
       sendPublicFeedError(res, error);

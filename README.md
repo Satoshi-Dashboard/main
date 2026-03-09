@@ -1,4 +1,23 @@
-# Satoshi Dashboard
+# Regla Universal de Automejora y Actualización Continua de Documentos de Reglas
+
+**Objetivo Primordial:** Este documento y **todos los demás archivos `.md` que contienen reglas, directrices o conocimientos operativos** deben ser actualizados proactivamente por el Agente de IA. La actualización se activará cada vez que se identifique y corrija un error (en código generado, recomendaciones, datos procesados, o en la aplicación de las propias reglas), o cuando se detecte una oportunidad significativa de mejora en la eficacia o el conocimiento del Agente. El propósito central es que el Agente de IA aprenda continuamente de sus experiencias, optimizando sus directrices internas, su coherencia y su relevancia a través de todos los documentos de conocimiento.
+
+**Proceso de Actualización Automática de Documentos (`.md`):**
+1. **Detección y Corrección de Eventos:** Cuando el Agente de IA (o un observador externo) identifique un error, un fallo en la aplicación de una regla, o una clara oportunidad de optimización/mejora, y este evento sea corregido o abordado.
+2. **Análisis de Impacto:** El Agente de IA debe analizar la causa raíz del evento y determinar si su resolución requiere una mejora, adición o modificación en las reglas, directrices o conocimientos contenidos en **este documento** o en **cualquier otro archivo `.md` de reglas/conocimiento relacionado**.
+3. **Ejecución de la Actualización del Archivo (`.md`):**
+   * **Identificación del Cambio:** El Agente identificará la sección o regla que necesita ser actualizada, o si se debe añadir una nueva entrada de conocimiento.
+   * **Formato del Registro (Anexo Histórico):** **Todas las actualizaciones deben ser registradas al final del documento afectado**, en una sección específicamente titulada `## Registro Histórico de Automejoras y Lecciones Aprendidas`. Cada entrada en este registro debe incluir los siguientes campos:
+     * **Fecha de la Actualización:** `AAAA-MM-DD`
+     * **Archivo(s) Afectado(s):** El nombre(s) del archivo(s) `.md` de reglas/conocimiento que se ha(n) modificado.
+     * **Tipo de Evento/Contexto:** (Ej. Error de Lógica en módulo X, Aplicación Incorrecta de Regla Y, Oportunidad de Optimización en Z, Fallo de Seguridad).
+     * **Descripción del Evento Original:** Breve explicación del problema detectado o la oportunidad de mejora identificada.
+     * **Acción Realizada/Corrección:** Descripción de cómo se resolvió el problema o cómo se implementó la mejora.
+     * **Nueva/Modificada Regla o Directriz:** La regla, directriz o entrada de conocimiento específica que se ha añadido, ajustado o resaltado en el documento para prevenir futuros problemas similares o mejorar la operación.
+     * **Justificación:** Explicación concisa de por qué esta actualización es importante para el aprendizaje y la mejora del Agente de IA.
+   * **Prioridad Recursiva:** Si una actualización afecta directamente la forma en que esta "Regla Universal de Automejora" debe aplicarse o describirse, entonces **esta misma regla debe ser ajustada** para reflejar la mejora en el proceso de automejora del Agente.
+
+## Satoshi Dashboard
 
 Bitcoin analytics dashboard built with React + Vite and backed by an Express/serverless API layer that caches market, macro, map, and on-chain data for a single-module player experience.
 
@@ -116,7 +135,7 @@ Module codes and slugs are generated from array order in `src/config/modules.js`
 | Code | Title | Data path in app | Upstream/source priority | Fallback | Reload |
 | --- | --- | --- | --- | --- | --- |
 | S01 | Bitcoin Overview | `fetchBtcSpot()` + `/api/public/mempool/overview` | Spot: Binance -> Binance.US -> cached spot; overview: mempool.space + Alternative.me | Backend stale cache; UI keeps previous values | UI 30s; spot API 5s; overview API 30s |
-| S02 | Price Chart | `fetchBtcSpot()` + `/api/public/binance/btc-history?days=7/30/90/365` | Spot: Binance -> Binance.US -> cached spot; history: Binance -> Binance.US | Backend stale cache; per-range frontend session cache | Spot on mount; history on mount/range change; history API 5m |
+| S02 | Price Chart | `fetchBtcSpot()` + `/api/public/binance/btc-history?days=1\|7\|30\|90\|365\|1825&interval=5m\|15m\|1h\|1d` | Spot: Binance -> Binance.US -> cached spot; history: Binance -> Binance.US (paginated for >1000 candles) | Backend stale cache; per-range frontend session cache | Spot 10s poll; history on mount/range change; history API refresh 5m (1825d: 60m) |
 | S03 | Multi-Currency | `/api/s03/multi-currency` + `/api/public/geo/land` | BTC anchor from `/api/btc/rates`; FX: Investing scraper proxy -> direct Investing HTML scrape; land: Natural Earth | Stale shared FX payload; UI keeps previous globe/map state | UI 30s; S03 API 30s; land geo monthly |
 | S04 | Mempool Gauge | `/api/public/mempool/overview` | mempool.space + Alternative.me bundle | Stale cache; UI keeps previous values | UI 30s; API 30s |
 | S05 | Long-Term Trend | `/api/public/mempool/live` | mempool.space blocks + mempool blocks + fees | Stale cache; UI shows reconnecting state and last good payload | UI 10s; API 10s |
@@ -228,9 +247,30 @@ Notes:
 - `GET /api/public/lightning/world`
 - `GET /api/public/btcmap/businesses-by-country`
 - `GET /api/public/coingecko/bitcoin-market-chart?days=365`
-- `GET /api/public/binance/btc-history?days=7|30|90|365`
+- `GET /api/public/binance/btc-history?days=1|7|30|90|365|1825&interval=5m|15m|30m|1h|1d`
 - `GET /api/public/s21/big-mac-sats-data`
 - `GET /api/public/us-national-debt`
+
+#### S02 chart range reference
+
+The Price Chart module (`S02_PriceChart.jsx`) exposes 7 time ranges. Each maps to a `days` + `interval` pair that determines which Binance klines are requested:
+
+| Range label | `days` | `interval` | Candles | Cache refresh |
+| --- | --- | --- | --- | --- |
+| LIVE | 1 | `15m` | 96 | 5 min |
+| 1D | 1 | `5m` | 288 | 5 min |
+| 1W | 7 | `1h` | 168 | 5 min |
+| 1M | 30 | `1h` | 720 | 5 min |
+| 3M | 90 | `1d` | 90 | 5 min |
+| 1Y | 365 | `1d` | 365 | 5 min |
+| 5Y | 1825 | `1d` | 1825 | 60 min |
+
+Notes:
+
+- Binance enforces a maximum of 1000 candles per request. Ranges that exceed this (5Y = 1825 candles) are fetched with a `startTime`-based pagination loop (2 requests of 1000 + 825).
+- Each combination produces a distinct backend cache key (`public:binance:btc-history:{days}:{interval}`).
+- The frontend keeps a per-session in-memory cache keyed by `{label}_{interval}` to avoid re-fetching on range toggle.
+- LIVE range uses `15m` candles (96 per day) for a compact, readable intraday chart.
 
 ### Visitors
 
@@ -334,3 +374,13 @@ Notes:
 ## License
 
 Distributed under the Unlicense. See `LICENSE.txt`.
+
+## Registro Histórico de Automejoras y Lecciones Aprendidas
+
+- **Fecha de la Actualización:** `2026-03-09`
+- **Archivo(s) Afectado(s):** `README.md`
+- **Tipo de Evento/Contexto:** Configuración universal de automejora
+- **Descripción del Evento Original:** El principal documento de conocimiento operativo del proyecto no empezaba con la regla universal ni tenía un anexo histórico para registrar mejoras aprendidas.
+- **Acción Realizada/Corrección:** Se insertó la regla universal al inicio del `README.md` y se creó el registro histórico al final para futuras actualizaciones derivadas de errores o mejoras.
+- **Nueva/Modificada Regla o Directriz:** El `README.md` pasa a tratarse como documento de conocimiento operativo sujeto a la política universal de automejora y trazabilidad histórica.
+- **Justificación:** Garantiza que el documento más consultado por agentes mantenga memoria persistente de cambios de conocimiento y no quede fuera del ciclo de aprendizaje continuo.

@@ -159,6 +159,87 @@ const FEED_DEFS = {
     safeMinuteBudget: 4,
     safeDailyBudget: 5760,
   },
+  // ── Interval-specific entries (used by S02 range tabs) ──────────────────
+  binanceHistory_1_15m: {
+    cacheKey: 'public:binance:btc-history:1:15m',
+    lockKey: 'public:binance:btc-history:1:15m:refresh',
+    refreshMs: 5 * 60_000,
+    sourceProvider: 'binance',
+    sourceUrl: 'https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=15m',
+    hardMinuteLimit: 1200,
+    safeMinuteBudget: 4,
+    safeDailyBudget: 5760,
+  },
+  binanceHistory_1_5m: {
+    cacheKey: 'public:binance:btc-history:1:5m',
+    lockKey: 'public:binance:btc-history:1:5m:refresh',
+    refreshMs: 5 * 60_000,
+    sourceProvider: 'binance',
+    sourceUrl: 'https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=5m',
+    hardMinuteLimit: 1200,
+    safeMinuteBudget: 4,
+    safeDailyBudget: 5760,
+  },
+  binanceHistory_1_30m: {
+    cacheKey: 'public:binance:btc-history:1:30m',
+    lockKey: 'public:binance:btc-history:1:30m:refresh',
+    refreshMs: 5 * 60_000,
+    sourceProvider: 'binance',
+    sourceUrl: 'https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=30m',
+    hardMinuteLimit: 1200,
+    safeMinuteBudget: 4,
+    safeDailyBudget: 5760,
+  },
+  binanceHistory_7_1h: {
+    cacheKey: 'public:binance:btc-history:7:1h',
+    lockKey: 'public:binance:btc-history:7:1h:refresh',
+    refreshMs: 5 * 60_000,
+    sourceProvider: 'binance',
+    sourceUrl: 'https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1h',
+    hardMinuteLimit: 1200,
+    safeMinuteBudget: 4,
+    safeDailyBudget: 5760,
+  },
+  binanceHistory_30_1h: {
+    cacheKey: 'public:binance:btc-history:30:1h',
+    lockKey: 'public:binance:btc-history:30:1h:refresh',
+    refreshMs: 5 * 60_000,
+    sourceProvider: 'binance',
+    sourceUrl: 'https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1h',
+    hardMinuteLimit: 1200,
+    safeMinuteBudget: 4,
+    safeDailyBudget: 5760,
+  },
+  binanceHistory_90_1d: {
+    cacheKey: 'public:binance:btc-history:90:1d',
+    lockKey: 'public:binance:btc-history:90:1d:refresh',
+    refreshMs: 5 * 60_000,
+    sourceProvider: 'binance',
+    sourceUrl: 'https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d',
+    hardMinuteLimit: 1200,
+    safeMinuteBudget: 4,
+    safeDailyBudget: 5760,
+  },
+  binanceHistory_365_1d: {
+    cacheKey: 'public:binance:btc-history:365:1d',
+    lockKey: 'public:binance:btc-history:365:1d:refresh',
+    refreshMs: 5 * 60_000,
+    sourceProvider: 'binance',
+    sourceUrl: 'https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d',
+    hardMinuteLimit: 1200,
+    safeMinuteBudget: 4,
+    safeDailyBudget: 5760,
+  },
+  binanceHistory_1825_1d: {
+    cacheKey: 'public:binance:btc-history:1825:1d',
+    lockKey: 'public:binance:btc-history:1825:1d:refresh',
+    refreshMs: 60 * 60_000,
+    sourceProvider: 'binance',
+    sourceUrl: 'https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d',
+    hardMinuteLimit: 1200,
+    safeMinuteBudget: 4,
+    safeDailyBudget: 5760,
+  },
   usNationalDebtSeries: {
     cacheKey: 'public:macro:us-national-debt:series',
     lockKey: 'public:macro:us-national-debt:series:refresh',
@@ -1509,19 +1590,27 @@ export async function getCoingeckoBitcoinMarketChartPayload({ days = 365 } = {})
   );
 }
 
-function historyFeedKey(days) {
-  if (days === 1) return 'binanceHistory1';
-  if (days === 7) return 'binanceHistory7';
-  if (days === 30) return 'binanceHistory30';
-  if (days === 90) return 'binanceHistory90';
-  return 'binanceHistory365';
+const VALID_HISTORY_INTERVALS = new Set(['5m', '15m', '30m', '1h', '1d']);
+const BINANCE_MAX_CANDLES = 1000;
+
+function candlesNeeded(interval, days) {
+  if (interval === '5m')  return days * 288;
+  if (interval === '15m') return days * 96;
+  if (interval === '30m') return days * 48;
+  if (interval === '1h')  return days * 24;
+  return days;
 }
 
-export async function getBinanceBtcHistoryPayload({ days = 365 } = {}) {
-  const normalizedDays = [1, 7, 30, 90, 365].includes(Number(days)) ? Number(days) : 365;
-  const key = historyFeedKey(normalizedDays);
-  const interval = normalizedDays === 1 ? '1h' : '1d';
-  const limit = normalizedDays === 1 ? 24 : normalizedDays;
+function historyFeedKey(days, interval) {
+  return `binanceHistory_${days}_${interval}`;
+}
+
+export async function getBinanceBtcHistoryPayload({ days = 365, interval: rawInterval = '1d' } = {}) {
+  const normalizedDays = [1, 7, 30, 90, 365, 1825].includes(Number(days)) ? Number(days) : 365;
+  const interval = VALID_HISTORY_INTERVALS.has(rawInterval) ? rawInterval : '1d';
+  const key = historyFeedKey(normalizedDays, interval);
+  const needed = candlesNeeded(interval, normalizedDays);
+  const startTime = Date.now() - normalizedDays * DAY_MS;
 
   return getFeed(
     key,
@@ -1529,24 +1618,38 @@ export async function getBinanceBtcHistoryPayload({ days = 365 } = {}) {
       let lastError = null;
 
       for (const base of BINANCE_KLINES_BASE_URLS) {
-        const params = new URLSearchParams({
-          symbol: 'BTCUSDT',
-          interval,
-          limit: String(limit),
-        });
-
         try {
-          const payload = await fetchJsonWithTimeout(`${base}?${params.toString()}`);
-          const points = Array.isArray(payload)
-            ? payload
-              .map((row) => {
-                const ts = Number(row?.[0]);
-                const price = Number(row?.[4]);
-                if (!Number.isFinite(ts) || !Number.isFinite(price) || price <= 0) return null;
-                return toChartPoint(ts, price);
-              })
-              .filter(Boolean)
-            : [];
+          const allRows = [];
+          let fetchStart = Math.round(startTime);
+          let remaining = needed;
+
+          while (remaining > 0) {
+            const batchLimit = Math.min(remaining, BINANCE_MAX_CANDLES);
+            const params = new URLSearchParams({
+              symbol: 'BTCUSDT',
+              interval,
+              startTime: String(fetchStart),
+              limit: String(batchLimit),
+            });
+
+            const payload = await fetchJsonWithTimeout(`${base}?${params.toString()}`);
+            if (!Array.isArray(payload) || payload.length === 0) break;
+
+            allRows.push(...payload);
+            remaining -= payload.length;
+
+            if (payload.length < batchLimit) break;
+            fetchStart = Number(payload[payload.length - 1][0]) + 1;
+          }
+
+          const points = allRows
+            .map((row) => {
+              const ts = Number(row?.[0]);
+              const price = Number(row?.[4]);
+              if (!Number.isFinite(ts) || !Number.isFinite(price) || price <= 0) return null;
+              return toChartPoint(ts, price);
+            })
+            .filter(Boolean);
 
           if (points.length > 0) {
             return points;

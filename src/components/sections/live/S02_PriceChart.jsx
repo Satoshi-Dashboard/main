@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   Area,
   AreaChart,
-  CartesianGrid,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -13,386 +12,405 @@ import { fmt } from '../../../utils/formatters';
 import { fetchBtcSpot, fetchBtcHistory } from '../../../services/priceApi';
 
 const RANGES = [
-  { label: '24H', days: 1 },
-  { label: '7D', days: 7 },
-  { label: '30D', days: 30 },
-  { label: '90D', days: 90 },
-  { label: '1Y', days: 365 },
+  { label: 'LIVE', days: 1,    interval: '15m', live: true },
+  { label: '1D',   days: 1,    interval: '5m' },
+  { label: '1W',   days: 7,    interval: '1h' },
+  { label: '1M',   days: 30,   interval: '1h' },
+  { label: '3M',   days: 90,   interval: '1d' },
+  { label: '1Y',   days: 365,  interval: '1d' },
+  { label: '5Y',   days: 1825, interval: '1d' },
 ];
 
-const UI_COLORS = {
-  brand: 'var(--accent-bitcoin)',
-  positive: 'var(--accent-green)',
-  negative: 'var(--accent-red)',
-  textPrimary: 'var(--text-primary)',
-  textSecondary: 'var(--text-secondary)',
-  textTertiary: 'var(--text-tertiary)',
-  border: 'rgba(255,255,255,0.08)',
-  grid: 'rgba(255,255,255,0.06)',
-  panel: 'rgba(255,255,255,0.03)',
+const RANGE_TEXT = {
+  LIVE: 'Live',
+  '1D':  'Past Day',
+  '1W':  'Past Week',
+  '1M':  'Past Month',
+  '3M':  'Past 3 Months',
+  '1Y':  'Past Year',
+  '5Y':  'Past 5 Years',
 };
 
-/* ── Custom Tooltip ── */
-function ChartTooltip({ active, payload }) {
-  if (!active || !payload?.length) return null;
-  const { tooltipLabel, price } = payload[0].payload;
+/* ── Robinhood cursor: vertical line + dot on the curve ── */
+function RobinhoodCursor({ points, height, lineColor }) {
+  if (!points?.length) return null;
+  const { x, y } = points[0];
   return (
-    <div
-      className="rounded bg-[#111111]/95 px-3 py-2 text-xs font-mono shadow-xl"
-      style={{ border: '1px solid color-mix(in srgb, var(--accent-bitcoin) 38%, transparent)' }}
-    >
-      <div className="text-white/50">{tooltipLabel}</div>
-      <div className="font-bold text-sm" style={{ color: UI_COLORS.brand }}>{fmt.usd(price, 0)}</div>
-    </div>
+    <g>
+      <line
+        x1={x} y1={0} x2={x} y2={height}
+        stroke="rgba(255,255,255,0.2)" strokeWidth={1}
+      />
+      <circle cx={x} cy={y} r={4} fill={lineColor} stroke="#111111" strokeWidth={2} />
+    </g>
   );
 }
 
-// Cache to avoid re-fetching the same range twice in a session
+/* ── Tooltip bridge: syncs hover data to parent without re-rendering the chart ── */
+function HoverBridge({ active, payload, onHover }) {
+  useLayoutEffect(() => {
+    if (active && payload?.[0]?.payload) {
+      const p = payload[0].payload;
+      if (Number.isFinite(p.price)) {
+        onHover({ price: p.price, label: p.tooltipLabel });
+        return;
+      }
+    }
+    onHover(null);
+  });
+  return null;
+}
+
+/* ── Session cache ── */
 const dataCache = {};
 
+/* ── Memoized chart — isolated so hover state updates don't re-render it ── */
+const ChartSection = memo(function ChartSection({
+  chartData, showAvgLine, hasAvg, avgPrice,
+  lineColor, gradId, yMin, yMax, onHoverChange,
+}) {
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <AreaChart
+        data={chartData}
+        margin={{ top: 6, right: 4, left: 4, bottom: 2 }}
+      >
+        <defs>
+          <linearGradient id="s02GradGreen" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stopColor="var(--accent-green)" stopOpacity="0.22" />
+            <stop offset="100%" stopColor="var(--accent-green)" stopOpacity="0" />
+          </linearGradient>
+          <linearGradient id="s02GradRed" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stopColor="var(--accent-red)" stopOpacity="0.22" />
+            <stop offset="100%" stopColor="var(--accent-red)" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+
+        <XAxis dataKey="ts" hide />
+        <YAxis domain={[yMin, yMax]} hide />
+
+        {showAvgLine && hasAvg && (
+          <ReferenceLine
+            y={avgPrice}
+            stroke="rgba(255,255,255,0.55)"
+            strokeWidth={1.2}
+            strokeDasharray="6 4"
+          />
+        )}
+
+        <Tooltip
+          content={(props) => <HoverBridge {...props} onHover={onHoverChange} />}
+          cursor={<RobinhoodCursor lineColor={lineColor} />}
+        />
+
+        <Area
+          type="monotone"
+          dataKey="price"
+          stroke={lineColor}
+          strokeWidth={2}
+          fill={`url(#${gradId})`}
+          dot={false}
+          activeDot={false}
+          isAnimationActive={true}
+          animationDuration={700}
+          animationEasing="ease-out"
+        />
+      </AreaChart>
+    </ResponsiveContainer>
+  );
+});
+
 export default function S02_PriceChart() {
-  const [chartData, setChartData] = useState([]);
-  const [range, setRange] = useState(1);
-  const [livePrice, setLivePrice] = useState(null);
-  const [showAverageLine, setShowAverageLine] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth);
-  const abortRef = useRef(null);
+  const [chartData, setChartData]     = useState([]);
+  const [activeLabel, setActiveLabel] = useState('1W');
+  const [livePrice, setLivePrice]     = useState(null);
+  const [showAvgLine, setShowAvgLine] = useState(false);
+  const [loading, setLoading]         = useState(true);
+  const [priceFlash, setPriceFlash]   = useState(null); // 'up' | 'down' | null
+  const [hoverData, setHoverData]     = useState(null); // { price, label } | null
+  const prevPriceRef  = useRef(null);
+  const flashTimerRef = useRef(null);
+  const abortRef      = useRef(null);
 
-  useEffect(() => {
-    const onResize = () => setViewportWidth(window.innerWidth);
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
+  const activeRange = RANGES.find(r => r.label === activeLabel) ?? RANGES[2];
+
+  /* ── Apply live price with flash animation ── */
+  const applyPrice = useCallback((newPrice) => {
+    if (!Number.isFinite(newPrice) || newPrice <= 0) return;
+    const prev = prevPriceRef.current;
+    if (prev !== null && newPrice !== prev) {
+      const dir = newPrice > prev ? 'up' : 'down';
+      clearTimeout(flashTimerRef.current);
+      setPriceFlash(dir);
+      flashTimerRef.current = setTimeout(() => setPriceFlash(null), 700);
+    }
+    prevPriceRef.current = newPrice;
+    setLivePrice(newPrice);
   }, []);
 
-  /* Fetch live price once on mount */
+  /* ── Spot price — poll every 10 s ── */
   useEffect(() => {
-    fetchBtcSpot().then(spot => {
-      if (spot) {
-        setLivePrice(spot.usd);
-      }
-    }).catch(() => {});
-  }, []);
+    let mounted = true;
+    fetchBtcSpot().then(s => { if (s && mounted) applyPrice(s.usd); }).catch(() => {});
+    const id = setInterval(() => {
+      fetchBtcSpot().then(s => { if (s && mounted) applyPrice(s.usd); }).catch(() => {});
+    }, 10_000);
+    return () => { mounted = false; clearInterval(id); clearTimeout(flashTimerRef.current); };
+  }, [applyPrice]);
 
-  /* Fetch historical data from Binance per selected range */
+  /* ── Historical data ── */
   useEffect(() => {
     let active = true;
     abortRef.current?.abort();
     const ctrl = new AbortController();
     abortRef.current = ctrl;
 
-    if (dataCache[range]) {
-      setChartData(dataCache[range]);
+    const key = `${activeLabel}_${activeRange.interval}`;
+    if (dataCache[key]) {
+      setChartData(dataCache[key]);
       setLoading(false);
-      return () => { active = false; ctrl.abort(); };
+      return () => { active = false; };
     }
 
     setLoading(true);
     setChartData([]);
     (async () => {
       try {
-        const hist = await fetchBtcHistory(range);
+        const hist = await fetchBtcHistory(activeRange.days, activeRange.interval);
         if (!active) return;
-        if (hist?.length) {
-          dataCache[range] = hist;
-          setChartData(hist);
-        }
-      } catch {
-        /* keep previous chart data */
-      } finally {
+        if (hist?.length) { dataCache[key] = hist; setChartData(hist); }
+      } catch { /* keep */ } finally {
         if (active) setLoading(false);
       }
     })();
-    return () => {
-      active = false;
-      ctrl.abort();
-    };
-  }, [range]);
+    return () => { active = false; ctrl.abort(); };
+  }, [activeLabel, activeRange.days]);
 
-  /* Derived stats — only when data is available */
+  /* ── Derived stats ── */
   const hasChart = chartData.length > 0;
   const hasPrice = livePrice !== null;
-  const activeRange = RANGES.find(({ days }) => days === range) ?? RANGES[0];
+
   const prices = useMemo(
-    () => (hasChart ? chartData.map((d) => d.price).filter((price) => Number.isFinite(price)) : []),
+    () => hasChart ? chartData.map(d => d.price).filter(Number.isFinite) : [],
     [chartData, hasChart],
   );
-  const high = hasChart ? Math.max(...prices) : null;
-  const low  = hasChart ? Math.min(...prices) : null;
-  const averagePrice = prices.length
-    ? prices.reduce((sum, price) => sum + price, 0) / prices.length
-    : null;
-  const rangeStartPrice = hasChart ? Number(chartData[0]?.price) : null;
-  const rangeEndPrice = Number.isFinite(livePrice) && livePrice > 0
+
+  const high     = hasChart ? Math.max(...prices) : null;
+  const low      = hasChart ? Math.min(...prices) : null;
+  const avgPrice = prices.length ? prices.reduce((s, p) => s + p, 0) / prices.length : null;
+  const hasAvg   = Number.isFinite(avgPrice);
+
+  const startPrice = hasChart ? Number(chartData[0]?.price) : null;
+  const endPrice   = Number.isFinite(livePrice) && livePrice > 0
     ? livePrice
-    : hasChart
-      ? Number(chartData[chartData.length - 1]?.price)
-      : null;
-  const rangeChange = Number.isFinite(rangeStartPrice) && Number.isFinite(rangeEndPrice) && rangeStartPrice > 0
-    ? ((rangeEndPrice - rangeStartPrice) / rangeStartPrice) * 100
-    : null;
-  const hasAveragePrice = Number.isFinite(averagePrice);
-  const hasRangeChange = Number.isFinite(rangeChange);
-  const isUp = hasRangeChange ? rangeChange >= 0 : true;
+    : hasChart ? Number(chartData.at(-1)?.price) : null;
 
-  const yMin = hasChart ? low * 0.98 : 0;
-  const yMax = hasChart ? high * 1.02 : 1;
-  const isTablet = viewportWidth < 1024;
-  const isPhone = viewportWidth < 640;
-  const isTinyPhone = viewportWidth < 480;
+  const delta    = Number.isFinite(startPrice) && Number.isFinite(endPrice) && startPrice > 0
+    ? endPrice - startPrice : null;
+  const deltaPct = delta !== null && startPrice > 0
+    ? (delta / startPrice) * 100 : null;
 
-  const axisLabelMap = useMemo(
-    () => new Map(chartData.map((point) => [point.ts, point.axisLabel])),
-    [chartData],
-  );
+  const hasChange = Number.isFinite(delta) && Number.isFinite(deltaPct);
+  const isUp      = hasChange ? delta >= 0 : true;
 
-  const xTicks = useMemo(() => {
-    if (!hasChart) return [];
+  const lineColor = isUp ? 'var(--accent-green)' : 'var(--accent-red)';
+  const gradId    = isUp ? 's02GradGreen' : 's02GradRed';
 
-    const targetTicks = isTinyPhone ? 4 : isPhone ? 5 : isTablet ? 6 : 7;
-    const step = Math.max(1, Math.floor((chartData.length - 1) / Math.max(1, targetTicks - 1)));
-    const ticks = chartData
-      .filter((_, index) => index === 0 || index === chartData.length - 1 || index % step === 0)
-      .map((point) => point.ts);
+  const yPad = hasChart ? (high - low) * 0.06 : 1;
+  const yMin = hasChart ? low  - yPad : 0;
+  const yMax = hasChart ? high + yPad : 1;
 
-    return [...new Set(ticks)];
-  }, [chartData, hasChart, isPhone, isTablet, isTinyPhone]);
+  const rangeText = RANGE_TEXT[activeLabel] ?? 'Past Period';
 
-  const statItems = [
-    { label: 'HIGH', value: fmt.usd(high, 0), color: UI_COLORS.positive },
-    { label: 'AVG BUY', value: hasAveragePrice ? fmt.usd(averagePrice, 0) : '—', color: UI_COLORS.brand },
-    { label: 'LOW', value: fmt.usd(low, 0), color: UI_COLORS.negative },
-  ];
-
-  const changeBorder = isUp ? UI_COLORS.positive : UI_COLORS.negative;
-  const changeBorderColor = isUp
-    ? 'color-mix(in srgb, var(--accent-green) 42%, transparent)'
-    : 'color-mix(in srgb, var(--accent-red) 42%, transparent)';
-  const changeBackground = `color-mix(in srgb, ${changeBorder} 18%, transparent)`;
+  /* ── Display values (hover overrides live) ── */
+  const displayPrice = hoverData ? hoverData.price : livePrice;
+  const priceColor   = hoverData
+    ? 'white'
+    : priceFlash === 'up'   ? 'var(--accent-green)'
+    : priceFlash === 'down' ? 'var(--accent-red)'
+    : 'white';
 
   return (
-    <div className="flex h-full w-full flex-col bg-[#111111]">
-      {/* ── Price Header ── */}
-      <div className="flex flex-shrink-0 flex-col items-center justify-center gap-2 px-3 py-3 text-center sm:flex-row sm:flex-wrap sm:gap-3 sm:py-4">
-        {!hasPrice ? (
-          <>
-            <div className="skeleton" style={{ width: 12, height: 12, borderRadius: '50%' }} />
-            <div className="skeleton" style={{ width: 160, height: '2em' }} />
-            <div className="skeleton" style={{ width: 90, height: '1.4em' }} />
-          </>
-        ) : (
-          <>
-            <div className="flex items-center justify-center gap-3">
+    <div className="flex h-full w-full flex-col bg-[#111111]" style={{ padding: '20px 22px 16px' }}>
+
+      {/* ── Header ── */}
+      <div className="flex flex-shrink-0 items-start justify-between gap-4">
+        <div className="min-w-0">
+          {!hasPrice ? (
+            <>
+              <div className="skeleton" style={{ width: 220, height: '2.8rem', borderRadius: 6, marginBottom: 10 }} />
+              <div className="skeleton" style={{ width: 180, height: '1rem', borderRadius: 4 }} />
+            </>
+          ) : (
+            <>
               <div
-                className="h-3 w-3 rounded-full shadow-lg"
+                className="font-mono font-bold tabular-nums leading-none"
                 style={{
-                  backgroundColor: isUp ? UI_COLORS.positive : UI_COLORS.negative,
-                  boxShadow: `0 0 8px ${isUp ? UI_COLORS.positive : UI_COLORS.negative}`,
+                  fontSize: 'clamp(1.9rem, 3.8vw, 2.9rem)',
+                  color: priceColor,
+                  transition: hoverData ? 'none' : priceFlash ? 'color 0.1s ease' : 'color 0.6s ease',
+                }}
+              >
+                {fmt.usd(displayPrice, 2)}
+              </div>
+
+              <div className="mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 font-mono tabular-nums" style={{ fontSize: '0.82rem' }}>
+                {hoverData ? (
+                  <span className="uppercase tracking-wide" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                    {hoverData.label}
+                  </span>
+                ) : hasChange ? (
+                  <>
+                    <span style={{ color: isUp ? 'var(--accent-green)' : 'var(--accent-red)' }}>
+                      {isUp ? '+' : ''}{fmt.usd(delta, 2)}
+                    </span>
+                    <span style={{ color: isUp ? 'var(--accent-green)' : 'var(--accent-red)' }}>
+                      ({isUp ? '+' : ''}{deltaPct.toFixed(2)}%)
+                    </span>
+                    <span style={{ color: 'rgba(255,255,255,0.38)' }}>{rangeText}</span>
+                  </>
+                ) : (
+                  <span style={{ color: 'rgba(255,255,255,0.25)' }}>Loading…</span>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Show / Hide AVG Buy */}
+        <button
+          type="button"
+          onClick={() => setShowAvgLine(v => !v)}
+          disabled={!hasAvg}
+          className="relative flex flex-shrink-0 items-center gap-1.5 pb-1.5 font-mono transition-colors disabled:opacity-25 disabled:cursor-not-allowed"
+          style={{
+            fontSize: '0.78rem',
+            fontWeight: showAvgLine ? 700 : 400,
+            color: showAvgLine ? 'white' : 'rgba(255,255,255,0.5)',
+            letterSpacing: '0.05em',
+          }}
+        >
+          {showAvgLine ? 'Hide AVG Buy' : 'Show AVG Buy'}
+          {showAvgLine && (
+            <span
+              className="absolute bottom-0 left-0 right-0 rounded-full"
+              style={{ height: 2, background: 'white' }}
+            />
+          )}
+        </button>
+      </div>
+
+      {/* ── Chart ── */}
+      <div className="min-h-0 flex-1" style={{ margin: '20px -4px 0' }}>
+        {loading || !hasChart ? (
+          <div className="flex h-full items-end gap-px pb-1">
+            {Array.from({ length: 60 }, (_, i) => (
+              <div
+                key={i}
+                className="skeleton flex-1"
+                style={{
+                  height: `${32 + Math.sin(i * 0.38) * 24 + Math.sin(i * 0.11) * 30}%`,
+                  borderRadius: 2,
                 }}
               />
-              <span
-                className="font-mono font-bold text-white tabular-nums"
-                style={{ fontSize: 'var(--fs-hero)' }}
-              >
-                {fmt.usd(livePrice, 0)}
-              </span>
-            </div>
-            <span
-              className="rounded-full border px-3 py-1 font-mono font-bold tabular-nums"
-              style={{
-                fontSize: 'var(--fs-caption)',
-                color: changeBorder,
-                borderColor: changeBorderColor,
-                background: changeBackground,
-              }}
-            >
-              {hasRangeChange ? `${isUp ? '+' : ''}${rangeChange.toFixed(2)}% ${activeRange.label} ${isUp ? '▲' : '▼'}` : '...'}
-            </span>
-          </>
+            ))}
+          </div>
+        ) : (
+          <ChartSection
+            key={activeLabel}
+            chartData={chartData}
+            showAvgLine={showAvgLine}
+            hasAvg={hasAvg}
+            avgPrice={avgPrice}
+            lineColor={lineColor}
+            gradId={gradId}
+            yMin={yMin}
+            yMax={yMax}
+            onHoverChange={setHoverData}
+          />
         )}
       </div>
 
-      {/* ── Controls ── */}
-      <div className="flex flex-shrink-0 flex-col gap-3 border-y px-3 py-3 sm:px-4 lg:flex-row lg:items-center lg:justify-between" style={{ borderColor: UI_COLORS.border }}>
-        <div className="flex flex-wrap items-center justify-center gap-2 lg:justify-start">
-          <span className="uppercase tracking-[0.28em]" style={{ fontSize: 'var(--fs-tag)', color: UI_COLORS.textSecondary }}>
-            Range
-          </span>
-          <span
-            className="rounded-full border px-2.5 py-1 font-mono font-bold uppercase tracking-[0.24em]"
-            style={{
-              fontSize: 'var(--fs-tag)',
-              color: UI_COLORS.textPrimary,
-              borderColor: UI_COLORS.border,
-              background: UI_COLORS.panel,
-            }}
-          >
-            {activeRange.label}
-          </span>
-          <span
-            className="rounded-full border px-2.5 py-1 font-mono tabular-nums"
-            style={{
-              fontSize: 'var(--fs-tag)',
-              color: hasAveragePrice ? UI_COLORS.brand : UI_COLORS.textSecondary,
-              borderColor: hasAveragePrice ? 'color-mix(in srgb, var(--accent-bitcoin) 28%, transparent)' : UI_COLORS.border,
-              background: hasAveragePrice ? 'color-mix(in srgb, var(--accent-bitcoin) 14%, transparent)' : UI_COLORS.panel,
-            }}
-          >
-            {hasAveragePrice ? `Avg Buy ${fmt.usd(averagePrice, 0)}` : 'Avg Buy --'}
-          </span>
-        </div>
-
-        <div className="flex flex-wrap items-center justify-center gap-2 lg:justify-end">
-          {RANGES.map(({ label, days }) => (
+      {/* ── Range Tabs ── */}
+      <div
+        className="flex-shrink-0 flex items-center gap-5 overflow-x-auto"
+        style={{ margin: '14px 0 16px', paddingBottom: 2 }}
+      >
+        {RANGES.map(({ label, live }) => {
+          const isActive = activeLabel === label;
+          return (
             <button
               key={label}
               type="button"
-              onClick={() => setRange(days)}
+              onClick={() => setActiveLabel(label)}
+              className="relative flex flex-shrink-0 items-center gap-1.5 pb-1.5 font-mono transition-colors"
               style={{
-                fontSize: 'var(--fs-tag)',
-                color: range === days ? UI_COLORS.brand : 'rgba(255,255,255,0.42)',
-                background: range === days ? 'color-mix(in srgb, var(--accent-bitcoin) 18%, transparent)' : UI_COLORS.panel,
-                border: range === days ? '1px solid color-mix(in srgb, var(--accent-bitcoin) 38%, transparent)' : `1px solid ${UI_COLORS.border}`,
+                fontSize: '0.78rem',
+                fontWeight: isActive ? 700 : 400,
+                color: isActive ? 'white' : 'rgba(255,255,255,0.32)',
+                letterSpacing: '0.05em',
               }}
-              className="min-w-[58px] rounded-full px-3 py-1.5 font-mono uppercase tracking-widest whitespace-nowrap transition hover:text-white/80"
             >
+              {live && (
+                <span
+                  className="rounded-full flex-shrink-0"
+                  style={{
+                    width: 6,
+                    height: 6,
+                    background: isActive ? 'var(--accent-green)' : 'rgba(255,255,255,0.32)',
+                    boxShadow: isActive ? '0 0 6px var(--accent-green)' : 'none',
+                  }}
+                />
+              )}
               {label}
+              {isActive && (
+                <span
+                  className="absolute bottom-0 left-0 right-0 rounded-full"
+                  style={{ height: 2, background: 'white' }}
+                />
+              )}
             </button>
-          ))}
-        </div>
+          );
+        })}
       </div>
 
-      {/* ── Chart or Skeleton ── */}
-      <div className="min-h-0 flex-1">
-        <div className="flex h-full min-h-0 flex-col md:flex-row">
-          <div
-            className="flex flex-shrink-0 items-center justify-between gap-3 border-b px-3 py-3 md:w-[148px] md:flex-col md:items-stretch md:justify-center md:border-b-0 md:border-r"
-            style={{ borderColor: UI_COLORS.border, background: 'rgba(255,255,255,0.02)' }}
-          >
-            <button
-              type="button"
-              onClick={() => setShowAverageLine((value) => !value)}
-              disabled={!hasAveragePrice}
-              aria-pressed={showAverageLine}
-              className="rounded-2xl px-3 py-3 text-left transition disabled:cursor-not-allowed disabled:opacity-50"
-              style={{
-                border: showAverageLine ? '1px solid color-mix(in srgb, var(--accent-bitcoin) 38%, transparent)' : `1px solid ${UI_COLORS.border}`,
-                background: showAverageLine ? 'color-mix(in srgb, var(--accent-bitcoin) 16%, transparent)' : UI_COLORS.panel,
-              }}
-            >
-              <div className="flex items-center justify-between gap-3">
-                <span className="uppercase tracking-[0.22em]" style={{ fontSize: 'var(--fs-tag)', color: showAverageLine ? UI_COLORS.brand : UI_COLORS.textPrimary }}>
-                  {showAverageLine ? 'Hide Avg Buy' : 'Show Avg Buy'}
-                </span>
-                <span className="w-8 border-t-2 border-dashed" style={{ borderColor: UI_COLORS.brand }} />
-              </div>
-              <div className="mt-2 font-mono font-bold tabular-nums" style={{ fontSize: 'var(--fs-body)', color: hasAveragePrice ? UI_COLORS.brand : UI_COLORS.textSecondary }}>
-                {hasAveragePrice ? fmt.usd(averagePrice, 0) : '—'}
-              </div>
-            </button>
-
-            <div className="text-right md:text-left">
-              <div className="uppercase tracking-[0.22em]" style={{ fontSize: 'var(--fs-tag)', color: UI_COLORS.textSecondary }}>
-                Guide
-              </div>
-              <div className="mt-1 font-mono" style={{ fontSize: 'var(--fs-micro)', color: UI_COLORS.textTertiary }}>
-                Average buy line
-              </div>
-            </div>
-          </div>
-
-          <div className="relative min-h-0 flex-1 px-2 py-3 sm:px-3 md:px-4">
-            {loading || !hasChart ? (
-              <div className="absolute inset-0 flex items-end gap-[3px] px-3 pb-8 pt-4 sm:px-4">
-                {Array.from({ length: isTinyPhone ? 16 : isPhone ? 22 : isTablet ? 30 : 40 }, (_, i) => (
-                  <div
-                    key={i}
-                    className="skeleton flex-1"
-                    style={{ height: `${30 + Math.sin(i * 0.4) * 20 + Math.sin(i * 0.15) * 30}%`, borderRadius: 4 }}
-                  />
-                ))}
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 12, right: isPhone ? 8 : 12, left: isPhone ? 0 : 6, bottom: isPhone ? 2 : 6 }}>
-                  <defs>
-                    <linearGradient id="priceGradFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#E88000" stopOpacity="0.85" />
-                      <stop offset="35%" stopColor="#C04800" stopOpacity="0.65" />
-                      <stop offset="75%" stopColor="#7a2000" stopOpacity="0.3" />
-                      <stop offset="100%" stopColor="#111111" stopOpacity="0.05" />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid vertical={false} stroke={UI_COLORS.grid} strokeDasharray="2 4" />
-                  {showAverageLine && hasAveragePrice ? (
-                    <ReferenceLine
-                      y={averagePrice}
-                      stroke={UI_COLORS.brand}
-                      strokeWidth={1.2}
-                      strokeDasharray="6 6"
-                    />
-                  ) : null}
-                  <XAxis
-                    dataKey="ts"
-                    ticks={xTicks}
-                    tickFormatter={(value) => axisLabelMap.get(value) ?? ''}
-                    tick={{ fill: '#555', fontSize: 11, fontFamily: 'JetBrains Mono, monospace' }}
-                    axisLine={false}
-                    tickLine={false}
-                    tickMargin={8}
-                    height={isPhone ? 30 : 34}
-                    minTickGap={isTinyPhone ? 10 : 16}
-                  />
-                  <YAxis
-                    domain={[yMin, yMax]}
-                    tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
-                    tick={{ fill: '#555', fontSize: 11, fontFamily: 'JetBrains Mono, monospace' }}
-                    axisLine={false}
-                    tickLine={false}
-                    tickMargin={10}
-                    width={isPhone ? 0 : isTablet ? 46 : 54}
-                    hide={isPhone}
-                  />
-                  <Tooltip
-                    content={<ChartTooltip />}
-                    cursor={{ stroke: UI_COLORS.brand, strokeWidth: 1, strokeDasharray: '3 3' }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="price"
-                    stroke={UI_COLORS.brand}
-                    strokeWidth={1.7}
-                    fill="url(#priceGradFill)"
-                    dot={false}
-                    isAnimationActive={false}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* ── Range Stats ── */}
-      <div className="grid flex-shrink-0 grid-cols-3 gap-2 border-t px-3 py-3 sm:px-4" style={{ borderColor: UI_COLORS.border }}>
+      {/* ── Stat Boxes ── */}
+      <div className="flex-shrink-0 grid grid-cols-3 gap-3">
         {!hasChart || !hasPrice ? (
-          <>
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="flex flex-col items-center gap-1 rounded-xl px-2 py-2" style={{ background: UI_COLORS.panel }}>
-                <div className="skeleton" style={{ width: 48, height: '0.8em' }} />
-                <div className="skeleton" style={{ width: 72, height: '1em' }} />
-              </div>
-            ))}
-          </>
+          [0, 1, 2].map(i => (
+            <div key={i} className="rounded-xl px-3 py-3" style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
+              <div className="skeleton mb-2" style={{ width: 40, height: '0.65rem', borderRadius: 3 }} />
+              <div className="skeleton"       style={{ width: 72, height: '0.9rem',  borderRadius: 3 }} />
+            </div>
+          ))
         ) : (
-          statItems.map(({ label, value, color }) => (
-            <div key={label} className="flex flex-col items-center gap-1 rounded-xl px-2 py-2 text-center" style={{ background: UI_COLORS.panel }}>
-              <span className="uppercase tracking-[0.24em]" style={{ fontSize: 'var(--fs-tag)', color: UI_COLORS.textSecondary }}>{label}</span>
-              <span className="font-mono font-bold tabular-nums" style={{ fontSize: 'var(--fs-micro)', color }}>{value}</span>
+          [
+            { label: 'HIGH',    value: fmt.usd(high, 0),                    color: 'var(--accent-green)' },
+            { label: 'AVG BUY', value: hasAvg ? fmt.usd(avgPrice, 0) : '—', color: 'var(--accent-bitcoin)' },
+            { label: 'LOW',     value: fmt.usd(low, 0),                     color: 'var(--accent-red)' },
+          ].map(({ label, value, color }) => (
+            <div
+              key={label}
+              className="rounded-xl px-3 py-3 text-center"
+              style={{ border: '1px solid rgba(255,255,255,0.1)' }}
+            >
+              <div
+                className="font-mono font-bold uppercase tracking-widest"
+                style={{ fontSize: '0.62rem', color, marginBottom: 5 }}
+              >
+                {label}
+              </div>
+              <div
+                className="font-mono tabular-nums font-semibold text-white"
+                style={{ fontSize: '0.82rem' }}
+              >
+                {value}
+              </div>
             </div>
           ))
         )}
       </div>
+
     </div>
   );
 }
