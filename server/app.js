@@ -1,40 +1,40 @@
 import express from 'express';
-import { ExternalApiError, getBtcRates, updateBtcRates } from '../btcRates.js';
+import { ExternalApiError, getBtcRates, updateBtcRates } from './services/btcRates.js';
 import {
   getBitnodesPayload,
   pendingResponse,
   refreshBitnodesCache,
-} from './features/bitnodesCache.js';
+} from './features/bitnodes/bitnodesCache.js';
 import {
   getS12BtcDistributionJs,
   getS12BtcDistributionPayload,
   getS12BtcDistributionStatus,
   updateBtcDistributionCache,
-} from './features/s12BtcDistribution.js';
+} from './features/bitinfocharts/s12BtcDistribution.js';
 import {
   getS13AddressesRicherJs,
   getS13AddressesRicherPayload,
   getS13AddressesRicherStatus,
   updateS13AddressesRicherCache,
-} from './features/s13AddressesRicher.js';
+} from './features/bitinfocharts/s13AddressesRicher.js';
 import {
   getS03MultiCurrencyPayload,
   getS03MultiCurrencyStatus,
   refreshS03MultiCurrencyPayload,
   S03ScrapeError,
-} from './features/s03MultiCurrencyScraper.js';
+} from './features/multi-currency/s03MultiCurrencyScraper.js';
 import {
   getS10StablecoinDetail,
   getS10StablecoinList,
   getS10StablecoinLivePrices,
   S10StablecoinError,
-} from './features/s10StablecoinPegCache.js';
+} from './features/stablecoins/s10StablecoinPegCache.js';
 import {
   getS14GlobalAssetsPayload,
   getS14GlobalAssetsStatus,
   refreshS14GlobalAssetsPayload,
   S14GlobalAssetsError,
-} from './features/s14GlobalAssetsCache.js';
+} from './features/global-assets/s14GlobalAssetsCache.js';
 import {
   getBinanceBtcHistoryPayload,
   getBtcMapBusinessesByCountryPayload,
@@ -48,8 +48,8 @@ import {
   getS21BigMacSatsPayload,
   getUsNationalDebtPayload,
   PublicFeedError,
-} from './shared/publicDataFeeds.js';
-import { getVisitorStats, trackVisitorById } from './features/visitorCounter.js';
+} from './services/publicDataFeeds.js';
+import { getVisitorStats, trackVisitorById } from './features/visitors/visitorCounter.js';
 
 const REFRESH_API_TOKEN = String(process.env.REFRESH_API_TOKEN || '');
 const IS_PRODUCTION = ['production', 'preview'].includes(String(process.env.VERCEL_ENV || '').toLowerCase())

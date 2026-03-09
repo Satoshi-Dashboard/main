@@ -23,7 +23,7 @@ Bitcoin analytics dashboard built with React + Vite and backed by an Express/ser
 
 ## Current project state
 
-- Frontend module registry: **31 modules** generated from `src/config/modules.js`.
+- Frontend module registry: **31 modules** generated from `src/features/module-registry/modules.js`.
 - Live/indexable module routes: **17** (`S01-S15`, `S30`, `S31`).
 - Under-construction module routes: **14** (`S16-S29`) with a UI overlay and `noindex` robots policy.
 - Primary app routes:
@@ -56,31 +56,32 @@ Bitcoin analytics dashboard built with React + Vite and backed by an Express/ser
 ### Frontend
 
 - App shell and routing: `src/App.jsx`, `src/main.jsx`
-- Single-module player page: `src/pages/ModulePage.jsx`
-- Module registry and generated codes/slugs: `src/config/modules.js`
-- Live module sections: `src/components/sections/live/`
-- Under-construction module sections: `src/components/sections/under-construction/`
-- Module metadata strip config: `src/config/moduleDataMeta.js`
-- Module SEO metadata: `src/config/moduleSEO.js`
-- Landing/blog SEO content: `src/config/seoContent.js`
-- Shared API helpers: `src/lib/api.js`, `src/services/priceApi.js`, `src/services/usNationalDebtApi.js`
+- Single-module player page: `src/features/module-player/ModulePage.jsx`
+- Module registry and generated codes/slugs: `src/features/module-registry/modules.js`
+- Live module sections: `src/features/modules/live/`
+- Under-construction module sections: `src/features/modules/under-construction/`
+- Module metadata strip config: `src/features/module-registry/moduleDataMeta.js`
+- Module SEO metadata: `src/features/module-registry/moduleSEO.js`
+- Landing/blog SEO content: `src/features/seo/content/seoContent.js`
+- Shared API helpers: `src/shared/lib/api.js`, `src/shared/services/priceApi.js`, `src/shared/services/usNationalDebtApi.js`
+- Shared UI primitives and hooks: `src/shared/components/common/`, `src/shared/hooks/usePageSEO.js`, `src/shared/lib/queryClient.js`
 - Global design tokens and typography: `src/index.css`
 
 ### Backend / API
 
 - Route surface: `server/app.js`
-- Shared memory/KV cache and lock layer: `server/shared/runtimeCache.js`
-- BTC spot + fiat conversion pipeline: `btcRates.js`
-- Shared public feeds: `server/shared/publicDataFeeds.js`
+- Shared memory/KV cache and lock layer: `server/core/runtimeCache.js`
+- BTC spot + fiat conversion pipeline: `server/services/btcRates.js`
+- Shared public feeds: `server/services/publicDataFeeds.js`
 - Module-specific caches/scrapers:
-  - `server/features/s03MultiCurrencyScraper.js`
-  - `server/features/s10StablecoinPegCache.js`
-  - `server/features/s14GlobalAssetsCache.js`
-  - `server/features/bitnodesCache.js`
-  - `server/shared/bitinfochartsShared.js`
-  - `server/features/s12BtcDistribution.js`
-  - `server/features/s13AddressesRicher.js`
-  - `server/features/visitorCounter.js`
+  - `server/features/multi-currency/s03MultiCurrencyScraper.js`
+  - `server/features/stablecoins/s10StablecoinPegCache.js`
+  - `server/features/global-assets/s14GlobalAssetsCache.js`
+  - `server/features/bitnodes/bitnodesCache.js`
+  - `server/services/bitinfochartsShared.js`
+  - `server/features/bitinfocharts/s12BtcDistribution.js`
+  - `server/features/bitinfocharts/s13AddressesRicher.js`
+  - `server/features/visitors/visitorCounter.js`
 
 ### Cache model
 
@@ -92,7 +93,7 @@ Bitcoin analytics dashboard built with React + Vite and backed by an Express/ser
 
 ## Module registry (source of truth)
 
-Module codes and slugs are generated from array order in `src/config/modules.js`. Component filenames still contain legacy numbering and are **not** the source of truth.
+Module codes and slugs are generated from array order in `src/features/module-registry/modules.js`. Component filenames still contain legacy numbering and are **not** the source of truth.
 
 | Code | Title | Route |
 | --- | --- | --- |
@@ -279,7 +280,7 @@ Notes:
 
 Notes:
 
-- The frontend generates an anonymous visitor ID and sends it once per session.
+- The backend exposes anonymous visitor endpoints; any client must generate a 16-128 character URL-safe visitor ID before calling `POST /api/visitors/track`.
 - The backend stores a salted hash only.
 - Storage mode can be:
   - `shared-kv` when shared cache is configured
@@ -327,13 +328,14 @@ Useful scripts:
 Development notes:
 
 - Vite proxies `/api` to the API server via `API_PROXY_TARGET`.
+- Frontend alias `@/*` resolves to `src/*` via `vite.config.js` and `jsconfig.json`.
 - `vite.config.js` ignores generated cache JSON files to reduce unnecessary reload noise.
 - Shared KV is recommended on Vercel to avoid per-instance cache drift.
 - Shared KV is also recommended for visitor tracking consistency across serverless instances.
 
 ## SEO / public assets
 
-- Base metadata starts in `index.html` and is refined by `src/lib/usePageSEO.js` and `src/config/moduleSEO.js`.
+- Base metadata starts in `index.html` and is refined by `src/shared/hooks/usePageSEO.js` and `src/features/module-registry/moduleSEO.js`.
 - Public SEO assets include:
   - `public/robots.txt`
   - `public/sitemap.xml`
@@ -365,6 +367,7 @@ Notes:
 - Data source/provider strict rules: `.claude/DATA_SOURCE_INTEGRITY_RULES.md`
 - Module registry/order strict rules: `.claude/MODULE_REGISTRY_RULES.md`
 - Frontend color/UX/UI strict rules: `.claude/FRONTEND_COLOR_UX_UI_RULES.md`
+- Structure guide: `PROJECT_STRUCTURE.md`
 
 ## Contributing
 
@@ -394,3 +397,11 @@ Distributed under the Unlicense. See `LICENSE.txt`.
 - **Acción Realizada/Corrección:** Se documentó la política de cacheo inmutable para `/assets/*` y se aclaró que las rutas HTML siguen resolviéndose por rewrites para propagar nuevos deploys sin servir shells obsoletos.
 - **Nueva/Modificada Regla o Directriz:** El `README.md` ahora exige mantener cache largo solo para assets hasheados y preservar HTML/API fuera de esa política.
 - **Justificación:** Ayuda a futuros agentes a optimizar Vercel sin introducir regresiones de cacheo que dejen deploys viejos en producción.
+
+- **Fecha de la Actualización:** `2026-03-09`
+- **Archivo(s) Afectado(s):** `README.md`
+- **Tipo de Evento/Contexto:** Reorganización estructural y corrección documental
+- **Descripción del Evento Original:** El `README.md` seguía apuntando a rutas frontend/backend previas a la reorganización y describía el tracking de visitantes como si ya existiera un consumidor frontend activo.
+- **Acción Realizada/Corrección:** Se actualizaron las rutas de arquitectura, se documentó el alias `@/*`, se añadió la referencia a `PROJECT_STRUCTURE.md` y se corrigió la nota de visitantes para reflejar el estado real del proyecto.
+- **Nueva/Modificada Regla o Directriz:** La documentación principal debe reflejar la estructura vigente y distinguir entre endpoints backend expuestos y consumidores frontend realmente montados.
+- **Justificación:** Mantiene precisa la guía de onboarding y evita que agentes o desarrolladores inspeccionen archivos obsoletos o asuman integraciones inexistentes.

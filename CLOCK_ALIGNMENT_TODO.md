@@ -47,7 +47,7 @@ Corregir textos que implican "tiempo real" cuando la fuente no lo es.
 | S01 BitcoinOverview | `/api/public/mempool/overview` | 15s | 30s (unificar con S04) |
 | S13 TransactionCount | `/api/s13/addresses-richer` | 60s | 1h (3 600 000ms) |
 | S08 NodesMap | `/api/bitnodes/cache` | 60s | 10min (600 000ms) |
-| UniqueVisitorsCounter | `/api/visitors/stats` | 30s | 5min (300 000ms) |
+| Visitor counter frontend consumer (not currently mounted) | `/api/visitors/stats` | n/a | Re-evaluate only if a frontend consumer is reintroduced |
 | S10 Stablecoins (list) | `/api/s10/stablecoins` | 60s | 2min (120 000ms) |
 | S10 Stablecoins (peg) | `/api/s10/stablecoins/live-prices` | 60s | 2min (120 000ms) |
 
@@ -55,7 +55,7 @@ Corregir textos que implican "tiempo real" cuando la fuente no lo es.
 - [ ] **S01** — cambiar `setInterval(load, 15_000)` → `setInterval(load, 30_000)`
 - [ ] **S14** — cambiar `setInterval(load, 60_000)` → `setInterval(load, 3_600_000)`
 - [ ] **S08** — cambiar `setInterval(load, 60_000)` → `setInterval(load, 600_000)`
-- [ ] **UniqueVisitorsCounter** — cambiar `setInterval(refreshStats, 30_000)` → `setInterval(refreshStats, 300_000)`
+- [x] **Visitor counter frontend consumer** — no existe un componente montado en `src/` actualmente; posponer cualquier ajuste de polling hasta que el consumidor frontend sea reintroducido.
 - [ ] **S10 (list)** — cambiar `setInterval(load, LIST_REFRESH_MS)` donde `LIST_REFRESH_MS = 60_000` → `120_000`
 - [ ] **S10 (peg)** — cambiar `setInterval(loadLivePegPrices, LIVE_PEG_REFRESH_MS)` donde `LIVE_PEG_REFRESH_MS = 60_000` → `120_000`
 - [ ] **Eliminar `{ cache: 'no-store' }`** en estos endpoints estables para que el CDN Vercel pueda servir desde el edge:
@@ -179,7 +179,7 @@ Corregir textos que implican "tiempo real" cuando la fuente no lo es.
 | Bitnodes (scraper) | 144 | 2 | −98.6% |
 | Bitnodes (frontend) | 1 440 | 144 | −90.0% |
 | S14 TransactionCount (frontend) | 1 440 | 24 | −98.3% |
-| UniqueVisitors (frontend) | 2 880 | 288 | −90.0% |
+| Visitor counter frontend consumer | n/a | n/a | No hay consumidor montado actualmente |
 | S09b Stablecoins (frontend) | 2 880 | 720 | −75.0% |
 | S01 Mempool (frontend) | 5 760 | 2 880 | −50.0% |
 | Investing.com (scraper) | 2 880 | 1 440 | −50.0% |
@@ -199,3 +199,11 @@ Corregir textos que implican "tiempo real" cuando la fuente no lo es.
 - **Acción Realizada/Corrección:** Se añadió la regla universal al inicio del plan y se creó el registro histórico al final para documentar mejoras posteriores.
 - **Nueva/Modificada Regla o Directriz:** `CLOCK_ALIGNMENT_TODO.md` queda formalizado como documento de conocimiento operativo sujeto al ciclo de automejora y trazabilidad histórica.
 - **Justificación:** Evita que decisiones operativas relevantes queden fuera del aprendizaje del agente y permite mantener continuidad en auditorías posteriores.
+
+- **Fecha de la Actualización:** `2026-03-09`
+- **Archivo(s) Afectado(s):** `CLOCK_ALIGNMENT_TODO.md`
+- **Tipo de Evento/Contexto:** Corrección documental de consumidor inexistente
+- **Descripción del Evento Original:** El plan seguía incluyendo tareas para `UniqueVisitorsCounter`, pero actualmente no existe ningún consumidor frontend montado para esos endpoints en `src/`.
+- **Acción Realizada/Corrección:** Se marcaron como no aplicables las filas y tareas de polling frontend asociadas al visitor counter hasta que exista un componente real.
+- **Nueva/Modificada Regla o Directriz:** Los planes operativos deben diferenciar entre endpoints backend disponibles y consumidores frontend efectivamente montados antes de proponer cambios de polling o UX.
+- **Justificación:** Evita ejecutar trabajo sobre componentes inexistentes y mantiene el TODO alineado con el estado real del código.

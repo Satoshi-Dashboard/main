@@ -1,0 +1,414 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AlertCircle, RefreshCw } from 'lucide-react';
+import { fetchUsNationalDebtPayload } from '@/shared/services/usNationalDebtApi.js';
+import AnimatedMetric from '@/shared/components/common/AnimatedMetric.jsx';
+import {
+  buildUsDebtRateCards,
+  formatDateLabel,
+  formatDateTimeLabel,
+  formatNumberCompact,
+  getDebtPressureTone,
+  projectCurrencyValue,
+  projectSessionDelta,
+} from '@/shared/utils/usNationalDebt.js';
+
+const DATA_REFRESH_MS = 60_000;
+const LIVE_TICK_MS = 1_000;
+const PHONE_MEDIA_QUERY = '(max-width: 639px)';
+
+function getToneStyles(tone) {
+  if (tone === 'pressure') {
+    return {
+      color: 'var(--accent-red)',
+      borderColor: 'rgba(255, 71, 87, 0.18)',
+      background: 'rgba(255, 71, 87, 0.08)',
+    };
+  }
+
+  if (tone === 'relief') {
+    return {
+      color: 'var(--accent-green)',
+      borderColor: 'rgba(0, 216, 151, 0.18)',
+      background: 'rgba(0, 216, 151, 0.08)',
+    };
+  }
+
+  return {
+    color: 'var(--text-secondary)',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    background: 'rgba(255, 255, 255, 0.03)',
+  };
+}
+
+function HeroFigure({ value, animate = true }) {
+  const fontSize = useMemo(() => {
+    const digits = String(Math.round(Number(value) || 0)).length;
+    if (digits >= 15) return 'clamp(1.05rem, 5vw, 4.4rem)';
+    if (digits >= 14) return 'clamp(1.12rem, 5.4vw, 4.8rem)';
+    return 'clamp(1.2rem, 5.8vw, 5.2rem)';
+  }, [value]);
+
+  return (
+    <div
+      className="flex w-full min-w-0 items-center justify-center overflow-visible font-mono font-semibold text-white tabular-nums tracking-[-0.03em] sm:tracking-[-0.05em] xl:tracking-[-0.075em]"
+      style={{
+        fontSize,
+        lineHeight: 0.96,
+      }}
+    >
+      <AnimatedMetric value={value} variant="usd" decimals={0} animate={animate} />
+    </div>
+  );
+}
+
+function StatCard({ label, value, variant = 'number', helper, accent = 'var(--text-primary)', featured = false, className = '', animate = true }) {
+  return (
+    <article
+      className={`rounded-[24px] border border-white/10 bg-white/[0.03] p-3.5 text-left sm:p-4 lg:p-5 2xl:p-6 ${className}`}
+    >
+      <div
+        className="font-mono uppercase"
+        style={{
+          color: featured ? 'var(--accent-bitcoin)' : 'var(--text-secondary)',
+          fontSize: 'var(--fs-tag)',
+          letterSpacing: '0.18em',
+        }}
+      >
+        {label}
+      </div>
+      <div
+        className="mt-3 min-w-0 font-mono font-semibold tabular-nums"
+        style={{
+          color: accent,
+          fontSize: featured ? 'clamp(1.45rem, 5vw, 2.5rem)' : 'clamp(1.12rem, 3.5vw, 1.95rem)',
+          letterSpacing: '-0.05em',
+          lineHeight: 1,
+        }}
+        >
+          <AnimatedMetric value={value} variant={variant} blockAlign="start" animate={animate} />
+        </div>
+      {helper ? (
+        <div
+          className="mt-3 font-mono leading-relaxed"
+          style={{ color: 'var(--text-secondary)', fontSize: 'var(--fs-micro)' }}
+        >
+          {helper}
+        </div>
+      ) : null}
+    </article>
+  );
+}
+
+function RateCard({ label, value, toneColor, animate = true }) {
+  return (
+    <article className="rounded-[22px] border border-white/10 bg-white/[0.025] p-3.5 text-left sm:p-4 xl:p-5 2xl:p-4">
+      <div className="mb-3 flex items-center gap-2">
+        <span className="h-1.5 w-1.5 rounded-full" style={{ background: toneColor, opacity: 0.8 }} />
+        <span
+          className="font-mono uppercase"
+          style={{
+            color: 'var(--text-secondary)',
+            fontSize: 'var(--fs-tag)',
+            letterSpacing: '0.18em',
+          }}
+        >
+          {label}
+        </span>
+      </div>
+      <div
+        className="min-w-0 font-mono font-semibold tabular-nums text-white"
+        style={{ fontSize: 'clamp(1.05rem, 3.6vw, 1.7rem)', letterSpacing: '-0.04em', lineHeight: 1 }}
+      >
+        <AnimatedMetric value={value} variant="usdCompact" signed blockAlign="start" animate={animate} />
+      </div>
+      <div className="mt-2 font-mono" style={{ color: 'var(--text-tertiary)', fontSize: 'var(--fs-micro)' }}>
+        Projected pace
+      </div>
+    </article>
+  );
+}
+
+function LoadingState() {
+  return (
+    <div className="mx-auto flex w-full max-w-[1240px] flex-col items-center justify-center py-6 text-center sm:py-10 lg:min-h-full lg:py-0">
+      <div className="skeleton h-6 w-56 rounded-full" />
+      <div className="mt-5 flex w-full max-w-[980px] flex-wrap justify-center gap-3">
+        {Array.from({ length: 5 }).map((_, index) => (
+          <div key={index} className="skeleton h-16 w-40 rounded-2xl sm:h-20 sm:w-44 lg:h-24 lg:w-48" />
+        ))}
+      </div>
+      <div className="skeleton mt-6 h-8 w-72 rounded-full sm:h-10 sm:w-96" />
+      <div className="skeleton mt-3 h-4 w-64 rounded-full sm:w-72" />
+      <div className="mt-6 grid w-full gap-4 lg:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <div key={index} className="skeleton min-h-[180px] rounded-[24px]" />
+        ))}
+      </div>
+      <div className="mt-5 grid w-full gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <div key={index} className="skeleton min-h-[128px] rounded-[22px]" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ErrorState({ message, onRetry }) {
+  return (
+    <div className="mx-auto flex min-h-full w-full max-w-xl items-center justify-center py-8">
+      <div className="w-full rounded-[28px] border border-white/10 bg-white/[0.03] px-6 py-8 text-center sm:px-8">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-[var(--accent-red)]">
+          <AlertCircle size={20} />
+        </div>
+        <div className="mt-4 font-mono text-white" style={{ fontSize: 'var(--fs-section)' }}>
+          Could not load official debt data
+        </div>
+        <div className="mt-2 font-mono leading-relaxed" style={{ color: 'var(--text-secondary)', fontSize: 'var(--fs-body)' }}>
+          {message || 'The Treasury or Census endpoints are temporarily unavailable.'}
+        </div>
+        <button
+          type="button"
+          onClick={onRetry}
+          className="mx-auto mt-5 inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.04] px-4 py-2 font-mono text-white transition hover:border-white/25 hover:bg-white/[0.08]"
+          style={{ fontSize: 'var(--fs-caption)' }}
+        >
+          <RefreshCw size={14} />
+          Retry
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export default function S30_USNationalDebt() {
+  const openedAtRef = useRef(Date.now());
+  const hasPayloadRef = useRef(false);
+  const [payload, setPayload] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState('');
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  const [isPhoneViewport, setIsPhoneViewport] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia(PHONE_MEDIA_QUERY).matches;
+  });
+
+  const load = useCallback(async ({ silent = false, force = false } = {}) => {
+    if (silent) setRefreshing(true);
+    if (!silent && !hasPayloadRef.current) setLoading(true);
+
+    try {
+      const nextPayload = await fetchUsNationalDebtPayload({ force });
+      setPayload(nextPayload);
+      hasPayloadRef.current = true;
+      setError('');
+    } catch (loadError) {
+      const message = loadError instanceof Error ? loadError.message : 'Could not load official debt data.';
+      setError(message);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load({ force: true });
+    const refreshTimer = setInterval(() => {
+      load({ silent: true, force: true });
+    }, DATA_REFRESH_MS);
+    return () => clearInterval(refreshTimer);
+  }, [load]);
+
+  useEffect(() => {
+    const tick = setInterval(() => setNowMs(Date.now()), LIVE_TICK_MS);
+    return () => clearInterval(tick);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const phoneMedia = window.matchMedia(PHONE_MEDIA_QUERY);
+    const onPhoneChange = (event) => setIsPhoneViewport(event.matches);
+
+    setIsPhoneViewport(phoneMedia.matches);
+
+    if (typeof phoneMedia.addEventListener === 'function') {
+      phoneMedia.addEventListener('change', onPhoneChange);
+      return () => phoneMedia.removeEventListener('change', onPhoneChange);
+    }
+
+    phoneMedia.addListener(onPhoneChange);
+    return () => phoneMedia.removeListener(onPhoneChange);
+  }, []);
+
+  const model = payload?.data || null;
+  const tone = useMemo(() => getDebtPressureTone(model?.rate_per_second), [model?.rate_per_second]);
+  const toneStyles = useMemo(() => getToneStyles(tone), [tone]);
+  const toneColor = toneStyles.color;
+  const projectedTotal = useMemo(
+    () => projectCurrencyValue(model?.total_debt, model?.rate_per_second, model?.projection_base_at || payload?.updated_at, nowMs),
+    [model?.projection_base_at, model?.rate_per_second, model?.total_debt, nowMs, payload?.updated_at],
+  );
+  const sinceOpenDelta = useMemo(
+    () => projectSessionDelta(model?.rate_per_second, openedAtRef.current, nowMs),
+    [model?.rate_per_second, nowMs],
+  );
+  const rateCards = useMemo(() => buildUsDebtRateCards(model), [model]);
+  const liveVerb = Number(model?.rate_per_second) < 0 ? 'reduced every second' : 'added every second';
+  const animateMetrics = !isPhoneViewport;
+  const projectedDebtPerPerson = useMemo(() => {
+    const population = Number(model?.population);
+    if (!Number.isFinite(population) || population <= 0) return model?.debt_per_person;
+    return projectedTotal / population;
+  }, [model?.debt_per_person, model?.population, projectedTotal]);
+
+  if (loading && !model) {
+    return (
+      <div className="relative flex min-h-full w-full bg-[var(--bg-primary)] px-4 py-5 sm:px-6 lg:h-full lg:px-10 lg:py-8 2xl:overflow-hidden">
+        <LoadingState />
+      </div>
+    );
+  }
+
+  if (!model) {
+    return (
+      <div className="relative flex min-h-full w-full bg-[var(--bg-primary)] px-4 py-5 sm:px-6 lg:h-full lg:px-10 lg:py-8 2xl:overflow-hidden">
+        <ErrorState message={error} onRetry={() => load({ force: true })} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative flex min-h-full w-full overflow-visible bg-[var(--bg-primary)] lg:h-full lg:overflow-hidden">
+      <div className="relative mx-auto flex min-h-full w-full max-w-[1720px] flex-col px-4 py-4 sm:px-5 sm:py-5 lg:h-full lg:px-10 lg:py-6 xl:px-12 2xl:px-16 2xl:py-7">
+        <div className="mx-auto flex w-full max-w-[1520px] flex-col items-center gap-4 text-center sm:gap-5 lg:h-full lg:flex-1 lg:justify-between lg:gap-0">
+          <header className="flex w-full max-w-[980px] flex-col items-center gap-4 max-md:gap-3">
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <span
+                className="font-mono uppercase"
+                style={{
+                  color: 'var(--accent-bitcoin)',
+                  fontSize: 'var(--fs-caption)',
+                  letterSpacing: '0.28em',
+                }}
+              >
+                UNITED STATES NATIONAL DEBT
+              </span>
+              <span className="hidden h-px w-10 bg-white/10 sm:block" />
+              <span
+                className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 font-mono uppercase"
+                style={{ color: 'var(--text-secondary)', fontSize: 'var(--fs-tag)', letterSpacing: '0.18em' }}
+              >
+                <span
+                  className="h-1.5 w-1.5 rounded-full"
+                  style={{ background: 'var(--accent-bitcoin)', boxShadow: '0 0 12px rgba(247,147,26,0.4)' }}
+                />
+                REAL-TIME
+              </span>
+            </div>
+
+            <div
+              className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 font-mono max-md:max-w-[26rem]"
+              style={{ color: 'var(--text-secondary)', fontSize: 'var(--fs-micro)' }}
+            >
+              <span>Official print {formatDateLabel(model.official_record_date)}</span>
+              <span className="hidden h-1 w-1 rounded-full bg-white/20 sm:block" />
+              <span>{model.interpolation_window_observations} observations in projection window</span>
+              <span className="hidden h-1 w-1 rounded-full bg-white/20 sm:block" />
+              <span>{refreshing ? 'Refreshing official cache' : `Synced ${formatDateTimeLabel(payload.updated_at)}`}</span>
+            </div>
+          </header>
+
+          <section className="mt-4 flex w-full max-w-[1460px] justify-center px-0 sm:px-1 2xl:px-0">
+            <HeroFigure value={projectedTotal} animate={animateMetrics} />
+          </section>
+
+          <section className="flex w-full max-w-[980px] flex-col items-center gap-3">
+            <div
+              className="inline-flex max-w-full flex-wrap items-center justify-center gap-2 rounded-[22px] border px-4 py-2 font-mono tabular-nums max-md:px-3 max-md:py-2"
+              style={{
+                color: toneStyles.color,
+                borderColor: toneStyles.borderColor,
+                background: toneStyles.background,
+                fontSize: 'var(--fs-body)',
+              }}
+            >
+              <AnimatedMetric value={sinceOpenDelta} variant="usdCompact" signed inline color={toneStyles.color} animate={animateMetrics} />
+              <span style={{ color: 'var(--text-secondary)' }}>since you opened this page</span>
+            </div>
+            <div
+              className="flex max-w-full flex-wrap items-center justify-center gap-x-2 gap-y-1 font-mono tabular-nums"
+              style={{ fontSize: 'clamp(1.1rem, 1vw, 1.45rem)', color: 'var(--text-primary)' }}
+            >
+               <AnimatedMetric value={Math.abs(Number(model.rate_per_second) || 0)} variant="usd" decimals={0} inline animate={animateMetrics} />
+               <span style={{ color: 'var(--text-secondary)' }}>{liveVerb}</span>
+            </div>
+          </section>
+
+          <section className="grid w-full gap-3.5 md:grid-cols-2 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,0.95fr)_minmax(0,0.95fr)] xl:gap-4">
+            <StatCard
+              label="DEBT PER PERSON"
+              value={projectedDebtPerPerson}
+              variant="usd"
+              helper={`Estimated share of national debt per U.S. resident. Moves in step with the national counter using the latest population estimate (${formatNumberCompact(model.population)} residents).`}
+              accent="var(--text-primary)"
+              featured
+              className="md:col-span-2 xl:col-span-1"
+              animate={animateMetrics}
+            />
+            <StatCard
+              label="DEBT HELD BY THE PUBLIC"
+              value={model.debt_held_public}
+              variant="usdCompact"
+              helper="Market-facing Treasury obligations held outside federal accounts."
+              accent={toneColor}
+              animate={animateMetrics}
+            />
+            <StatCard
+              label="INTRAGOVERNMENTAL HOLDINGS"
+              value={model.intragovernmental_holdings}
+              variant="usdCompact"
+              helper="Treasury securities held by federal trust funds and government accounts."
+              accent="var(--text-primary)"
+              animate={animateMetrics}
+            />
+          </section>
+
+          <section className="w-full">
+            <div
+              className="mb-3 text-center font-mono uppercase"
+              style={{ color: 'var(--text-secondary)', fontSize: 'var(--fs-tag)', letterSpacing: '0.22em' }}
+            >
+              RATE OF INCREASE
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+               {rateCards.map((card) => (
+                 <RateCard
+                    key={card.label}
+                    label={card.label}
+                    value={card.value}
+                    toneColor={toneColor}
+                    animate={animateMetrics}
+                  />
+                ))}
+            </div>
+          </section>
+
+          {(payload?.is_fallback || payload?.fallback_note || error) ? (
+            <div
+              className="mt-5 w-full rounded-2xl border px-3 py-2 font-mono text-left"
+              style={{
+                color: 'var(--accent-warning)',
+                fontSize: 'var(--fs-micro)',
+                borderColor: 'rgba(255,215,0,0.18)',
+                background: 'rgba(255,215,0,0.06)',
+              }}
+            >
+              {payload?.fallback_note || error}
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -26,7 +26,7 @@ This file is mandatory for any backend or API change in this repository.
 Apply these rules when editing anything under:
 - `server/**`
 - `api/**`
-- `btcRates.js`
+- `server/services/btcRates.js`
 - `vercel.json`
 - any frontend call to `/api/*`
 
@@ -42,7 +42,7 @@ Apply these rules when editing anything under:
 
 Before applying any backend/API change that references modules by number, slug, title, route behavior, or module-specific data:
 
-1. Re-read `src/config/modules.js` and confirm the current `code <-> slug <-> title` mapping.
+1. Re-read `src/features/module-registry/modules.js` and confirm the current `code <-> slug <-> title` mapping.
 2. Do not trust prior chat memory for module identity/order; always use current registry as source of truth.
 3. If touching frontend calls to `/api/*` for a specific module, verify that module slug/code still match the intended target.
 4. In final verification, re-check that no unintended module reindexing happened.
@@ -53,7 +53,8 @@ Before applying any backend/API change that references modules by number, slug, 
 - API route definitions live in `server/app.js`.
 - Local runtime entrypoint is `server/index.js`.
 - Serverless entrypoint is `api/index.js`.
-- Shared runtime cache layer is `server/shared/runtimeCache.js`.
+- Shared runtime cache layer is `server/core/runtimeCache.js`.
+- Shared backend pipelines live in `server/services/` and module-specific backends live in `server/features/<domain>/`.
 - Endpoint refresh policy is request-time with stale fallback + lock.
 
 ## Rules for creating/changing endpoints
@@ -71,7 +72,7 @@ Before applying any backend/API change that references modules by number, slug, 
 1. Use timeout for all external fetches.
 2. Use stale-if-error fallback whenever possible.
 3. Use `withCacheLock(...)` for expensive refresh paths.
-4. Use namespaced cache keys via `server/shared/runtimeCache.js`.
+4. Use namespaced cache keys via `server/core/runtimeCache.js`.
 5. If KV is unavailable, local fallback must still work.
 
 ## Provider-aware refresh budget policy (mandatory)
@@ -166,3 +167,11 @@ When backend/API behavior changes:
 - **Acción Realizada/Corrección:** Se añadió una regla específica para conservar cache inmutable solo en assets estáticos versionados y evitar aplicarlo a entry HTML o respuestas API.
 - **Nueva/Modificada Regla o Directriz:** Las optimizaciones de cache en `vercel.json` deben limitarse a assets hasheados; HTML y `/api/*` deben seguir con estrategias compatibles con deploys frescos y headers por endpoint.
 - **Justificación:** Previene bugs de despliegue donde usuarios reciben bundles o shells obsoletos por una política de cache demasiado amplia.
+
+- **Fecha de la Actualización:** `2026-03-09`
+- **Archivo(s) Afectado(s):** `.claude/BACKEND_API_RULES.md`
+- **Tipo de Evento/Contexto:** Alineación backend tras reorganización estructural
+- **Descripción del Evento Original:** La política backend hacía referencia a ubicaciones previas de servicios y caché, lo que podía desalinear verificaciones y revisiones arquitectónicas.
+- **Acción Realizada/Corrección:** Se actualizaron las rutas backend al nuevo esquema `server/core`, `server/services` y `server/features/<domain>` y se documentó explícitamente esa separación.
+- **Nueva/Modificada Regla o Directriz:** Las verificaciones backend deben usar las rutas actuales de infraestructura compartida y respetar la separación entre primitives (`server/core`) y pipelines/feature backends (`server/services`, `server/features`).
+- **Justificación:** Evita que futuros agentes editen archivos obsoletos o evalúen una arquitectura distinta a la realmente desplegada.

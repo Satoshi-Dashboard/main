@@ -48,16 +48,16 @@ Use this file to answer, before changing any data flow:
 
 Before editing any of the following:
 
-- `btcRates.js`
+- `server/services/btcRates.js`
 - `server/**`
 - `api/**`
-- frontend callers under `src/lib/**`, `src/services/**`, `src/components/sections/**`
+- frontend callers under `src/shared/lib/**`, `src/shared/services/**`, `src/features/modules/**`
 - any module metadata that describes providers or refresh behavior
 
 you must:
 
 1. Read this file.
-2. Confirm the target module/code/slug in `src/config/modules.js`.
+2. Confirm the target module/code/slug in `src/features/module-registry/modules.js`.
 3. Preserve the approved source priority documented here unless the owner explicitly says to change it.
 4. After the change, update this file if any source/fallback/cadence/route changed.
 
@@ -106,26 +106,26 @@ This table mirrors the same intent with implementation details for agents.
 
 | Module / feature | Frontend consumer | Internal route / service | Approved upstream priority | Effective refresh cadence | Allowed fallback path | Key files |
 | --- | --- | --- | --- | --- | --- | --- |
-| S01 Bitcoin Overview | `src/components/sections/live/S01_BitcoinOverview.jsx` | `fetchBtcSpot()` + `/api/public/mempool/overview` | BTC spot: Binance -> Binance.US -> cached `btcRates`; overview: mempool.space + Alternative.me via `getMempoolOverviewPayload()` | `btcRates`: 5s; mempool overview: 30s; UI poll: 30s | Shared KV/memory stale payloads; keep previous UI state | `btcRates.js`, `server/shared/publicDataFeeds.js`, `server/app.js` |
-| S02 Price Chart | `src/components/sections/live/S02_PriceChart.jsx` | `fetchBtcSpot()` + `/api/public/binance/btc-history` | Spot: Binance -> Binance.US -> cached `btcRates`; history: Binance -> Binance.US | Spot: 5s; history feed: 5 min; UI by range/on load | Shared stale history payload + frontend per-range cache | `btcRates.js`, `server/shared/publicDataFeeds.js` |
-| S03 Multi-Currency | `src/components/sections/live/S03_MultiCurrencyBoard.jsx` | `/api/s03/multi-currency` | `/api/btc/rates` as anchor; FX: `SCRAPER_BASE_URL/api/scrape/investing-currencies` -> direct Investing HTML parse | 30s | `withCacheLock()` + shared stale payload in `server/features/s03MultiCurrencyScraper.js` | `server/features/s03MultiCurrencyScraper.js`, `btcRates.js`, `server/app.js` |
-| S04 Mempool Gauge | `src/components/sections/live/S04_MempoolGauge.jsx` | `/api/public/mempool/overview` | mempool difficulty/fees/hashrate/mempool + Alternative.me FNG | 30s | Shared stale payload in `getFeed()` | `server/shared/publicDataFeeds.js` |
-| S05 Long-Term Trend | `src/components/sections/live/S05_LongTermTrend.jsx` | `/api/public/mempool/live` | mempool blocks + mempool fee blocks + recommended fees | 10s | Shared stale payload in `getFeed()` | `server/shared/publicDataFeeds.js` |
-| S06 Nodes Map | `src/components/sections/live/S06_NodesMap.jsx` | `/api/bitnodes/cache` | `SCRAPER_BASE_URL/api/scrape/bitnodes-nodes` API data -> direct Bitnodes API + snapshot -> Bitnodes HTML modal scrape fallback | Backend follows Bitnodes next snapshot / scrape throttle; UI poll ~10 min | Existing fallback payload or stale cache | `server/features/bitnodesCache.js`, `server/app.js` |
-| S07 Lightning Nodes Map | `src/components/sections/live/S07_LightningNodesMap.jsx` | `/api/public/lightning/world` | mempool.space lightning world | 60s | Shared stale payload in `getFeed()` | `server/shared/publicDataFeeds.js` |
-| S08 BTC Map Business Density | `src/components/sections/live/S08_BtcMapBusinessesMap.jsx` | `/api/public/btcmap/businesses-by-country` | BTC Map places API + Natural Earth high-res countries | Backend 6h; UI poll ~10 min | Shared stale aggregate payload | `server/shared/publicDataFeeds.js` |
-| S09 Lightning Network | `src/components/sections/live/S09_LightningNetwork.jsx` | `fetchBtcSpot()` | Binance -> Binance.US -> cached `btcRates` | Spot 5s; UI 15s | Cached `btcRates` payload / previous UI state | `src/services/priceApi.js`, `btcRates.js` |
-| S10 Stablecoin Peg Health | `src/components/sections/live/S10_StablecoinPegHealth.jsx` | `/api/s10/stablecoins`, `/api/s10/stablecoins/live-prices`, `/api/s10/stablecoin/:id` | CoinGecko markets list -> derived live-price payload -> CoinGecko detail endpoint | List/live 2 min; detail cache 10 min TTL with slower effective reuse | Stale list/live/detail payloads from memory/KV | `server/features/s10StablecoinPegCache.js`, `server/app.js` |
-| S11 Fear & Greed | `src/components/sections/live/S11_FearGreedIndex.jsx` | `/api/public/fear-greed?limit=31` | Alternative.me | 6h | Shared stale payload in `getFeed()` | `server/shared/publicDataFeeds.js` |
-| S12 Address Distribution | `src/components/sections/live/S12_AddressDistribution.jsx` | `/api/s12/btc-distribution` | `SCRAPER_BASE_URL/api/scrape/bitinfocharts-richlist` -> direct BitInfoCharts HTML shared parser | 30 min | Stale shared payload | `server/shared/bitinfochartsShared.js`, `server/features/s12BtcDistribution.js`, `server/app.js` |
-| S13 Wealth Pyramid | `src/components/sections/live/S13_WealthPyramid.jsx` | `/api/s13/addresses-richer` | `SCRAPER_BASE_URL/api/scrape/bitinfocharts-richlist` -> direct BitInfoCharts HTML shared parser | 30 min | Stale shared payload | `server/shared/bitinfochartsShared.js`, `server/features/s13AddressesRicher.js`, `server/app.js` |
-| S14 Global Assets | `src/components/sections/live/S14_GlobalAssetsTreemap.jsx` | `/api/s14/global-assets` | `SCRAPER_BASE_URL/api/scrape/newhedge-global-assets` -> `https://r.jina.ai/http://newhedge.io/bitcoin/global-asset-values` | 60 min | Stale snapshot from KV/memory | `server/features/s14GlobalAssetsCache.js`, `server/app.js` |
-| S15 BTC vs Gold | `src/components/sections/live/S15_BTCvsGold.jsx` | `/api/public/coingecko/bitcoin-market-chart?days=365` | CoinGecko | 60 min | Component-side local fallback rendering path | `server/shared/publicDataFeeds.js`, `src/components/sections/live/S15_BTCvsGold.jsx` |
-| S17 Price Performance | `src/components/sections/under-construction/S17_PricePerformance.jsx` | `/api/btc/rates` | Binance -> Binance.US -> cached `btcRates` | On load | Local fallback price `84000` in component | `btcRates.js`, `src/components/sections/under-construction/S17_PricePerformance.jsx` |
-| S21 Big Mac Sats Tracker | `src/components/sections/under-construction/S21_BigMacSatsTracker.jsx` | `/api/public/s21/big-mac-sats-data` | `/api/btc/rates` spot + Economist CSV + Binance/Binance.US historical close lookups | Combined feed 7d; subfeeds 12h-24h; UI 5 min | Shared stale combined payload | `server/shared/publicDataFeeds.js`, `btcRates.js`, `src/components/sections/under-construction/S21_BigMacSatsTracker.jsx` |
-| S23 Big Mac Index | `src/components/sections/under-construction/S23_BigMacIndex.jsx` | `/api/btc/rates` | Binance -> Binance.US -> cached `btcRates` | On load | Local fallback price `84000` in component | `btcRates.js`, `src/components/sections/under-construction/S23_BigMacIndex.jsx` |
-| S30 U.S. National Debt | `src/components/sections/live/S30_USNationalDebt.jsx` | `/api/public/us-national-debt` | Treasury Debt to the Penny -> latest available ACS 1-Year population year | Debt 15 min; population 30d; UI local 1s interpolation loop | Combined stale payload from debt/population feeds | `server/shared/publicDataFeeds.js`, `src/services/usNationalDebtApi.js`, `server/app.js` |
-| Visitor counter | `src/components/common/UniqueVisitorsCounter.jsx` | `/api/visitors/stats`, `/api/visitors/track` | Shared KV if configured -> local file fallback; visitor identity is browser-generated and salted server-side | Session-based track; stats read on demand | Local file mode with approximate behavior in production if KV missing | `server/features/visitorCounter.js`, `server/app.js` |
+| S01 Bitcoin Overview | `src/features/modules/live/S01_BitcoinOverview.jsx` | `fetchBtcSpot()` + `/api/public/mempool/overview` | BTC spot: Binance -> Binance.US -> cached `btcRates`; overview: mempool.space + Alternative.me via `getMempoolOverviewPayload()` | `btcRates`: 5s; mempool overview: 30s; UI poll: 30s | Shared KV/memory stale payloads; keep previous UI state | `server/services/btcRates.js`, `server/services/publicDataFeeds.js`, `server/app.js` |
+| S02 Price Chart | `src/features/modules/live/S02_PriceChart.jsx` | `fetchBtcSpot()` + `/api/public/binance/btc-history` | Spot: Binance -> Binance.US -> cached `btcRates`; history: Binance -> Binance.US | Spot: 5s; history feed: 5 min; UI by range/on load | Shared stale history payload + frontend per-range cache | `server/services/btcRates.js`, `server/services/publicDataFeeds.js` |
+| S03 Multi-Currency | `src/features/modules/live/S03_MultiCurrencyBoard.jsx` | `/api/s03/multi-currency` | `/api/btc/rates` as anchor; FX: `SCRAPER_BASE_URL/api/scrape/investing-currencies` -> direct Investing HTML parse | 30s | `withCacheLock()` + shared stale payload in `server/features/multi-currency/s03MultiCurrencyScraper.js` | `server/features/multi-currency/s03MultiCurrencyScraper.js`, `server/services/btcRates.js`, `server/app.js` |
+| S04 Mempool Gauge | `src/features/modules/live/S04_MempoolGauge.jsx` | `/api/public/mempool/overview` | mempool difficulty/fees/hashrate/mempool + Alternative.me FNG | 30s | Shared stale payload in `getFeed()` | `server/services/publicDataFeeds.js` |
+| S05 Long-Term Trend | `src/features/modules/live/S05_LongTermTrend.jsx` | `/api/public/mempool/live` | mempool blocks + mempool fee blocks + recommended fees | 10s | Shared stale payload in `getFeed()` | `server/services/publicDataFeeds.js` |
+| S06 Nodes Map | `src/features/modules/live/S06_NodesMap.jsx` | `/api/bitnodes/cache` | `SCRAPER_BASE_URL/api/scrape/bitnodes-nodes` API data -> direct Bitnodes API + snapshot -> Bitnodes HTML modal scrape fallback | Backend follows Bitnodes next snapshot / scrape throttle; UI poll ~10 min | Existing fallback payload or stale cache | `server/features/bitnodes/bitnodesCache.js`, `server/app.js` |
+| S07 Lightning Nodes Map | `src/features/modules/live/S07_LightningNodesMap.jsx` | `/api/public/lightning/world` | mempool.space lightning world | 60s | Shared stale payload in `getFeed()` | `server/services/publicDataFeeds.js` |
+| S08 BTC Map Business Density | `src/features/modules/live/S08_BtcMapBusinessesMap.jsx` | `/api/public/btcmap/businesses-by-country` | BTC Map places API + Natural Earth high-res countries | Backend 6h; UI poll ~10 min | Shared stale aggregate payload | `server/services/publicDataFeeds.js` |
+| S09 Lightning Network | `src/features/modules/live/S09_LightningNetwork.jsx` | `fetchBtcSpot()` | Binance -> Binance.US -> cached `btcRates` | Spot 5s; UI 15s | Cached `btcRates` payload / previous UI state | `src/shared/services/priceApi.js`, `server/services/btcRates.js` |
+| S10 Stablecoin Peg Health | `src/features/modules/live/S10_StablecoinPegHealth.jsx` | `/api/s10/stablecoins`, `/api/s10/stablecoins/live-prices`, `/api/s10/stablecoin/:id` | CoinGecko markets list -> derived live-price payload -> CoinGecko detail endpoint | List/live 2 min; detail cache 10 min TTL with slower effective reuse | Stale list/live/detail payloads from memory/KV | `server/features/stablecoins/s10StablecoinPegCache.js`, `server/app.js` |
+| S11 Fear & Greed | `src/features/modules/live/S11_FearGreedIndex.jsx` | `/api/public/fear-greed?limit=31` | Alternative.me | 6h | Shared stale payload in `getFeed()` | `server/services/publicDataFeeds.js` |
+| S12 Address Distribution | `src/features/modules/live/S12_AddressDistribution.jsx` | `/api/s12/btc-distribution` | `SCRAPER_BASE_URL/api/scrape/bitinfocharts-richlist` -> direct BitInfoCharts HTML shared parser | 30 min | Stale shared payload | `server/services/bitinfochartsShared.js`, `server/features/bitinfocharts/s12BtcDistribution.js`, `server/app.js` |
+| S13 Wealth Pyramid | `src/features/modules/live/S13_WealthPyramid.jsx` | `/api/s13/addresses-richer` | `SCRAPER_BASE_URL/api/scrape/bitinfocharts-richlist` -> direct BitInfoCharts HTML shared parser | 30 min | Stale shared payload | `server/services/bitinfochartsShared.js`, `server/features/bitinfocharts/s13AddressesRicher.js`, `server/app.js` |
+| S14 Global Assets | `src/features/modules/live/S14_GlobalAssetsTreemap.jsx` | `/api/s14/global-assets` | `SCRAPER_BASE_URL/api/scrape/newhedge-global-assets` -> `https://r.jina.ai/http://newhedge.io/bitcoin/global-asset-values` | 60 min | Stale snapshot from KV/memory | `server/features/global-assets/s14GlobalAssetsCache.js`, `server/app.js` |
+| S15 BTC vs Gold | `src/features/modules/live/S15_BTCvsGold.jsx` | `/api/public/coingecko/bitcoin-market-chart?days=365` | CoinGecko | 60 min | Component-side local fallback rendering path | `server/services/publicDataFeeds.js`, `src/features/modules/live/S15_BTCvsGold.jsx` |
+| S17 Price Performance | `src/features/modules/under-construction/S17_PricePerformance.jsx` | `/api/btc/rates` | Binance -> Binance.US -> cached `btcRates` | On load | Local fallback price `84000` in component | `server/services/btcRates.js`, `src/features/modules/under-construction/S17_PricePerformance.jsx` |
+| S21 Big Mac Sats Tracker | `src/features/modules/under-construction/S21_BigMacSatsTracker.jsx` | `/api/public/s21/big-mac-sats-data` | `/api/btc/rates` spot + Economist CSV + Binance/Binance.US historical close lookups | Combined feed 7d; subfeeds 12h-24h; UI 5 min | Shared stale combined payload | `server/services/publicDataFeeds.js`, `server/services/btcRates.js`, `src/features/modules/under-construction/S21_BigMacSatsTracker.jsx` |
+| S23 Big Mac Index | `src/features/modules/under-construction/S23_BigMacIndex.jsx` | `/api/btc/rates` | Binance -> Binance.US -> cached `btcRates` | On load | Local fallback price `84000` in component | `server/services/btcRates.js`, `src/features/modules/under-construction/S23_BigMacIndex.jsx` |
+| S30 U.S. National Debt | `src/features/modules/live/S30_USNationalDebt.jsx` | `/api/public/us-national-debt` | Treasury Debt to the Penny -> latest available ACS 1-Year population year | Debt 15 min; population 30d; UI local 1s interpolation loop | Combined stale payload from debt/population feeds | `server/services/publicDataFeeds.js`, `src/shared/services/usNationalDebtApi.js`, `server/app.js` |
+| Visitor counter | `n/a (no mounted frontend consumer)` | `/api/visitors/stats`, `/api/visitors/track` | Shared KV if configured -> local file fallback; visitor identity is browser-generated and salted server-side | Session-based track; stats read on demand | Local file mode with approximate behavior in production if KV missing | `server/features/visitors/visitorCounter.js`, `server/app.js` |
 
 ## Change checklist (required whenever a source changes)
 
@@ -134,7 +134,7 @@ If you change a provider, scrape path, internal API route, refresh cadence, or f
 1. Update the Human table.
 2. Update the Technical table.
 3. Update `README.md` if user-facing documentation changed.
-4. Keep `src/config/moduleDataMeta.js` aligned with the real provider story.
+4. Keep `src/features/module-registry/moduleDataMeta.js` aligned with the real provider story.
 5. Run the verification required by `.claude/BACKEND_API_RULES.md`.
 
 ## Owner intent summary
@@ -157,3 +157,11 @@ That means:
 - **Acción Realizada/Corrección:** Se insertó la regla universal al inicio y se añadió la sección histórica para registrar futuras correcciones relacionadas con proveedores, fallback y cadencias.
 - **Nueva/Modificada Regla o Directriz:** Las decisiones sobre fuentes de datos deben conservar una traza histórica y actualizar esta política cuando un aprendizaje cambie reglas o conocimiento operativo.
 - **Justificación:** Reduce el riesgo de que futuros agentes deshagan ajustes críticos de proveedores o repitan cambios incompatibles con la intención del owner.
+
+- **Fecha de la Actualización:** `2026-03-09`
+- **Archivo(s) Afectado(s):** `.claude/DATA_SOURCE_INTEGRITY_RULES.md`
+- **Tipo de Evento/Contexto:** Reorganización de rutas y corrección de consumidor inexistente
+- **Descripción del Evento Original:** La política de fuentes apuntaba a rutas previas de frontend/backend y seguía documentando un `UniqueVisitorsCounter` montado en frontend aunque actualmente no existe ese consumidor en `src/`.
+- **Acción Realizada/Corrección:** Se actualizaron las rutas al layout `src/features`/`src/shared` y `server/core`/`server/services`/`server/features`, y se corrigió la fila del visitor counter para marcarlo como endpoint backend sin consumidor frontend montado.
+- **Nueva/Modificada Regla o Directriz:** Las tablas de integridad deben distinguir entre consumidores frontend realmente montados y endpoints backend disponibles, además de seguir siempre la estructura vigente del repositorio.
+- **Justificación:** Reduce el riesgo de investigar archivos equivocados, asumir flujos inexistentes o alterar la historia de proveedores en el lugar incorrecto.

@@ -21,7 +21,7 @@
 
 These rules apply to any frontend change that introduces, modifies, or reviews color usage in modules, cards, charts, labels, badges, and titles.
 
-Source basis: analysis of the first 11 active modules in `src/config/modules.js` order:
+Source basis: analysis of the first 11 active modules in `src/features/module-registry/modules.js` order:
 - S01 Bitcoin Overview
 - S02 Price Chart
 - S03 Multi-Currency
@@ -44,16 +44,16 @@ Color can be diverse by context, but semantic meaning must stay stable:
 
 Before applying any frontend UX/UI change that references module numbers, slugs, titles, navigation order, or module-specific copy/labels:
 
-1. Re-read `src/config/modules.js` and confirm the live `code <-> slug <-> title` mapping.
+1. Re-read `src/features/module-registry/modules.js` and confirm the live `code <-> slug <-> title` mapping.
 2. Do not rely on prior chat memory for module identity/order in multi-agent workflows.
 3. Verify the targeted module slug/code still match the requested module before editing.
 4. Re-check mapping after edits to ensure no unintended module index/slug drift occurred.
 
 ## Source of truth rule (mandatory)
 
-1. `src/config/modules.js` is the only source of truth for live module identity/order.
+1. `src/features/module-registry/modules.js` is the only source of truth for live module identity/order.
 2. Do not infer live module code/order from component filenames or variable names.
-3. Some under-construction filenames/constants may still lag behind live codes; verify module identity from `src/config/modules.js`, not from component filenames alone.
+3. Some under-construction filenames/constants may still lag behind live codes; verify module identity from `src/features/module-registry/modules.js`, not from component filenames alone.
 4. When frontend copy, metadata, or labels mention a module by number/title/slug, verify against generated `MODULES`, not legacy component names.
 
 ## Responsive-first policy (mandatory)
@@ -194,7 +194,7 @@ When a frontend view shows live or periodically refreshed numeric data, avoid ha
    - Slower dashboard refreshes: slightly more noticeable value transitions are acceptable.
 
 4. Prefer the shared animated counter primitive for DOM-rendered numeric updates.
-   - Use `src/components/common/AnimatedMetric.jsx` as the project wrapper.
+   - Use `src/shared/components/common/AnimatedMetric.jsx` as the project wrapper.
    - For numeric transitions, prefer the `react-animated-counter`-based wrapper over ad-hoc text swaps.
    - If a number is rendered in canvas, SVG text, or third-party map tooltips, use the closest equivalent motion that fits the rendering constraint.
 
@@ -206,6 +206,7 @@ When a frontend view shows live or periodically refreshed numeric data, avoid ha
     - Do not override a counter library's digit line-height/height model with inherited values if it computes digit travel from `font-size`.
     - If using responsive font tokens (`clamp(...)`, CSS vars), resolve them to a concrete computed pixel font size before passing them to the counter engine.
     - If that computed size can change with viewport width or responsive emulation, re-measure it on resize so live digits do not overflow, stack, or keep stale dimensions.
+    - If a third-party digit roller remains unstable on narrow phones, prefer a stable non-animated numeric fallback on that breakpoint over shipping broken motion.
 
 ## Required verification for frontend color changes
 
@@ -230,9 +231,9 @@ When creating any new frontend module, agents must follow the project example pa
     - status uses semantic colors (green/red/yellow)
     - metadata uses neutral gray role
 6. New modules must integrate with the current player shell behavior:
-   - confirm metadata strip behavior in `src/config/moduleDataMeta.js`
-   - confirm SEO metadata in `src/config/moduleSEO.js`
-   - confirm responsive/top/bottom overlay behavior in `src/pages/ModulePage.jsx`
+   - confirm metadata strip behavior in `src/features/module-registry/moduleDataMeta.js`
+   - confirm SEO metadata in `src/features/module-registry/moduleSEO.js`
+   - confirm responsive/top/bottom overlay behavior in `src/features/module-player/ModulePage.jsx`
 7. New modules are non-compliant if they skip this example baseline.
 
 ## Frontend language rule (mandatory)
@@ -240,7 +241,7 @@ When creating any new frontend module, agents must follow the project example pa
 1. All new user-facing text added to frontend must be in English.
 2. Do not introduce new Spanish (or other language) labels unless the owner explicitly requests multilingual/localized behavior.
 3. If updating an existing mixed-language area, new copy must still default to English unless instructed otherwise.
-4. Owner-approved exception: `src/components/sections/live/S31_ThankYouSatoshi.jsx` may rotate the single phrase "Thank you, Satoshi Nakamoto" in major world languages; do not expand that area with any other multilingual copy unless the owner explicitly asks.
+4. Owner-approved exception: `src/features/modules/live/S31_ThankYouSatoshi.jsx` may rotate the single phrase "Thank you, Satoshi Nakamoto" in major world languages; do not expand that area with any other multilingual copy unless the owner explicitly asks.
 
 ## Registro Histórico de Automejoras y Lecciones Aprendidas
 
@@ -272,7 +273,7 @@ When creating any new frontend module, agents must follow the project example pa
 - **Archivo(s) Afectado(s):** `.claude/FRONTEND_COLOR_UX_UI_RULES.md`
 - **Tipo de Evento/Contexto:** Estandarización de animación numérica
 - **Descripción del Evento Original:** La primera implementación de motion numérica usaba una transición personalizada de swap, pero el proyecto necesitaba alinearse con un patrón más consistente de contador animado solicitado por el owner.
-- **Acción Realizada/Corrección:** Se definió el wrapper compartido `src/components/common/AnimatedMetric.jsx` sobre `react-animated-counter` y se añadió la preferencia explícita en la política frontend.
+- **Acción Realizada/Corrección:** Se definió el wrapper compartido `src/shared/components/common/AnimatedMetric.jsx` sobre `react-animated-counter` y se añadió la preferencia explícita en la política frontend.
 - **Nueva/Modificada Regla o Directriz:** Las cifras DOM que cambian en tiempo real o por polling deben usar el wrapper compartido basado en `react-animated-counter`, salvo limitaciones de canvas/SVG/tooltips externos.
 - **Justificación:** Centraliza el comportamiento visual de métricas vivas, facilita su reutilización y evita soluciones inconsistentes entre módulos.
 
@@ -299,3 +300,19 @@ When creating any new frontend module, agents must follow the project example pa
 - **Acción Realizada/Corrección:** Se reforzó la política frontend para mantener un solo contenedor vertical de scroll en responsive y se ajustó el módulo para dejar al shell como dueño del scroll en pantallas estrechas.
 - **Nueva/Modificada Regla o Directriz:** Los módulos altos deben evitar scroll vertical anidado en móvil/tablet cuando el contenedor principal ya gestiona el desplazamiento de la página.
 - **Justificación:** Reduce bugs visuales difíciles de diagnosticar, mejora la interacción táctil y evita que el responsive parezca roto aunque el contenido sea correcto.
+
+- **Fecha de la Actualización:** `2026-03-09`
+- **Archivo(s) Afectado(s):** `.claude/FRONTEND_COLOR_UX_UI_RULES.md`
+- **Tipo de Evento/Contexto:** Fallback responsive para contadores animados
+- **Descripción del Evento Original:** En `S30`, la animación por dígitos seguía viéndose inestable en teléfonos aunque el mismo contador funcionaba bien en desktop, lo que degradaba la legibilidad del módulo live en móvil.
+- **Acción Realizada/Corrección:** Se añadió soporte para fallback numérico estable sin animación en breakpoints de teléfono cuando el digit roller no ofrece una experiencia fiable.
+- **Nueva/Modificada Regla o Directriz:** En teléfonos estrechos, los contadores live pueden degradar de animación por dígitos a render estático estable si eso mejora claramente legibilidad y robustez visual.
+- **Justificación:** Prioriza lectura correcta y estabilidad del producto en móvil frente a una animación rota que transmite baja calidad o datos defectuosos.
+
+- **Fecha de la Actualización:** `2026-03-09`
+- **Archivo(s) Afectado(s):** `.claude/FRONTEND_COLOR_UX_UI_RULES.md`
+- **Tipo de Evento/Contexto:** Alineación de paths frontend tras reorganización
+- **Descripción del Evento Original:** La política frontend seguía referenciando rutas antiguas para módulos, registry, player shell y componentes compartidos después del split `features/shared`.
+- **Acción Realizada/Corrección:** Se actualizaron las referencias obligatorias al nuevo layout `src/features/*` y `src/shared/*` sin alterar las reglas semánticas existentes.
+- **Nueva/Modificada Regla o Directriz:** Las validaciones frontend deben apuntar siempre a la jerarquía actual de features y shared, incluyendo el wrapper compartido `src/shared/components/common/AnimatedMetric.jsx`.
+- **Justificación:** Mantiene útiles las reglas de UX/UI y evita que futuras revisiones busquen componentes en rutas heredadas.

@@ -56,7 +56,7 @@ For OpenCode, Codex, Claude, and any automated coding agent:
 15. For any new frontend user-facing text, use English by default unless the owner explicitly requests another language.
 16. Before any code change (addition, modification, or deletion), verify the planned implementation remains compatible with Vercel deployment.
 17. After finishing each code change, re-verify that the project can still be deployed on Vercel without issues.
-18. Before any project analysis, audit, or improvement review, first inspect `README.md`, `package.json`, `src/config/modules.js`, and any relevant policy files in `.claude/`; then report findings prioritized by impact, risk, and effort.
+18. Before any project analysis, audit, or improvement review, first inspect `README.md`, `package.json`, `src/features/module-registry/modules.js`, and any relevant policy files in `.claude/`; then report findings prioritized by impact, risk, and effort.
 
 ## Registro Histórico de Automejoras y Lecciones Aprendidas
 
@@ -67,3 +67,11 @@ For OpenCode, Codex, Claude, and any automated coding agent:
 - **Acción Realizada/Corrección:** Se insertó la regla universal como primera sección y se añadió el workflow pre-entrega para que futuras tareas revisen, actualicen y registren aprendizaje en los documentos de políticas.
 - **Nueva/Modificada Regla o Directriz:** `AGENTS.md` ahora obliga a iniciar desde la regla universal, ejecutar el ciclo pre-entrega de automejora y mantener un registro histórico persistente.
 - **Justificación:** Centraliza el aprendizaje del agente en el archivo de entrada principal y reduce la probabilidad de repetir errores o saltarse actualizaciones de conocimiento.
+
+- **Fecha de la Actualización:** `2026-03-09`
+- **Archivo(s) Afectado(s):** `AGENTS.md`
+- **Tipo de Evento/Contexto:** Alineación de políticas con nueva estructura
+- **Descripción del Evento Original:** La política de auditoría inicial seguía señalando la antigua ruta del registro de módulos, lo que podía hacer que futuros agentes analizaran archivos obsoletos tras la reorganización.
+- **Acción Realizada/Corrección:** Se actualizó la instrucción de análisis inicial para usar `src/features/module-registry/modules.js` como fuente de verdad estructural.
+- **Nueva/Modificada Regla o Directriz:** Las revisiones iniciales del proyecto deben inspeccionar la ruta actual del registro de módulos en la jerarquía `src/features/module-registry/`.
+- **Justificación:** Reduce errores de contexto al iniciar auditorías o cambios que dependan de identidad, slugs y orden de módulos.

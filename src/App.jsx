@@ -1,12 +1,12 @@
 import { Suspense } from 'react';
 import { Navigate, Route, Routes, useParams } from 'react-router-dom';
-import { ToastProvider } from './components/common/Toast';
-import { FIRST_MODULE } from './config/modules';
-import { SEO_BLOG_PATH, SEO_HUB_PATH } from './config/seoContent';
-import ModulePage from './pages/ModulePage';
-import SeoBlogIndexPage from './pages/SeoBlogIndexPage';
-import SeoBlogPostPage from './pages/SeoBlogPostPage';
-import SeoLandingPage from './pages/SeoLandingPage';
+import { ToastProvider } from '@/shared/components/common/Toast.jsx';
+import { FIRST_MODULE } from '@/features/module-registry/modules.js';
+import { SEO_BLOG_PATH, SEO_HUB_PATH } from '@/features/seo/content/seoContent.js';
+import ModulePage from '@/features/module-player/ModulePage.jsx';
+import SeoBlogIndexPage from '@/features/seo/pages/SeoBlogIndexPage.jsx';
+import SeoBlogPostPage from '@/features/seo/pages/SeoBlogPostPage.jsx';
+import SeoLandingPage from '@/features/seo/pages/SeoLandingPage.jsx';
 
 function AppShellFallback() {
   return (
