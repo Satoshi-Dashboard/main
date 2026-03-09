@@ -82,18 +82,16 @@ function MiniDonut({ pct, className = '' }) {
 function Tile({ label, value, variant = 'number', decimals, suffix, accent, source }) {
   return (
     <div className="flex min-h-[108px] flex-col items-center justify-center bg-[#111111] px-3 py-2 select-none sm:px-4 sm:py-3">
-      {value == null ? (
-        <div className="skeleton w-3/4" style={{ height: '2.4em' }} />
-      ) : (
-        <div className="text-center font-mono font-bold leading-[1] text-white tabular-nums" style={{ fontSize: 'var(--fs-hero)' }}>
-          <AnimatedMetric value={value} variant={variant} decimals={decimals} suffix={suffix} inline />
-          {accent && (
-            <span style={{ fontSize: '0.28em', marginLeft: '0.25em', color: UI_COLORS.brand }}>
-              {accent}
-            </span>
-          )}
-        </div>
-      )}
+      <div className="flex min-h-[2.4em] w-full max-w-full items-center justify-center">
+        {value == null ? (
+          <div className="skeleton w-3/4 max-w-[18rem]" style={{ height: '2.4em' }} />
+        ) : (
+          <div className="flex max-w-full flex-wrap items-end justify-center gap-x-1 gap-y-1 text-center font-mono font-bold leading-[1] text-white tabular-nums" style={{ fontSize: 'var(--fs-hero)' }}>
+            <AnimatedMetric value={value} variant={variant} decimals={decimals} suffix={suffix} inline />
+            {accent ? <span style={{ fontSize: '0.28em', color: UI_COLORS.brand }}>{accent}</span> : null}
+          </div>
+        )}
+      </div>
       <div
         className="mt-2 text-center uppercase tracking-[0.18em]"
         style={{ fontSize: 'var(--fs-label)', color: UI_COLORS.brand }}
@@ -117,7 +115,7 @@ function FearGreedTile({ value, classification, history }) {
   return (
     <div className="flex min-h-[108px] flex-col items-center justify-center gap-0.5 bg-[#111111] px-3 py-2 select-none sm:px-4">
       {loading ? (
-        <div className="skeleton w-3/4" style={{ height: '2.4em' }} />
+        <div className="skeleton w-3/4 max-w-[14rem]" style={{ height: '2.4em' }} />
       ) : (
         <AnimatedMetric
           value={value}
@@ -220,7 +218,7 @@ function DifficultyTile({ pct, etaBlocks, changeNext, changePrev }) {
           )}
         </div>
 
-        <div className="flex w-full flex-wrap items-center justify-center gap-1.5" style={{ fontSize: 'var(--fs-micro)' }}>
+        <div className="flex w-full max-w-full flex-wrap items-center justify-center gap-1.5" style={{ fontSize: 'var(--fs-micro)' }}>
           {loading || !hasChanges ? (
             <>
               <div className="skeleton" style={{ width: '98px', height: '1.2em' }} />
@@ -228,10 +226,10 @@ function DifficultyTile({ pct, etaBlocks, changeNext, changePrev }) {
             </>
           ) : (
             <>
-              <span className="rounded bg-black/40 px-1.5 py-px font-mono" style={{ color: UI_COLORS.negative }}>
+              <span className="inline-flex max-w-full flex-wrap items-center justify-center rounded bg-black/40 px-1.5 py-px font-mono text-center" style={{ color: UI_COLORS.negative }}>
                 <AnimatedMetric value={changeNext} variant="percent" decimals={2} signed inline /> {nextUp ? '▲' : '▼'} Next
               </span>
-              <span className="rounded bg-black/40 px-1.5 py-px font-mono" style={{ color: UI_COLORS.positive }}>
+              <span className="inline-flex max-w-full flex-wrap items-center justify-center rounded bg-black/40 px-1.5 py-px font-mono text-center" style={{ color: UI_COLORS.positive }}>
                 <AnimatedMetric value={changePrev} variant="percent" decimals={2} signed inline /> {prevUp ? '▲' : '▼'} Prev
               </span>
             </>
@@ -264,7 +262,7 @@ function DifficultyTile({ pct, etaBlocks, changeNext, changePrev }) {
       {loading ? (
         <div className="skeleton" style={{ width: '55%', height: '1em' }} />
       ) : (
-          <div className="font-mono text-center" style={{ fontSize: 'var(--fs-micro)', color: UI_COLORS.textTertiary }}>
+          <div className="flex max-w-full flex-wrap items-center justify-center gap-x-1 text-center font-mono" style={{ fontSize: 'var(--fs-micro)', color: UI_COLORS.textTertiary }}>
             <AnimatedMetric value={etaBlocks} variant="number" suffix=" blocks remaining" inline />
           </div>
       )}

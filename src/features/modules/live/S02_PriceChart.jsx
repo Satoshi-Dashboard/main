@@ -218,17 +218,17 @@ export default function S02_PriceChart() {
     <div className="flex h-full w-full flex-col bg-[#111111] px-3.5 pb-3.5 pt-4 sm:px-5 sm:pb-4 sm:pt-5 lg:px-[22px] lg:pb-4 lg:pt-5">
 
       {/* ── Header ── */}
-      <div className="flex flex-shrink-0 flex-col items-start justify-between gap-3 sm:flex-row sm:gap-4">
+      <div className="flex flex-shrink-0 flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-start sm:gap-4">
         <div className="min-w-0">
           {!hasPrice ? (
             <>
-              <div className="skeleton" style={{ width: 220, height: '2.8rem', borderRadius: 6, marginBottom: 10 }} />
+              <div className="skeleton max-w-full" style={{ width: 'min(220px, 72vw)', height: '2.9rem', borderRadius: 6, marginBottom: 10 }} />
               <div className="skeleton" style={{ width: 180, height: '1rem', borderRadius: 4 }} />
             </>
           ) : (
             <>
               <div
-                className="font-mono font-bold tabular-nums leading-none"
+                className="flex min-h-[3.1rem] max-w-full items-center font-mono font-bold tabular-nums leading-none"
                 style={{
                   fontSize: 'clamp(1.55rem, 5.6vw, 2.9rem)',
                 }}
@@ -264,7 +264,7 @@ export default function S02_PriceChart() {
           type="button"
           onClick={() => setShowAvgLine(v => !v)}
           disabled={!hasAvg}
-          className="relative flex flex-shrink-0 items-center gap-1.5 self-start pb-1.5 font-mono transition-colors disabled:cursor-not-allowed disabled:opacity-25"
+          className="relative flex w-full flex-shrink-0 items-center justify-end gap-1.5 self-start pb-1.5 font-mono transition-colors disabled:cursor-not-allowed disabled:opacity-25 sm:w-auto sm:justify-start"
           style={{
             fontSize: '0.78rem',
             fontWeight: showAvgLine ? 700 : 400,
@@ -383,7 +383,7 @@ export default function S02_PriceChart() {
                 {label}
               </div>
               <div
-                className="font-mono tabular-nums font-semibold text-white"
+                className="flex min-h-[1.15em] items-center justify-center font-mono tabular-nums font-semibold text-white"
                 style={{ fontSize: '0.82rem' }}
               >
                 <AnimatedMetric value={value} variant="usd" decimals={0} inline />

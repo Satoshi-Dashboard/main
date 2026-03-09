@@ -378,9 +378,9 @@ function CoinCard({ coin, idx, sparkCache, onVisible }) {
               </div>
             </div>
           </div>
-          <div className="flex flex-shrink-0 items-center gap-2 self-start sm:self-auto">
+          <div className="flex w-full flex-wrap items-center justify-between gap-2 self-start sm:w-auto sm:flex-nowrap sm:justify-start sm:self-auto">
             <span
-              className="font-mono font-bold tabular-nums"
+              className="inline-flex min-h-[1.2em] items-center font-mono font-bold tabular-nums"
               style={{ fontSize: 'var(--fs-caption)', color: cfg.color }}
               title="Peg deviation"
             >
@@ -404,14 +404,14 @@ function CoinCard({ coin, idx, sparkCache, onVisible }) {
         <div className="flex flex-wrap items-end justify-between gap-3 sm:flex-nowrap">
           <div className="min-w-0 flex-1">
             <div
-              className="font-mono font-bold text-white tabular-nums leading-none"
+              className="flex min-h-[1.25em] max-w-full items-center font-mono font-bold text-white tabular-nums leading-none"
               style={{ fontSize: 'var(--fs-section)' }}
             >
               <AnimatedMetric value={currentPrice} variant="usd" decimals={4} inline />
             </div>
-            <div className="mt-1 flex items-center gap-2">
+            <div className="mt-1 flex max-w-full flex-wrap items-center gap-2">
               <span
-                className="font-mono tabular-nums"
+                className="inline-flex min-h-[1.2em] items-center font-mono tabular-nums"
                 style={{ fontSize: 'var(--fs-caption)', color: pctColor(change24h) }}
               >
                 24h <AnimatedMetric value={change24h} variant="percent" decimals={2} signed inline color={pctColor(change24h)} />

@@ -212,6 +212,10 @@ When a frontend view shows live or periodically refreshed numeric data, avoid ha
     - In dense tablet/mobile headers or cards, let rows with live numerals wrap or stack before squeezing the counter into clipped inline space.
     - Surrounding responsive flex/grid containers must give animated values `min-w-0` and a non-clipping path; if the available width becomes too tight, degrade the numeral to a stable static render.
 
+8. Keep loading, fallback, and live numerals footprint-stable.
+    - Skeletons, fallback text, and final animated values should reserve similar vertical space so cards do not jump when data arrives.
+    - In dense responsive cards, prefer explicit min-height shells around key numerals instead of letting each state define its own height.
+
 ## Required verification for frontend color changes
 
 After any color UX/UI modification:
@@ -336,3 +340,11 @@ When creating any new frontend module, agents must follow the project example pa
 - **Acción Realizada/Corrección:** Se retiró esa nota específica para no dejar reglas accesorias derivadas de una feature descartada.
 - **Nueva/Modificada Regla o Directriz:** Las reglas frontend deben conservar solo restricciones duraderas y relevantes para el producto vigente, evitando acumular políticas circunstanciales de features eliminadas.
 - **Justificación:** Mantiene el archivo de reglas más limpio, más estable y mejor enfocado en decisiones de UI/UX que siguen vivas en el proyecto.
+
+- **Fecha de la Actualización:** `2026-03-09`
+- **Archivo(s) Afectado(s):** `.claude/FRONTEND_COLOR_UX_UI_RULES.md`
+- **Tipo de Evento/Contexto:** Estabilidad responsive en métricas animadas
+- **Descripción del Evento Original:** Varias cards y headers con `AnimatedMetric` seguían mostrando saltos visuales en móvil/tablet cuando el loading, el fallback y el valor final no reservaban una huella similar y cuando las filas estrechas no cedían espacio a cifras largas.
+- **Acción Realizada/Corrección:** Se reforzó la política frontend para exigir shells con altura mínima consistente alrededor de numerales críticos y layouts responsivos que permitan wrap/stack antes de comprimir o recortar el contador.
+- **Nueva/Modificada Regla o Directriz:** Los estados loading/fallback/live de métricas animadas deben compartir una huella visual estable y los contenedores responsivos deben priorizar reflow legible frente a filas rígidas en tablet/móvil.
+- **Justificación:** Reduce clipping, saltos bruscos y sensación de UI rota en módulos live con cifras variables sin degradar el comportamiento de escritorio.

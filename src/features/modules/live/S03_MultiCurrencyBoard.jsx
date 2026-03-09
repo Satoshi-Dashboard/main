@@ -608,7 +608,7 @@ export default function S03_MultiCurrencyBoard() {
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                   padding: '5px 10px', borderBottom: '1px solid #141418',
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
                     {isPriceLoading ? (
                       <div className="skeleton" style={{ width: 6, height: 6, borderRadius: '50%' }} />
                     ) : (
@@ -622,7 +622,7 @@ export default function S03_MultiCurrencyBoard() {
                       fontSize: 'var(--fs-micro)', fontWeight: 700,
                     }}>{c.code}</span>
                   </div>
-                  <div style={{ textAlign: 'right' }}>
+                  <div style={{ textAlign: 'right', minWidth: 84 }}>
                     {isPriceLoading ? (
                       <>
                         <div className="skeleton" style={{ width: 64, height: '0.9em', marginBottom: 4 }} />
@@ -632,13 +632,13 @@ export default function S03_MultiCurrencyBoard() {
                       <>
                         <div style={{
                            color: '#eee', fontFamily: 'monospace',
-                           fontSize: 'var(--fs-micro)', fontWeight: 600,
+                           fontSize: 'var(--fs-micro)', fontWeight: 600, minHeight: '1.2em',
                          }}><CurrencyMetric value={c.price} /></div>
                          <div style={{
                            color: up == null ? UI_COLORS.textTertiary : (up ? UI_COLORS.positive : UI_COLORS.negative),
                            fontFamily: 'monospace',
-                           fontSize: 'var(--fs-tag)',
-                         }}><AnimatedMetric value={c.change} variant="percent" decimals={2} signed inline color={up == null ? UI_COLORS.textTertiary : (up ? UI_COLORS.positive : UI_COLORS.negative)} /></div>
+                           fontSize: 'var(--fs-tag)', minHeight: '1.1em',
+                          }}><AnimatedMetric value={c.change} variant="percent" decimals={2} signed inline color={up == null ? UI_COLORS.textTertiary : (up ? UI_COLORS.positive : UI_COLORS.negative)} /></div>
                        </>
                      )}
                   </div>

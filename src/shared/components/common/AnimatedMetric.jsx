@@ -134,6 +134,10 @@ export default function AnimatedMetric({
   const [preferStaticResponsive, setPreferStaticResponsive] = useState(false);
   const display = inline ? 'inline-flex' : 'flex';
   const textColor = color ?? 'white';
+  const metricMinHeight = useMemo(() => {
+    const fontPx = Number.parseFloat(counterFontSize) || 16;
+    return `${Math.max(fontPx * 1.08, fontPx + 2)}px`;
+  }, [counterFontSize]);
 
   const formattedValue = config
     ? new Intl.NumberFormat('en-US', {
@@ -230,7 +234,7 @@ export default function AnimatedMetric({
     whiteSpace: 'nowrap',
     maxWidth: '100%',
     minWidth: 0,
-    minHeight: counterFontSize,
+    minHeight: metricMinHeight,
     overflow: 'visible',
     fontVariantNumeric: 'tabular-nums',
   };
@@ -273,7 +277,7 @@ export default function AnimatedMetric({
         includeDecimals={config.decimals > 0}
         decimalPrecision={config.decimals}
         includeCommas={config.includeCommas}
-        containerStyles={{ display: 'inline-flex', alignItems: 'baseline', fontFamily: 'inherit', height: counterFontSize, lineHeight: counterFontSize, whiteSpace: 'nowrap', flexShrink: 0, margin: 0, minWidth: 0 }}
+        containerStyles={{ display: 'inline-flex', alignItems: 'baseline', fontFamily: 'inherit', height: counterFontSize, lineHeight: counterFontSize, whiteSpace: 'nowrap', flexShrink: 0, margin: 0, minWidth: 0, maxWidth: '100%' }}
         digitStyles={{ fontFamily: 'inherit', lineHeight: counterFontSize }}
       />
       {config.suffix ? <span style={{ lineHeight: 1, flexShrink: 0 }}>{config.suffix}</span> : null}

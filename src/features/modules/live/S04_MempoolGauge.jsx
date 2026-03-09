@@ -81,11 +81,11 @@ function GaugeArc({ pct, loading }) {
 /* ── Fee Tile ── */
 function FeeTile({ label, value, color = UI_COLORS.brand, loading }) {
   return (
-    <div className="flex min-w-[92px] flex-col items-center gap-2 border-[#2a2a2a] px-4 py-1 sm:px-6">
+    <div className="flex min-w-[92px] flex-1 basis-[132px] flex-col items-center gap-2 border-[#2a2a2a] px-4 py-1 sm:flex-none sm:basis-auto sm:px-6">
       {loading || value == null ? (
         <div className="skeleton" style={{ width: 48, height: '2em' }} />
       ) : (
-        <div className="font-mono font-bold tabular-nums" style={{ fontSize: 'var(--fs-title)', color }}>
+        <div className="flex min-h-[2.1em] items-center font-mono font-bold tabular-nums" style={{ fontSize: 'var(--fs-title)', color }}>
           <AnimatedMetric value={value} variant="number" inline />
         </div>
       )}
@@ -161,7 +161,7 @@ export default function S04_MempoolGauge() {
           {loading || mempool.count == null ? (
             <div className="skeleton" style={{ width: 100, height: '1.8em' }} />
           ) : (
-            <div className="font-mono font-bold text-white tabular-nums" style={{ fontSize: 'var(--fs-title)' }}>
+            <div className="flex min-h-[2em] items-center font-mono font-bold text-white tabular-nums" style={{ fontSize: 'var(--fs-title)' }}>
               <AnimatedMetric value={mempool.count} variant="number" inline />
             </div>
           )}
@@ -176,7 +176,7 @@ export default function S04_MempoolGauge() {
           {loading || mempool.size == null ? (
             <div className="skeleton" style={{ width: 80, height: '1.8em' }} />
           ) : (
-            <div className="font-mono font-bold text-white tabular-nums" style={{ fontSize: 'var(--fs-title)' }}>
+            <div className="flex min-h-[2em] items-center font-mono font-bold text-white tabular-nums" style={{ fontSize: 'var(--fs-title)' }}>
               <AnimatedMetric value={mempool.size} variant="number" inline /> <span className="text-[0.4em] text-white/50">vMB</span>
             </div>
           )}

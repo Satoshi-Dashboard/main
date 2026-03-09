@@ -54,6 +54,7 @@ function HeroFigure({ value, animate = true }) {
       style={{
         fontSize,
         lineHeight: 0.96,
+        minHeight: '1.15em',
       }}
     >
       <AnimatedMetric value={value} variant="usd" decimals={0} animate={animate} />
@@ -77,7 +78,7 @@ function StatCard({ label, value, variant = 'number', helper, accent = 'var(--te
         {label}
       </div>
       <div
-        className="mt-3 min-w-0 font-mono font-semibold tabular-nums"
+        className="mt-3 flex min-h-[1.25em] min-w-0 items-center font-mono font-semibold tabular-nums"
         style={{
           color: accent,
           fontSize: featured ? 'clamp(1.45rem, 5vw, 2.5rem)' : 'clamp(1.12rem, 3.5vw, 1.95rem)',
@@ -116,7 +117,7 @@ function RateCard({ label, value, toneColor, animate = true }) {
         </span>
       </div>
       <div
-        className="min-w-0 font-mono font-semibold tabular-nums text-white"
+        className="flex min-h-[1.2em] min-w-0 items-center font-mono font-semibold tabular-nums text-white"
         style={{ fontSize: 'clamp(1.05rem, 3.6vw, 1.7rem)', letterSpacing: '-0.04em', lineHeight: 1 }}
       >
         <AnimatedMetric value={value} variant="usdCompact" signed blockAlign="start" animate={animate} />
@@ -325,7 +326,7 @@ export default function S30_USNationalDebt() {
 
           <section className="flex w-full max-w-[980px] flex-col items-center gap-3">
             <div
-              className="inline-flex max-w-full flex-wrap items-center justify-center gap-2 rounded-[22px] border px-4 py-2 font-mono tabular-nums max-md:px-3 max-md:py-2"
+              className="inline-flex min-h-[3.25rem] max-w-full flex-wrap items-center justify-center gap-2 rounded-[22px] border px-4 py-2 font-mono tabular-nums max-md:px-3 max-md:py-2"
               style={{
                 color: toneStyles.color,
                 borderColor: toneStyles.borderColor,
@@ -337,7 +338,7 @@ export default function S30_USNationalDebt() {
               <span style={{ color: 'var(--text-secondary)' }}>since you opened this page</span>
             </div>
             <div
-              className="flex max-w-full flex-wrap items-center justify-center gap-x-2 gap-y-1 font-mono tabular-nums"
+              className="flex min-h-[2.75rem] max-w-full flex-wrap items-center justify-center gap-x-2 gap-y-1 font-mono tabular-nums"
               style={{ fontSize: 'clamp(1.1rem, 1vw, 1.45rem)', color: 'var(--text-primary)' }}
             >
                <AnimatedMetric value={Math.abs(Number(model.rate_per_second) || 0)} variant="usd" decimals={0} inline animate={animateMetrics} />

@@ -108,14 +108,14 @@ export default function S09_LightningNetwork() {
               }}
             />
             <span
-              className="font-mono font-bold text-white tabular-nums"
+              className="inline-flex min-h-[1.2em] items-center font-mono font-bold text-white tabular-nums"
               style={{ fontSize: 'var(--fs-hero)' }}
             >
               <AnimatedMetric value={sats} variant="number" inline />
             </span>
             {Number.isFinite(data.change) ? (
               <span
-                className="font-mono font-bold"
+                className="inline-flex min-h-[1.2em] items-center font-mono font-bold"
                 style={{ fontSize: 'var(--fs-subtitle)', color: isUp ? UI_COLORS.positive : UI_COLORS.negative }}
               >
                 <AnimatedMetric value={data.change} variant="percent" decimals={2} signed inline color={isUp ? UI_COLORS.positive : UI_COLORS.negative} />&nbsp;{isUp ? '▲' : '▼'}
@@ -147,9 +147,13 @@ export default function S09_LightningNetwork() {
       </div>
 
       {/* Sub-info */}
-      <div className="flex-shrink-0 px-2 text-center font-mono text-white/25" style={{ fontSize: 'var(--fs-caption)' }}>
+      <div className="flex-shrink-0 max-w-full px-2 text-center font-mono text-white/25" style={{ fontSize: 'var(--fs-caption)' }}>
         {hasData ? (
-          <>1 BTC = 100,000,000 sats &nbsp;·&nbsp; 1 USD = <AnimatedMetric value={sats} variant="number" inline /> sats</>
+          <span className="inline-flex max-w-full flex-wrap items-center justify-center gap-x-1 gap-y-0.5">
+            <span>1 BTC = 100,000,000 sats</span>
+            <span aria-hidden="true">·</span>
+            <span>1 USD = <AnimatedMetric value={sats} variant="number" inline /> sats</span>
+          </span>
         ) : (
           <div className="skeleton" style={{ width: 260, height: '0.9em' }} />
         )}
