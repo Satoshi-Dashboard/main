@@ -1,151 +1,457 @@
+import { useEffect, useMemo, useState } from 'react';
 import {
-  ComposedChart, Bar, Line, XAxis, YAxis, Tooltip,
-  ResponsiveContainer, ReferenceLine, Cell,
+  Area,
+  ComposedChart,
+  Line,
+  ReferenceArea,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
 } from 'recharts';
+import AnimatedMetric from '@/shared/components/common/AnimatedMetric.jsx';
+import { fetchBtcHistory, fetchBtcSpot } from '@/shared/services/priceApi.js';
+import {
+  buildCurrentMayerSnapshot,
+  buildRangeChange,
+  calcularMayerMultiple,
+  getMayerState,
+  MAYER_EXTREME_UNDERVALUE,
+  MAYER_FAIR_VALUE,
+  MAYER_HISTORICAL_AVERAGE,
+  MAYER_OVERVALUED,
+  MAYER_SMA_WINDOW,
+  sliceMayerSeriesByDays,
+} from '@/shared/utils/mayerMultiple.js';
 
-function mmColor(mm) {
-  if (mm < 0.40) return '#1a00ff';
-  if (mm < 0.60) return '#0055ee';
-  if (mm < 0.80) return '#0099cc';
-  if (mm < 1.00) return '#00bb88';
-  if (mm < 1.20) return '#00cc44';
-  if (mm < 1.50) return '#88cc00';
-  if (mm < 2.00) return '#ccaa00';
-  if (mm < 2.40) return '#f07800';
-  return '#ff3030';
+const BASE_HISTORY_DAYS = 2025;
+const BASE_HISTORY_INTERVAL = '1d';
+const SPOT_POLL_MS = 10_000;
+
+const PRICE_LINE_COLOR = 'var(--accent-bitcoin)';
+const MAYER_LINE_COLOR = '#7fc4ff';
+
+const RANGES = [
+  { label: '3M', days: 90 },
+  { label: '1Y', days: 365 },
+  { label: '5Y', days: 1825 },
+];
+
+const RANGE_TEXT = {
+  '3M': 'Past 3 Months',
+  '1Y': 'Past Year',
+  '5Y': 'Past 5 Years',
+};
+
+const PRICE_FORMATTER = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  maximumFractionDigits: 2,
+});
+
+function formatUsd(value) {
+  return Number.isFinite(value) ? PRICE_FORMATTER.format(value) : '—';
 }
 
-// Generate ~4 years of realistic mock data (Mar 2021 – Mar 2025)
-function genData() {
-  const rows = [];
-  // Approximate BTC price path
-  const prices = [];
-  for (let i = 0; i < 365 * 4; i++) {
-    let p;
-    if (i < 60)  p = 55000 + Math.sin(i * 0.04) * 8000 + i * 100 + (Math.random() - 0.5) * 3000;  // bull top
-    else if (i < 130) p = 65000 - (i - 60) * 200 + (Math.random() - 0.5) * 3000;                  // correction
-    else if (i < 280) p = 52000 + Math.sin((i - 130) * 0.03) * 18000 + (Math.random() - 0.5) * 3000; // chop
-    else if (i < 400) p = 68000 - (i - 280) * 250 + (Math.random() - 0.5) * 3000;                  // dump
-    else if (i < 550) p = 36000 - (i - 400) * 80 + (Math.random() - 0.5) * 2000;                   // bear market
-    else if (i < 700) p = 24000 + Math.sin((i - 550) * 0.025) * 4000 + (Math.random() - 0.5) * 2000; // accumulation
-    else if (i < 800) p = 26000 + (i - 700) * 120 + (Math.random() - 0.5) * 2000;                   // recovery start
-    else if (i < 950) p = 38000 + (i - 800) * 180 + (Math.random() - 0.5) * 3000;                   // 2024 bull run
-    else              p = 65000 + Math.sin((i - 950) * 0.04) * 20000 + (Math.random() - 0.5) * 5000; // 2024–25 ATH
-    prices.push(Math.max(15000, Math.min(110000, p)));
-  }
-
-  const start = new Date('2021-03-01');
-  for (let i = 0; i < prices.length; i++) {
-    const win = prices.slice(Math.max(0, i - 199), i + 1);
-    const ma200 = win.reduce((a, b) => a + b, 0) / win.length;
-    const mm = prices[i] / ma200;
-    const dt = new Date(start.getTime() + i * 86400000);
-    rows.push({
-      date: dt.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
-      mm: +mm.toFixed(3),
-      price: Math.round(prices[i]),
-    });
-  }
-  return rows;
+function formatSignedMayer(value) {
+  if (!Number.isFinite(value)) return '—';
+  return `${value >= 0 ? '+' : ''}${value.toFixed(2)}`;
 }
 
-const ALL_DATA = genData();
-// Sample every 3rd day for performance
-const DATA = ALL_DATA.filter((_, i) => i % 3 === 0);
-const CURRENT_MM = ALL_DATA[ALL_DATA.length - 1]?.mm ?? 1.13;
-const PREV_MM = ALL_DATA[ALL_DATA.length - 8]?.mm ?? 1.09;
-const PCT = +((CURRENT_MM - PREV_MM) / PREV_MM * 100).toFixed(2);
-const UP = PCT >= 0;
+function formatSignedPercent(value) {
+  if (!Number.isFinite(value)) return '—';
+  return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
+}
 
-export default function S16_MayerMultiple() {
+function MayerCursor({ points, height }) {
+  const validPoints = Array.isArray(points)
+    ? points.filter((point) => Number.isFinite(point?.x) && Number.isFinite(point?.y))
+    : [];
+
+  if (!validPoints.length) return null;
+
+  const x = validPoints[0].x;
+
   return (
-    <div className="flex h-full w-full flex-col bg-[#111111]">
-      {/* Header */}
-      <div className="flex-none flex items-baseline gap-3 px-8 pt-5 pb-2">
-        <span className="inline-block h-3 w-3 flex-none rounded-full bg-green-400" style={{ marginBottom: 2 }} />
-        <span style={{ color: '#fff', fontFamily: 'monospace', fontSize: 'var(--fs-subtitle)', fontWeight: 700 }}>
-          Mayer Multiple: {CURRENT_MM.toFixed(2)}
-        </span>
-        <span style={{ color: UP ? '#00D897' : '#FF4757', fontFamily: 'monospace', fontSize: 'var(--fs-heading)', fontWeight: 600 }}>
-          {UP ? '+' : ''}{PCT}% {UP ? '▲' : '▼'}
-        </span>
-      </div>
+    <g>
+      <line x1={x} y1={0} x2={x} y2={height} stroke="rgba(255,255,255,0.2)" strokeWidth={1} />
+      {validPoints.map((point, index) => (
+        <circle
+          key={`${point.dataKey}-${index}`}
+          cx={point.x}
+          cy={point.y}
+          r={4}
+          fill={point.dataKey === 'price' ? PRICE_LINE_COLOR : MAYER_LINE_COLOR}
+          stroke="#111111"
+          strokeWidth={2}
+        />
+      ))}
+    </g>
+  );
+}
 
-      {/* Chart */}
-      <div className="min-h-0 flex-1 px-2 pb-2">
-        <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={DATA} margin={{ top: 10, right: 52, left: 10, bottom: 24 }}>
-            <XAxis
-              dataKey="date"
-              stroke="#2a2a2a"
-              tick={{ fill: '#555', fontSize: 11 }}
-              interval={Math.floor(DATA.length / 10)}
-              angle={-30}
-              textAnchor="end"
-              height={36}
-            />
-            {/* Left axis — Mayer Multiple */}
-            <YAxis
-              yAxisId="mm"
-              stroke="#2a2a2a"
-              tick={{ fill: '#555', fontSize: 11 }}
-              domain={[0, 3]}
-              ticks={[0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0]}
-              tickFormatter={(v) => v.toFixed(1)}
-              label={{ value: 'Mayer Multiple', angle: -90, position: 'insideLeft', fill: '#444', fontSize: 11, dx: -2 }}
-            />
-            {/* Right axis — BTC Price */}
-            <YAxis
-              yAxisId="price"
-              orientation="right"
-              stroke="#2a2a2a"
-              tick={{ fill: '#555', fontSize: 11 }}
-              tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
-              width={44}
-            />
-            {/* Fair-value reference line at MM = 1 */}
-            <ReferenceLine yAxisId="mm" y={1.0} stroke="#00D897" strokeDasharray="4 4" strokeWidth={1} />
-            <Tooltip
-              contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #444', fontSize: 11 }}
-              formatter={(v, name) => [
-                name === 'mm' ? v.toFixed(3) : `$${Number(v).toLocaleString()}`,
-                name === 'mm' ? 'MM' : 'Price',
-              ]}
-              labelStyle={{ color: '#888' }}
-            />
-            {/* Colored MM bars */}
-            <Bar yAxisId="mm" dataKey="mm" maxBarSize={10} isAnimationActive={false}>
-              {DATA.map((d, i) => <Cell key={i} fill={mmColor(d.mm)} />)}
-            </Bar>
-            {/* White BTC price line */}
-            <Line
-              yAxisId="price"
-              type="monotone"
-              dataKey="price"
-              stroke="#ffffff"
-              strokeWidth={1.5}
-              dot={false}
-              isAnimationActive={false}
-            />
-          </ComposedChart>
-        </ResponsiveContainer>
-      </div>
+function formatMayer(value) {
+  return Number.isFinite(value) ? value.toFixed(2) : '—';
+}
 
-      {/* Zone labels */}
-      <div className="flex-none grid grid-cols-3 gap-2 px-6 pb-4">
-        <div className="rounded border border-red-900/60 bg-red-950/30 px-3 py-2">
-          <div style={{ color: '#ff4444', fontFamily: 'monospace', fontWeight: 700, fontSize: 'var(--fs-caption)' }}>Overvalued</div>
-          <div style={{ color: '#cc3333', fontFamily: 'monospace', fontSize: 'var(--fs-micro)' }}>&gt; 2.4</div>
+function MayerTooltip({ active, payload }) {
+  if (!active || !payload?.length) return null;
+
+  const point = payload[0]?.payload;
+  if (!point) return null;
+
+  return (
+    <div
+      className="rounded-xl border border-white/12 bg-[rgba(9,12,18,0.96)] px-3 py-2.5 font-mono shadow-[0_12px_28px_rgba(0,0,0,0.38)]"
+      style={{ minWidth: 188 }}
+    >
+      <div className="text-[11px] uppercase tracking-[0.14em] text-white/55">
+        {point.tooltipLabel || 'Daily candle'}
+      </div>
+      <div className="mt-2 space-y-1.5 text-[11px]">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-white/55">BTC Price</span>
+          <span style={{ color: PRICE_LINE_COLOR }}>{formatUsd(point.price)}</span>
         </div>
-        <div className="rounded border border-yellow-800/50 bg-yellow-950/30 px-3 py-2">
-          <div style={{ color: '#ccaa00', fontFamily: 'monospace', fontWeight: 700, fontSize: 'var(--fs-caption)' }}>Neutral</div>
-          <div style={{ color: '#997700', fontFamily: 'monospace', fontSize: 'var(--fs-micro)' }}>0.8 – 2.4</div>
-        </div>
-        <div className="rounded border border-green-900/60 bg-green-950/30 px-3 py-2">
-          <div style={{ color: '#00cc44', fontFamily: 'monospace', fontWeight: 700, fontSize: 'var(--fs-caption)' }}>Undervalued</div>
-          <div style={{ color: '#009933', fontFamily: 'monospace', fontSize: 'var(--fs-micro)' }}>&lt; 0.8</div>
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-white/55">Mayer Multiple</span>
+          <span style={{ color: MAYER_LINE_COLOR }}>{formatMayer(point.mayerMultiple)}</span>
         </div>
       </div>
     </div>
   );
 }
+
+function StatusCard({ label, range, active, color }) {
+  return (
+    <div
+      className="rounded-xl px-3 py-3 text-center"
+      style={{
+        border: `1px solid ${active ? color : 'rgba(255,255,255,0.1)'}`,
+        boxShadow: active ? `0 0 0 1px ${color} inset` : 'none',
+      }}
+    >
+      <div
+        className="font-mono font-bold uppercase tracking-widest"
+        style={{ fontSize: '0.62rem', color, marginBottom: 5 }}
+      >
+        {label}
+      </div>
+      <div className="font-mono tabular-nums font-semibold text-white" style={{ fontSize: '0.82rem' }}>
+        {range}
+      </div>
+    </div>
+  );
+}
+
+function WarningPanel({ title, description }) {
+  return (
+    <div className="flex h-full min-h-[320px] items-center justify-center px-5 py-6 text-center">
+      <div className="max-w-md font-mono">
+        <div style={{ color: 'var(--accent-warning)', fontSize: 'var(--fs-label)', fontWeight: 700 }}>
+          {title}
+        </div>
+        <div className="mt-3 text-white/60" style={{ fontSize: 'var(--fs-caption)', lineHeight: 1.65 }}>
+          {description}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function S16_MayerMultiple() {
+  const [historyData, setHistoryData] = useState([]);
+  const [activeLabel, setActiveLabel] = useState('1Y');
+  const [liveSpot, setLiveSpot] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [hoverData, setHoverData] = useState(null);
+  const [showZones, setShowZones] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+
+    (async () => {
+      try {
+        const history = await fetchBtcHistory(BASE_HISTORY_DAYS, BASE_HISTORY_INTERVAL);
+        if (!active) return;
+
+        if (history?.length) {
+          setHistoryData(history);
+          setLoadError('');
+        } else {
+          setHistoryData([]);
+          setLoadError('Could not load daily Bitcoin history from the shared price feed.');
+        }
+      } catch {
+        if (active) {
+          setHistoryData([]);
+          setLoadError('Could not load daily Bitcoin history from the shared price feed.');
+        }
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadSpot = async () => {
+      try {
+        const spot = await fetchBtcSpot();
+        if (active && Number.isFinite(spot?.usd) && spot.usd > 0) {
+          setLiveSpot(spot.usd);
+        }
+      } catch {
+        // Keep the last good spot value.
+      }
+    };
+
+    loadSpot();
+    const timer = setInterval(loadSpot, SPOT_POLL_MS);
+
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, []);
+
+  const mayerSeries = useMemo(() => calcularMayerMultiple(historyData), [historyData]);
+  const activeRange = RANGES.find((range) => range.label === activeLabel) ?? RANGES[1];
+
+  const chartData = useMemo(
+    () => sliceMayerSeriesByDays(mayerSeries, activeRange.days)
+      .filter((point) => Number.isFinite(point?.mayerMultiple)),
+    [activeRange.days, mayerSeries],
+  );
+
+  const currentSnapshot = useMemo(
+    () => buildCurrentMayerSnapshot(mayerSeries, liveSpot),
+    [liveSpot, mayerSeries],
+  );
+
+  const rangeChange = useMemo(
+    () => buildRangeChange(currentSnapshot.currentMayerMultiple, chartData),
+    [currentSnapshot.currentMayerMultiple, chartData],
+  );
+
+  const hasEnoughData = historyData.length >= MAYER_SMA_WINDOW && chartData.length > 1;
+  const currentState = currentSnapshot.state || getMayerState(null);
+  const displayValue = hoverData?.mayerMultiple ?? currentSnapshot.currentMayerMultiple;
+  const displayState = hoverData ? getMayerState(hoverData.mayerMultiple) : currentState;
+  const showHoverLabel = Boolean(hoverData?.label);
+  const hasRangeChange = Number.isFinite(rangeChange.absolute) && Number.isFinite(rangeChange.percent);
+
+  const prices = useMemo(
+    () => chartData.map((point) => point.price).filter(Number.isFinite),
+    [chartData],
+  );
+
+  const priceHigh = prices.length ? Math.max(...prices) : null;
+  const priceLow = prices.length ? Math.min(...prices) : null;
+  const pricePad = priceHigh !== null && priceLow !== null ? Math.max((priceHigh - priceLow) * 0.06, 1) : 1;
+  const priceYMin = priceLow !== null ? Math.max(0, priceLow - pricePad) : 0;
+  const priceYMax = priceHigh !== null ? priceHigh + pricePad : 1;
+
+  const mayerValues = useMemo(
+    () => chartData.map((point) => point.mayerMultiple).filter(Number.isFinite),
+    [chartData],
+  );
+
+  const mayerHigh = mayerValues.length ? Math.max(...mayerValues) : null;
+  const mayerLow = mayerValues.length ? Math.min(...mayerValues) : null;
+  const mayerYMin = mayerLow !== null ? Math.max(0, Math.min(0.6, mayerLow - 0.12)) : 0;
+  const mayerYMax = mayerHigh !== null ? Math.max(2.8, mayerHigh + 0.18) : 2.8;
+
+  return (
+    <div className="flex h-full w-full flex-col bg-[#111111] px-3.5 pb-3.5 pt-4 sm:px-5 sm:pb-4 sm:pt-5 lg:px-[22px] lg:pb-4 lg:pt-5">
+      <div className="flex flex-shrink-0 flex-col items-start justify-between gap-3 sm:flex-row sm:gap-4">
+        <div className="min-w-0">
+          {loading ? (
+            <>
+              <div className="skeleton" style={{ width: 220, height: '2.8rem', borderRadius: 6, marginBottom: 10 }} />
+              <div className="skeleton" style={{ width: 180, height: '1rem', borderRadius: 4 }} />
+            </>
+          ) : (
+            <>
+              <div className="font-mono font-bold lg:hidden" style={{ color: 'var(--accent-bitcoin)', fontSize: 'var(--fs-subtitle)' }}>
+                Mayer Multiple
+              </div>
+
+              <div className="mt-2 flex flex-wrap items-end gap-x-3 gap-y-1.5 font-mono tabular-nums leading-none">
+                <div style={{ fontSize: 'clamp(1.55rem, 5.6vw, 2.9rem)', color: displayState.color }}>
+                  <AnimatedMetric value={displayValue} variant="number" decimals={2} inline color={displayState.color} />
+                </div>
+
+                <div className="pb-1" style={{ fontSize: '0.82rem' }}>
+                  {showHoverLabel ? (
+                    <span style={{ color: 'rgba(255,255,255,0.5)' }}>{hoverData.label}</span>
+                  ) : hasRangeChange ? (
+                    <>
+                      <span style={{ color: rangeChange.absolute >= 0 ? 'var(--accent-green)' : 'var(--accent-red)' }}>
+                        {formatSignedMayer(rangeChange.absolute)} ({formatSignedPercent(rangeChange.percent)})
+                      </span>
+                      <span style={{ color: 'rgba(255,255,255,0.38)', marginLeft: 8 }}>{RANGE_TEXT[activeLabel] || 'Past Year'}</span>
+                    </>
+                  ) : (
+                    <span style={{ color: 'rgba(255,255,255,0.25)' }}>Loading...</span>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setShowZones((value) => !value)}
+          disabled={!hasEnoughData}
+          className="relative flex flex-shrink-0 items-center gap-1.5 self-start pb-1.5 font-mono transition-colors disabled:cursor-not-allowed disabled:opacity-25"
+          style={{
+            fontSize: '0.78rem',
+            fontWeight: showZones ? 700 : 400,
+            color: showZones ? 'white' : 'rgba(255,255,255,0.5)',
+            letterSpacing: '0.05em',
+          }}
+        >
+          {showZones ? 'Hide Zones' : 'Show Zones'}
+          {showZones ? (
+            <span className="absolute bottom-0 left-0 right-0 rounded-full" style={{ height: 2, background: 'white' }} />
+          ) : null}
+        </button>
+      </div>
+
+      <div className="min-h-0 flex-1" style={{ margin: '20px -4px 0' }}>
+        {loading ? (
+          <div className="flex h-full items-end gap-px pb-1">
+            {Array.from({ length: 60 }, (_, index) => (
+              <div
+                key={index}
+                className="skeleton flex-1"
+                style={{
+                  height: `${32 + Math.sin(index * 0.38) * 24 + Math.sin(index * 0.11) * 30}%`,
+                  borderRadius: 2,
+                }}
+              />
+            ))}
+          </div>
+        ) : loadError ? (
+          <WarningPanel title="History feed unavailable" description={loadError} />
+        ) : !hasEnoughData ? (
+          <WarningPanel
+            title="Need at least 200 daily candles"
+            description="The Mayer Multiple depends on a full 200-day simple moving average. This preview waits for enough daily price points before drawing the indicator so the chart stays honest and readable."
+          />
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart
+              data={chartData}
+              margin={{ top: 6, right: 4, left: 4, bottom: 2 }}
+              onMouseMove={(e) => {
+                const point = e?.activePayload?.[0]?.payload;
+                if (Number.isFinite(point?.mayerMultiple)) {
+                  setHoverData({ mayerMultiple: point.mayerMultiple, label: point.tooltipLabel });
+                }
+              }}
+              onMouseLeave={() => setHoverData(null)}
+            >
+              <defs>
+                <linearGradient id="s16PriceFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="var(--accent-bitcoin)" stopOpacity="0.24" />
+                  <stop offset="100%" stopColor="var(--accent-bitcoin)" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+
+              <XAxis dataKey="ts" hide />
+              <YAxis yAxisId="price" domain={[priceYMin, priceYMax]} hide />
+              <YAxis yAxisId="mayer" orientation="right" domain={[mayerYMin, mayerYMax]} hide />
+
+              {showZones ? (
+                <>
+                  <ReferenceArea yAxisId="mayer" y1={mayerYMin} y2={MAYER_EXTREME_UNDERVALUE} fill="rgba(0,216,151,0.10)" />
+                  <ReferenceArea yAxisId="mayer" y1={MAYER_EXTREME_UNDERVALUE} y2={MAYER_OVERVALUED} fill="rgba(255,215,0,0.05)" />
+                  <ReferenceArea yAxisId="mayer" y1={MAYER_OVERVALUED} y2={mayerYMax} fill="rgba(255,71,87,0.10)" />
+                  <ReferenceLine yAxisId="mayer" y={MAYER_EXTREME_UNDERVALUE} stroke="rgba(0,216,151,0.45)" strokeDasharray="6 4" />
+                  <ReferenceLine yAxisId="mayer" y={MAYER_FAIR_VALUE} stroke="rgba(255,255,255,0.42)" strokeDasharray="6 4" />
+                  <ReferenceLine yAxisId="mayer" y={MAYER_HISTORICAL_AVERAGE} stroke="rgba(127,196,255,0.75)" strokeDasharray="5 4" />
+                  <ReferenceLine yAxisId="mayer" y={MAYER_OVERVALUED} stroke="rgba(255,71,87,0.52)" strokeDasharray="6 4" />
+                </>
+              ) : null}
+
+              <Tooltip
+                content={MayerTooltip}
+                cursor={<MayerCursor />}
+              />
+
+              <Area
+                yAxisId="price"
+                type="monotone"
+                dataKey="price"
+                stroke={PRICE_LINE_COLOR}
+                strokeWidth={2}
+                fill="url(#s16PriceFill)"
+                dot={false}
+                activeDot={false}
+                isAnimationActive
+                animationDuration={700}
+                animationEasing="ease-out"
+              />
+
+              <Line
+                yAxisId="mayer"
+                type="monotone"
+                dataKey="mayerMultiple"
+                stroke={MAYER_LINE_COLOR}
+                strokeWidth={2}
+                dot={false}
+                activeDot={false}
+                isAnimationActive
+                animationDuration={700}
+                animationEasing="ease-out"
+              />
+            </ComposedChart>
+          </ResponsiveContainer>
+        )}
+      </div>
+
+      <div className="flex flex-shrink-0 items-center gap-5 overflow-x-auto" style={{ margin: '14px 0 16px', paddingBottom: 2 }}>
+        {RANGES.map(({ label }) => {
+          const isActive = activeLabel === label;
+
+          return (
+            <button
+              key={label}
+              type="button"
+              onClick={() => setActiveLabel(label)}
+              className="relative flex flex-shrink-0 items-center gap-1.5 pb-1.5 font-mono transition-colors"
+              style={{
+                fontSize: '0.78rem',
+                fontWeight: isActive ? 700 : 400,
+                color: isActive ? 'white' : 'rgba(255,255,255,0.32)',
+                letterSpacing: '0.05em',
+              }}
+            >
+              {label}
+              {isActive ? (
+                <span className="absolute bottom-0 left-0 right-0 rounded-full" style={{ height: 2, background: 'white' }} />
+              ) : null}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="flex-shrink-0 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <StatusCard label="Overvalued" range="> 2.40" active={currentState.key === 'overvalued'} color="var(--accent-red)" />
+        <StatusCard label="Neutral" range="1.00 - 2.40" active={currentState.key === 'neutral'} color="var(--accent-warning)" />
+        <StatusCard label="Undervalued" range="< 1.00" active={currentState.key === 'undervalued'} color="var(--accent-green)" />
+      </div>
+    </div>
+  );
+}
+

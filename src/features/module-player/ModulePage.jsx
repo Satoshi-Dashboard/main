@@ -584,10 +584,10 @@ export default function ModulePage({ forcedSlug = null }) {
           {showTopMeta && (
             <div className="flex flex-none items-center justify-between px-2 py-1 sm:px-3 lg:px-4">
               {moduleMeta?.showTitleInStrip ? (
-                <div style={{ color: 'var(--accent-bitcoin)', fontFamily: 'monospace', fontSize: 'var(--fs-subtitle)', fontWeight: 700 }}>
+                <div className="min-w-0" style={{ color: 'var(--accent-bitcoin)', fontFamily: 'monospace', fontSize: 'var(--fs-subtitle)', fontWeight: 700 }}>
                   {moduleMeta.stripTitle || module.title}
                 </div>
-              ) : <div />}
+              ) : <div className="min-w-0" />}
               <div className="text-right font-mono text-[11px] tracking-wide" style={{ color: 'var(--text-secondary)' }}>
                 <div>
                   <span>src: </span>

@@ -8,11 +8,16 @@
 import { fetchJson } from '@/shared/lib/api.js';
 
 const SPOT_CACHE_MS = 10_000;
+const DEFAULT_HISTORY_CACHE_MS = 5 * 60 * 1000;
+const LONG_HISTORY_CACHE_MS = 60 * 60 * 1000;
 
 let spotMemoryCache = {
   expiresAt: 0,
   value: null,
 };
+
+const historyMemoryCache = new Map();
+const historyInFlight = new Map();
 
 function readSpotCache(now = Date.now()) {
   if (spotMemoryCache.value && now < spotMemoryCache.expiresAt) {
@@ -27,6 +32,40 @@ function writeSpotCache(payload, now = Date.now()) {
     value: { ...payload },
   };
   return payload;
+}
+
+function getHistoryCacheKey(days, interval) {
+  return `${days}:${interval}`;
+}
+
+function cloneHistoryRows(rows) {
+  return Array.isArray(rows) ? rows.map((row) => ({ ...row })) : null;
+}
+
+function getHistoryCacheTtl(days, interval) {
+  if (Number(days) >= 1825 && interval === '1d') {
+    return LONG_HISTORY_CACHE_MS;
+  }
+  return DEFAULT_HISTORY_CACHE_MS;
+}
+
+function readHistoryCache(key, now = Date.now()) {
+  const cached = historyMemoryCache.get(key);
+  if (!cached) return null;
+  if (now >= cached.expiresAt) {
+    historyMemoryCache.delete(key);
+    return null;
+  }
+  return cloneHistoryRows(cached.value);
+}
+
+function writeHistoryCache(key, rows, ttl, now = Date.now()) {
+  const value = cloneHistoryRows(rows);
+  historyMemoryCache.set(key, {
+    expiresAt: now + ttl,
+    value,
+  });
+  return cloneHistoryRows(value);
 }
 
 // ── Spot price + 24h change + market cap + supply ───────────────────────────
@@ -102,26 +141,50 @@ function toChartPoint(ts, price, interval) {
 
 /**
  * Returns array of { ts, price, axisLabel, tooltipLabel } or null if every source fails.
- * @param {number} days - 1 | 7 | 30 | 90 | 365 | 1825
+ * @param {number} days - 1 | 7 | 30 | 90 | 365 | 1825 | 2025
  * @param {string} interval - '5m' | '30m' | '1h' | '1d'
  */
 export async function fetchBtcHistory(days, interval = '1d') {
-  try {
-    const validDays = [1, 7, 30, 90, 365, 1825].includes(Number(days)) ? Number(days) : 365;
-    const safeInterval = ['5m', '15m', '30m', '1h', '1d'].includes(interval) ? interval : '1d';
-    const payload = await fetchJson(
-      `/api/public/binance/btc-history?days=${validDays}&interval=${safeInterval}`,
-      { timeout: 8000 },
-    );
-    const rows = Array.isArray(payload?.data) ? payload.data : payload;
-    if (Array.isArray(rows) && rows.length > 1) {
-      return rows
-        .map((row) => toChartPoint(Number(row.ts), Number(row.price), safeInterval))
-        .filter((item) => Number.isFinite(item.ts) && Number.isFinite(item.price) && item.price > 0);
-    }
-  } catch { /* failed */ }
+  const validDays = [1, 7, 30, 90, 365, 1825, 2025].includes(Number(days)) ? Number(days) : 365;
+  const safeInterval = ['5m', '15m', '30m', '1h', '1d'].includes(interval) ? interval : '1d';
+  const cacheKey = getHistoryCacheKey(validDays, safeInterval);
+  const now = Date.now();
+  const cached = readHistoryCache(cacheKey, now);
+  if (cached) return cached;
 
-  return null;
+  const inFlight = historyInFlight.get(cacheKey);
+  if (inFlight) {
+    return inFlight.then((rows) => cloneHistoryRows(rows));
+  }
+
+  const request = (async () => {
+    try {
+      const payload = await fetchJson(
+        `/api/public/binance/btc-history?days=${validDays}&interval=${safeInterval}`,
+        { timeout: 8000 },
+      );
+      const rows = Array.isArray(payload?.data) ? payload.data : payload;
+      if (Array.isArray(rows) && rows.length > 1) {
+        const points = rows
+          .map((row) => toChartPoint(Number(row.ts), Number(row.price), safeInterval))
+          .filter((item) => Number.isFinite(item.ts) && Number.isFinite(item.price) && item.price > 0);
+
+        if (points.length > 1) {
+          return writeHistoryCache(cacheKey, points, getHistoryCacheTtl(validDays, safeInterval), now);
+        }
+      }
+    } catch { /* failed */ }
+
+    return null;
+  })();
+
+  historyInFlight.set(cacheKey, request);
+
+  try {
+    return await request;
+  } finally {
+    historyInFlight.delete(cacheKey);
+  }
 }
 
 // ── Multi-currency BTC prices ────────────────────────────────────────────────

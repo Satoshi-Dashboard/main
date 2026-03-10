@@ -7,7 +7,10 @@
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173)",
       "Bash(powershell.exe -Command \"Get-Process -Id 20544 -ErrorAction SilentlyContinue | Select-Object Name, Id, Path\")",
       "Bash(powershell.exe -Command \"Stop-Process -Id 20544 -Force; Start-Sleep -Milliseconds 500; Get-Process -Id 20544 -ErrorAction SilentlyContinue\")",
-      "Bash(netstat -ano)"
+      "Bash(netstat -ano)",
+      "Bash(cmd.exe /c \"tasklist /FI \"\"PID eq 18740\"\"\")",
+      "Bash(cmd //c \"tasklist /FI \"\"PID eq 18740\"\"\")",
+      "Bash(powershell -Command \"Get-Process -Id 18740 | Select-Object Name,Id,Path; Stop-Process -Id 18740 -Force -ErrorAction SilentlyContinue\")"
     ]
   }
 }

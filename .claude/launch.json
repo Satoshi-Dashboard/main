@@ -5,7 +5,8 @@
       "name": "satoshi-dashboard",
       "runtimeExecutable": "node",
       "runtimeArgs": ["C:/Program Files/nodejs/node_modules/npm/bin/npm-cli.js", "run", "dev", "--", "--host"],
-      "port": 5173
+      "port": 5173,
+      "autoPort": true
     },
     {
       "name": "satoshi-dashboard-preview",

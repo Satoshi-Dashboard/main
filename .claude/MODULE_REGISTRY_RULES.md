@@ -45,7 +45,7 @@ After changing module registry/order:
 3. Confirm footer shows module identity clearly (`module.code` + position).
 4. Re-check `src/features/module-registry/moduleSEO.js` keys/titles/descriptions for affected modules.
 5. Re-check `src/features/module-registry/moduleDataMeta.js` keys and module-specific strip/overlay behavior for affected modules.
-6. Re-check `UNDER_CONSTRUCTION_SLUGS` and any module-specific shell logic in `src/features/module-player/ModulePage.jsx`.
+6. Re-check any under-construction shell sets and module-specific player logic in `src/features/module-player/ModulePage.jsx` (for example `NOINDEX_PREVIEW_SLUGS`, blocking overlay sets, or similar preview/live distinctions).
 7. Confirm no unintended module reindexing changed unrelated slugs/codes.
 
 ## Cross-domain guardrail (mandatory)
@@ -73,3 +73,11 @@ Even when changes are not directly editing `src/features/module-registry/modules
 - **Acción Realizada/Corrección:** Se actualizaron todas las referencias al nuevo layout `src/features/module-registry/` y `src/features/module-player/`.
 - **Nueva/Modificada Regla o Directriz:** Las comprobaciones de identidad, slugs, SEO y shell del player deben ejecutarse sobre las rutas actuales dentro de `src/features/`.
 - **Justificación:** Evita errores de navegación o reindexación provocados por inspeccionar ubicaciones heredadas.
+
+- **Fecha de la Actualización:** `2026-03-09`
+- **Archivo(s) Afectado(s):** `.claude/MODULE_REGISTRY_RULES.md`
+- **Tipo de Evento/Contexto:** Separación entre preview noindex y overlay bloqueante
+- **Descripción del Evento Original:** La verificación del shell del player asumía un único set `UNDER_CONSTRUCTION_SLUGS`, pero algunos módulos preview necesitan seguir en `noindex` sin conservar necesariamente el overlay bloqueante para revisión local o QA.
+- **Acción Realizada/Corrección:** Se amplió la regla de verificación para exigir revisar cualquier set de preview/overlay/noindex vigente en `ModulePage.jsx`, no solo un nombre histórico de constante.
+- **Nueva/Modificada Regla o Directriz:** Las reglas del registro deben contemplar que el estado de preview SEO y el bloqueo UX pueden separarse; al tocar módulos preview, agentes deben validar ambas capas del shell y mantener la documentación alineada.
+- **Justificación:** Evita que futuros agentes vuelvan a acoplar overlay y noindex por inercia, lo que podría romper revisiones internas o publicar previews antes de tiempo.

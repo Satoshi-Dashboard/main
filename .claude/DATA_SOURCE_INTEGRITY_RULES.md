@@ -82,8 +82,8 @@ This table is intentionally plain-language and owner-friendly.
 | S12 Address Distribution | BTC address distribution | BitInfoCharts, preferably via scraper proxy, otherwise direct shared scrape/parser | About every 30 min | Use stale cached payload | Do not replace BitInfoCharts silently |
 | S13 Wealth Pyramid | Richness tiers / wealth pyramid | BitInfoCharts, preferably via scraper proxy, otherwise direct shared scrape/parser | About every 30 min | Use stale cached payload | Do not replace BitInfoCharts silently |
 | S14 Global Assets | BTC vs global asset values | Newhedge snapshot, preferably via `api.zatobox.io`, otherwise fetched through the `r.jina.ai` mirror | About every 60 min | Use stale cached snapshot | Do not replace Newhedge silently |
-| S15 BTC vs Gold | BTC vs gold comparison | BTC market chart from CoinGecko; gold comparison values come from a local/static gold market-cap reference transformed on the backend | About every 60 min for BTC chart | Backend serves transformed payload from cached/stale CoinGecko feed | Do not replace CoinGecko silently |
-| S16 Mayer Multiple | Under-construction model page | Local mock/generated data only | Static | No remote fallback needed | Do not document this as live API-driven data |
+| S15 BTC vs Gold | BTC vs gold comparison | BTC price/history from Binance with backend-derived BTC market cap from protocol issuance estimates; gold current market cap from `api.zatobox.io/api/scrape/companiesmarketcap-gold` | BTC history about every 5 min; gold snapshot about every 15 min | Backend serves cached/stale Binance+Zatobox comparison payload | Do not replace Binance or Zatobox/CompaniesMarketCap silently |
+| S16 Mayer Multiple | Under-construction interactive preview | BTC spot from Binance plus shared daily BTC history from Binance/Binance.US; Mayer Multiple is derived client-side from that history with a 200-day SMA warmup | Spot about every 10s in UI; daily history requested on load and effectively cached at the long-range backend cadence | Use frontend memory cache, backend stale history payload, and keep the last good spot value | Do not swap Binance spot/history or document this preview as a fully live/indexable module without owner approval |
 | S17 Price Performance | Under-construction comparison page | BTC spot from Binance; rest is local/static data | On load | Component falls back to a baked BTC value if needed | Do not pretend this is fully live data |
 | S18 Cycle Spiral | Under-construction cycle visual | Local handcrafted cycle data | Static | n/a | Do not document as live API data |
 | S19 Power Law Model | Under-construction model page | Local model data | Static | n/a | Do not document as live API data |
@@ -121,7 +121,8 @@ This table mirrors the same intent with implementation details for agents.
 | S12 Address Distribution | `src/features/modules/live/S12_AddressDistribution.jsx` | `/api/s12/btc-distribution` | `SCRAPER_BASE_URL/api/scrape/bitinfocharts-richlist` -> direct BitInfoCharts HTML shared parser | 30 min | Stale shared payload | `server/services/bitinfochartsShared.js`, `server/features/bitinfocharts/s12BtcDistribution.js`, `server/app.js` |
 | S13 Wealth Pyramid | `src/features/modules/live/S13_WealthPyramid.jsx` | `/api/s13/addresses-richer` | `SCRAPER_BASE_URL/api/scrape/bitinfocharts-richlist` -> direct BitInfoCharts HTML shared parser | 30 min | Stale shared payload | `server/services/bitinfochartsShared.js`, `server/features/bitinfocharts/s13AddressesRicher.js`, `server/app.js` |
 | S14 Global Assets | `src/features/modules/live/S14_GlobalAssetsTreemap.jsx` | `/api/s14/global-assets` | `SCRAPER_BASE_URL/api/scrape/newhedge-global-assets` -> `https://r.jina.ai/http://newhedge.io/bitcoin/global-asset-values` | 60 min | Stale snapshot from KV/memory | `server/features/global-assets/s14GlobalAssetsCache.js`, `server/app.js` |
-| S15 BTC vs Gold | `src/features/modules/live/S15_BTCvsGold.jsx` | `/api/s15/btc-vs-gold-market-cap` | CoinGecko BTC market chart -> backend transform + local static gold market-cap reference | 60 min | Backend payload built from stale/cached CoinGecko feed | `server/services/publicDataFeeds.js`, `server/app.js`, `src/features/modules/live/S15_BTCvsGold.jsx` |
+| S15 BTC vs Gold | `src/features/modules/live/S15_BTCvsGold.jsx` | `/api/s15/btc-vs-gold-market-cap` | Binance/Binance.US daily BTC history + `/api/btc/rates` spot -> backend BTC market-cap derivation from protocol issuance schedule; gold: `SCRAPER_BASE_URL/api/scrape/companiesmarketcap-gold` | BTC history 5 min; BTC spot 5s; gold snapshot 15 min | Backend payload built from stale/cached Binance history and stale/cached Zatobox gold snapshot | `server/services/publicDataFeeds.js`, `server/services/btcRates.js`, `server/app.js`, `src/features/modules/live/S15_BTCvsGold.jsx` |
+| S16 Mayer Multiple | `src/features/modules/under-construction/S16_MayerMultiple.jsx` | `fetchBtcSpot()` + `fetchBtcHistory(2025, '1d')` | Spot: Binance -> Binance.US -> cached `btcRates`; history: Binance -> Binance.US | Spot poll 10s in UI; warmup-adjusted long-range daily history requested on load with effective 60 min backend cadence | Frontend memory cache in `priceApi.js`, backend stale history payload, previous UI spot value | `src/shared/services/priceApi.js`, `src/shared/utils/mayerMultiple.js`, `src/features/modules/under-construction/S16_MayerMultiple.jsx` |
 | S17 Price Performance | `src/features/modules/under-construction/S17_PricePerformance.jsx` | `/api/btc/rates` | Binance -> Binance.US -> cached `btcRates` | On load | Local fallback price `84000` in component | `server/services/btcRates.js`, `src/features/modules/under-construction/S17_PricePerformance.jsx` |
 | S21 Big Mac Sats Tracker | `src/features/modules/under-construction/S21_BigMacSatsTracker.jsx` | `/api/public/s21/big-mac-sats-data` | `/api/btc/rates` spot + Economist CSV + Binance/Binance.US historical close lookups | Combined feed 7d; subfeeds 12h-24h; UI 5 min | Shared stale combined payload | `server/services/publicDataFeeds.js`, `server/services/btcRates.js`, `src/features/modules/under-construction/S21_BigMacSatsTracker.jsx` |
 | S23 Big Mac Index | `src/features/modules/under-construction/S23_BigMacIndex.jsx` | `/api/btc/rates` | Binance -> Binance.US -> cached `btcRates` | On load | Local fallback price `84000` in component | `server/services/btcRates.js`, `src/features/modules/under-construction/S23_BigMacIndex.jsx` |
@@ -145,7 +146,7 @@ The owner wants stable, approved data sources and does not want agents to casual
 That means:
 
 - if the project uses Investing via Zatobox, keep that unless explicitly told otherwise
-- if the project uses Bitnodes, BitInfoCharts, Newhedge, CoinGecko, Treasury, Census, Binance, BTC Map, or mempool.space, preserve them unless explicitly told otherwise
+- if the project uses Bitnodes, BitInfoCharts, Newhedge, CoinGecko, Zatobox, Treasury, Census, Binance, BTC Map, or mempool.space, preserve them unless explicitly told otherwise
 - if a source is scraped on purpose, do not replace it with a different API just because it is easier
 - if the owner asks for a source change, update this file immediately so future agents do not undo it
 
@@ -182,3 +183,27 @@ That means:
 - **Acción Realizada/Corrección:** Se separaron las nociones de `Refresh target`, `Source snapshot` y `Last checked/sync` en frontend y backend, añadiendo timestamps de chequeo reales donde hacía falta.
 - **Nueva/Modificada Regla o Directriz:** Las superficies de metadata temporal deben distinguir explícitamente entre cadencia de chequeo, momento del último chequeo del sistema y fecha del snapshot entregado por la fuente upstream.
 - **Justificación:** Evita diagnósticos falsos de stale data, mejora transparencia operativa y ayuda a detectar si el retraso viene del backend o del proveedor real.
+
+- **Fecha de la Actualización:** `2026-03-09`
+- **Archivo(s) Afectado(s):** `.claude/DATA_SOURCE_INTEGRITY_RULES.md`
+- **Tipo de Evento/Contexto:** Sustitución de mock local por derivación real en preview S16
+- **Descripción del Evento Original:** `S16` seguía documentado como dataset sintético local, aunque pasó a derivar el Mayer Multiple desde el mismo spot e histórico diario de BTC ya aprobados para `S02`.
+- **Acción Realizada/Corrección:** Se actualizaron las tablas humana y técnica para reflejar que `S16` usa `fetchBtcSpot()` más `fetchBtcHistory(1825, '1d')`, calculando SMA200 y Mayer Multiple en cliente con caché frontend y fallback del historial backend.
+- **Nueva/Modificada Regla o Directriz:** Cuando un módulo preview deja de usar mocks y deriva un indicador desde feeds aprobados ya existentes, la política de fuentes debe pasar a describir el flujo derivado real y sus cadencias/fallbacks sin promocionarlo todavía como módulo live/indexable.
+- **Justificación:** Mantiene coherencia entre implementación, metadata y documentación de integridad de fuentes, y evita que futuros agentes reintroduzcan datos sintéticos por creer que el módulo aún no consume servicios reales.
+
+- **Fecha de la Actualización:** `2026-03-09`
+- **Archivo(s) Afectado(s):** `.claude/DATA_SOURCE_INTEGRITY_RULES.md`
+- **Tipo de Evento/Contexto:** Corrección de cobertura SMA200 en rango visible de S16
+- **Descripción del Evento Original:** La primera versión con datos reales de `S16` usaba solo `1825` días, lo que dejaba sin warmup suficiente a la SMA200 al abrir el rango visible de 5 años y podía producir un tramo inicial vacío en la línea del Mayer Multiple.
+- **Acción Realizada/Corrección:** Se documentó y adoptó una carga de `2025` días (`5Y + 200d` de warmup) para que el gráfico visible de 5 años conserve cobertura completa sin cambiar proveedor, ruta base ni semántica del indicador.
+- **Nueva/Modificada Regla o Directriz:** Cuando un indicador derivado necesita ventana retrospectiva adicional (por ejemplo una SMA larga), la política de fuentes debe reflejar explícitamente el warmup necesario para evitar huecos o cálculos truncados en el rango visible.
+- **Justificación:** Previene diagnósticos falsos de datos faltantes, mantiene honestidad matemática en indicadores derivados y evita que futuros agentes vuelvan a recortar demasiado la historia base.
+
+- **Fecha de la Actualización:** `2026-03-09`
+- **Archivo(s) Afectado(s):** `.claude/DATA_SOURCE_INTEGRITY_RULES.md`
+- **Tipo de Evento/Contexto:** Sustitución aprobada de fuente en S15
+- **Descripción del Evento Original:** `S15` dependía de CoinGecko para el market chart BTC y de una referencia local/manual para el oro, pero el owner pidió quitar CoinGecko de este módulo y usar la API scraper de Zatobox para el market cap del oro.
+- **Acción Realizada/Corrección:** Se actualizaron las tablas humana y técnica para fijar `Binance/Binance.US + emision protocolaria` como base del market cap BTC y `SCRAPER_BASE_URL/api/scrape/companiesmarketcap-gold` como fuente aprobada del market cap actual del oro.
+- **Nueva/Modificada Regla o Directriz:** En `S15`, CoinGecko deja de ser una fuente aprobada; el flujo permitido es Binance/Binance.US para precio/histórico BTC y Zatobox/CompaniesMarketCap para el snapshot actual del oro, con fallback stale de backend y sin volver a una tabla local/manual del oro salvo instrucción expresa del owner.
+- **Justificación:** Evita que futuros agentes reintroduzcan CoinGecko o datos locales del oro en `S15`, preserva la decision explicita del owner y mantiene trazabilidad clara del nuevo contrato de datos.

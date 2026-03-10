@@ -41,7 +41,7 @@ It is designed for people who want more than a price ticker: Bitcoin builders, c
 
 - Frontend module registry: **31 modules** generated from `src/features/module-registry/modules.js`
 - Live and indexable module routes: **17** (`S01-S15`, `S30`, `S31`)
-- Under-construction module routes: **14** (`S16-S29`) with a visible overlay and `noindex, follow` policy
+- Under-construction module routes: **14** (`S16-S29`) remain `noindex, follow`; **13** (`S17-S29`) still use the blocking overlay while `S16` is now an interactive preview route
 - Primary routes:
   - `/` -> first live module (`S01`)
   - `/module/:slug` -> module player route
@@ -155,17 +155,17 @@ This section exists on purpose: public readers and contributors should be able t
 | S12 | Address Distribution | `/api/s12/btc-distribution` | BitInfoCharts scraper proxy/direct HTML via shared parser | Stale shared cache | UI 30m; API 30m |
 | S13 | Wealth Pyramid | `/api/s13/addresses-richer` | BitInfoCharts scraper proxy/direct HTML via shared parser | Stale shared cache | UI 30m; API 30m |
 | S14 | Global Assets | `/api/s14/global-assets` | Scraper proxy -> `r.jina.ai` mirror of Newhedge snapshot | Stale shared cache | UI 60m; API 60m |
-| S15 | BTC vs Gold | `/api/s15/btc-vs-gold-market-cap` | CoinGecko BTC market chart transformed by backend + local static gold market-cap reference on server | Backend returns transformed comparison payload from cached/stale CoinGecko feed | UI on mount; API 60m |
+| S15 | BTC vs Gold | `/api/s15/btc-vs-gold-market-cap` | Binance BTC price/history transformed by backend with protocol-issued BTC supply estimates + Zatobox `companiesmarketcap-gold` snapshot | Backend serves cached/stale comparison payload with the latest gold market-cap reference line | UI on mount; BTC API 5m; gold API 15m |
 | S30 | U.S. National Debt | `/api/public/us-national-debt` | U.S. Treasury Debt to the Penny + latest available U.S. Census ACS year (currentYear-1 down to 2020) | Stale debt/population cache; UI keeps last payload and keeps 1s local interpolation | UI 60s + 1s local tick; debt API 15m; population API 30d |
 | S31 | Thank You Satoshi | Local component copy, QR, whitepaper quote | Local static content only | No remote dependency | Static |
 
-## Under-construction modules (routable, overlaid, and noindex)
+## Under-construction modules (routable previews and noindex)
 
-These modules are intentionally visible in the product because they communicate the roadmap and future direction of the dashboard. They remain routable, but they ship with an overlay and `noindex, follow` metadata until they are ready to be treated as fully live public pages.
+These modules are intentionally visible in the product because they communicate the roadmap and future direction of the dashboard. They remain routable and keep `noindex, follow` metadata until they are ready to be treated as fully live public pages. Most still ship with a blocking overlay; `S16` is now an interactive preview without the overlay so the module can be reviewed locally before final signoff.
 
 | Code | Title | Status | Data path in app | Real source priority | Fallback | Reload |
 | --- | --- | --- | --- | --- | --- | --- |
-| S16 | Mayer Multiple | Under construction | Local generated mock dataset in component | Local-only synthetic series | n/a | Static |
+| S16 | Mayer Multiple | Interactive preview | `fetchBtcSpot()` + `/api/public/binance/btc-history?days=2025&interval=1d` with client-side SMA200 / MM derivation and a 200-day warmup for full 5Y coverage | Spot: Binance -> Binance.US -> cached spot; daily history: Binance -> Binance.US | Frontend memory cache + backend stale history cache; UI keeps last good spot | UI spot 10s; history on mount; history API refresh 60m |
 | S17 | Price Performance | Under construction | `/api/btc/rates` + local historical constants | BTC spot: Binance -> Binance.US -> cached spot; house-price history is local | Static `84000` BTC fallback in component | UI on mount only |
 | S18 | Cycle Spiral | Under construction | Local halving dates + waypoint price table | Local-only handcrafted cycle data | n/a | Static |
 | S19 | Power Law Model | Under construction | Local regression/model data in component | Local-only model data | n/a | Static |
@@ -263,11 +263,19 @@ Notes:
 - `GET /api/public/btcmap/businesses-by-country`
 - `GET /api/public/coingecko/bitcoin-market-chart?days=365`
 - `GET /api/s15/btc-vs-gold-market-cap`
-- `GET /api/public/binance/btc-history?days=1|7|30|90|365|1825&interval=5m|15m|30m|1h|1d`
+- `GET /api/public/binance/btc-history?days=1|7|30|90|365|1825|2025&interval=5m|15m|30m|1h|1d`
 - `GET /api/public/s21/big-mac-sats-data`
 - `GET /api/public/us-national-debt`
 
 #### S02 chart range reference
+
+#### S15 BTC vs Gold
+
+Notes:
+
+- BTC market cap is derived on the backend from Binance BTC price/history multiplied by an estimated circulating supply from Bitcoin's issuance schedule
+- Gold uses `SCRAPER_BASE_URL/api/scrape/companiesmarketcap-gold` as the primary current market-cap snapshot via Zatobox
+- The gold line is a current market-cap reference across the chart, not a reconstructed historical gold market-cap series
 
 The Price Chart module (`src/features/modules/live/S02_PriceChart.jsx`) exposes 7 time ranges. Each maps to a `days` + `interval` pair that determines which Binance klines are requested.
 
@@ -284,6 +292,7 @@ The Price Chart module (`src/features/modules/live/S02_PriceChart.jsx`) exposes 
 Notes:
 
 - Binance limits a single response to 1000 candles, so 5Y uses paginated requests
+- `2025d + 1d` is reserved for S16 so the visible 5Y Mayer chart still has a full 200-day SMA warmup instead of a blank opening segment
 - Each `days + interval` combination gets its own backend cache key
 - The frontend keeps a per-session in-memory cache keyed by `{label}_{interval}` to reduce repeated range fetches
 
@@ -444,3 +453,27 @@ Satoshi Dashboard is open-source under the MIT License. See `LICENSE.txt`.
 - **Acción Realizada/Corrección:** Se eliminó la referencia pública a esa capacidad para que el `README.md` vuelva a reflejar solo funcionalidades activas y deseadas por el owner.
 - **Nueva/Modificada Regla o Directriz:** El `README.md` solo debe promocionar capacidades activas que el owner considera realmente útiles y permanentes en la experiencia del dashboard.
 - **Justificación:** Evita sobreprometer funciones descartadas y mantiene la portada pública alineada con el producto que realmente se quiere ofrecer.
+
+- **Fecha de la Actualización:** `2026-03-09`
+- **Archivo(s) Afectado(s):** `README.md`
+- **Tipo de Evento/Contexto:** Evolución funcional de módulo preview S16
+- **Descripción del Evento Original:** `S16` seguía documentado como mock local con overlay bloqueante, aunque se convirtió en un preview interactivo derivado de la misma historia de precio BTC usada por `S02`.
+- **Acción Realizada/Corrección:** Se actualizó el estado del módulo en el README para distinguir entre previews `noindex` y overlays bloqueantes, y se reemplazó la historia de datos de `S16` por su flujo real basado en spot e histórico diario de Binance con cálculo cliente de SMA200/Mayer Multiple.
+- **Nueva/Modificada Regla o Directriz:** El `README.md` debe describir con honestidad cuándo un módulo preview ya es interactivo y qué flujo real de datos usa, sin seguir llamándolo mock una vez que comparte servicios productivos del dashboard.
+- **Justificación:** Evita confusión entre QA local, estado SEO y veracidad de datos, y ayuda a futuros agentes a no revertir el módulo a una narrativa documental obsoleta.
+
+- **Fecha de la Actualización:** `2026-03-09`
+- **Archivo(s) Afectado(s):** `README.md`
+- **Tipo de Evento/Contexto:** Corrección de cobertura histórica para indicador derivado S16
+- **Descripción del Evento Original:** La primera documentación del preview `S16` describía una carga de `1825` días, pero eso no dejaba margen suficiente para una SMA200 completa al inicio del rango visible de 5 años.
+- **Acción Realizada/Corrección:** Se ajustó el README para documentar la carga real de `2025` días y se añadió la nota de warmup para explicar por qué `S16` necesita historia adicional aunque solo muestre 5 años al usuario.
+- **Nueva/Modificada Regla o Directriz:** Cuando un módulo derivado necesita historial extra para construir correctamente el rango visible, el `README.md` debe documentar ese warmup explícitamente en lugar de simplificarlo hasta volverlo engañoso.
+- **Justificación:** Mejora la transparencia técnica del proyecto y evita que futuros mantenedores recorten la serie base por creer que el exceso de historia es accidental o innecesario.
+
+- **Fecha de la Actualización:** `2026-03-09`
+- **Archivo(s) Afectado(s):** `README.md`
+- **Tipo de Evento/Contexto:** Sustitución de fuente comparativa en S15
+- **Descripción del Evento Original:** `S15` seguía documentado como dependiente de CoinGecko y de un mapa estático local del oro, aunque el owner pidió eliminar CoinGecko de este módulo y consumir la referencia de oro desde la API de Zatobox.
+- **Acción Realizada/Corrección:** Se actualizó la tabla de fuentes y la sección API para describir el nuevo flujo: precio/histórico BTC desde Binance, market cap BTC derivado por emisión protocolaria y market cap actual del oro desde `api.zatobox.io/api/scrape/companiesmarketcap-gold`.
+- **Nueva/Modificada Regla o Directriz:** Cuando un módulo comparativo derive capitalización desde precio + supply en backend, el `README.md` debe explicitar la fórmula y diferenciar claramente entre una serie histórica derivada y una referencia actual fija proveniente de un scraper.
+- **Justificación:** Evita volver a presentar `S15` como CoinGecko-backed, mejora la honestidad documental del gráfico y deja claro por qué la línea del oro no representa historial completo.
