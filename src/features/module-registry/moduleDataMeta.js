@@ -98,7 +98,7 @@ const MODULE_DATA_META = {
   'bitcoin-vs-gold-chart': {
     providers: [
       { name: 'Binance', url: 'https://api.binance.com' },
-      { name: 'Zatobox', url: 'https://api.zatobox.io/api/scrape/companiesmarketcap-gold' },
+      { name: 'CompaniesMarketCap', url: 'https://companiesmarketcap.com/' },
     ],
     refreshRangeLabel: 'spot/history 5m + gold 15m',
     showTitleInStrip: true,
