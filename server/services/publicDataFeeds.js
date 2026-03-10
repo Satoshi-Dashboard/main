@@ -14,16 +14,13 @@ const BINANCE_KLINES_BASE_URLS = [
   'https://api.binance.com/api/v3/klines',
   'https://api.binance.us/api/v3/klines',
 ];
-const S15_GOLD_MARKET_CAP_MAP = {
-  '2024-06': 15.8, '2024-07': 16.1, '2024-08': 16.6,
-  '2024-09': 17.6, '2024-10': 18.6, '2024-11': 19.4,
-  '2024-12': 20.2, '2025-01': 20.5, '2025-02': 21.0,
-  '2025-03': 21.8, '2025-04': 22.4, '2025-05': 23.0,
-  '2025-06': 23.8, '2025-07': 24.2, '2025-08': 24.5,
-  '2025-09': 24.0, '2025-10': 24.3, '2025-11': 24.6,
-  '2025-12': 25.0, '2026-01': 25.4, '2026-02': 25.8,
-  '2026-03': 26.2,
-};
+const SCRAPER_BASE_URL = String(process.env.SCRAPER_BASE_URL || 'https://api.zatobox.io').trim();
+const S15_GOLD_SCRAPER_PATH = '/api/scrape/companiesmarketcap-gold';
+const BTC_GENESIS_TS = Date.UTC(2009, 0, 3, 18, 15, 5);
+const BTC_HALVING_INTERVAL_BLOCKS = 210_000;
+const BTC_TARGET_BLOCK_INTERVAL_MS = 10 * 60 * 1000;
+const BTC_MAX_SUPPLY = 21_000_000;
+const BTC_CURRENT_HALVING_REWARD = 3.125;
 
 const memCache = new Map();
 
@@ -118,6 +115,15 @@ const FEED_DEFS = {
     hardMinuteLimit: 30,
     safeMinuteBudget: 1,
     safeDailyBudget: 120,
+  },
+  s15GoldMarketCapCurrent: {
+    cacheKey: 'public:s15:gold-market-cap:current',
+    lockKey: 'public:s15:gold-market-cap:current:refresh',
+    refreshMs: 15 * 60_000,
+    sourceProvider: 'companiesmarketcap-zatobox',
+    sourceUrl: `${SCRAPER_BASE_URL}${S15_GOLD_SCRAPER_PATH}`,
+    safeMinuteBudget: 1,
+    safeDailyBudget: 96,
   },
   binanceHistory1: {
     cacheKey: 'public:binance:btc-history:1',
@@ -243,6 +249,16 @@ const FEED_DEFS = {
   binanceHistory_1825_1d: {
     cacheKey: 'public:binance:btc-history:1825:1d',
     lockKey: 'public:binance:btc-history:1825:1d:refresh',
+    refreshMs: 60 * 60_000,
+    sourceProvider: 'binance',
+    sourceUrl: 'https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d',
+    hardMinuteLimit: 1200,
+    safeMinuteBudget: 4,
+    safeDailyBudget: 5760,
+  },
+  binanceHistory_2025_1d: {
+    cacheKey: 'public:binance:btc-history:2025:1d',
+    lockKey: 'public:binance:btc-history:2025:1d:refresh',
     refreshMs: 60 * 60_000,
     sourceProvider: 'binance',
     sourceUrl: 'https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d',
@@ -428,6 +444,71 @@ async function fetchTextWithTimeout(url, {
   }
 }
 
+function parseSuffixedUsdNumber(value) {
+  const match = String(value || '').trim().match(/^\$?\s*([\d.,]+)\s*([TMBK])?$/i);
+  if (!match) return null;
+
+  const amount = Number(String(match[1]).replace(/,/g, ''));
+  if (!Number.isFinite(amount)) return null;
+
+  const suffix = String(match[2] || '').toUpperCase();
+  const multiplier = suffix === 'T'
+    ? 1e12
+    : suffix === 'B'
+      ? 1e9
+      : suffix === 'M'
+        ? 1e6
+        : suffix === 'K'
+          ? 1e3
+          : 1;
+
+  return amount * multiplier;
+}
+
+function parsePercentValue(value) {
+  const parsed = Number(String(value || '').replace(/[%+,\s]/g, ''));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function estimateBitcoinCirculatingSupply(ts) {
+  const targetTs = Number(ts);
+  if (!Number.isFinite(targetTs) || targetTs <= BTC_GENESIS_TS) return 0;
+
+  let remainingBlocks = Math.floor((targetTs - BTC_GENESIS_TS) / BTC_TARGET_BLOCK_INTERVAL_MS);
+  let reward = 50;
+  let era = 0;
+  let total = 0;
+
+  while (remainingBlocks > 0 && reward > 0) {
+    const eraBlocks = Math.min(remainingBlocks, BTC_HALVING_INTERVAL_BLOCKS);
+    total += eraBlocks * reward;
+    remainingBlocks -= eraBlocks;
+    era += 1;
+    reward = 50 / (2 ** era);
+  }
+
+  return Math.min(BTC_MAX_SUPPLY, total);
+}
+
+function buildS15GoldSnapshot(raw) {
+  const marketCapUsd = parseSuffixedUsdNumber(raw?.marketCap);
+  const priceUsdPerOunce = parseSuffixedUsdNumber(raw?.price);
+  const marketCapTrillions = Number.isFinite(marketCapUsd) ? Number((marketCapUsd / 1e12).toFixed(2)) : null;
+
+  return {
+    id: String(raw?.id || 'GOLD').toUpperCase(),
+    market_cap_usd: marketCapUsd,
+    market_cap_trillions: marketCapTrillions,
+    price_usd_per_ounce: priceUsdPerOunce,
+    change_today_pct: parsePercentValue(raw?.changeTodayPct),
+    source: String(raw?.source || 'companiesmarketcap.com'),
+    page_url: typeof raw?.url === 'string' ? raw.url : 'https://companiesmarketcap.com/gold/marketcap/',
+    assets_url: typeof raw?.assetsUrl === 'string' ? raw.assetsUrl : 'https://companiesmarketcap.com/assets-by-market-cap/',
+    scraper_cached_at: typeof raw?._meta?.cachedAt === 'string' ? raw._meta.cachedAt : null,
+    scraper_name: typeof raw?._meta?.scraper === 'string' ? raw._meta.scraper : null,
+  };
+}
+
 function toChartPoint(ts, price) {
   return {
     ts,
@@ -444,6 +525,17 @@ function validateArray(value) {
 
 function validateObject(value) {
   return Boolean(value && typeof value === 'object');
+}
+
+function validateS15GoldPayload(value) {
+  return Boolean(
+    value
+      && typeof value === 'object'
+      && Number.isFinite(value.market_cap_usd)
+      && value.market_cap_usd > 0
+      && Number.isFinite(value.market_cap_trillions)
+      && value.market_cap_trillions > 0,
+  );
 }
 
 function validateCountryBusinessPayload(value) {
@@ -1600,23 +1692,52 @@ export async function getCoingeckoBitcoinMarketChartPayload({ days = 365 } = {})
   );
 }
 
-function getGoldMarketCapForTimestamp(ts) {
-  const date = new Date(ts);
-  const key = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
-  return S15_GOLD_MARKET_CAP_MAP[key] ?? 18;
+async function getS15GoldMarketCapSnapshotPayload() {
+  const proxyUrl = `${SCRAPER_BASE_URL}${S15_GOLD_SCRAPER_PATH}`;
+
+  return getFeed(
+    's15GoldMarketCapCurrent',
+    async () => {
+      const raw = await fetchJsonWithTimeout(proxyUrl);
+      const snapshot = buildS15GoldSnapshot(raw);
+      if (!validateS15GoldPayload(snapshot)) {
+        throw new PublicFeedError('Zatobox gold market-cap payload is incomplete');
+      }
+      return snapshot;
+    },
+    validateS15GoldPayload,
+  );
 }
 
 export async function getS15BtcVsGoldMarketCapPayload() {
-  const payload = await getCoingeckoBitcoinMarketChartPayload({ days: 365 });
-  const raw = payload?.data || payload;
-  const marketCaps = Array.isArray(raw?.market_caps) ? raw.market_caps : [];
+  const [historyPayload, btcRatesPayload, goldPayload] = await Promise.all([
+    getBinanceBtcHistoryPayload({ days: 1825, interval: '1d' }),
+    getBtcRates(),
+    getS15GoldMarketCapSnapshotPayload(),
+  ]);
 
-  const points = marketCaps
-    .filter((entry, index) => index % 3 === 0 && Array.isArray(entry) && entry.length >= 2)
-    .map(([ts, btcMarketCap]) => {
-      const bitcoin = Number((Number(btcMarketCap) / 1e12).toFixed(2));
-      const gold = Number(getGoldMarketCapForTimestamp(ts).toFixed(2));
-      const ratio = gold > 0 ? Number(((bitcoin / gold) * 100).toFixed(2)) : null;
+  const historyPoints = Array.isArray(historyPayload?.data) ? historyPayload.data : [];
+  const goldSnapshot = goldPayload?.data || goldPayload;
+  const gold = Number(goldSnapshot?.market_cap_trillions);
+  const currentBtcUsd = Number(btcRatesPayload?.btc_usd);
+  const currentTs = Date.now();
+
+  if (!Number.isFinite(gold) || gold <= 0) {
+    throw new PublicFeedError('Gold market-cap snapshot is unavailable');
+  }
+
+  const points = historyPoints
+    .filter((point, index) => index % 3 === 0)
+    .map((point) => {
+      const ts = Number(point?.ts);
+      const price = Number(point?.price);
+      const supply = estimateBitcoinCirculatingSupply(ts);
+      if (!Number.isFinite(ts) || !Number.isFinite(price) || price <= 0 || !Number.isFinite(supply) || supply <= 0) {
+        return null;
+      }
+
+      const bitcoin = Number(((price * supply) / 1e12).toFixed(2));
+      const ratio = Number(((bitcoin / gold) * 100).toFixed(2));
       const gap = Number((gold - bitcoin).toFixed(2));
 
       return {
@@ -1628,22 +1749,59 @@ export async function getS15BtcVsGoldMarketCapPayload() {
         gap,
       };
     })
-    .filter((point) => Number.isFinite(point.bitcoin) && Number.isFinite(point.gold));
+    .filter(Boolean);
+
+  if (Number.isFinite(currentBtcUsd) && currentBtcUsd > 0) {
+    const latestSupply = estimateBitcoinCirculatingSupply(currentTs);
+    const latestBitcoin = Number(((currentBtcUsd * latestSupply) / 1e12).toFixed(2));
+    const latestPoint = {
+      ts: currentTs,
+      date: new Date(currentTs).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit', timeZone: 'UTC' }),
+      bitcoin: latestBitcoin,
+      gold,
+      ratio: Number(((latestBitcoin / gold) * 100).toFixed(2)),
+      gap: Number((gold - latestBitcoin).toFixed(2)),
+    };
+
+    const previousTs = Number(points.at(-1)?.ts);
+    if (!Number.isFinite(previousTs) || currentTs - previousTs > (12 * 60 * 60 * 1000)) {
+      points.push(latestPoint);
+    } else {
+      points[points.length - 1] = latestPoint;
+    }
+  }
+
+  if (!points.length) {
+    throw new PublicFeedError('BTC vs Gold comparison has no chart points');
+  }
 
   const latest = points.at(-1) || null;
+  const updatedAtCandidates = [historyPayload?.updated_at, btcRatesPayload?.updated_at, goldPayload?.updated_at]
+    .map((value) => parseIsoDate(value)?.getTime())
+    .filter(Number.isFinite);
+  const nextUpdateCandidates = [historyPayload?.next_update_at, btcRatesPayload?.next_update_at, goldPayload?.next_update_at]
+    .map((value) => parseIsoDate(value)?.getTime())
+    .filter(Number.isFinite);
+  const isFallback = Boolean(historyPayload?.is_fallback || goldPayload?.is_fallback);
+  const fallbackParts = [historyPayload?.fallback_note, goldPayload?.fallback_note].filter(Boolean);
 
   return {
     data: {
       points,
       latest,
-      gold_reference: 'local_static_map',
+      gold_reference: 'current_market_cap_snapshot',
+      gold_market_cap_trillions: gold,
+      gold_price_usd_per_ounce: goldSnapshot?.price_usd_per_ounce ?? null,
+      gold_change_today_pct: goldSnapshot?.change_today_pct ?? null,
+      btc_supply_methodology: `Estimated from Bitcoin issuance schedule using ${BTC_CURRENT_HALVING_REWARD} BTC block reward and 10-minute target blocks`,
     },
-    updated_at: payload?.updated_at || new Date().toISOString(),
-    next_update_at: payload?.next_update_at || null,
-    source_provider: payload?.source_provider || 'coingecko',
-    comparison_source: 'local_gold_market_cap_map',
-    is_fallback: Boolean(payload?.is_fallback),
-    fallback_note: payload?.fallback_note || null,
+    updated_at: updatedAtCandidates.length ? normalizeTimestamp(new Date(Math.max(...updatedAtCandidates))) : new Date().toISOString(),
+    next_update_at: nextUpdateCandidates.length ? normalizeTimestamp(new Date(Math.min(...nextUpdateCandidates))) : null,
+    source_provider: 'binance + zatobox',
+    source_url: `${historyPayload?.source_url || ''} | ${goldPayload?.source_url || ''}`,
+    comparison_source: 'binance_price_x_protocol_supply_vs_zatobox_companiesmarketcap_gold',
+    is_fallback: isFallback,
+    fallback_note: fallbackParts.length ? fallbackParts.join(' | ') : null,
   };
 }
 
@@ -1663,7 +1821,7 @@ function historyFeedKey(days, interval) {
 }
 
 export async function getBinanceBtcHistoryPayload({ days = 365, interval: rawInterval = '1d' } = {}) {
-  const normalizedDays = [1, 7, 30, 90, 365, 1825].includes(Number(days)) ? Number(days) : 365;
+  const normalizedDays = [1, 7, 30, 90, 365, 1825, 2025].includes(Number(days)) ? Number(days) : 365;
   const interval = VALID_HISTORY_INTERVALS.has(rawInterval) ? rawInterval : '1d';
   const key = historyFeedKey(normalizedDays, interval);
   const needed = candlesNeeded(interval, normalizedDays);

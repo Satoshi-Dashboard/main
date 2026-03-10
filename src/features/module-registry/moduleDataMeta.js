@@ -96,11 +96,20 @@ const MODULE_DATA_META = {
     stripTitle: 'Total Global Asset Values',
   },
   'bitcoin-vs-gold-chart': {
-    providers: [{ name: 'CoinGecko', url: 'https://www.coingecko.com/en/api' }],
-    refreshMinutes: 60,
+    providers: [
+      { name: 'Binance', url: 'https://api.binance.com' },
+      { name: 'Zatobox', url: 'https://api.zatobox.io/api/scrape/companiesmarketcap-gold' },
+    ],
+    refreshRangeLabel: 'spot/history 5m + gold 15m',
+    showTitleInStrip: true,
+    stripTitle: 'Market Cap Comparison',
   },
   'bitcoin-mayer-multiple': {
-    ...UNDER_CONSTRUCTION_META,
+    providers: [{ name: 'Binance', url: 'https://api.binance.com' }],
+    refreshRangeLabel: 'spot 10s / history 60m',
+    responsiveScroll: true,
+    showTitleInStrip: true,
+    stripTitle: 'Mayer Multiple',
   },
   'bitcoin-price-performance': {
     ...UNDER_CONSTRUCTION_META,

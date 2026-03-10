@@ -226,6 +226,25 @@ After any color UX/UI modification:
 4. Run `npm run build` and verify no visual regressions in touched modules.
 5. Clear React Hooks dependency warnings (`react-hooks/exhaustive-deps`) in touched frontend files before delivery.
 
+## Dual-metric hero section (mandatory pattern)
+
+When a module compares two assets or values side by side (e.g., BTC vs Gold, asset A vs asset B):
+
+1. Use a `flex` row to display both metrics as equally prominent hero numbers.
+   - Each metric gets its own labeled column (`min-w-0 flex-1`).
+   - Separate columns with a thin vertical divider (`w-px opacity-20`).
+   - Do not bury one asset's value inside a secondary metadata row when it is a primary data point.
+
+2. Label each column explicitly above its number (e.g., "Bitcoin" / "Gold") using a micro-caps label at `0.58rem`.
+   - BTC column label: `--accent-bitcoin`
+   - Counterpart column label: contextually appropriate neutral (e.g., silver/gray for gold)
+
+3. Delta / change rows belong below the flex block, scoped to the primary asset (BTC), not inside the flex columns.
+
+4. Skeleton loading states must mirror the flex structure: two side-by-side skeleton blocks.
+
+5. Apply `min-h-[2.8rem]` to each number container for footprint stability across loading / live states.
+
 ## New module example rules (mandatory)
 
 When creating any new frontend module, agents must follow the project example pattern used in active modules.
@@ -243,6 +262,9 @@ When creating any new frontend module, agents must follow the project example pa
    - confirm SEO metadata in `src/features/module-registry/moduleSEO.js`
    - confirm responsive/top/bottom overlay behavior in `src/features/module-player/ModulePage.jsx`
 7. New modules are non-compliant if they skip this example baseline.
+8. If the owner asks to clone or match an existing module's UX/UI, preserve the source module's structural treatment unless they explicitly ask to change it.
+   - Example: if the reference chart is full-bleed and not wrapped in a card, do not add a card wrapper.
+   - Do not add extra charts, legends, metadata rows, or layout sections that the reference module does not use unless requested.
 
 ## Frontend language rule (mandatory)
 
@@ -348,3 +370,11 @@ When creating any new frontend module, agents must follow the project example pa
 - **Acción Realizada/Corrección:** Se reforzó la política frontend para exigir shells con altura mínima consistente alrededor de numerales críticos y layouts responsivos que permitan wrap/stack antes de comprimir o recortar el contador.
 - **Nueva/Modificada Regla o Directriz:** Los estados loading/fallback/live de métricas animadas deben compartir una huella visual estable y los contenedores responsivos deben priorizar reflow legible frente a filas rígidas en tablet/móvil.
 - **Justificación:** Reduce clipping, saltos bruscos y sensación de UI rota en módulos live con cifras variables sin degradar el comportamiento de escritorio.
+
+- **Fecha de la Actualización:** `2026-03-09`
+- **Archivo(s) Afectado(s):** `.claude/FRONTEND_COLOR_UX_UI_RULES.md`
+- **Tipo de Evento/Contexto:** Corrección de clon UX/UI demasiado libre
+- **Descripción del Evento Original:** Al implementar `S16` como referencia de `S02`, la primera versión añadió tarjetas, una segunda gráfica y metadata extra que no respetaban suficientemente la estructura visual del módulo origen pedida por el owner.
+- **Acción Realizada/Corrección:** Se reforzó la política para exigir que las tareas de clon/match preserven la estructura del módulo de referencia salvo instrucción explícita en contra.
+- **Nueva/Modificada Regla o Directriz:** Cuando el owner pide replicar el estilo de un módulo existente, se debe mantener su tratamiento estructural principal (cantidad de gráficas, framing, ubicación de controles y densidad de metadata) y evitar adornos o secciones nuevas no solicitadas.
+- **Justificación:** Reduce iteraciones evitables y ayuda a que futuros cambios respeten con mayor fidelidad la intención visual del owner desde la primera entrega.

@@ -16,12 +16,14 @@ const RANGES = [
   { label: '3M', days: 90 },
   { label: '6M', days: 180 },
   { label: '1Y', days: 365 },
+  { label: 'MAX', days: Infinity },
 ];
 
 const RANGE_TEXT = {
   '3M': 'Past 3 Months',
   '6M': 'Past 6 Months',
   '1Y': 'Past Year',
+  'MAX': 'All Available History',
 };
 
 function ComparisonCursor({ points, height }) {
@@ -137,6 +139,7 @@ export default function S15_BTCvsGold() {
   const [loading, setLoading] = useState(true);
   const [hoverData, setHoverData] = useState(null);
   const [showGold, setShowGold] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -144,9 +147,15 @@ export default function S15_BTCvsGold() {
     (async () => {
       try {
         const nextPayload = await fetchJson('/api/s15/btc-vs-gold-market-cap', { timeout: 8000, cache: 'no-store' });
-        if (active) setPayload(nextPayload);
+        if (active) {
+          setPayload(nextPayload);
+          setError(null);
+        }
       } catch {
-        if (active) setPayload(null);
+        if (active) {
+          setPayload((current) => current);
+          setError('Live comparison is temporarily unavailable.');
+        }
       } finally {
         if (active) setLoading(false);
       }
@@ -162,6 +171,7 @@ export default function S15_BTCvsGold() {
 
   const chartData = useMemo(() => {
     if (!points.length) return [];
+    if (!Number.isFinite(activeRange.days)) return points;
     const lastTs = Number(points.at(-1)?.ts);
     if (!Number.isFinite(lastTs)) return points;
     const cutoff = lastTs - activeRange.days * DAY_MS;
@@ -201,21 +211,38 @@ export default function S15_BTCvsGold() {
   return (
     <div className="flex h-full w-full flex-col bg-[#111111] px-3.5 pb-3.5 pt-4 sm:px-5 sm:pb-4 sm:pt-5 lg:px-[22px] lg:pb-4 lg:pt-5">
       <div className="flex flex-shrink-0 flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-start sm:gap-4">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           {!loading && hoveredPoint ? (
             <>
-              <div className="flex min-h-[3rem] max-w-full items-center font-mono font-bold tabular-nums leading-none" style={{ fontSize: 'clamp(1.55rem, 5.6vw, 2.9rem)' }}>
-                <AnimatedMetric value={hoveredPoint.bitcoin} variant="number" decimals={2} prefix="$" suffix="T" inline />
+              {/* Dual market cap hero — flex row */}
+              <div className="flex min-w-0 items-start gap-3 sm:gap-5">
+                {/* BTC market cap */}
+                <div className="min-w-0 flex-1">
+                  <div className="mb-1 font-mono text-[0.58rem] font-bold uppercase tracking-widest" style={{ color: 'var(--accent-bitcoin)' }}>
+                    Bitcoin
+                  </div>
+                  <div className="flex min-h-[2.8rem] max-w-full items-center font-mono font-bold tabular-nums leading-none" style={{ fontSize: 'clamp(1.25rem, 4.5vw, 2.4rem)' }}>
+                    <AnimatedMetric value={hoveredPoint.bitcoin} variant="number" decimals={2} prefix="$" suffix="T" inline />
+                  </div>
+                </div>
+
+                {/* Divider */}
+                <div className="mt-5 w-px self-stretch opacity-20" style={{ background: 'white' }} />
+
+                {/* Gold market cap */}
+                <div className="min-w-0 flex-1">
+                  <div className="mb-1 font-mono text-[0.58rem] font-bold uppercase tracking-widest" style={{ color: 'rgba(214,214,214,0.72)' }}>
+                    Gold
+                  </div>
+                  <div className="flex min-h-[2.8rem] max-w-full items-center font-mono font-bold tabular-nums leading-none" style={{ fontSize: 'clamp(1.25rem, 4.5vw, 2.4rem)', color: 'rgba(214,214,214,0.95)' }}>
+                    <AnimatedMetric value={hoveredPoint.gold} variant="number" decimals={2} prefix="$" suffix="T" inline color="rgba(214,214,214,0.95)" />
+                  </div>
+                </div>
               </div>
 
               <div className="mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 font-mono tabular-nums" style={{ fontSize: '0.82rem' }}>
                 {hoverData ? (
-                  <>
-                    <span className="uppercase tracking-wide" style={{ color: 'rgba(255,255,255,0.5)' }}>{hoveredPoint.date}</span>
-                    <span style={{ color: 'rgba(255,255,255,0.38)' }}>
-                      Gold <AnimatedMetric value={hoveredPoint.gold} variant="number" decimals={2} prefix="$" suffix="T" inline />
-                    </span>
-                  </>
+                  <span className="uppercase tracking-wide" style={{ color: 'rgba(255,255,255,0.5)' }}>{hoveredPoint.date}</span>
                 ) : hasDelta ? (
                   <>
                     <span style={{ color: isUp ? 'var(--accent-green)' : 'var(--accent-red)' }}>
@@ -234,18 +261,33 @@ export default function S15_BTCvsGold() {
               <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono" style={{ fontSize: 'var(--fs-micro)', color: 'var(--text-secondary)' }}>
                 {latestPoint ? (
                   <>
-                    <span>Gold now <AnimatedMetric value={latestPoint.gold} variant="number" decimals={2} prefix="$" suffix="T" inline color="var(--text-primary)" /></span>
-                    <span className="hidden h-1 w-1 rounded-full bg-white/20 sm:block" />
                     <span>BTC = <AnimatedMetric value={latestPoint.ratio} variant="percent" decimals={2} inline color="var(--accent-bitcoin)" /> of gold</span>
                     {updatedLabel ? <><span className="hidden h-1 w-1 rounded-full bg-white/20 sm:block" /><span>Synced {updatedLabel}</span></> : null}
+                    {payload?.data?.gold_reference === 'current_market_cap_snapshot' ? <><span className="hidden h-1 w-1 rounded-full bg-white/20 sm:block" /><span>Gold line uses current market cap snapshot</span></> : null}
                   </>
                 ) : null}
               </div>
+
+              {error ? (
+                <div className="mt-2 font-mono" style={{ fontSize: '0.72rem', color: 'var(--accent-red)' }}>
+                  {error}
+                </div>
+              ) : null}
             </>
           ) : (
             <>
-              <div className="skeleton max-w-full" style={{ width: 'min(220px, 72vw)', height: '2.9rem', borderRadius: 6, marginBottom: 10 }} />
-              <div className="skeleton" style={{ width: 180, height: '1rem', borderRadius: 4 }} />
+              <div className="flex items-start gap-3 sm:gap-5">
+                <div className="flex-1">
+                  <div className="skeleton mb-2" style={{ width: 36, height: '0.6rem', borderRadius: 3 }} />
+                  <div className="skeleton" style={{ width: 'min(140px, 42vw)', height: '2.4rem', borderRadius: 6 }} />
+                </div>
+                <div className="mt-4 w-px self-stretch opacity-10" style={{ background: 'white' }} />
+                <div className="flex-1">
+                  <div className="skeleton mb-2" style={{ width: 30, height: '0.6rem', borderRadius: 3 }} />
+                  <div className="skeleton" style={{ width: 'min(140px, 42vw)', height: '2.4rem', borderRadius: 6 }} />
+                </div>
+              </div>
+              <div className="skeleton mt-3" style={{ width: 180, height: '1rem', borderRadius: 4 }} />
             </>
           )}
         </div>
@@ -313,7 +355,7 @@ export default function S15_BTCvsGold() {
         {latestPoint ? (
           <>
             <MetricBox label="BTC HIGH" value={Math.max(...chartData.map((point) => point.bitcoin))} color="var(--accent-bitcoin)" />
-            <MetricBox label="GOLD NOW" value={latestPoint.gold} color="rgba(214,214,214,0.9)" />
+            <MetricBox label="GOLD REF" value={latestPoint.gold} color="rgba(214,214,214,0.9)" />
             <div className="rounded-xl border border-white/10 px-3 py-3 text-center">
               <div className="font-mono font-bold uppercase tracking-widest" style={{ fontSize: '0.62rem', color: 'var(--accent-green)', marginBottom: 5 }}>
                 BTC / GOLD
