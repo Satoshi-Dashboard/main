@@ -267,6 +267,19 @@ When a module compares two assets or values side by side (e.g., BTC vs Gold, ass
 
 5. Apply `min-h-[2.8rem]` to each number container for footprint stability across loading / live states.
 
+## Equal-width metric rows (mandatory for repeated stat triplets)
+
+When a module renders repeated metric rows beneath a chart/gauge (example: three KPI cards in one row, followed by three fee tiles):
+
+1. Desktop columns must use a stable equal-width grid instead of content-sized flex distribution.
+   - Long values, short values, and unit suffixes must not push sibling metrics out of alignment.
+
+2. Repeated separators must belong to the shared grid/container, not depend on per-value content width.
+   - Vertical dividers should stay fixed even when one metric has more digits or a wrapped label.
+
+3. Loading, fallback, and live states must preserve the same column footprint.
+   - A metric row is non-compliant if the columns visibly jump or drift between sources on desktop.
+
 ## New module example rules (mandatory)
 
 When creating any new frontend module, agents must follow the project example pattern used in active modules.
@@ -424,3 +437,11 @@ When creating any new frontend module, agents must follow the project example pa
 - **Acción Realizada/Corrección:** Se reforzó la política frontend para exigir que labels live reutilizados entre módulos compartan exactamente la misma fuente/derivación o, en caso contrario, se renombren para reflejar la diferencia.
 - **Nueva/Modificada Regla o Directriz:** Las métricas live repetidas en distintos módulos no pueden cambiar silenciosamente de banda de fee, fallback o fórmula manteniendo el mismo label visible.
 - **Justificación:** Evita inconsistencias de producto difíciles de detectar, mejora la confianza del usuario en métricas repetidas y reduce regresiones de semántica cuando varios módulos consumen el mismo dominio de datos.
+
+- **Fecha de la Actualización:** `2026-03-11`
+- **Archivo(s) Afectado(s):** `.claude/FRONTEND_COLOR_UX_UI_RULES.md`
+- **Tipo de Evento/Contexto:** Corrección de alineación desktop en filas métricas
+- **Descripción del Evento Original:** En el módulo de mempool, las filas de métricas bajo el gauge podían desalinearse en pantallas de PC porque el layout dependía del ancho variable de cada cifra y de sus unidades.
+- **Acción Realizada/Corrección:** Se añadió una regla para exigir grids de columnas iguales y separadores estables en filas repetidas de KPIs/fees bajo charts o gauges.
+- **Nueva/Modificada Regla o Directriz:** Las filas repetidas de métricas en desktop deben usar columnas de ancho estable para que cambios de longitud en valores, labels o unidades no desplacen visualmente a los bloques hermanos.
+- **Justificación:** Evita paneles descuadrados cuando los datos live cambian entre fuentes o magnitudes distintas y mejora la percepción de orden en vistas analíticas.

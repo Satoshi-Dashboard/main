@@ -111,7 +111,7 @@ function MetricTile({ label, value, unit = null, decimals = 0, loading }) {
   const hasValue = value != null;
 
   return (
-    <div className="flex flex-col items-center gap-2 text-center">
+    <div className="flex w-full min-w-0 flex-col items-center gap-2 text-center">
       {loading ? (
         <div className="skeleton" style={{ width: 96, height: '1.8em' }} />
       ) : hasValue ? (
@@ -135,7 +135,7 @@ function BottomTile({ label, value, unit = null, decimals = 0, loading, color = 
   const hasValue = value != null;
 
   return (
-    <div className="flex min-w-[92px] flex-1 basis-[132px] flex-col items-center gap-2 border-[#2a2a2a] px-4 py-1 text-center sm:flex-none sm:basis-auto sm:px-6">
+    <div className="flex w-full min-w-0 flex-col items-center gap-2 border-[#2a2a2a] px-2 py-1 text-center sm:px-4">
       {loading ? (
         <div className="skeleton" style={{ width: 56, height: '2em' }} />
       ) : hasValue ? (
@@ -204,16 +204,18 @@ function MempoolPanel({
         )}
       </div>
 
-      <div className="flex w-full max-w-[700px] flex-col items-center gap-4 border-y border-[#2a2a2a] px-3 py-4 sm:flex-row sm:items-end sm:justify-center sm:gap-8 sm:px-8 sm:py-5">
+      <div className="grid w-full max-w-[760px] grid-cols-1 border-y border-[#2a2a2a] px-3 py-2 md:grid-cols-3 md:divide-x md:divide-[#2a2a2a] md:px-6">
         {stats.map((stat, index) => (
-          <div key={stat.label} className="contents">
-            {index > 0 ? <div className="h-px w-28 bg-[#2a2a2a] sm:h-16 sm:w-px" /> : null}
+          <div
+            key={stat.label}
+            className={`flex justify-center py-4 ${index > 0 ? 'border-t border-[#2a2a2a] md:border-t-0' : ''}`}
+          >
             <MetricTile {...stat} loading={loading} />
           </div>
         ))}
       </div>
 
-      <div className="flex w-full flex-wrap items-center justify-center gap-1 sm:w-auto sm:flex-nowrap sm:items-end sm:gap-0 sm:divide-x sm:divide-[#2a2a2a]">
+      <div className="grid w-full max-w-[560px] grid-cols-3 divide-x divide-[#2a2a2a]">
         {footerTiles.map((tile) => (
           <BottomTile key={tile.label} {...tile} loading={loading} />
         ))}
