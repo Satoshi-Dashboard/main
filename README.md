@@ -59,6 +59,7 @@ It is designed for people who want more than a price ticker: Bitcoin builders, c
 - React Router 7
 - Vite 7
 - Vercel Web Analytics
+- Vercel Speed Insights
 - Tailwind CSS 4
 - Express 4
 - TanStack React Query
@@ -378,7 +379,7 @@ Notes:
 
 - The serverless function is pinned to region `fra1`
 - Vercel deploys use the same Express app used locally
-- Production traffic analytics are collected through `@vercel/analytics` and require Web Analytics to be enabled in the Vercel project dashboard
+- Production traffic analytics and custom events are collected through `@vercel/analytics`, and performance telemetry through `@vercel/speed-insights`; both products must be enabled in the Vercel project dashboard to populate their panels
 - Built assets under `/assets/*` are served with `Cache-Control: public, max-age=31536000, immutable`
 - HTML entry routes continue to resolve through rewrites rather than long-lived immutable caching so new deploys propagate cleanly
 - If you add new remote origins, update `vercel.json` CSP and related header rules
@@ -487,3 +488,11 @@ Satoshi Dashboard is open-source under the MIT License. See `LICENSE.txt`.
 - **Acción Realizada/Corrección:** Se añadió Vercel Web Analytics al stack documentado y se incorporó una nota explícita en la sección de despliegue para recordar el requisito de activación en Vercel.
 - **Nueva/Modificada Regla o Directriz:** Cuando el proyecto adopte una capacidad operativa ligada al runtime o al panel de Vercel, el `README.md` debe reflejar tanto la dependencia instalada como cualquier prerrequisito de activación fuera del repositorio.
 - **Justificación:** Reduce configuraciones incompletas donde el código ya emite eventos pero el owner no ve métricas en el panel por faltar la activación del servicio en Vercel.
+
+- **Fecha de la Actualización:** `2026-03-11`
+- **Archivo(s) Afectado(s):** `README.md`
+- **Tipo de Evento/Contexto:** Expansión de observabilidad frontend en Vercel
+- **Descripción del Evento Original:** El dashboard añadió custom events para rutas clave y empezó a instrumentar Speed Insights, pero la documentación operativa no reflejaba todavía el alcance completo de la observabilidad activa en producción.
+- **Acción Realizada/Corrección:** Se amplió la documentación para incluir Vercel Speed Insights en el stack y para dejar claro que el despliegue ahora emite pageviews, eventos custom de navegacion/landing y telemetría de rendimiento.
+- **Nueva/Modificada Regla o Directriz:** Cuando se amplíe la observabilidad del producto con nuevas categorías de eventos o performance telemetry, el `README.md` debe describir tanto la herramienta añadida como el tipo de señal que se espera ver en Vercel.
+- **Justificación:** Facilita que futuros agentes y maintainers entiendan por qué aparecen nuevas métricas en Vercel y evita diagnosticar como bug una integración que solo estaba pobremente documentada.

@@ -1,5 +1,6 @@
 import { Link, NavLink } from 'react-router-dom';
 import { SEO_BLOG_PATH, SEO_HUB_PATH } from '@/features/seo/content/seoRoutes.js';
+import { trackSeoNavigationClick } from '@/shared/lib/analytics.js';
 
 const NAV_LINKS = [
   { to: '/', label: 'Dashboard' },
@@ -23,7 +24,11 @@ export default function SeoChrome({ children }) {
         <header className="border-b border-white/8 py-5 sm:py-6">
           <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
             <div className="space-y-2">
-              <Link to="/" className="inline-flex items-center gap-3 text-white transition hover:opacity-90">
+              <Link
+                to="/"
+                onClick={() => trackSeoNavigationClick({ label: 'Satoshi Dashboard', destination: '/', surface: 'seo-header-logo' })}
+                className="inline-flex items-center gap-3 text-white transition hover:opacity-90"
+              >
                 <img src="/logo.svg" alt="Satoshi Dashboard" className="h-8 w-auto" />
                 <span className="font-mono text-[13px] uppercase tracking-[0.22em] text-[color:var(--accent-bitcoin)]">
                   Satoshi Dashboard
@@ -36,7 +41,13 @@ export default function SeoChrome({ children }) {
 
             <nav className="flex flex-wrap items-center gap-5">
               {NAV_LINKS.map((item) => (
-                <NavLink key={item.to} to={item.to} className={navClassName} end={item.to === '/'}>
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  className={navClassName}
+                  end={item.to === '/'}
+                  onClick={() => trackSeoNavigationClick({ label: item.label, destination: item.to, surface: 'seo-header-nav' })}
+                >
                   {item.label}
                 </NavLink>
               ))}
@@ -58,9 +69,9 @@ export default function SeoChrome({ children }) {
             </div>
 
             <div className="flex flex-wrap gap-5 text-[12px] uppercase tracking-[0.16em] text-white/58">
-              <Link to="/" className="transition hover:text-white">Open dashboard</Link>
-              <Link to={SEO_HUB_PATH} className="transition hover:text-white">Open landing</Link>
-              <Link to={SEO_BLOG_PATH} className="transition hover:text-white">Read blog</Link>
+              <Link to="/" onClick={() => trackSeoNavigationClick({ label: 'Open dashboard', destination: '/', surface: 'seo-footer-nav' })} className="transition hover:text-white">Open dashboard</Link>
+              <Link to={SEO_HUB_PATH} onClick={() => trackSeoNavigationClick({ label: 'Open landing', destination: SEO_HUB_PATH, surface: 'seo-footer-nav' })} className="transition hover:text-white">Open landing</Link>
+              <Link to={SEO_BLOG_PATH} onClick={() => trackSeoNavigationClick({ label: 'Read blog', destination: SEO_BLOG_PATH, surface: 'seo-footer-nav' })} className="transition hover:text-white">Read blog</Link>
             </div>
           </div>
         </footer>

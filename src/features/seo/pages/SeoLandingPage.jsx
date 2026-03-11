@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import SeoChrome from '@/features/seo/components/SeoChrome.jsx';
 import { FIRST_MODULE, getModulePath } from '@/features/module-registry/modules.js';
@@ -9,6 +10,7 @@ import {
 } from '@/features/seo/content/seoContent.js';
 import { SEO_BLOG_PATH, SEO_HUB_PATH } from '@/features/seo/content/seoRoutes.js';
 import { absoluteUrl, DEFAULT_OG_IMAGE, SITE_URL, usePageSEO } from '@/shared/hooks/usePageSEO.js';
+import { trackLandingCtaClick, trackLandingViewed } from '@/shared/lib/analytics.js';
 
 const LANDING_TITLE = 'Satoshi Dashboard Landing Page | Bitcoin Price, Nodes, Tools and Blog';
 const LANDING_DESCRIPTION = 'A minimal landing page and editorial index for Satoshi Dashboard, built to explain the product, surface high-intent Bitcoin topics, and route visitors into the live dashboard.';
@@ -115,6 +117,10 @@ export default function SeoLandingPage() {
     schema: [WEB_APP_SCHEMA, SOFTWARE_SCHEMA, FAQ_SCHEMA, BREADCRUMB_SCHEMA],
   });
 
+  useEffect(() => {
+    trackLandingViewed({ path: SEO_HUB_PATH });
+  }, []);
+
   return (
     <SeoChrome>
       <section className="grid gap-10 border-b border-white/8 pb-12 lg:grid-cols-[minmax(0,1.2fr)_280px] lg:pb-16">
@@ -133,10 +139,18 @@ export default function SeoLandingPage() {
           </p>
 
           <div className="mt-8 flex flex-wrap gap-6 text-[12px] uppercase tracking-[0.18em] text-white/66">
-            <Link to={getModulePath(FIRST_MODULE)} className="border-b border-[color:var(--accent-bitcoin)] pb-1 text-white transition hover:text-[color:var(--accent-bitcoin)]">
+            <Link
+              to={getModulePath(FIRST_MODULE)}
+              onClick={() => trackLandingCtaClick({ label: 'Open dashboard', destination: getModulePath(FIRST_MODULE), section: 'hero-cta' })}
+              className="border-b border-[color:var(--accent-bitcoin)] pb-1 text-white transition hover:text-[color:var(--accent-bitcoin)]"
+            >
               Open dashboard
             </Link>
-            <Link to={SEO_BLOG_PATH} className="border-b border-white/20 pb-1 transition hover:text-white">
+            <Link
+              to={SEO_BLOG_PATH}
+              onClick={() => trackLandingCtaClick({ label: 'Open blog', destination: SEO_BLOG_PATH, section: 'hero-cta' })}
+              className="border-b border-white/20 pb-1 transition hover:text-white"
+            >
               Open blog
             </Link>
           </div>
@@ -166,6 +180,7 @@ export default function SeoLandingPage() {
           <Link
             key={item.title}
             to={item.to}
+            onClick={() => trackLandingCtaClick({ label: item.title, destination: item.to, section: 'highlights' })}
             className={[
               'group border-white/8 py-7 transition',
               index % 2 === 0 ? 'lg:border-r lg:pr-10' : 'lg:pl-10',

@@ -12,6 +12,7 @@ import { getModuleDataMeta } from '@/features/module-registry/moduleDataMeta.js'
 import { getModuleSEO } from '@/features/module-registry/moduleSEO.js';
 import { SEO_HUB_PATH } from '@/features/seo/content/seoRoutes.js';
 import { absoluteUrl, DEFAULT_OG_IMAGE, usePageSEO } from '@/shared/hooks/usePageSEO.js';
+import { trackModuleNavigation, trackModuleViewed, trackSeoNavigationClick } from '@/shared/lib/analytics.js';
 import { fetchBtcSpot } from '@/shared/services/priceApi.js';
 
 const BitcoinDonationQr = lazy(() => import('@/shared/components/common/BitcoinDonationQr.jsx'));
@@ -282,6 +283,14 @@ export default function ModulePage({ forcedSlug = null }) {
     schema: isNoindexPreview ? [] : moduleSchema,
   });
 
+  useEffect(() => {
+    trackModuleViewed(module, {
+      path: canonicalPath,
+      routeType: module.code === FIRST_MODULE.code ? 'root' : 'module',
+      slugBase: module.slugBase,
+    });
+  }, [canonicalPath, module]);
+
   const footerPage = useMemo(() => String(module.code || '').replace(/^S/i, ''), [module.code]);
   const footerTotal = useMemo(
     () => MODULES.reduce((max, item) => {
@@ -408,15 +417,36 @@ export default function ModulePage({ forcedSlug = null }) {
   }, [slug, navigate]);
 
   const goToModule = useCallback(
-    (index) => {
-      navigate(getModulePath(MODULES[getWrappedIndex(index)]));
+    (index, options = {}) => {
+      const targetModule = MODULES[getWrappedIndex(index)];
+      trackModuleNavigation({
+        action: options.action || 'open',
+        surface: options.surface || 'module-shell',
+        currentModule: module,
+        targetModule,
+      });
+      navigate(getModulePath(targetModule));
     },
-    [navigate],
+    [module, navigate],
   );
 
   const goToHomeModule = useCallback(() => {
+    trackModuleNavigation({
+      action: 'home',
+      surface: 'header-logo',
+      currentModule: module,
+      targetModule: FIRST_MODULE,
+    });
     navigate('/');
-  }, [navigate]);
+  }, [module, navigate]);
+
+  const onOpenLanding = useCallback(() => {
+    trackSeoNavigationClick({
+      label: 'satoshi-dashboard',
+      destination: SEO_HUB_PATH,
+      surface: 'module-footer-brand',
+    });
+  }, []);
 
   useEffect(() => {
     const onKeyDown = (event) => {
@@ -430,10 +460,10 @@ export default function ModulePage({ forcedSlug = null }) {
 
       if (event.key === 'ArrowLeft') {
         event.preventDefault();
-        goToModule(currentIndex - 1);
+        goToModule(currentIndex - 1, { action: 'previous', surface: 'keyboard' });
       } else if (event.key === 'ArrowRight') {
         event.preventDefault();
-        goToModule(currentIndex + 1);
+        goToModule(currentIndex + 1, { action: 'next', surface: 'keyboard' });
       }
     };
 
@@ -676,6 +706,7 @@ export default function ModulePage({ forcedSlug = null }) {
         {/* Branding */}
         <Link
           to={SEO_HUB_PATH}
+          onClick={onOpenLanding}
           className="absolute left-1/2 top-1/2 hidden max-w-[34vw] -translate-x-1/2 -translate-y-1/2 items-center justify-center text-center tracking-[0.18em] text-white/24 transition-colors hover:text-white/60 sm:flex lg:max-w-none"
           style={{ fontSize: 'var(--fs-tag)' }}
           aria-label="Open landing page"
@@ -687,7 +718,7 @@ export default function ModulePage({ forcedSlug = null }) {
         <div className="flex items-center gap-1.5 text-white/50 sm:gap-2">
           <button
             type="button"
-            onClick={() => goToModule(currentIndex - 1)}
+            onClick={() => goToModule(currentIndex - 1, { action: 'previous', surface: 'pagination' })}
             className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 transition hover:border-white/35 hover:text-white sm:h-9 sm:w-9 lg:h-7 lg:w-7 lg:border-0"
             aria-label="Previous module"
           >
@@ -698,7 +729,7 @@ export default function ModulePage({ forcedSlug = null }) {
           </span>
           <button
             type="button"
-            onClick={() => goToModule(currentIndex + 1)}
+            onClick={() => goToModule(currentIndex + 1, { action: 'next', surface: 'pagination' })}
             className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 transition hover:border-white/35 hover:text-white sm:h-9 sm:w-9 lg:h-7 lg:w-7 lg:border-0"
             aria-label="Next module"
           >
