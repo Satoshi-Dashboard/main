@@ -19,6 +19,25 @@ const PROVIDER_LINKS = {
   bitnodes_scrape: 'https://bitnodes.io/nodes/',
 };
 
+// Fallback population in millions — used until World Bank API responds
+const POPULATION_FALLBACK = {
+  US: 335, DE: 84, FR: 68, GB: 68, CA: 40, NL: 17.9, CH: 8.7,
+  RU: 145, AU: 26, ES: 47, KR: 52, CZ: 10.9, SE: 10.5, IT: 60,
+  AT: 9.1, FI: 5.5, NO: 5.5, DK: 5.9, PL: 37.7, BE: 11.6,
+  SG: 6, HK: 7.5, JP: 125, CN: 1410, IN: 1440, BR: 215,
+  ZA: 62, MX: 130, AR: 46, CL: 19.6, CO: 52, PE: 33,
+  TR: 85, UA: 43, RO: 19, HU: 9.7, GR: 10.4, PT: 10.2,
+  IL: 9.7, AE: 9.9, SA: 36, EG: 105, NG: 220, KE: 56,
+  TH: 72, ID: 275, MY: 33, PH: 115, VN: 98, PK: 230,
+  BD: 170, TW: 23.6, NZ: 5.1, IE: 5.1, LU: 0.66, IS: 0.37,
+  LT: 2.8, LV: 1.8, EE: 1.3, SK: 5.5, SI: 2.1, HR: 3.9,
+  BG: 6.5, RS: 6.8, MD: 2.5, GE: 3.7, AM: 3, AZ: 10.1,
+  KZ: 19.5, UZ: 36, BY: 9.4, CY: 1.2, MT: 0.54,
+};
+
+const WB_POP_URL =
+  'https://api.worldbank.org/v2/country/all/indicator/SP.POP.TOTL?format=json&per_page=500&mrv=1';
+
 const NODE_DENSITY_SCALE = [
   { key: 'very-high', label: 'Very high', color: '#FF6A00', minNodes: 1001, legend: '> 1000' },
   { key: 'high', label: 'High', color: '#FF8C1A', minNodes: 201, legend: '> 200' },
@@ -26,6 +45,38 @@ const NODE_DENSITY_SCALE = [
   { key: 'low', label: 'Low', color: '#FFC266', minNodes: 11, legend: '> 10' },
   { key: 'trace', label: 'Trace', color: '#FFD9A0', minNodes: 1, legend: '<= 10' },
 ];
+
+// Thresholds in nodes per million inhabitants
+const NODE_PERCAPITA_SCALE = [
+  { key: 'very-high', label: 'Very high', color: '#FF6A00', minVal: 50, legend: '> 50 /M' },
+  { key: 'high',      label: 'High',      color: '#FF8C1A', minVal: 20, legend: '> 20 /M' },
+  { key: 'mid',       label: 'Mid',       color: '#FFAA33', minVal: 10, legend: '> 10 /M' },
+  { key: 'low',       label: 'Low',       color: '#FFC266', minVal: 5,  legend: '> 5 /M'  },
+  { key: 'trace',     label: 'Trace',     color: '#FFD9A0', minVal: 0,  legend: '<= 5 /M' },
+];
+
+function computePerCapitaScale(maxVal) {
+  if (!maxVal || maxVal <= 0) return NODE_PERCAPITA_SCALE;
+  const magnitude = Math.pow(10, Math.floor(Math.log10(maxVal)));
+  const niceMax = Math.ceil(maxVal / magnitude) * magnitude;
+  const t4 = Math.max(1, Math.round(niceMax * 0.50));
+  const t3 = Math.max(1, Math.round(niceMax * 0.25));
+  const t2 = Math.max(1, Math.round(niceMax * 0.10));
+  const t1 = Math.max(1, Math.round(niceMax * 0.05));
+  return [
+    { key: 'very-high', label: 'Very high', color: '#FF6A00', minVal: t4,    legend: `> ${t4} /M` },
+    { key: 'high',      label: 'High',      color: '#FF8C1A', minVal: t3,    legend: `> ${t3} /M` },
+    { key: 'mid',       label: 'Mid',       color: '#FFAA33', minVal: t2,    legend: `> ${t2} /M` },
+    { key: 'low',       label: 'Low',       color: '#FFC266', minVal: t1,    legend: `> ${t1} /M` },
+    { key: 'trace',     label: 'Trace',     color: '#FFD9A0', minVal: 0.001, legend: '> 0 /M'    },
+  ];
+}
+
+function getFillColorByPerCapita(perCapita, scale) {
+  const v = Number(perCapita) || 0;
+  if (v <= 0) return '#141414';
+  return ((scale || NODE_PERCAPITA_SCALE).find((s) => v >= s.minVal) || {}).color || '#FFD9A0';
+}
 
 function getFeatureCountryCode(feature) {
   const primary = String(feature?.properties?.ISO_A2 || feature?.properties?.iso_a2 || feature?.properties?.['ISO3166-1-Alpha-2'] || '').toUpperCase();
@@ -54,6 +105,40 @@ function normalizeCountryName(value) {
     .toLowerCase();
 }
 
+// Static fallback names for territories/microstates absent from most GeoJSON datasets
+const ISO_COUNTRY_NAMES = {
+  AD: 'Andorra',      AE: 'UAE',            AG: 'Antigua & Barbuda',
+  AI: 'Anguilla',     AW: 'Aruba',          BB: 'Barbados',
+  BH: 'Bahrain',      BL: 'St. Barthélemy', BM: 'Bermuda',
+  BN: 'Brunei',       BQ: 'Bonaire',        BS: 'Bahamas',
+  BT: 'Bhutan',       BV: 'Bouvet Island',  CC: 'Cocos Islands',
+  CK: 'Cook Islands', CV: 'Cape Verde',     CW: 'Curaçao',
+  CX: 'Christmas Island', DJ: 'Djibouti',   DM: 'Dominica',
+  EH: 'W. Sahara',    FJ: 'Fiji',           FK: 'Falkland Islands',
+  FM: 'Micronesia',   FO: 'Faroe Islands',  GD: 'Grenada',
+  GG: 'Guernsey',     GI: 'Gibraltar',      GL: 'Greenland',
+  GP: 'Guadeloupe',   GQ: 'Eq. Guinea',     GU: 'Guam',
+  GW: 'Guinea-Bissau',HK: 'Hong Kong',      HM: 'Heard Island',
+  IM: 'Isle of Man',  IO: 'British Indian Ocean',
+  JE: 'Jersey',       KI: 'Kiribati',       KM: 'Comoros',
+  KN: 'St. Kitts & Nevis', KY: 'Cayman Islands',
+  LC: 'St. Lucia',    LI: 'Liechtenstein',  MF: 'St. Martin',
+  MH: 'Marshall Islands', MO: 'Macao',      MP: 'N. Mariana Islands',
+  MQ: 'Martinique',   MS: 'Montserrat',     MT: 'Malta',
+  MU: 'Mauritius',    MV: 'Maldives',     NF: 'Norfolk Island', NR: 'Nauru',
+  NU: 'Niue',         PF: 'French Polynesia', PM: 'St. Pierre & Miquelon',
+  PN: 'Pitcairn',     PR: 'Puerto Rico',    PW: 'Palau',
+  RE: 'Réunion',      SC: 'Seychelles',     SH: 'St. Helena',
+  SJ: 'Svalbard',     SM: 'San Marino',     SS: 'South Sudan',
+  ST: 'São Tomé & Príncipe', SX: 'Sint Maarten',
+  TC: 'Turks & Caicos', TF: 'French S. Territories',
+  TK: 'Tokelau',      TL: 'Timor-Leste',   TO: 'Tonga',
+  TV: 'Tuvalu',       UM: 'U.S. Minor Islands',
+  VA: 'Vatican',      VC: 'St. Vincent',    VG: 'British Virgin Islands',
+  VI: 'U.S. Virgin Islands', VU: 'Vanuatu', WF: 'Wallis & Futuna',
+  WS: 'Samoa',        XK: 'Kosovo',        YT: 'Mayotte',
+};
+
 const COUNTRY_NAME_ALIASES = {
   'united states': 'united states of america',
   'russian federation': 'russia',
@@ -73,8 +158,9 @@ function getDensityStepByCount(count) {
 }
 
 function getFillColor(count) {
-  const step = getDensityStepByCount(count);
-  return step?.color || '#141414';
+  const value = Number(count) || 0;
+  if (value <= 0) return '#141414';
+  return getDensityStepByCount(value)?.color || '#141414';
 }
 
 function getDensityLabel(count) {
@@ -143,6 +229,11 @@ export default function S06_NodesMap() {
   const [isBreakdownExpanded, setIsBreakdownExpanded] = useState(false);
   const [isMetaExpanded, setIsMetaExpanded] = useState(false);
   const [isDensityExpanded, setIsDensityExpanded] = useState(false);
+  const [viewMode, setViewMode] = useState('country'); // 'country' | 'perCapita'
+  const [populationMap, setPopulationMap] = useState(POPULATION_FALLBACK);
+  const [popDataYear, setPopDataYear] = useState(null);
+  const [popSource, setPopSource] = useState('fallback'); // 'fallback' | 'worldbank' | 'cache'
+  const [popLastFetched, setPopLastFetched] = useState(null); // ISO timestamp of last WB fetch
   const [isCompactViewport, setIsCompactViewport] = useState(() => {
     if (typeof window === 'undefined') return false;
     return window.matchMedia('(max-width: 1023px)').matches;
@@ -219,6 +310,63 @@ export default function S06_NodesMap() {
     };
   }, []);
 
+  // Fetch World Bank population data — localStorage cache, TTL 24 h (data is annual)
+  useEffect(() => {
+    const CACHE_KEY = 'wb_pop_v1';
+    const TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+    let active = true;
+
+    const apply = (map, year, fetchedAt, source) => {
+      if (!active) return;
+      setPopulationMap((prev) => ({ ...prev, ...map }));
+      setPopDataYear(year);
+      setPopSource(source);
+      setPopLastFetched(fetchedAt);
+    };
+
+    // Try reading from localStorage first
+    try {
+      const raw = localStorage.getItem(CACHE_KEY);
+      if (raw) {
+        const cached = JSON.parse(raw);
+        const age = Date.now() - Number(cached.fetchedAt || 0);
+        if (age < TTL_MS && cached.map && Object.keys(cached.map).length > 0) {
+          apply(cached.map, cached.year, new Date(cached.fetchedAt).toISOString(), 'cache');
+          return () => { active = false; };
+        }
+      }
+    } catch { /* ignore parse errors */ }
+
+    // Cache miss or stale — fetch from World Bank
+    (async () => {
+      try {
+        const res = await fetch(WB_POP_URL);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
+        if (!active) return;
+        const entries = json[1];
+        if (!Array.isArray(entries)) return;
+        const map = {};
+        let year = null;
+        entries.forEach((entry) => {
+          const code = String(entry?.country?.id || '').toUpperCase();
+          const pop = Number(entry?.value);
+          if (!/^[A-Z]{2}$/.test(code)) return;
+          if (!Number.isFinite(pop) || pop <= 0) return;
+          map[code] = pop / 1_000_000;
+          if (!year) year = entry.date;
+        });
+        if (active && Object.keys(map).length > 0) {
+          const fetchedAt = Date.now();
+          try { localStorage.setItem(CACHE_KEY, JSON.stringify({ map, year, fetchedAt })); } catch { /* storage full */ }
+          apply(map, year, new Date(fetchedAt).toISOString(), 'worldbank');
+        }
+      } catch { /* keep fallback values */ }
+    })();
+
+    return () => { active = false; };
+  }, []);
+
   const isPending = payload?.status === 'pending' || !payload?.data;
   const isFallback = Boolean(payload?.is_fallback);
   const nextUpdateDelay = useMemo(() => formatNextUpdateDelay(payload?.next_update), [payload?.next_update]);
@@ -275,10 +423,12 @@ export default function S06_NodesMap() {
       const inferredCode = featureCodeByName.get(aliasedName) || '';
       const resolvedCode = /^[A-Z]{2}$/.test(directCode) ? directCode : inferredCode;
       const resolvedNameFromCode = featureNameByCode.get(resolvedCode) || '';
+      const isoFallbackName = ISO_COUNTRY_NAMES[resolvedCode] || '';
+      const displayName = resolvedNameFromCode || isoFallbackName;
       const baseName = isUnknownCountryValue(countryName)
-        ? (resolvedNameFromCode || (/^[A-Z]{2}$/.test(resolvedCode) ? resolvedCode : UNKNOWN_COUNTRY_LABEL))
-        : (countryName || resolvedNameFromCode || resolvedCode || UNKNOWN_COUNTRY_LABEL);
-      const label = resolvedCode && resolvedNameFromCode
+        ? (displayName || (/^[A-Z]{2}$/.test(resolvedCode) ? resolvedCode : UNKNOWN_COUNTRY_LABEL))
+        : (countryName || displayName || resolvedCode || UNKNOWN_COUNTRY_LABEL);
+      const label = resolvedCode && displayName
         ? `${baseName} (${resolvedCode})`
         : baseName;
 
@@ -300,12 +450,45 @@ export default function S06_NodesMap() {
     return map;
   }, [resolvedCountryRows]);
 
+  const perCapitaByCode = useMemo(() => {
+    const map = {};
+    resolvedCountryRows.forEach((row) => {
+      const code = row.country_code_resolved;
+      if (!/^[A-Z]{2}$/.test(code)) return;
+      if (populationMap[code] == null) return;
+      const total = (countsByCode[code] || 0);
+      map[code] = total / populationMap[code];
+    });
+    return map;
+  }, [resolvedCountryRows, countsByCode, populationMap]);
+
   const maxCount = useMemo(() => {
     if (!countryCounts.length) return 0;
     return Math.max(...countryCounts.map((x) => x.nodes));
   }, [countryCounts]);
 
+  const maxPerCapita = useMemo(() => {
+    const vals = Object.values(perCapitaByCode);
+    return vals.length ? Math.max(...vals) : 0;
+  }, [perCapitaByCode]);
+
+  const activePerCapitaScale = useMemo(() => computePerCapitaScale(maxPerCapita), [maxPerCapita]);
+
   const allCountries = useMemo(() => resolvedCountryRows, [resolvedCountryRows]);
+
+  const displayRows = useMemo(() => {
+    if (viewMode === 'country') return allCountries;
+    return allCountries
+      .filter((row) => {
+        const code = row.country_code_resolved;
+        return /^[A-Z]{2}$/.test(code) && populationMap[code] != null;
+      })
+      .map((row) => ({
+        ...row,
+        perCapita: row.nodes / populationMap[row.country_code_resolved],
+      }))
+      .sort((a, b) => b.perCapita - a.perCapita);
+  }, [allCountries, viewMode, populationMap]);
 
   const totalNodes = useMemo(() => {
     if (Number.isFinite(payload?.data?.total_nodes)) return payload.data.total_nodes;
@@ -344,15 +527,17 @@ export default function S06_NodesMap() {
           >
             {countriesGeo && (
               <GeoJSON
-                key={`countries-${maxCount}-${countryCounts.length}`}
+                key={`countries-${maxCount}-${countryCounts.length}-${viewMode}`}
                 data={countriesGeo}
                 style={(feature) => {
                   const code = getFeatureCountryCode(feature);
-                  const count = countsByCode[code] || 0;
+                  const fillColor = viewMode === 'perCapita'
+                    ? getFillColorByPerCapita(perCapitaByCode[code], activePerCapitaScale)
+                    : getFillColor(countsByCode[code] || 0);
                   return {
                     color: '#2d2d2d',
                     weight: 0.7,
-                    fillColor: getFillColor(count),
+                    fillColor,
                     fillOpacity: 0.9,
                   };
                 }}
@@ -361,7 +546,15 @@ export default function S06_NodesMap() {
                   const name = getFeatureCountryName(feature, 0);
                   const count = countsByCode[code] || 0;
                   const displayCode = code && code !== '-99' ? code : UNKNOWN_COUNTRY_LABEL;
-                  layer.bindTooltip(`${name} (${displayCode}): ${fmt.num(count)} nodes - ${getDensityLabel(count)}`, { sticky: true, opacity: 0.95 });
+                  const tooltipText = viewMode === 'perCapita'
+                    ? (() => {
+                        const pc = perCapitaByCode[code];
+                        if (pc == null || pc <= 0) return `${name} (${displayCode}): no data`;
+                        const step = activePerCapitaScale.find((s) => pc >= s.minVal);
+                        return `${name} (${displayCode}): ${Math.round(pc)} /M — ${step?.label ?? 'Trace'}`;
+                      })()
+                    : `${name} (${displayCode}): ${fmt.num(count)} nodes — ${getDensityLabel(count)}`;
+                  layer.bindTooltip(tooltipText, { sticky: true, opacity: 0.95 });
                 }}
               />
             )}
@@ -391,27 +584,34 @@ export default function S06_NodesMap() {
               </button>
             )}
 
-            {showDensityLegend && (
-              <div className={`absolute z-[1000] rounded border border-white/15 bg-black/55 px-2.5 py-2 font-mono text-[11px] backdrop-blur-sm ${isCompactViewport ? 'left-3 top-12' : 'left-3 top-3 sm:left-4 sm:top-4'}`}>
-                <div className="mb-1 text-white/75">Node density</div>
-                <div className="flex flex-wrap items-center gap-2.5">
-                  {NODE_DENSITY_SCALE.map((step) => (
-                    <span key={step.label} className="inline-flex items-center gap-1 text-white/80">
-                      <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: step.color, boxShadow: `0 0 6px ${step.color}` }} />
-                      {step.label}
-                      <span className="text-white/55">{step.legend}</span>
-                    </span>
-                  ))}
+            {showDensityLegend && (() => {
+              const activeScale = viewMode === 'perCapita' ? activePerCapitaScale : NODE_DENSITY_SCALE;
+              const legendTitle = viewMode === 'perCapita' ? 'Per-capita node density' : 'Node concentration';
+              return (
+                <div className={`absolute z-[1000] rounded border border-white/15 bg-black/55 px-2.5 py-2 font-mono text-[11px] backdrop-blur-sm ${isCompactViewport ? 'left-3 top-12' : 'left-3 top-3 sm:left-4 sm:top-4'}`}>
+                  <div className="mb-0.5 text-white/75">{legendTitle}</div>
+                  {viewMode === 'perCapita' && (
+                    <div className="mb-1.5 text-white/40" style={{ fontSize: '9px' }}>nodes per million inhabitants</div>
+                  )}
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    {activeScale.map((step) => (
+                      <span key={step.key} className="inline-flex items-center gap-1 text-white/80">
+                        <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: step.color, boxShadow: `0 0 6px ${step.color}` }} />
+                        {step.label}
+                        <span className="text-white/55">{step.legend}</span>
+                      </span>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
           </>
         )}
       </div>
 
       <aside className="flex h-[40%] w-full flex-none flex-col border-t border-white/10 bg-[#111111] lg:h-auto lg:w-[280px] lg:border-l lg:border-t-0">
         <div className="border-b border-white/10 px-4 py-3 font-mono text-[12px] tracking-wide text-white/60">
-          Active Nodes by Country ({fmt.num(allCountries.length)})
+          Global Bitcoin Nodes
         </div>
 
         <div className="border-b border-white/10 px-3 py-2">
@@ -462,6 +662,36 @@ export default function S06_NodesMap() {
           )}
         </div>
 
+        {/* View mode toggle */}
+        <div className="border-b border-white/10 px-3 py-2">
+          <div className="flex gap-1">
+            <button
+              type="button"
+              onClick={() => setViewMode('country')}
+              className="flex-1 rounded border px-2 py-1 font-mono text-[10px] transition"
+              style={
+                viewMode === 'country'
+                  ? { borderColor: 'var(--accent-bitcoin)', color: 'var(--accent-bitcoin)', backgroundColor: 'rgba(247,147,26,0.1)' }
+                  : { borderColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', backgroundColor: 'transparent' }
+              }
+            >
+              Node count
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('perCapita')}
+              className="flex-1 rounded border px-2 py-1 font-mono text-[10px] transition"
+              style={
+                viewMode === 'perCapita'
+                  ? { borderColor: 'var(--accent-bitcoin)', color: 'var(--accent-bitcoin)', backgroundColor: 'rgba(247,147,26,0.1)' }
+                  : { borderColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', backgroundColor: 'transparent' }
+              }
+            >
+              Per capita
+            </button>
+          </div>
+        </div>
+
         <div className="min-h-0 flex-1 overflow-y-auto px-3 py-2">
           {isLoading ? (
             <div className="space-y-2">
@@ -471,31 +701,30 @@ export default function S06_NodesMap() {
             </div>
           ) : (
             <div className="space-y-1">
-              {allCountries.map((item, index) => {
+              {displayRows.map((item, index) => {
                 const isTorRow = isTorCyberspaceRow(item.country_label);
+                const dotColor = isTorRow
+                  ? UI_COLORS.tor
+                  : viewMode === 'perCapita' && item.perCapita != null
+                    ? getFillColorByPerCapita(item.perCapita, activePerCapitaScale)
+                    : getFillColor(item.nodes);
+                const valueLabel = viewMode === 'perCapita' && item.perCapita != null
+                  ? `${Math.round(item.perCapita)} /M`
+                  : fmt.num(item.nodes);
                 return (
                   <div
                     key={`${item.country_label}-${item.country_code_resolved}-${index}`}
                     className="flex items-center justify-between rounded border px-2 py-1.5"
                     style={
                       isTorRow
-                        ? {
-                            borderColor: 'rgba(168, 85, 247, 0.45)',
-                            backgroundColor: 'rgba(168, 85, 247, 0.12)',
-                          }
-                        : {
-                            borderColor: 'rgba(255, 255, 255, 0.05)',
-                            backgroundColor: 'rgba(255, 255, 255, 0.02)',
-                          }
+                        ? { borderColor: 'rgba(168, 85, 247, 0.45)', backgroundColor: 'rgba(168, 85, 247, 0.12)' }
+                        : { borderColor: 'rgba(255, 255, 255, 0.05)', backgroundColor: 'rgba(255, 255, 255, 0.02)' }
                     }
                   >
                     <span className="flex min-w-0 items-center gap-1.5">
                       <span
                         className="inline-block h-2 w-2 flex-none rounded-sm"
-                        style={{
-                          background: isTorRow ? UI_COLORS.tor : getFillColor(item.nodes),
-                          boxShadow: `0 0 4px ${isTorRow ? UI_COLORS.tor : getFillColor(item.nodes)}`,
-                        }}
+                        style={{ background: dotColor, boxShadow: `0 0 4px ${dotColor}` }}
                       />
                       <span
                         className="truncate font-mono text-[11px]"
@@ -506,9 +735,9 @@ export default function S06_NodesMap() {
                     </span>
                     <span
                       className="flex-none font-mono text-[11px]"
-                      style={{ color: isTorRow ? UI_COLORS.tor : getFillColor(item.nodes) }}
+                      style={{ color: isTorRow ? UI_COLORS.tor : dotColor }}
                     >
-                      {fmt.num(item.nodes)}
+                      {valueLabel}
                     </span>
                   </div>
                 );
@@ -536,6 +765,19 @@ export default function S06_NodesMap() {
             <span className="rounded border border-white/10 bg-white/[0.03] px-1.5 py-0.5 text-white/75">
               refresh: {nextUpdateDelay === 'N/A' ? 'N/A' : (nextUpdateDelay === 'now' ? 'now' : `in ${nextUpdateDelay}`)}
             </span>
+            {viewMode === 'perCapita' && (
+              <span className="rounded border border-white/10 bg-white/[0.03] px-1.5 py-0.5 text-white/55">
+                pop:{' '}
+                {popSource === 'worldbank' ? (
+                  <a href="https://data.worldbank.org/indicator/SP.POP.TOTL" target="_blank" rel="noreferrer" style={{ color: 'var(--accent-bitcoin)', textDecoration: 'none' }}>
+                    World Bank
+                  </a>
+                ) : (
+                  <span>estimates</span>
+                )}
+                {popDataYear && ` · ${popDataYear}`}
+              </span>
+            )}
             {isFallback && (
               <span className="rounded border border-[#f7931a]/40 bg-[#f7931a]/10 px-1.5 py-0.5" style={{ color: 'var(--accent-warning)' }}>
                 fallback
@@ -571,6 +813,28 @@ export default function S06_NodesMap() {
                   <span style={{ color: UI_COLORS.warning }}>Fallback:</span> {fallbackNote}
                 </div>
               )}
+              <div className="mt-2 border-t border-white/10 pt-2">
+                <div className="mb-0.5" style={{ color: 'rgba(255,255,255,0.5)' }}>Population data</div>
+                <div>
+                  Source:{' '}
+                  <a href="https://data.worldbank.org/indicator/SP.POP.TOTL" target="_blank" rel="noreferrer" style={{ color: 'var(--accent-bitcoin)', textDecoration: 'none' }}>
+                    World Bank
+                  </a>
+                  {popDataYear && ` · ${popDataYear}`}
+                </div>
+                <div>Cadence: annual (published mid-year)</div>
+                <div>
+                  Cache TTL: 24 h · status:{' '}
+                  <span style={{ color: popSource === 'worldbank' ? '#00D897' : popSource === 'cache' ? 'var(--accent-bitcoin)' : 'rgba(255,255,255,0.4)' }}>
+                    {popSource === 'worldbank' ? 'fresh fetch' : popSource === 'cache' ? 'from cache' : 'built-in estimates'}
+                  </span>
+                </div>
+                {popLastFetched && (
+                  <div style={{ color: 'rgba(255,255,255,0.4)' }}>
+                    Last fetched: {new Date(popLastFetched).toLocaleString()}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>

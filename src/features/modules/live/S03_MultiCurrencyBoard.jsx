@@ -102,10 +102,14 @@ function getCurrencyName(code) {
 // ─── Land texture from GeoJSON ─────────────────────────────────────────────────
 const TEX_W = 2048, TEX_H = 1024;
 
+// Singleton promise — built once per page session, not per component mount
+let _landDotsPromise = null;
+
 // Draw GeoJSON land polygons onto an offscreen canvas → ImageData for fast lookup
 async function buildLandTexture() {
   // Natural Earth 110m land polygons (public domain, ~60 KB)
-  const payload = await fetchJson('/api/public/geo/land', { timeout: 10000, cache: 'no-store' });
+  // Use default browser cache — server sets Cache-Control: max-age=2592000 (30 days)
+  const payload = await fetchJson('/api/public/geo/land', { timeout: 10000 });
   const geojson = payload?.data || payload;
 
   const oc = document.createElement('canvas');
@@ -185,6 +189,16 @@ function buildDots(isLandFn, n = 4000) {
 const FALLBACK_DOTS = buildDots(
   (lat, lon) => isLandFallback(lat * 180 / Math.PI, lon * 180 / Math.PI)
 );
+
+// Fetch + build accurate dots once per session; reuse across mounts
+function getAccurateLandDots() {
+  if (!_landDotsPromise) {
+    _landDotsPromise = buildLandTexture()
+      .then(imageData => buildDots((lat, lon) => sampleLand(imageData, lat, lon), 5000))
+      .catch(() => FALLBACK_DOTS);
+  }
+  return _landDotsPromise;
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function fmtPrice(price) {
@@ -457,18 +471,9 @@ export default function S03_MultiCurrencyBoard() {
     return () => { active = false; clearInterval(t); };
   }, []);
 
-  // Load accurate GeoJSON land texture asynchronously
+  // Load accurate GeoJSON land dots (singleton — fetched once per session)
   useEffect(() => {
-    buildLandTexture()
-      .then(imageData => {
-        dotsRef.current = buildDots(
-          (lat, lon) => sampleLand(imageData, lat, lon),
-          5000
-        );
-      })
-      .catch(() => {
-        // Keep fallback dots — already set
-      });
+    getAccurateLandDots().then(dots => { dotsRef.current = dots; });
   }, []);
 
   // Canvas animation loop
@@ -515,31 +520,23 @@ export default function S03_MultiCurrencyBoard() {
         borderTop: '1px solid #1a1a1a', borderBottom: '1px solid #1a1a1a',
         background: '#111111', padding: '2px 0',
       }}>
-        {isPriceLoading ? (
-          <div className="flex items-center gap-3 px-4 py-1">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="skeleton" style={{ width: 110, height: '1em' }} />
-            ))}
-          </div>
-        ) : (
-          <>
-            <style>{`
-              @keyframes s03-ticker {
-                0%   { transform: translateX(0); }
-                100% { transform: translateX(-50%); }
-              }
-            `}</style>
-            <div style={{
-              display: 'inline-flex',
-              animation: 's03-ticker 75s linear infinite',
-              whiteSpace: 'nowrap',
-            }}>
-              {tickerItems.map((c, i) => (
-                <TickerItem key={i} code={c.code} change={c.change} />
-              ))}
-            </div>
-          </>
-        )}
+        <style>{`
+          @keyframes s03-ticker {
+            0%   { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+          }
+        `}</style>
+        <div style={{
+          display: 'inline-flex',
+          animation: 's03-ticker 75s linear infinite',
+          whiteSpace: 'nowrap',
+          opacity: isPriceLoading ? 0 : 1,
+          transition: 'opacity 0.4s ease',
+        }}>
+          {tickerItems.map((c, i) => (
+            <TickerItem key={i} code={c.code} change={c.change} />
+          ))}
+        </div>
       </div>
 
       {/* ── Globe + Right panel ────────────────────────────────────────── */}
@@ -597,9 +594,14 @@ export default function S03_MultiCurrencyBoard() {
               </div>
           </div>
 
-          <div className="scrollbar-hidden-mobile flex-1 overflow-y-auto" style={{
-            scrollbarWidth: 'thin', scrollbarColor: '#2a2a2a transparent',
-          }}>
+          <div
+            className="scrollbar-hidden-mobile flex-1 overflow-y-auto"
+            style={{
+              scrollbarWidth: 'thin', scrollbarColor: '#2a2a2a transparent',
+              opacity: isPriceLoading ? 0 : 1,
+              transition: 'opacity 0.4s ease',
+            }}
+          >
             {filtered.map((c) => {
               const hasChange = Number.isFinite(c.change);
               const up = hasChange ? c.change >= 0 : null;
@@ -609,38 +611,25 @@ export default function S03_MultiCurrencyBoard() {
                   padding: '5px 10px', borderBottom: '1px solid #141418',
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-                    {isPriceLoading ? (
-                      <div className="skeleton" style={{ width: 6, height: 6, borderRadius: '50%' }} />
-                    ) : (
-                      <div style={{
-                        width: 6, height: 6, borderRadius: '50%',
-                        background: up == null ? UI_COLORS.textTertiary : (up ? UI_COLORS.positive : UI_COLORS.negative), flexShrink: 0,
-                      }} />
-                    )}
+                    <div style={{
+                      width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
+                      background: up == null ? UI_COLORS.textTertiary : (up ? UI_COLORS.positive : UI_COLORS.negative),
+                    }} />
                     <span style={{
                       color: '#bbb', fontFamily: 'monospace',
                       fontSize: 'var(--fs-micro)', fontWeight: 700,
                     }}>{c.code}</span>
                   </div>
                   <div style={{ textAlign: 'right', minWidth: 84 }}>
-                    {isPriceLoading ? (
-                      <>
-                        <div className="skeleton" style={{ width: 64, height: '0.9em', marginBottom: 4 }} />
-                        <div className="skeleton" style={{ width: 48, height: '0.8em' }} />
-                      </>
-                    ) : (
-                      <>
-                        <div style={{
-                           color: '#eee', fontFamily: 'monospace',
-                           fontSize: 'var(--fs-micro)', fontWeight: 600, minHeight: '1.2em',
-                         }}><CurrencyMetric value={c.price} /></div>
-                         <div style={{
-                           color: up == null ? UI_COLORS.textTertiary : (up ? UI_COLORS.positive : UI_COLORS.negative),
-                           fontFamily: 'monospace',
-                           fontSize: 'var(--fs-tag)', minHeight: '1.1em',
-                          }}><AnimatedMetric value={c.change} variant="percent" decimals={2} signed inline color={up == null ? UI_COLORS.textTertiary : (up ? UI_COLORS.positive : UI_COLORS.negative)} /></div>
-                       </>
-                     )}
+                    <div style={{
+                      color: '#eee', fontFamily: 'monospace',
+                      fontSize: 'var(--fs-micro)', fontWeight: 600, minHeight: '1.2em',
+                    }}><CurrencyMetric value={c.price} /></div>
+                    <div style={{
+                      color: up == null ? UI_COLORS.textTertiary : (up ? UI_COLORS.positive : UI_COLORS.negative),
+                      fontFamily: 'monospace',
+                      fontSize: 'var(--fs-tag)', minHeight: '1.1em',
+                    }}><AnimatedMetric value={c.change} variant="percent" decimals={2} signed inline color={up == null ? UI_COLORS.textTertiary : (up ? UI_COLORS.positive : UI_COLORS.negative)} /></div>
                   </div>
                 </div>
               );

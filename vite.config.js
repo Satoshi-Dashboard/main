@@ -25,7 +25,6 @@ export default defineConfig(({ mode }) => {
           '**/btc_rates_cache.json',
           '**/btc_distribution_cache.json',
           '**/btc_addresses_richer_cache.json',
-          '**/visitor_counter.json',
         ],
       },
       proxy: {

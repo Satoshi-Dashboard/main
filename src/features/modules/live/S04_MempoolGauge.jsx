@@ -189,7 +189,7 @@ function MempoolPanel({
   const hasGaugeData = usageBytes != null && maxBytes != null && maxBytes > 0;
 
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-[#111111] px-3 py-4 sm:gap-6 sm:px-4">
+    <div className="flex min-h-0 flex-1 w-full flex-col items-center justify-center gap-4 sm:gap-6">
       <div className="flex w-full flex-col items-center justify-center gap-1">
         <GaugeArc usageBytes={usageBytes} maxBytes={maxBytes} loading={loading} centerLabel="USAGE" />
         {loading ? null : hasGaugeData ? (
@@ -219,7 +219,7 @@ function MempoolPanel({
         ))}
       </div>
 
-      <div className={`flex-shrink-0 pb-1${hideSourceOnDesktop ? ' sm:hidden' : ''}`}>
+      <div className={`flex-shrink-0 pb-1${hideSourceOnDesktop ? ' sm:invisible' : ''}`}>
         <span className="font-mono text-white/20" style={{ fontSize: 'var(--fs-micro)' }}>
           {footerSource}
         </span>
@@ -372,7 +372,7 @@ export default function S04_MempoolGauge() {
   const isNode = activeSource === 'node';
 
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-[#111111] px-3 py-4 sm:gap-6 sm:px-4">
+    <div className="flex h-full w-full flex-col items-center justify-start gap-4 bg-[#111111] px-3 py-4 sm:gap-6 sm:px-4">
       <div className="text-center">
         <div className="font-mono font-bold uppercase tracking-[0.2em]" style={{ fontSize: 'var(--fs-heading)', color: UI_COLORS.brand }}>
           MEMPOOL STATUS

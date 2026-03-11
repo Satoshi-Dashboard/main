@@ -301,7 +301,7 @@ export default function S01_BitcoinOverview() {
           priceSource:   spot?.source      || prev.priceSource,
           satsPerDollar: spot?.usd ? Math.round(1e8 / spot.usd) : prev.satsPerDollar,
           circulatingSupply: h ? calculateBitcoinSupply(h) : prev.circulatingSupply,
-          avgTxFee:      mempoolBundle.fees.economy ?? prev.avgTxFee,
+          avgTxFee:      mempoolBundle.fees.normal ?? prev.avgTxFee,
           blockHeight:   h || prev.blockHeight,
           difficultyT:   hashData?.currentDifficulty ? hashData.currentDifficulty / 1e12 : prev.difficultyT,
           nextDifficultyEtaBlocks: diff?.remainingBlocks  != null ? Number(diff.remainingBlocks)  : prev.nextDifficultyEtaBlocks,
