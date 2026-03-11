@@ -175,7 +175,29 @@ Use root tokens from `src/index.css` as source of truth:
    - pair color with icon, label, sign, or pattern for critical states.
 
 3. Mobile + desktop parity:
-    - semantic colors must preserve meaning in responsive states.
+     - semantic colors must preserve meaning in responsive states.
+
+## Metric semantics and unit integrity (mandatory)
+
+For frontend modules that present live metrics, percentages, gauges, limits, or comparisons:
+
+1. Do not compare incompatible units as if they were the same metric.
+   - Example: virtual transaction size, memory usage, and configured memory limit must stay explicitly separated.
+
+2. Labels must describe the exact underlying quantity.
+   - If a value is virtual size/transaction volume, do not label it as generic "Mempool size" when the UI also references memory usage.
+
+3. Percent-of-limit visuals must use the metric that the limit actually governs.
+   - Example: a Bitcoin Core `maxmempool` percentage must be computed from mempool memory usage, not transaction virtual size.
+
+4. Do not over-round live fee metrics when sub-unit precision matters.
+   - If a fee can be meaningfully below 1 or include useful decimals, preserve at least one decimal place instead of forcing integer display.
+
+5. If the approved payload does not expose the exact metric required for a fair comparison, omit that comparison UI instead of faking it with a proxy, a default cap, or a related metric.
+    - Example: if virtual size is available but memory usage is not, do not render a `% of 300 MB` limit gauge.
+
+6. Reused live metric labels must keep the same underlying source/derivation across modules.
+   - Example: if two modules both show `AVG TX FEE`, they must resolve to the same fee band / fallback logic; otherwise rename one label so the UI does not imply a false equivalence.
 
 ## Live numeric motion (mandatory for live-data UX)
 
@@ -378,3 +400,27 @@ When creating any new frontend module, agents must follow the project example pa
 - **Acción Realizada/Corrección:** Se reforzó la política para exigir que las tareas de clon/match preserven la estructura del módulo de referencia salvo instrucción explícita en contra.
 - **Nueva/Modificada Regla o Directriz:** Cuando el owner pide replicar el estilo de un módulo existente, se debe mantener su tratamiento estructural principal (cantidad de gráficas, framing, ubicación de controles y densidad de metadata) y evitar adornos o secciones nuevas no solicitadas.
 - **Justificación:** Reduce iteraciones evitables y ayuda a que futuros cambios respeten con mayor fidelidad la intención visual del owner desde la primera entrega.
+
+- **Fecha de la Actualización:** `2026-03-10`
+- **Archivo(s) Afectado(s):** `.claude/FRONTEND_COLOR_UX_UI_RULES.md`
+- **Tipo de Evento/Contexto:** Corrección de semántica métrica en módulos live
+- **Descripción del Evento Original:** Un ajuste de feedback detectó que un módulo podía mezclar `virtual size` con `memory usage` bajo una misma etiqueta de mempool y que una fee live podía mostrarse sin decimales aunque eso ocultara precisión útil.
+- **Acción Realizada/Corrección:** Se añadió una regla explícita para separar cantidades con unidades distintas en labels, porcentajes y gauges, y para preservar al menos una decimal en fees cuando la precisión sub-entera importe.
+- **Nueva/Modificada Regla o Directriz:** Los módulos live deben mantener integridad estricta entre nombre, unidad, fórmula comparativa y formato numérico; no se permite comparar métricas incompatibles ni redondear fees hasta borrar información material.
+- **Justificación:** Evita visualizaciones técnicamente engañosas en módulos de datos y reduce la probabilidad de repetir comparaciones injustas o nomenclatura ambigua.
+
+- **Fecha de la Actualización:** `2026-03-11`
+- **Archivo(s) Afectado(s):** `.claude/FRONTEND_COLOR_UX_UI_RULES.md`
+- **Tipo de Evento/Contexto:** Fallback UX cuando falta la métrica exacta
+- **Descripción del Evento Original:** Un ajuste del módulo de mempool mostró una comparación visual de límite usando un valor por defecto aunque la carga real de `memory usage` no venía en el payload consumido, lo que generaba un panel roto y una semántica engañosa.
+- **Acción Realizada/Corrección:** Se añadió una regla para ocultar comparaciones y gauges dependientes de métricas ausentes, reemplazándolos por una presentación honesta de los datos realmente disponibles.
+- **Nueva/Modificada Regla o Directriz:** Si el payload aprobado no trae la métrica exacta para una comparación justa, el frontend debe omitir esa comparación en vez de inventarla con proxies, caps por defecto o placeholders ambiguos.
+- **Justificación:** Previene UIs engañosas, evita repetir límites estáticos sin contexto y mejora la legibilidad cuando la fuente no expone todos los campos deseados.
+
+- **Fecha de la Actualización:** `2026-03-11`
+- **Archivo(s) Afectado(s):** `.claude/FRONTEND_COLOR_UX_UI_RULES.md`
+- **Tipo de Evento/Contexto:** Consistencia semántica entre módulos live
+- **Descripción del Evento Original:** `S01` mostraba `AVG TX FEE` con una derivación distinta a la usada por `S04` para la fee `ECONOMY`, lo que hacía que dos labels equivalentes del producto enseñaran valores distintos sin explicarlo al usuario.
+- **Acción Realizada/Corrección:** Se reforzó la política frontend para exigir que labels live reutilizados entre módulos compartan exactamente la misma fuente/derivación o, en caso contrario, se renombren para reflejar la diferencia.
+- **Nueva/Modificada Regla o Directriz:** Las métricas live repetidas en distintos módulos no pueden cambiar silenciosamente de banda de fee, fallback o fórmula manteniendo el mismo label visible.
+- **Justificación:** Evita inconsistencias de producto difíciles de detectar, mejora la confianza del usuario en métricas repetidas y reduce regresiones de semántica cuando varios módulos consumen el mismo dominio de datos.

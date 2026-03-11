@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { fetchJson } from '@/shared/lib/api.js';
 import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts';
 import { fetchBtcSpot } from '@/shared/services/priceApi.js';
+import { fetchMempoolOverviewBundle } from '@/shared/services/mempoolApi.js';
 import AnimatedMetric from '@/shared/components/common/AnimatedMetric.jsx';
 
 /* ── Circulating supply from protocol constants (no API needed) ── */
@@ -283,14 +283,12 @@ export default function S01_BitcoinOverview() {
     let active = true;
     const load = async () => {
       try {
-        const [spot, overviewRes] = await Promise.all([
+        const [spot, mempoolBundle] = await Promise.all([
           fetchBtcSpot(),
-          fetchJson('/api/public/mempool/overview'),
+          fetchMempoolOverviewBundle({ timeout: 8000, cache: 'no-store' }),
         ]);
-        const overviewPayload = overviewRes;
-        const overview = overviewPayload?.data || {};
+        const overview = mempoolBundle.overview || {};
         const diff = overview.difficulty || {};
-        const fees = overview.fees || {};
         const hashData = overview.hashrate || {};
         const fng = overview.fear_greed || {};
 
@@ -303,7 +301,7 @@ export default function S01_BitcoinOverview() {
           priceSource:   spot?.source      || prev.priceSource,
           satsPerDollar: spot?.usd ? Math.round(1e8 / spot.usd) : prev.satsPerDollar,
           circulatingSupply: h ? calculateBitcoinSupply(h) : prev.circulatingSupply,
-          avgTxFee:      Number(fees?.halfHourFee) || prev.avgTxFee,
+          avgTxFee:      mempoolBundle.fees.economy ?? prev.avgTxFee,
           blockHeight:   h || prev.blockHeight,
           difficultyT:   hashData?.currentDifficulty ? hashData.currentDifficulty / 1e12 : prev.difficultyT,
           nextDifficultyEtaBlocks: diff?.remainingBlocks  != null ? Number(diff.remainingBlocks)  : prev.nextDifficultyEtaBlocks,
@@ -336,7 +334,7 @@ export default function S01_BitcoinOverview() {
         source: sourceLabel(stats.priceSource),
       },
       { label: 'SATS PER DOLLAR', value: stats.satsPerDollar },
-      { label: 'AVG TX FEE (sat/vB)', value: stats.avgTxFee },
+      { label: 'AVG TX FEE (sat/vB)', value: stats.avgTxFee, decimals: 2 },
       { label: 'BLOCK HEIGHT', value: stats.blockHeight },
       { label: 'CURRENT HASH RATE', value: stats.hashRateEh != null ? stats.hashRateEh * 1e18 : null, variant: 'hashrate' },
       { label: 'NETWORK DIFFICULTY', value: stats.difficultyT, decimals: 2, suffix: ' T' },

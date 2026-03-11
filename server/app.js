@@ -44,6 +44,7 @@ import {
   getLandGeoPayload,
   getLightningWorldPayload,
   getMempoolLivePayload,
+  getMempoolNodePayload,
   getMempoolOverviewPayload,
   getS15BtcVsGoldMarketCapPayload,
   getS21BigMacSatsPayload,
@@ -344,6 +345,17 @@ export function createApp() {
     setDataCacheHeaders(res, { sMaxAge: 5, swr: 20 });
     try {
       const payload = await getMempoolOverviewPayload();
+      res.json(payload);
+    } catch (error) {
+      sendPublicFeedError(res, error);
+    }
+  }));
+
+  // Node memory data via zatobox bitcoin-core-mempool scraper (5s server cache)
+  app.get('/api/public/mempool/node', asyncRoute(async (_req, res) => {
+    setDataCacheHeaders(res, { sMaxAge: 3, swr: 5 });
+    try {
+      const payload = await getMempoolNodePayload();
       res.json(payload);
     } catch (error) {
       sendPublicFeedError(res, error);

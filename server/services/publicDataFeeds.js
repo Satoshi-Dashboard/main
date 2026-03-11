@@ -16,6 +16,7 @@ const BINANCE_KLINES_BASE_URLS = [
 ];
 const SCRAPER_BASE_URL = String(process.env.SCRAPER_BASE_URL || 'https://api.zatobox.io').trim();
 const S15_GOLD_SCRAPER_PATH = '/api/scrape/companiesmarketcap-gold';
+const S04_MEMPOOL_NODE_SCRAPER_PATH = '/api/scrape/bitcoin-core-mempool';
 const BTC_GENESIS_TS = Date.UTC(2009, 0, 3, 18, 15, 5);
 const BTC_HALVING_INTERVAL_BLOCKS = 210_000;
 const BTC_TARGET_BLOCK_INTERVAL_MS = 10 * 60 * 1000;
@@ -115,6 +116,15 @@ const FEED_DEFS = {
     hardMinuteLimit: 30,
     safeMinuteBudget: 1,
     safeDailyBudget: 120,
+  },
+  mempoolNode: {
+    cacheKey: 'public:mempool:node',
+    lockKey: 'public:mempool:node:refresh',
+    refreshMs: 5_000,
+    sourceProvider: 'bitcoin-core-zatobox',
+    sourceUrl: `${SCRAPER_BASE_URL}${S04_MEMPOOL_NODE_SCRAPER_PATH}`,
+    safeMinuteBudget: 12,
+    safeDailyBudget: 17_280,
   },
   s15GoldMarketCapCurrent: {
     cacheKey: 'public:s15:gold-market-cap:current',
@@ -1614,6 +1624,44 @@ export async function getMempoolLivePayload() {
       };
     },
     validateObject,
+  );
+}
+
+/** Node memory data from zatobox Bitcoin Core scraper.
+ *  Expected zatobox response shape (mirrors Bitcoin Core getmempoolinfo):
+ *  { usage: number, maxmempool: number, bytes: number, size: number, total_fee: number, ... }
+ *  Fields wrapped in standard zatobox envelope with optional _meta.
+ */
+export async function getMempoolNodePayload() {
+  return getFeed(
+    'mempoolNode',
+    async () => {
+      const url = `${SCRAPER_BASE_URL}${S04_MEMPOOL_NODE_SCRAPER_PATH}`;
+      const raw = await fetchJsonWithTimeout(url, { timeoutMs: 8_000 });
+
+      // Zatobox may wrap the data directly or under a `data` key
+      const d = raw?.data ?? raw;
+
+      const n = (v) => (typeof v === 'number'  ? v : null);
+      const b = (v) => (typeof v === 'boolean' ? v : null);
+      const str = (v) => (typeof v === 'string'  ? v : null);
+
+      return {
+        usage:            n(d?.usage),            // node RAM used by mempool (bytes)
+        maxmempool:       n(d?.maxmempool),        // max allowed RAM (bytes, default 300 MB)
+        size:             n(d?.size),              // number of txs in this node's mempool
+        bytes:            n(d?.bytes),             // virtual size of all txs (bytes)
+        total_fee:        n(d?.total_fee),         // sum of all tx fees (BTC)
+        mempoolminfee:    n(d?.mempoolminfee),     // dynamic floor fee rate (BTC/kB)
+        minrelaytxfee:    n(d?.minrelaytxfee),     // static relay floor (BTC/kB)
+        unbroadcastcount: n(d?.unbroadcastcount),  // txs not yet broadcast to peers
+        fullrbf:          b(d?.fullrbf),           // true = full RBF enabled
+        rbf_policy:       str(d?.rbf_policy),      // "always" | "never"
+        truc_policy:      str(d?.truc_policy),     // v3 tx policy: "accept" | "reject"
+        cached_at:        raw?._meta?.cachedAt ?? null,
+      };
+    },
+    (v) => v != null && typeof v === 'object' && v.usage != null,
   );
 }
 
