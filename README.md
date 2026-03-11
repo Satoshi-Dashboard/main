@@ -58,6 +58,7 @@ It is designed for people who want more than a price ticker: Bitcoin builders, c
 - React 19
 - React Router 7
 - Vite 7
+- Vercel Web Analytics
 - Tailwind CSS 4
 - Express 4
 - TanStack React Query
@@ -377,6 +378,7 @@ Notes:
 
 - The serverless function is pinned to region `fra1`
 - Vercel deploys use the same Express app used locally
+- Production traffic analytics are collected through `@vercel/analytics` and require Web Analytics to be enabled in the Vercel project dashboard
 - Built assets under `/assets/*` are served with `Cache-Control: public, max-age=31536000, immutable`
 - HTML entry routes continue to resolve through rewrites rather than long-lived immutable caching so new deploys propagate cleanly
 - If you add new remote origins, update `vercel.json` CSP and related header rules
@@ -477,3 +479,11 @@ Satoshi Dashboard is open-source under the MIT License. See `LICENSE.txt`.
 - **Acción Realizada/Corrección:** Se actualizó la tabla de fuentes y la sección API para describir el nuevo flujo: precio/histórico BTC desde Binance, market cap BTC derivado por emisión protocolaria y market cap actual del oro desde `api.zatobox.io/api/scrape/companiesmarketcap-gold`.
 - **Nueva/Modificada Regla o Directriz:** Cuando un módulo comparativo derive capitalización desde precio + supply en backend, el `README.md` debe explicitar la fórmula y diferenciar claramente entre una serie histórica derivada y una referencia actual fija proveniente de un scraper.
 - **Justificación:** Evita volver a presentar `S15` como CoinGecko-backed, mejora la honestidad documental del gráfico y deja claro por qué la línea del oro no representa historial completo.
+
+- **Fecha de la Actualización:** `2026-03-11`
+- **Archivo(s) Afectado(s):** `README.md`
+- **Tipo de Evento/Contexto:** Integración de analítica web en despliegue Vercel
+- **Descripción del Evento Original:** El proyecto incorporó `@vercel/analytics` para medir tráfico real en producción, pero la documentación pública todavía no indicaba que Vercel Web Analytics formaba parte del stack ni que debía estar habilitado en el dashboard para que aparecieran métricas.
+- **Acción Realizada/Corrección:** Se añadió Vercel Web Analytics al stack documentado y se incorporó una nota explícita en la sección de despliegue para recordar el requisito de activación en Vercel.
+- **Nueva/Modificada Regla o Directriz:** Cuando el proyecto adopte una capacidad operativa ligada al runtime o al panel de Vercel, el `README.md` debe reflejar tanto la dependencia instalada como cualquier prerrequisito de activación fuera del repositorio.
+- **Justificación:** Reduce configuraciones incompletas donde el código ya emite eventos pero el owner no ve métricas en el panel por faltar la activación del servicio en Vercel.
