@@ -101,15 +101,19 @@ function getCadenceLabel(meta) {
 function renderProviderLinks(providers) {
   return (providers || []).map((provider, index) => (
     <span key={`${provider.name}-${provider.url}`}>
-      <a
-        href={provider.url}
-        target="_blank"
-        rel="noreferrer"
-        className="underline-offset-2 hover:underline"
-        style={{ color: 'var(--accent-bitcoin)' }}
-      >
-        {provider.name}
-      </a>
+      {provider.url ? (
+        <a
+          href={provider.url}
+          target="_blank"
+          rel="noreferrer"
+          className="underline-offset-2 hover:underline"
+          style={{ color: 'var(--accent-bitcoin)' }}
+        >
+          {provider.name}
+        </a>
+      ) : (
+        <span style={{ color: 'var(--accent-bitcoin)' }}>{provider.name}</span>
+      )}
       {index < providers.length - 1 ? <span className="text-white/45"> + </span> : null}
     </span>
   ));
@@ -350,7 +354,8 @@ export default function ModulePage({ forcedSlug = null }) {
     && (!isResponsiveViewport || showSharedStripOnResponsive);
   const useAbsoluteSharedMetaCard = Boolean(moduleMeta?.sharedMetaAbsoluteCard);
   const showAbsoluteMetaCard = showSharedMeta && useAbsoluteSharedMetaCard && !isResponsiveViewport;
-  const showTopMeta = showSharedMeta && !isResponsiveViewport && !useAbsoluteSharedMetaCard;
+  const hideSharedMetaOnDesktop = Boolean(moduleMeta?.hideSharedMetaOnDesktop);
+  const showTopMeta = showSharedMeta && !isResponsiveViewport && !useAbsoluteSharedMetaCard && !hideSharedMetaOnDesktop;
   const showBottomMeta = showSharedMeta && isResponsiveViewport;
   const useResponsiveScroll = isResponsiveViewport && (showBottomMeta || moduleMeta?.responsiveScroll === true);
   const metaLastAt = new Date(metaLastAtMs);

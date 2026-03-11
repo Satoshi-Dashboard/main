@@ -45,13 +45,13 @@ import {
   getLightningWorldPayload,
   getMempoolLivePayload,
   getMempoolNodePayload,
+  getMempoolOfficialUsagePayload,
   getMempoolOverviewPayload,
   getS15BtcVsGoldMarketCapPayload,
   getS21BigMacSatsPayload,
   getUsNationalDebtPayload,
   PublicFeedError,
 } from './services/publicDataFeeds.js';
-import { getVisitorStats, trackVisitorById } from './features/visitors/visitorCounter.js';
 
 const REFRESH_API_TOKEN = String(process.env.REFRESH_API_TOKEN || '');
 const IS_PRODUCTION = ['production', 'preview'].includes(String(process.env.VERCEL_ENV || '').toLowerCase())
@@ -351,6 +351,16 @@ export function createApp() {
     }
   }));
 
+  app.get('/api/public/mempool/official-usage', asyncRoute(async (_req, res) => {
+    setDataCacheHeaders(res, { sMaxAge: 5, swr: 20 });
+    try {
+      const payload = await getMempoolOfficialUsagePayload();
+      res.json(payload);
+    } catch (error) {
+      sendPublicFeedError(res, error);
+    }
+  }));
+
   // Node memory data via zatobox bitcoin-core-mempool scraper (5s server cache)
   app.get('/api/public/mempool/node', asyncRoute(async (_req, res) => {
     setDataCacheHeaders(res, { sMaxAge: 3, swr: 5 });
@@ -474,28 +484,6 @@ export function createApp() {
     } catch (error) {
       sendPublicFeedError(res, error);
     }
-  }));
-
-  app.get('/api/visitors/stats', asyncRoute(async (_req, res) => {
-    setNoStoreHeaders(res);
-    const payload = await getVisitorStats();
-    res.json(payload);
-  }));
-
-  app.post('/api/visitors/track', asyncRoute(async (req, res) => {
-    setNoStoreHeaders(res);
-    const visitorId = String(req.body?.visitorId || req.headers['x-visitor-id'] || '');
-    if (!/^[A-Za-z0-9_-]{16,128}$/.test(visitorId)) {
-      res.status(400).json({ error: 'visitorId must be 16-128 URL-safe characters' });
-      return;
-    }
-    const payload = await trackVisitorById(visitorId);
-    res.json(payload);
-  }));
-
-  app.get('/api/visitors/track', asyncRoute(async (_req, res) => {
-    setNoStoreHeaders(res);
-    res.status(405).json({ error: 'Use POST /api/visitors/track' });
   }));
 
   const sendS12BtcDistributionJs = async (_req, res) => {
@@ -629,6 +617,15 @@ export function createApp() {
       res.status(502).json({ error: `Bitnodes unavailable: ${message}` });
     }
   }));
+
+  // ── Cache warm-up on startup ──────────────────────────────────────────────
+  // Kick off S03 multi-currency scrape in the background so the first real
+  // request hits a warm cache instead of waiting on a cold scrape (~5-12 s).
+  setTimeout(() => {
+    getS03MultiCurrencyPayload()
+      .then(() => console.log('[warmup] S03 multi-currency cache ready'))
+      .catch(err => console.warn('[warmup] S03 multi-currency failed:', err?.message));
+  }, 2000);
 
   return app;
 }

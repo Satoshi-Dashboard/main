@@ -38,7 +38,10 @@ const MODULE_DATA_META = {
     showSharedStripOnResponsive: false,
   },
   'bitcoin-mempool-fees': {
-    providers: [{ name: 'mempool.space', url: 'https://mempool.space' }],
+    providers: [
+      { name: 'mempool.space', url: 'https://mempool.space' },
+      { name: 'Internal API', url: null },
+    ],
     refreshSeconds: 30,
   },
   'bitcoin-mempool-trend': {

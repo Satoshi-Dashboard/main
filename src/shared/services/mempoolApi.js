@@ -39,16 +39,98 @@ export function resolveMempoolOverviewBundle(overviewPayload, livePayload) {
   };
 }
 
+export function resolveMempoolOfficialUsageSnapshot(payload) {
+  const data = payload?.data || {};
+
+  return {
+    usageBytes: toFiniteNumber(data.usage),
+    maxBytes: toFiniteNumber(data.maxmempool),
+    label: typeof data.label === 'string' ? data.label : null,
+    cachedAt: typeof data.cached_at === 'string' ? data.cached_at : null,
+  };
+}
+
+export function resolveMempoolNodeSnapshot(payload) {
+  const data = payload?.data || {};
+
+  return {
+    usageBytes: toFiniteNumber(data.usage),
+    maxBytes: toFiniteNumber(data.maxmempool),
+    count: toFiniteNumber(data.size),
+    vsizeBytes: toFiniteNumber(data.bytes),
+    mempoolMinFeeBtcKb: toFiniteNumber(data.mempoolminfee),
+    relayMinFeeBtcKb: toFiniteNumber(data.minrelaytxfee),
+    unbroadcastCount: toFiniteNumber(data.unbroadcastcount),
+    feeEconomy: toFiniteNumber(data.fee_economy),
+    feeHalfHour: toFiniteNumber(data.fee_half_hour),
+    feeFastest: toFiniteNumber(data.fee_fastest),
+    cachedAt: typeof data.cached_at === 'string' ? data.cached_at : null,
+  };
+}
+
+/* ── In-flight deduplication ─────────────────────────────────────────────────
+ * Calls arriving within DEDUP_WINDOW_MS of each other (e.g. S01 + S04 both
+ * mounting at the same time) share a single HTTP round-trip instead of firing
+ * two identical requests to the same endpoints.
+ * ──────────────────────────────────────────────────────────────────────────── */
+const DEDUP_WINDOW_MS = 2_000;
+let _inflightBundle = null;
+let _inflightAt     = 0;
+let _inflightOfficialUsage = null;
+let _inflightOfficialUsageAt = 0;
+let _inflightNode = null;
+let _inflightNodeAt = 0;
+
 export async function fetchMempoolOverviewBundle(options = {}) {
-  const {
-    timeout = 8000,
-    cache = 'no-store',
-  } = options;
+  const { timeout = 8000, cache = 'no-store' } = options;
+  const now = Date.now();
 
-  const [overviewPayload, livePayload] = await Promise.all([
-    fetchJson('/api/public/mempool/overview', { timeout, cache }),
-    fetchJson('/api/public/mempool/live', { timeout, cache }).catch(() => null),
-  ]);
+  if (_inflightBundle && now - _inflightAt < DEDUP_WINDOW_MS) {
+    return _inflightBundle;
+  }
 
-  return resolveMempoolOverviewBundle(overviewPayload, livePayload);
+  _inflightAt     = now;
+  _inflightBundle = (async () => {
+    const [overviewPayload, livePayload] = await Promise.all([
+      fetchJson('/api/public/mempool/overview', { timeout, cache }),
+      fetchJson('/api/public/mempool/live', { timeout, cache }).catch(() => null),
+    ]);
+    return resolveMempoolOverviewBundle(overviewPayload, livePayload);
+  })();
+
+  return _inflightBundle;
+}
+
+export async function fetchMempoolOfficialUsageSnapshot(options = {}) {
+  const { timeout = 8000, cache = 'no-store' } = options;
+  const now = Date.now();
+
+  if (_inflightOfficialUsage && now - _inflightOfficialUsageAt < DEDUP_WINDOW_MS) {
+    return _inflightOfficialUsage;
+  }
+
+  _inflightOfficialUsageAt = now;
+  _inflightOfficialUsage = (async () => {
+    const payload = await fetchJson('/api/public/mempool/official-usage', { timeout, cache });
+    return resolveMempoolOfficialUsageSnapshot(payload);
+  })();
+
+  return _inflightOfficialUsage;
+}
+
+export async function fetchMempoolNodeSnapshot(options = {}) {
+  const { timeout = 8000, cache = 'no-store' } = options;
+  const now = Date.now();
+
+  if (_inflightNode && now - _inflightNodeAt < DEDUP_WINDOW_MS) {
+    return _inflightNode;
+  }
+
+  _inflightNodeAt = now;
+  _inflightNode = (async () => {
+    const payload = await fetchJson('/api/public/mempool/node', { timeout, cache });
+    return resolveMempoolNodeSnapshot(payload);
+  })();
+
+  return _inflightNode;
 }

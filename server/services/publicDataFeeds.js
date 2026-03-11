@@ -1,4 +1,7 @@
+import http from 'node:http';
+import net from 'node:net';
 import { cacheGetJson, cacheSetJson, withCacheLock } from '../core/runtimeCache.js';
+import { SocksProxyAgent } from 'socks-proxy-agent';
 import { getBtcRates } from './btcRates.js';
 
 const FETCH_TIMEOUT_MS = 12_000;
@@ -16,7 +19,13 @@ const BINANCE_KLINES_BASE_URLS = [
 ];
 const SCRAPER_BASE_URL = String(process.env.SCRAPER_BASE_URL || 'https://api.zatobox.io').trim();
 const S15_GOLD_SCRAPER_PATH = '/api/scrape/companiesmarketcap-gold';
-const S04_MEMPOOL_NODE_SCRAPER_PATH = '/api/scrape/bitcoin-core-mempool';
+const S04_KNOT_API_URL = String(process.env.KNOT_API_URL || 'https://knotapi.zatobox.io/api/v1/init-data').trim();
+const S04_MEMPOOL_SPACE_USAGE_SCRAPER_PATH = '/api/scrape/mempool-space-memory-usage';
+const BITCOIN_RPC_ONION = String(process.env.BITCOIN_RPC_ONION || '').trim();
+const BITCOIN_RPC_PORT = String(process.env.BITCOIN_RPC_PORT || '').trim();
+const BITCOIN_RPC_USER = String(process.env.BITCOIN_RPC_USER || '').trim();
+const BITCOIN_RPC_PASS = String(process.env.BITCOIN_RPC_PASS || '').trim();
+const BITCOIN_TOR_SOCKS_PORT = String(process.env.BITCOIN_TOR_SOCKS_PORT || '').trim();
 const BTC_GENESIS_TS = Date.UTC(2009, 0, 3, 18, 15, 5);
 const BTC_HALVING_INTERVAL_BLOCKS = 210_000;
 const BTC_TARGET_BLOCK_INTERVAL_MS = 10 * 60 * 1000;
@@ -24,6 +33,7 @@ const BTC_MAX_SUPPLY = 21_000_000;
 const BTC_CURRENT_HALVING_REWARD = 3.125;
 
 const memCache = new Map();
+const BITCOIN_TOR_PROXY_URL = BITCOIN_TOR_SOCKS_PORT ? `socks5h://127.0.0.1:${BITCOIN_TOR_SOCKS_PORT}` : '';
 
 const FEED_DEFS = {
   mempoolOverview: {
@@ -32,6 +42,15 @@ const FEED_DEFS = {
     refreshMs: 30_000,
     sourceProvider: 'mempool.space + alternative.me',
     sourceUrl: 'https://mempool.space + https://api.alternative.me/fng/',
+    safeMinuteBudget: 2,
+    safeDailyBudget: 2880,
+  },
+  mempoolOfficialUsage: {
+    cacheKey: 'public:mempool:official-usage',
+    lockKey: 'public:mempool:official-usage:refresh',
+    refreshMs: 30_000,
+    sourceProvider: 'mempool.space-zatobox + mempool.space',
+    sourceUrl: `${SCRAPER_BASE_URL}${S04_MEMPOOL_SPACE_USAGE_SCRAPER_PATH} | https://mempool.space/api/v1/init-data`,
     safeMinuteBudget: 2,
     safeDailyBudget: 2880,
   },
@@ -121,8 +140,8 @@ const FEED_DEFS = {
     cacheKey: 'public:mempool:node',
     lockKey: 'public:mempool:node:refresh',
     refreshMs: 5_000,
-    sourceProvider: 'bitcoin-core-zatobox',
-    sourceUrl: `${SCRAPER_BASE_URL}${S04_MEMPOOL_NODE_SCRAPER_PATH}`,
+    sourceProvider: 'knotapi.zatobox.io',
+    sourceUrl: S04_KNOT_API_URL,
     safeMinuteBudget: 12,
     safeDailyBudget: 17_280,
   },
@@ -454,6 +473,122 @@ async function fetchTextWithTimeout(url, {
   }
 }
 
+function hasTorBitcoinRpcConfig() {
+  return Boolean(
+    BITCOIN_RPC_ONION
+      && BITCOIN_RPC_PORT
+      && BITCOIN_RPC_USER
+      && BITCOIN_RPC_PASS
+      && BITCOIN_TOR_PROXY_URL,
+  );
+}
+
+function buildBitcoinRpcUrl() {
+  if (!hasTorBitcoinRpcConfig()) return null;
+
+  const baseUrl = /^https?:\/\//i.test(BITCOIN_RPC_ONION)
+    ? BITCOIN_RPC_ONION
+    : `http://${BITCOIN_RPC_ONION}`;
+
+  const url = new URL(baseUrl);
+  if (!url.port) {
+    url.port = BITCOIN_RPC_PORT;
+  }
+  if (!url.pathname || url.pathname === '/') {
+    url.pathname = '/';
+  }
+  return url;
+}
+
+async function isLocalTcpPortReachable(port, host = '127.0.0.1', timeoutMs = 600) {
+  const numericPort = Number(port);
+  if (!Number.isInteger(numericPort) || numericPort <= 0) return false;
+
+  return await new Promise((resolve) => {
+    const socket = net.createConnection({ host, port: numericPort });
+
+    const cleanup = () => {
+      socket.removeAllListeners();
+      socket.setTimeout(0);
+    };
+
+    const finish = (result, destroySocket = false) => {
+      cleanup();
+      if (destroySocket && !socket.destroyed) {
+        socket.destroy();
+      }
+      resolve(result);
+    };
+
+    socket.setTimeout(timeoutMs);
+    socket.once('connect', () => finish(true, true));
+    socket.once('timeout', () => finish(false, true));
+    socket.once('error', () => {
+      cleanup();
+      resolve(false);
+    });
+  });
+}
+
+async function callBitcoinRpcOverTor(method, params = []) {
+  const rpcUrl = buildBitcoinRpcUrl();
+  if (!rpcUrl) {
+    throw new PublicFeedError('Bitcoin Tor RPC is not configured');
+  }
+
+  const torReady = await isLocalTcpPortReachable(BITCOIN_TOR_SOCKS_PORT);
+  if (!torReady) {
+    throw new PublicFeedError('Bitcoin Tor SOCKS port is unavailable');
+  }
+
+  const bitcoinTorAgent = new SocksProxyAgent(BITCOIN_TOR_PROXY_URL);
+  const payload = JSON.stringify({ jsonrpc: '1.0', id: method, method, params });
+
+  return await new Promise((resolve, reject) => {
+    const request = http.request(rpcUrl, {
+      method: 'POST',
+      agent: bitcoinTorAgent,
+      headers: {
+        'Content-Type': 'text/plain',
+        'Content-Length': Buffer.byteLength(payload),
+        Authorization: `Basic ${Buffer.from(`${BITCOIN_RPC_USER}:${BITCOIN_RPC_PASS}`).toString('base64')}`,
+      },
+    }, (response) => {
+      let raw = '';
+      response.setEncoding('utf8');
+      response.on('data', (chunk) => {
+        raw += chunk;
+      });
+      response.on('end', () => {
+        if ((response.statusCode || 500) >= 400) {
+          reject(new PublicFeedError(`Bitcoin RPC HTTP ${response.statusCode}`));
+          return;
+        }
+
+        try {
+          const json = JSON.parse(raw);
+          if (json?.error) {
+            reject(new PublicFeedError(`Bitcoin RPC ${json.error.message || json.error.code || 'error'}`));
+            return;
+          }
+          resolve(json?.result ?? null);
+        } catch (error) {
+          reject(new PublicFeedError(error instanceof Error ? error.message : String(error)));
+        }
+      });
+    });
+
+    request.setTimeout(FETCH_TIMEOUT_MS, () => {
+      request.destroy(new PublicFeedError('Bitcoin RPC request timeout'));
+    });
+    request.on('error', (error) => {
+      reject(error instanceof PublicFeedError ? error : new PublicFeedError(error instanceof Error ? error.message : String(error)));
+    });
+    request.write(payload);
+    request.end();
+  });
+}
+
 function parseSuffixedUsdNumber(value) {
   const match = String(value || '').trim().match(/^\$?\s*([\d.,]+)\s*([TMBK])?$/i);
   if (!match) return null;
@@ -478,6 +613,121 @@ function parseSuffixedUsdNumber(value) {
 function parsePercentValue(value) {
   const parsed = Number(String(value || '').replace(/[%+,\s]/g, ''));
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function firstFiniteNumber(...values) {
+  for (const value of values) {
+    if (Number.isFinite(value)) return value;
+  }
+  return null;
+}
+
+function sizeUnitToBytes(unit) {
+  const normalized = String(unit || '').trim().toUpperCase();
+  if (!normalized || normalized === 'B' || normalized.startsWith('BYTE')) return 1;
+  if (normalized === 'KB') return 1e3;
+  if (normalized === 'MB') return 1e6;
+  if (normalized === 'GB') return 1e9;
+  if (normalized === 'TB') return 1e12;
+  return null;
+}
+
+function parseSizedValueToBytes(value, defaultUnit = '') {
+  if (value == null) return null;
+
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    const fallbackMultiplier = sizeUnitToBytes(defaultUnit);
+    return fallbackMultiplier ? value * fallbackMultiplier : value;
+  }
+
+  const match = String(value).trim().match(/([\d.,]+)\s*(TB|GB|MB|KB|B|BYTES?)?/i);
+  if (!match) return null;
+
+  const amount = Number(String(match[1]).replace(/,/g, ''));
+  if (!Number.isFinite(amount)) return null;
+
+  const unitMultiplier = sizeUnitToBytes(match[2] || defaultUnit);
+  return unitMultiplier ? amount * unitMultiplier : amount;
+}
+
+function parseMemoryUsagePairText(value) {
+  if (typeof value !== 'string') return null;
+
+  const match = value.match(/([\d.,]+)\s*(TB|GB|MB|KB|B)?\s*(?:\/|of)\s*([\d.,]+)\s*(TB|GB|MB|KB|B)?/i);
+  if (!match) return null;
+
+  const usageUnit = match[2] || match[4] || 'MB';
+  const maxUnit = match[4] || usageUnit;
+  const usageBytes = parseSizedValueToBytes(`${match[1]} ${usageUnit}`);
+  const maxBytes = parseSizedValueToBytes(`${match[3]} ${maxUnit}`);
+
+  if (!Number.isFinite(usageBytes) || !Number.isFinite(maxBytes)) return null;
+
+  return {
+    usageBytes,
+    maxBytes,
+    label: value.trim(),
+  };
+}
+
+function normalizeOfficialMempoolUsage(raw) {
+  const data = raw?.data ?? raw?.mempoolInfo ?? raw;
+
+  const textPair = [
+    data?.label,
+    data?.memory_usage_label,
+    data?.memoryUsageLabel,
+    data?.summary,
+    data?.text,
+    data?.value,
+  ]
+    .map(parseMemoryUsagePairText)
+    .find(Boolean) || null;
+
+  let usageBytes = firstFiniteNumber(
+    parseSizedValueToBytes(data?.usage_bytes, 'B'),
+    parseSizedValueToBytes(data?.usageBytes, 'B'),
+    parseSizedValueToBytes(data?.memory_usage_bytes, 'B'),
+    parseSizedValueToBytes(data?.memoryUsageBytes, 'B'),
+    parseSizedValueToBytes(data?.used_bytes, 'B'),
+    parseSizedValueToBytes(data?.usedBytes, 'B'),
+    parseSizedValueToBytes(data?.usage),
+    parseSizedValueToBytes(data?.used),
+    parseSizedValueToBytes(data?.memory_usage),
+    parseSizedValueToBytes(data?.memoryUsage),
+    parseSizedValueToBytes(data?.current),
+    textPair?.usageBytes ?? null,
+  );
+
+  let maxBytes = firstFiniteNumber(
+    parseSizedValueToBytes(data?.maxmempool_bytes, 'B'),
+    parseSizedValueToBytes(data?.maxMempoolBytes, 'B'),
+    parseSizedValueToBytes(data?.max_bytes, 'B'),
+    parseSizedValueToBytes(data?.maxBytes, 'B'),
+    parseSizedValueToBytes(data?.limit_bytes, 'B'),
+    parseSizedValueToBytes(data?.limitBytes, 'B'),
+    parseSizedValueToBytes(data?.maxmempool),
+    parseSizedValueToBytes(data?.maxMempool),
+    parseSizedValueToBytes(data?.max),
+    parseSizedValueToBytes(data?.limit),
+    parseSizedValueToBytes(data?.memory_limit),
+    parseSizedValueToBytes(data?.memoryLimit),
+    parseSizedValueToBytes(data?.capacity),
+    textPair?.maxBytes ?? null,
+  );
+
+  if (Number.isFinite(usageBytes) && Number.isFinite(maxBytes) && usageBytes <= 10_000 && maxBytes <= 10_000) {
+    usageBytes *= 1e6;
+    maxBytes *= 1e6;
+  }
+
+  return {
+    usage: usageBytes,
+    maxmempool: maxBytes,
+    label: textPair?.label || null,
+    cached_at: raw?._meta?.cachedAt ?? null,
+    scraper_name: raw?._meta?.scraper ?? null,
+  };
 }
 
 function estimateBitcoinCirculatingSupply(ts) {
@@ -1607,6 +1857,21 @@ export async function getMempoolOverviewPayload() {
   );
 }
 
+export async function getMempoolOfficialUsagePayload() {
+  return getFeed(
+    'mempoolOfficialUsage',
+    async () => {
+      const url = `${SCRAPER_BASE_URL}${S04_MEMPOOL_SPACE_USAGE_SCRAPER_PATH}`;
+      const raw = await fetchJsonWithTimeout(url, { timeoutMs: 8_000 }).catch(async () => {
+        const initData = await fetchJsonWithTimeout('https://mempool.space/api/v1/init-data', { timeoutMs: 8_000 });
+        return initData?.mempoolInfo ?? initData;
+      });
+      return normalizeOfficialMempoolUsage(raw);
+    },
+    (value) => validateObject(value) && Number.isFinite(Number(value?.usage)) && Number.isFinite(Number(value?.maxmempool)),
+  );
+}
+
 export async function getMempoolLivePayload() {
   return getFeed(
     'mempoolLive',
@@ -1627,38 +1892,37 @@ export async function getMempoolLivePayload() {
   );
 }
 
-/** Node memory data from zatobox Bitcoin Core scraper.
- *  Expected zatobox response shape (mirrors Bitcoin Core getmempoolinfo):
- *  { usage: number, maxmempool: number, bytes: number, size: number, total_fee: number, ... }
- *  Fields wrapped in standard zatobox envelope with optional _meta.
+/** Node mempool data from knotapi.zatobox.io/api/v1/init-data.
+ *  Relevant fields are nested under `mempoolInfo` (mirrors Bitcoin Knots getmempoolinfo).
  */
 export async function getMempoolNodePayload() {
   return getFeed(
     'mempoolNode',
     async () => {
-      const url = `${SCRAPER_BASE_URL}${S04_MEMPOOL_NODE_SCRAPER_PATH}`;
-      const raw = await fetchJsonWithTimeout(url, { timeoutMs: 8_000 });
+      const raw = await fetchJsonWithTimeout(S04_KNOT_API_URL, { timeoutMs: 8_000 });
 
-      // Zatobox may wrap the data directly or under a `data` key
-      const d = raw?.data ?? raw;
+      const d = raw?.mempoolInfo ?? {};
 
       const n = (v) => (typeof v === 'number'  ? v : null);
       const b = (v) => (typeof v === 'boolean' ? v : null);
       const str = (v) => (typeof v === 'string'  ? v : null);
 
       return {
-        usage:            n(d?.usage),            // node RAM used by mempool (bytes)
-        maxmempool:       n(d?.maxmempool),        // max allowed RAM (bytes, default 300 MB)
-        size:             n(d?.size),              // number of txs in this node's mempool
-        bytes:            n(d?.bytes),             // virtual size of all txs (bytes)
-        total_fee:        n(d?.total_fee),         // sum of all tx fees (BTC)
-        mempoolminfee:    n(d?.mempoolminfee),     // dynamic floor fee rate (BTC/kB)
-        minrelaytxfee:    n(d?.minrelaytxfee),     // static relay floor (BTC/kB)
-        unbroadcastcount: n(d?.unbroadcastcount),  // txs not yet broadcast to peers
-        fullrbf:          b(d?.fullrbf),           // true = full RBF enabled
-        rbf_policy:       str(d?.rbf_policy),      // "always" | "never"
-        truc_policy:      str(d?.truc_policy),     // v3 tx policy: "accept" | "reject"
-        cached_at:        raw?._meta?.cachedAt ?? null,
+        usage:            n(d.usage),            // node RAM used by mempool (bytes)
+        maxmempool:       n(d.maxmempool),        // max allowed RAM (bytes, default 300 MB)
+        size:             n(d.size),              // number of txs in this node's mempool
+        bytes:            n(d.bytes),             // virtual size of all txs (bytes)
+        total_fee:        n(d.total_fee),         // sum of all tx fees (BTC)
+        mempoolminfee:    n(d.mempoolminfee),     // dynamic floor fee rate (BTC/kB)
+        minrelaytxfee:    n(d.minrelaytxfee),     // static relay floor (BTC/kB)
+        unbroadcastcount: n(d.unbroadcastcount),  // txs not yet broadcast to peers
+        fullrbf:          b(d.fullrbf),           // true = full RBF enabled
+        rbf_policy:       str(d.rbf_policy),
+        truc_policy:      str(d.truc_policy),
+        fee_economy:      n(raw?.fees?.economyFee),   // sat/vB from knotapi fees object
+        fee_half_hour:    n(raw?.fees?.halfHourFee),  // sat/vB
+        fee_fastest:      n(raw?.fees?.fastestFee),   // sat/vB
+        cached_at:        null,
       };
     },
     (v) => v != null && typeof v === 'object' && v.usage != null,
@@ -1679,10 +1943,42 @@ export async function getFearGreedPayload({ limit = 31 } = {}) {
   );
 }
 
+// Filter out non-European polygons from France's MultiPolygon feature.
+// Natural Earth includes French Guiana, Martinique, Réunion, etc. as part of
+// France's geometry, causing those overseas territories to be labelled "France"
+// on the map. We keep only polygons whose centroid falls within Europe bounds.
+function _polygonCentroid(ring) {
+  let sumLon = 0, sumLat = 0;
+  for (const [lon, lat] of ring) { sumLon += lon; sumLat += lat; }
+  return [sumLon / ring.length, sumLat / ring.length];
+}
+function _patchFranceOverseas(geoJson) {
+  if (!Array.isArray(geoJson?.features)) return geoJson;
+  return {
+    ...geoJson,
+    features: geoJson.features.map((feature) => {
+      const iso2eh = String(feature?.properties?.ISO_A2_EH || '').toUpperCase();
+      const admin  = String(feature?.properties?.ADMIN || '').toLowerCase();
+      if (iso2eh !== 'FR' && admin !== 'france') return feature;
+      const geom = feature.geometry;
+      if (geom?.type !== 'MultiPolygon') return feature;
+      const european = geom.coordinates.filter((poly) => {
+        const [lon, lat] = _polygonCentroid(poly[0]);
+        return lon > -15 && lon < 20 && lat > 35 && lat < 56;
+      });
+      if (european.length === 0) return feature; // safety — keep all if nothing matched
+      return { ...feature, geometry: { ...geom, coordinates: european } };
+    }),
+  };
+}
+
 export async function getCountriesGeoPayload() {
   return getFeed(
     'geoCountries',
-    async () => fetchJsonWithTimeout('https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson'),
+    async () => {
+      const raw = await fetchJsonWithTimeout('https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_110m_admin_0_countries.geojson');
+      return _patchFranceOverseas(raw);
+    },
     validateObject,
   );
 }
@@ -1690,7 +1986,10 @@ export async function getCountriesGeoPayload() {
 async function getCountriesGeoHighResPayload() {
   return getFeed(
     'geoCountriesHighRes',
-    async () => fetchJsonWithTimeout('https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_admin_0_countries.geojson'),
+    async () => {
+      const raw = await fetchJsonWithTimeout('https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_admin_0_countries.geojson');
+      return _patchFranceOverseas(raw);
+    },
     validateObject,
   );
 }
