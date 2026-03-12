@@ -619,13 +619,34 @@ export function createApp() {
   }));
 
   // ── Cache warm-up on startup ──────────────────────────────────────────────
-  // Kick off S03 multi-currency scrape in the background so the first real
-  // request hits a warm cache instead of waiting on a cold scrape (~5-12 s).
+  // Kick off heavy feeds in the background so first real requests hit warm cache.
   setTimeout(() => {
     getS03MultiCurrencyPayload()
       .then(() => console.log('[warmup] S03 multi-currency cache ready'))
       .catch(err => console.warn('[warmup] S03 multi-currency failed:', err?.message));
   }, 2000);
+
+  // S06 Bitnodes: cold start hits Bitnodes API (2-3s) or HTML scraper fallback (5-10s).
+  setTimeout(() => {
+    getBitnodesPayload()
+      .then(() => console.log('[warmup] S06 Bitnodes nodes cache ready'))
+      .catch(err => console.warn('[warmup] S06 Bitnodes failed:', err?.message));
+  }, 4000);
+
+  // S07 Lightning: mempool.space responds fast but GeoJSON + lock wait adds latency cold.
+  setTimeout(() => {
+    getLightningWorldPayload()
+      .then(() => console.log('[warmup] S07 Lightning world cache ready'))
+      .catch(err => console.warn('[warmup] S07 Lightning failed:', err?.message));
+  }, 6000);
+
+  // S08 BTC Map: paginating ~50k places + point-in-polygon matching takes 20-60s cold.
+  // Warm it up 10s after start so the geo feed and polygon index are ready on first visit.
+  setTimeout(() => {
+    getBtcMapBusinessesByCountryPayload()
+      .then(() => console.log('[warmup] S08 BTC Map businesses cache ready'))
+      .catch(err => console.warn('[warmup] S08 BTC Map failed:', err?.message));
+  }, 10_000);
 
   return app;
 }

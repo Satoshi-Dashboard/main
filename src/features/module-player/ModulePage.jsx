@@ -565,6 +565,10 @@ export default function ModulePage({ forcedSlug = null }) {
           <img
             src="/logo.svg"
             alt="Satoshi Dashboard"
+            width="8682"
+            height="1558"
+            fetchPriority="high"
+            decoding="async"
             className="h-6 w-auto max-w-[110px] drop-shadow-[0_0_10px_rgba(245,136,13,0.35)] sm:h-7 sm:max-w-[120px]"
           />
         </button>
@@ -712,7 +716,7 @@ export default function ModulePage({ forcedSlug = null }) {
         <Link
           to={SEO_HUB_PATH}
           onClick={onOpenLanding}
-          className="absolute left-1/2 top-1/2 hidden max-w-[34vw] -translate-x-1/2 -translate-y-1/2 items-center justify-center text-center tracking-[0.18em] text-white/24 transition-colors hover:text-white/60 sm:flex lg:max-w-none"
+          className="absolute left-1/2 top-1/2 hidden max-w-[34vw] -translate-x-1/2 -translate-y-1/2 items-center justify-center text-center tracking-[0.18em] text-white/56 transition-colors hover:text-white/80 sm:flex lg:max-w-none"
           style={{ fontSize: 'var(--fs-tag)' }}
           aria-label="Open landing page"
         >

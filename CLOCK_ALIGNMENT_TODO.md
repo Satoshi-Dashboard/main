@@ -47,7 +47,6 @@ Corregir textos que implican "tiempo real" cuando la fuente no lo es.
 | S01 BitcoinOverview | `/api/public/mempool/overview` | 15s | 30s (unificar con S04) |
 | S13 TransactionCount | `/api/s13/addresses-richer` | 60s | 1h (3 600 000ms) |
 | S08 NodesMap | `/api/bitnodes/cache` | 60s | 10min (600 000ms) |
-| Visitor counter frontend consumer (not currently mounted) | `/api/visitors/stats` | n/a | Re-evaluate only if a frontend consumer is reintroduced |
 | S10 Stablecoins (list) | `/api/s10/stablecoins` | 60s | 2min (120 000ms) |
 | S10 Stablecoins (peg) | `/api/s10/stablecoins/live-prices` | 60s | 2min (120 000ms) |
 
@@ -55,7 +54,6 @@ Corregir textos que implican "tiempo real" cuando la fuente no lo es.
 - [ ] **S01** — cambiar `setInterval(load, 15_000)` → `setInterval(load, 30_000)`
 - [ ] **S14** — cambiar `setInterval(load, 60_000)` → `setInterval(load, 3_600_000)`
 - [ ] **S08** — cambiar `setInterval(load, 60_000)` → `setInterval(load, 600_000)`
-- [x] **Visitor counter frontend consumer** — no existe un componente montado en `src/` actualmente; posponer cualquier ajuste de polling hasta que el consumidor frontend sea reintroducido.
 - [ ] **S10 (list)** — cambiar `setInterval(load, LIST_REFRESH_MS)` donde `LIST_REFRESH_MS = 60_000` → `120_000`
 - [ ] **S10 (peg)** — cambiar `setInterval(loadLivePegPrices, LIVE_PEG_REFRESH_MS)` donde `LIVE_PEG_REFRESH_MS = 60_000` → `120_000`
 - [ ] **Eliminar `{ cache: 'no-store' }`** en estos endpoints estables para que el CDN Vercel pueda servir desde el edge:
@@ -207,3 +205,11 @@ Corregir textos que implican "tiempo real" cuando la fuente no lo es.
 - **Acción Realizada/Corrección:** Se marcaron como no aplicables las filas y tareas de polling frontend asociadas al visitor counter hasta que exista un componente real.
 - **Nueva/Modificada Regla o Directriz:** Los planes operativos deben diferenciar entre endpoints backend disponibles y consumidores frontend efectivamente montados antes de proponer cambios de polling o UX.
 - **Justificación:** Evita ejecutar trabajo sobre componentes inexistentes y mantiene el TODO alineado con el estado real del código.
+
+- **Fecha de la Actualización:** `2026-03-11`
+- **Archivo(s) Afectado(s):** `CLOCK_ALIGNMENT_TODO.md`
+- **Tipo de Evento/Contexto:** Limpieza de plan tras retiro del visitor counter
+- **Descripción del Evento Original:** El plan de polling todavía conservaba una fila histórica del visitor counter aunque el feature fue eliminado del proyecto.
+- **Acción Realizada/Corrección:** Se retiraron la fila y la tarea asociadas al visitor counter del plan operativo actual.
+- **Nueva/Modificada Regla o Directriz:** Si un endpoint o feature deja de existir, los TODOs operativos deben eliminarlo del plan activo en lugar de mantenerlo como pendiente condicional.
+- **Justificación:** Evita ruido en auditorías de polling y deja el documento enfocado en superficies que realmente siguen formando parte del producto.

@@ -115,7 +115,7 @@ This is a strict global rule for every external API integration (new or existing
 
 1. Protect mutation/refresh endpoints in production with `REFRESH_API_TOKEN`.
 2. Never log secrets or tokens.
-3. Keep visitor/IP handling hashed and minimal.
+3. Keep any user/IP handling minimal and privacy-conscious.
 
 ## Vercel/runtime compatibility (mandatory)
 
@@ -137,7 +137,6 @@ After backend/API changes, run:
    - `/api/s03/multi-currency/status`
    - `/api/s10/stablecoins`
    - `/api/public/fear-greed`
-   - `/api/visitors/stats`
    - `/api/bitnodes/cache/status`
    - `/api/s12/btc-distribution/status`
    - `/api/s13/addresses-richer/status`
@@ -175,3 +174,11 @@ When backend/API behavior changes:
 - **Acción Realizada/Corrección:** Se actualizaron las rutas backend al nuevo esquema `server/core`, `server/services` y `server/features/<domain>` y se documentó explícitamente esa separación.
 - **Nueva/Modificada Regla o Directriz:** Las verificaciones backend deben usar las rutas actuales de infraestructura compartida y respetar la separación entre primitives (`server/core`) y pipelines/feature backends (`server/services`, `server/features`).
 - **Justificación:** Evita que futuros agentes editen archivos obsoletos o evalúen una arquitectura distinta a la realmente desplegada.
+
+- **Fecha de la Actualización:** `2026-03-11`
+- **Archivo(s) Afectado(s):** `.claude/BACKEND_API_RULES.md`
+- **Tipo de Evento/Contexto:** Retiro de endpoint backend obsoleto
+- **Descripción del Evento Original:** La checklist backend seguía exigiendo smoke tests sobre `/api/visitors/stats` y la sección de seguridad lo trataba como capacidad vigente, aunque el feature de visitor counter fue eliminado.
+- **Acción Realizada/Corrección:** Se retiró ese endpoint de la verificación obligatoria y se generalizó la regla de privacidad para no anclarla a un feature ya removido.
+- **Nueva/Modificada Regla o Directriz:** Cuando un endpoint backend se retire, `.claude/BACKEND_API_RULES.md` debe eliminarlo de las smoke checks y conservar solo reglas de seguridad que sigan aplicando al estado real del API.
+- **Justificación:** Evita verificaciones fallidas sobre rutas inexistentes y mantiene la política backend enfocada en contratos realmente soportados.

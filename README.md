@@ -146,7 +146,7 @@ This section exists on purpose: public readers and contributors should be able t
 | S01 | Bitcoin Overview | `fetchBtcSpot()` + `/api/public/mempool/overview` | Spot: Binance -> Binance.US -> cached spot; overview: mempool.space + Alternative.me | Backend stale cache; UI keeps previous values | UI 30s; spot API 5s; overview API 30s |
 | S02 | Price Chart | `fetchBtcSpot()` + `/api/public/binance/btc-history?days=1\|7\|30\|90\|365\|1825&interval=5m\|15m\|1h\|1d` | Spot: Binance -> Binance.US -> cached spot; history: Binance -> Binance.US (paginated for >1000 candles) | Backend stale cache; per-range frontend session cache | Spot 10s poll; history on mount/range change; history API refresh 5m (1825d: 60m) |
 | S03 | Multi-Currency | `/api/s03/multi-currency` + `/api/public/geo/land` | BTC anchor from `/api/btc/rates`; FX: Investing scraper proxy -> direct Investing HTML scrape; land: Natural Earth | Stale shared FX payload; UI keeps previous globe/map state | UI 30s; S03 API 30s; land geo monthly |
-| S04 | Mempool Gauge | `/api/public/mempool/overview` | mempool.space + Alternative.me bundle | Stale cache; UI keeps previous values | UI 30s; API 30s |
+| S04 | Mempool Gauge | `/api/public/mempool/overview` + `/api/public/mempool/official-usage` + `/api/public/mempool/node` | mempool.space overview + Zatobox official memory-usage scrape (fallback: mempool.space `/api/v1/init-data`) + Zatobox node mempool scrape (fallback: local Tor RPC `getmempoolinfo`) | Stale cache per feed; UI keeps previous values and separates official vs node views | UI 30s official / 5s node; API 30s official / 5s node |
 | S05 | Long-Term Trend | `/api/public/mempool/live` | mempool.space blocks + mempool blocks + fees | Stale cache; UI shows reconnecting state and last good payload | UI 10s; API 10s |
 | S06 | Nodes Map | `/api/bitnodes/cache` + `/api/public/geo/countries` | Bitnodes scraper proxy API -> direct Bitnodes API + snapshot -> Bitnodes HTML modal scrape; countries: Natural Earth | HTML modal fallback and stale cache reuse | UI polls 10m; Bitnodes refresh follows next snapshot / fallback scrape throttle; geo monthly |
 | S07 | Lightning Nodes Map | `/api/public/lightning/world` + `/api/public/geo/countries` | mempool.space -> stale shared cache; countries: Natural Earth | Stale cache; UI keeps last payload | UI 60s; API 60s; geo monthly |
@@ -257,6 +257,7 @@ Notes:
 ### Public shared feeds
 
 - `GET /api/public/mempool/overview`
+- `GET /api/public/mempool/official-usage`
 - `GET /api/public/mempool/live`
 - `GET /api/public/fear-greed?limit=7|31`
 - `GET /api/public/geo/countries`
@@ -298,24 +299,12 @@ Notes:
 - Each `days + interval` combination gets its own backend cache key
 - The frontend keeps a per-session in-memory cache keyed by `{label}_{interval}` to reduce repeated range fetches
 
-### Visitors
-
-- `GET /api/visitors/stats`
-- `POST /api/visitors/track`
-
-Notes:
-
-- The backend exposes anonymous visitor endpoints; any client must generate a 16-128 character URL-safe visitor ID before calling `POST /api/visitors/track`
-- The backend stores a salted hash only
-- Storage mode can be `shared-kv` or `local-file`
-
 ## Environment variables
 
 - `API_PORT` (default `8787`)
 - `API_HOST` (default `0.0.0.0`)
 - `API_PROXY_TARGET` (default `http://127.0.0.1:8787`)
 - `REFRESH_API_TOKEN` (recommended for production refresh endpoints)
-- `VISITOR_COUNTER_SALT` (strongly recommended in production for anonymous visitor hashing)
 - `CACHE_KEY_PREFIX` (optional shared-cache namespace)
 - `KV_REST_API_URL` / `KV_REST_API_TOKEN` (optional Vercel KV)
 - `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` (optional shared KV aliases)
@@ -354,7 +343,6 @@ Development notes:
 - Frontend alias `@/*` resolves to `src/*` via `vite.config.js` and `jsconfig.json`
 - `vite.config.js` ignores generated cache JSON files to reduce unnecessary reload noise
 - Shared KV is recommended on Vercel to avoid per-instance cache drift
-- Shared KV is also recommended for visitor tracking consistency across serverless instances
 
 ## SEO and public assets
 
@@ -496,3 +484,19 @@ Satoshi Dashboard is open-source under the MIT License. See `LICENSE.txt`.
 - **Acción Realizada/Corrección:** Se amplió la documentación para incluir Vercel Speed Insights en el stack y para dejar claro que el despliegue ahora emite pageviews, eventos custom de navegacion/landing y telemetría de rendimiento.
 - **Nueva/Modificada Regla o Directriz:** Cuando se amplíe la observabilidad del producto con nuevas categorías de eventos o performance telemetry, el `README.md` debe describir tanto la herramienta añadida como el tipo de señal que se espera ver en Vercel.
 - **Justificación:** Facilita que futuros agentes y maintainers entiendan por qué aparecen nuevas métricas en Vercel y evita diagnosticar como bug una integración que solo estaba pobremente documentada.
+
+- **Fecha de la Actualización:** `2026-03-11`
+- **Archivo(s) Afectado(s):** `README.md`
+- **Tipo de Evento/Contexto:** Retiro del visitor counter backend
+- **Descripción del Evento Original:** El README seguía documentando endpoints y variables de entorno del visitor counter aunque el owner pidió eliminar el conteo de personas que entran en la app.
+- **Acción Realizada/Corrección:** Se retiraron la sección API de visitantes, la variable `VISITOR_COUNTER_SALT` y la nota de KV asociada a ese feature eliminado.
+- **Nueva/Modificada Regla o Directriz:** Cuando un feature operativo se retire por completo, el `README.md` debe eliminar sus endpoints, variables y notas de infraestructura en la misma tarea para que la documentación pública no prometa capacidades inexistentes.
+- **Justificación:** Mantiene la documentación alineada con el comportamiento real del despliegue y evita integraciones o revisiones basadas en endpoints ya inexistentes.
+
+- **Fecha de la Actualización:** `2026-03-11`
+- **Archivo(s) Afectado(s):** `README.md`
+- **Tipo de Evento/Contexto:** Comparativa dual en S04 entre mempool oficial y nodo propio
+- **Descripción del Evento Original:** `S04` solo documentaba el bundle general de mempool.space, aunque ahora debe exponer una comparativa modal entre la vista oficial de mempool.space y la vista del nodo Bitcoin Knots del owner, con un scrape dedicado para el usage oficial.
+- **Acción Realizada/Corrección:** Se actualizó la fila de `S04` y la lista de feeds públicos para incluir `/api/public/mempool/official-usage` junto a `/api/public/mempool/node`, dejando explícito que la UI separa ambas vistas, sus cadencias, el fallback oficial hacia `mempool.space /api/v1/init-data` y el fallback del nodo hacia Tor RPC local.
+- **Nueva/Modificada Regla o Directriz:** Cuando un módulo compare dos alcances de mempool dentro de la misma superficie, el `README.md` debe listar cada feed implicado, aclarar si la UI mantiene esas vistas separadas y documentar cualquier fallback que conserve la misma semántica oficial o node-scoped.
+- **Justificación:** Evita que futuros agentes o maintainers vuelvan a asumir que `S04` representa una sola fuente o que el gauge principal sale del mismo feed que la vista del nodo propio.

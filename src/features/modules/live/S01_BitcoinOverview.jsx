@@ -43,6 +43,7 @@ const UI_COLORS = {
   positive: 'var(--accent-green)',
   negative: 'var(--accent-red)',
   warning: 'var(--accent-warning)',
+  textPrimary: 'var(--text-primary)',
   textTertiary: 'var(--text-tertiary)',
 };
 
@@ -191,11 +192,19 @@ function DifficultyTile({ pct, etaBlocks, changeNext, changePrev }) {
             </>
           ) : (
             <>
-              <span className="font-mono" style={{ color: UI_COLORS.negative }}>
-                <AnimatedMetric value={changeNext} variant="percent" decimals={2} signed inline /> {nextUp ? '▲' : '▼'} Next
+              <span className="font-mono inline-flex items-center gap-1">
+                <span style={{ color: nextUp ? UI_COLORS.positive : UI_COLORS.negative }}>
+                  <AnimatedMetric value={changeNext} variant="percent" decimals={2} signed />
+                </span>
+                <span style={{ color: nextUp ? UI_COLORS.positive : UI_COLORS.negative }}>{nextUp ? '▲' : '▼'}</span>
+                <span style={{ color: UI_COLORS.textPrimary }}>Next</span>
               </span>
-              <span className="font-mono" style={{ color: UI_COLORS.positive }}>
-                <AnimatedMetric value={changePrev} variant="percent" decimals={2} signed inline /> {prevUp ? '▲' : '▼'} Prev
+              <span className="font-mono inline-flex items-center gap-1">
+                <span style={{ color: prevUp ? UI_COLORS.positive : UI_COLORS.negative }}>
+                  <AnimatedMetric value={changePrev} variant="percent" decimals={2} signed />
+                </span>
+                <span style={{ color: prevUp ? UI_COLORS.positive : UI_COLORS.negative }}>{prevUp ? '▲' : '▼'}</span>
+                <span style={{ color: UI_COLORS.textPrimary }}>Prev</span>
               </span>
             </>
           )}
@@ -213,7 +222,6 @@ function DifficultyTile({ pct, etaBlocks, changeNext, changePrev }) {
               style={{ fontSize: 'var(--fs-heading)' }}
               variant="percent"
               decimals={2}
-              inline
             />
           )}
         </div>
@@ -226,11 +234,19 @@ function DifficultyTile({ pct, etaBlocks, changeNext, changePrev }) {
             </>
           ) : (
             <>
-              <span className="inline-flex max-w-full flex-wrap items-center justify-center rounded bg-black/40 px-1.5 py-px font-mono text-center" style={{ color: UI_COLORS.negative }}>
-                <AnimatedMetric value={changeNext} variant="percent" decimals={2} signed inline /> {nextUp ? '▲' : '▼'} Next
+              <span className="inline-flex items-center gap-1 rounded bg-black/40 px-1.5 py-px font-mono">
+                <span style={{ color: nextUp ? UI_COLORS.positive : UI_COLORS.negative }}>
+                  <AnimatedMetric value={changeNext} variant="percent" decimals={2} signed />
+                </span>
+                <span style={{ color: nextUp ? UI_COLORS.positive : UI_COLORS.negative }}>{nextUp ? '▲' : '▼'}</span>
+                <span style={{ color: UI_COLORS.textPrimary }}>Next</span>
               </span>
-              <span className="inline-flex max-w-full flex-wrap items-center justify-center rounded bg-black/40 px-1.5 py-px font-mono text-center" style={{ color: UI_COLORS.positive }}>
-                <AnimatedMetric value={changePrev} variant="percent" decimals={2} signed inline /> {prevUp ? '▲' : '▼'} Prev
+              <span className="inline-flex items-center gap-1 rounded bg-black/40 px-1.5 py-px font-mono">
+                <span style={{ color: prevUp ? UI_COLORS.positive : UI_COLORS.negative }}>
+                  <AnimatedMetric value={changePrev} variant="percent" decimals={2} signed />
+                </span>
+                <span style={{ color: prevUp ? UI_COLORS.positive : UI_COLORS.negative }}>{prevUp ? '▲' : '▼'}</span>
+                <span style={{ color: UI_COLORS.textPrimary }}>Prev</span>
               </span>
             </>
           )}
@@ -247,7 +263,6 @@ function DifficultyTile({ pct, etaBlocks, changeNext, changePrev }) {
             style={{ fontSize: 'var(--fs-title)' }}
             variant="percent"
             decimals={2}
-            inline
           />
         )}
       </div>
@@ -263,7 +278,7 @@ function DifficultyTile({ pct, etaBlocks, changeNext, changePrev }) {
         <div className="skeleton" style={{ width: '55%', height: '1em' }} />
       ) : (
           <div className="flex max-w-full flex-wrap items-center justify-center gap-x-1 text-center font-mono" style={{ fontSize: 'var(--fs-micro)', color: UI_COLORS.textTertiary }}>
-            <AnimatedMetric value={etaBlocks} variant="number" suffix=" blocks remaining" inline />
+            <AnimatedMetric value={etaBlocks} variant="number" suffix=" blocks remaining" />
           </div>
       )}
     </div>

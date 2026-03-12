@@ -29,7 +29,7 @@ export default function SeoChrome({ children }) {
                 onClick={() => trackSeoNavigationClick({ label: 'Satoshi Dashboard', destination: '/', surface: 'seo-header-logo' })}
                 className="inline-flex items-center gap-3 text-white transition hover:opacity-90"
               >
-                <img src="/logo.svg" alt="Satoshi Dashboard" className="h-8 w-auto" />
+                <img src="/logo.svg" alt="Satoshi Dashboard" width="8682" height="1558" decoding="async" className="h-8 w-auto" />
                 <span className="font-mono text-[13px] uppercase tracking-[0.22em] text-[color:var(--accent-bitcoin)]">
                   Satoshi Dashboard
                 </span>

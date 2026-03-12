@@ -1,0 +1,61 @@
+name: SEO Monitor
+
+on:
+  schedule:
+    # Every Monday at 09:00 UTC
+    - cron: '0 9 * * 1'
+  # Allow manual trigger from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  pagespeed:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run PageSpeed Insights
+        run: node scripts/pagespeed.js
+        env:
+          PROD_URL: ${{ vars.PROD_URL }}
+          PAGESPEED_API_KEY: ${{ secrets.PAGESPEED_API_KEY }}
+
+      - name: Upload PSI report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pagespeed-report-${{ github.run_id }}
+          path: lhci-reports/
+          retention-days: 90
+
+  gsc-inspect:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run URL Inspection
+        run: node scripts/gsc-inspect.js
+        env:
+          GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
+          GOOGLE_SITE_URL: ${{ vars.GOOGLE_SITE_URL }}

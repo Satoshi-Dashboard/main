@@ -80,7 +80,7 @@ satoshi-dashboard/
 
 - `public/`: static assets copied into the Vite build output.
 - `dist/`: generated output only; do not hand-edit.
-- Root `*_cache.json` and `visitor_counter.json`: local runtime fallback files for backend caches/counters.
+- Root `*_cache.json`: local runtime fallback files for backend caches.
 
 ## Placement rules
 
@@ -151,3 +151,11 @@ satoshi-dashboard/
 - **Acción Realizada/Corrección:** Se creó `PROJECT_STRUCTURE.md` con el árbol principal, reglas de ubicación, convenciones de importación y ejemplos de contribución.
 - **Nueva/Modificada Regla o Directriz:** Las futuras contribuciones deben seguir la separación `src/features`, `src/shared`, `server/core`, `server/services` y `server/features/<domain>` documentada aquí.
 - **Justificación:** Reduce ambiguedad al añadir código nuevo y ayuda a mantener la coherencia conseguida con la reestructuración.
+
+- **Fecha de la Actualización:** `2026-03-11`
+- **Archivo(s) Afectado(s):** `PROJECT_STRUCTURE.md`
+- **Tipo de Evento/Contexto:** Retiro de runtime local del contador de visitantes
+- **Descripción del Evento Original:** La guía estructural seguía mencionando `visitor_counter.json` como archivo runtime válido aunque el feature de conteo de visitantes fue eliminado del backend.
+- **Acción Realizada/Corrección:** Se ajustó la sección de assets runtime para dejar solo los archivos `*_cache.json` que siguen activos.
+- **Nueva/Modificada Regla o Directriz:** Cuando se elimine un feature backend con persistencia local, `PROJECT_STRUCTURE.md` debe retirar de inmediato cualquier archivo runtime obsoleto de la descripción estructural.
+- **Justificación:** Evita que futuros agentes asuman que todavía existe un contador de visitantes persistido en disco o intenten reutilizar una ruta ya retirada.

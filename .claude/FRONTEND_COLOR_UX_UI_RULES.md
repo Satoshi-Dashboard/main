@@ -177,6 +177,15 @@ Use root tokens from `src/index.css` as source of truth:
 3. Mobile + desktop parity:
      - semantic colors must preserve meaning in responsive states.
 
+## Initial-route performance guardrail (mandatory)
+
+For the default dashboard route (`/`) and any above-the-fold module content loaded on first visit:
+
+1. Do not pull heavyweight charting or motion libraries just to render small decorative widgets if a light SVG/static alternative can preserve the same meaning.
+2. Avoid manual chunking that forces unrelated route-level libraries into the initial HTML preload chain.
+3. If the home route only needs a micro-visual (sparkline, tiny trend cue, static number), prefer a local lightweight implementation over importing a full chart or animated-counter stack.
+4. Treat repeated PSI warnings about unused JS on the first route as a product bug even when desktop still scores 100.
+
 ## Metric semantics and unit integrity (mandatory)
 
 For frontend modules that present live metrics, percentages, gauges, limits, or comparisons:
@@ -445,3 +454,11 @@ When creating any new frontend module, agents must follow the project example pa
 - **Acción Realizada/Corrección:** Se añadió una regla para exigir grids de columnas iguales y separadores estables en filas repetidas de KPIs/fees bajo charts o gauges.
 - **Nueva/Modificada Regla o Directriz:** Las filas repetidas de métricas en desktop deben usar columnas de ancho estable para que cambios de longitud en valores, labels o unidades no desplacen visualmente a los bloques hermanos.
 - **Justificación:** Evita paneles descuadrados cuando los datos live cambian entre fuentes o magnitudes distintas y mejora la percepción de orden en vistas analíticas.
+
+- **Fecha de la Actualización:** `2026-03-12`
+- **Archivo(s) Afectado(s):** `.claude/FRONTEND_COLOR_UX_UI_RULES.md`
+- **Tipo de Evento/Contexto:** Optimización del bundle inicial del dashboard
+- **Descripción del Evento Original:** El chequeo de PageSpeed mostraba JavaScript no usado en móvil/escritorio porque la ruta inicial seguía arrastrando librerías pesadas de charts y motion para microcomponentes del primer módulo, además de preloads innecesarios inducidos por chunking manual.
+- **Acción Realizada/Corrección:** Se añadió una guardrail explícita para la ruta inicial: preferir micro-SVGs o render estático en widgets above-the-fold y evitar manual chunking que vuelva críticas librerías pertenecientes a otras rutas o módulos.
+- **Nueva/Modificada Regla o Directriz:** La home del dashboard no debe importar ni preloadear librerías pesadas de charting/animación solo para widgets pequeños cuando exista una alternativa ligera equivalente en semántica y UX.
+- **Justificación:** Reduce bytes críticos, mejora LCP/TBT móvil sin degradar el desktop y evita repetir optimizaciones que parecen correctas en bundle analysis pero empeoran la ruta real más visitada.

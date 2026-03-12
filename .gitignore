@@ -34,3 +34,7 @@ visitor_counter.json
 *.sw?
 
 .vercel
+
+# Lighthouse CI / PageSpeed reports
+lhci-reports/
+.lighthouseci/
