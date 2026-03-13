@@ -19,9 +19,9 @@ const BitcoinDonationQr = lazy(() => import('@/shared/components/common/BitcoinD
 const MARKET_AUDIO_POLL_MS = 15_000;
 const MARKET_AUDIO_HISTORY_MS = 20 * 60 * 1000;
 const MARKET_AUDIO_TRACKS = {
-  down: 'gEQHhMNxr3Q',
-  up: 'EFDMum1vs7Q',
-  stable: 'bGDWDeZPW2Y',
+  down: '/modulos-referencia/musica/Bajista.mp3',
+  up: '/modulos-referencia/musica/Alcista.mp3',
+  stable: '/modulos-referencia/musica/Lateralestable.mp3',
 };
 
 const MARKET_AUDIO_THEMES = {
@@ -144,25 +144,6 @@ function getCadenceMs(meta) {
   if (Number.isFinite(minutes) && minutes > 0) return Math.round(minutes * 60 * 1000);
 
   return null;
-}
-
-function buildYoutubeEmbedUrl(videoId) {
-  if (!videoId) return '';
-
-  const params = new URLSearchParams({
-    autoplay: '1',
-    controls: '0',
-    disablekb: '1',
-    fs: '0',
-    iv_load_policy: '3',
-    loop: '1',
-    modestbranding: '1',
-    playsinline: '1',
-    playlist: videoId,
-    rel: '0',
-  });
-
-  return `https://www.youtube.com/embed/${videoId}?${params.toString()}`;
 }
 
 function classifyMarketAudioMood(spot, samples) {
@@ -312,6 +293,7 @@ export default function ModulePage({ forcedSlug = null }) {
   const [metaLastAtMs, setMetaLastAtMs] = useState(() => Date.now());
   const [marketAudioReady, setMarketAudioReady] = useState(false);
   const marketSamplesRef = useRef([]);
+  const marketAudioRef = useRef(null);
 
   const onCopyDonation = async () => {
     try {
@@ -548,11 +530,7 @@ export default function ModulePage({ forcedSlug = null }) {
   };
 
   const marketAudioTheme = MARKET_AUDIO_THEMES[marketAudioMood] || MARKET_AUDIO_THEMES.stable;
-  const activeTrackId = MARKET_AUDIO_TRACKS[marketAudioMood] || MARKET_AUDIO_TRACKS.stable;
-  const activePlayerSrc = useMemo(
-    () => (isPlaying ? buildYoutubeEmbedUrl(activeTrackId) : ''),
-    [activeTrackId, isPlaying],
-  );
+  const activeTrackSrc = MARKET_AUDIO_TRACKS[marketAudioMood] || MARKET_AUDIO_TRACKS.stable;
   const marketAudioChangeLabel = Number.isFinite(marketAudioSpot?.change24h)
     ? `${marketAudioSpot.change24h >= 0 ? '+' : ''}${marketAudioSpot.change24h.toFixed(2)}% 24h`
     : 'Waiting for BTC trend';
@@ -560,17 +538,36 @@ export default function ModulePage({ forcedSlug = null }) {
     ? `Pause market soundtrack. ${marketAudioTheme.label}. ${marketAudioChangeLabel}.`
     : `Play market soundtrack. ${marketAudioTheme.label}. ${marketAudioChangeLabel}.`;
 
+  useEffect(() => {
+    const audio = marketAudioRef.current;
+    if (!audio || !marketAudioReady) return;
+
+    if (!isPlaying) {
+      audio.pause();
+      audio.currentTime = 0;
+      return;
+    }
+
+    audio.loop = true;
+    audio.volume = 1;
+    const playPromise = audio.play();
+    if (playPromise && typeof playPromise.catch === 'function') {
+      playPromise.catch(() => {
+        setIsPlaying(false);
+      });
+    }
+  }, [activeTrackSrc, isPlaying, marketAudioReady]);
+
   return (
     <main className="player-shell relative h-dvh w-screen overflow-hidden bg-[color:var(--bg-primary)]">
       <div className="pointer-events-none absolute h-0 w-0 overflow-hidden opacity-0" aria-hidden="true">
-        {activePlayerSrc ? (
-          <iframe
-            key={activeTrackId}
-            title="Market soundtrack"
-            src={activePlayerSrc}
-            allow="autoplay; encrypted-media"
-          />
-        ) : null}
+        <audio
+          key={activeTrackSrc}
+          ref={marketAudioRef}
+          src={activeTrackSrc}
+          loop
+          preload="none"
+        />
       </div>
 
       {/* ── TOP BAR ── */}
