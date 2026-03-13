@@ -1,10 +1,35 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter } from 'react-router-dom';
+import { BrowserRouter, useLocation } from 'react-router-dom';
 import App from './App.jsx';
 import { queryClient } from './shared/lib/queryClient.js';
+import { SEO_BLOG_PATH, SEO_HUB_PATH } from '@/features/seo/content/seoRoutes.js';
 import './index.css';
+
+function getSpeedInsightsRouteLabel(pathname) {
+  if (pathname === '/') return '/';
+  if (pathname === SEO_HUB_PATH) return '/landingpage';
+  if (pathname === SEO_BLOG_PATH) return '/landingpage/blog';
+  if (pathname.startsWith(`${SEO_BLOG_PATH}/`)) return '/landingpage/blog/[slug]';
+  if (pathname.startsWith('/module/')) return '/module/[slug]';
+  return pathname || null;
+}
+
+function RouteAwareTelemetry({ Analytics, SpeedInsights }) {
+  const location = useLocation();
+  const routeLabel = useMemo(
+    () => getSpeedInsightsRouteLabel(location.pathname),
+    [location.pathname],
+  );
+
+  return (
+    <>
+      <Analytics mode="production" />
+      <SpeedInsights route={routeLabel} />
+    </>
+  );
+}
 
 function DeferredTelemetry() {
   const [components, setComponents] = useState(null);
@@ -47,12 +72,7 @@ function DeferredTelemetry() {
   if (!components) return null;
 
   const { Analytics, SpeedInsights } = components;
-  return (
-    <>
-      <Analytics mode="production" />
-      <SpeedInsights />
-    </>
-  );
+  return <RouteAwareTelemetry Analytics={Analytics} SpeedInsights={SpeedInsights} />;
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(

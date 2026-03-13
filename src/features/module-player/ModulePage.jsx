@@ -207,6 +207,43 @@ function DonationQrFallback({ size }) {
   );
 }
 
+function ModuleContentFallback({ title }) {
+  return (
+    <div className="flex h-full w-full flex-col bg-[#111111] px-3.5 pb-3.5 pt-4 sm:px-5 sm:pb-4 sm:pt-5 lg:px-[22px] lg:pb-4 lg:pt-5">
+      <div className="flex flex-shrink-0 flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-start sm:gap-4">
+        <div className="min-w-0">
+          <div
+            className="font-mono font-bold lg:hidden"
+            style={{ color: 'var(--accent-bitcoin)', fontSize: 'var(--fs-subtitle)' }}
+          >
+            {title}
+          </div>
+          <div className="skeleton mt-2 h-10 w-[min(240px,72vw)] rounded-xl sm:mt-0 sm:h-12 sm:w-[320px]" />
+          <div className="skeleton mt-3 h-4 w-40 rounded-full" />
+        </div>
+        <div className="hidden sm:block">
+          <div className="skeleton h-4 w-28 rounded-full" />
+        </div>
+      </div>
+
+      <div className="mt-5 flex min-h-0 flex-1 flex-col gap-3 sm:gap-4">
+        <div className="grid flex-1 min-h-0 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {Array.from({ length: 6 }, (_, index) => (
+            <div
+              key={index}
+              className="rounded-2xl border border-white/[0.06] bg-[#0f0f0f] p-4"
+            >
+              <div className="skeleton h-5 w-24 rounded-full" />
+              <div className="skeleton mt-4 h-14 w-full rounded-2xl" />
+              <div className="skeleton mt-4 h-4 w-2/3 rounded-full" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ModulePage({ forcedSlug = null }) {
   const { slug } = useParams();
   const navigate = useNavigate();
@@ -461,17 +498,32 @@ export default function ModulePage({ forcedSlug = null }) {
   useEffect(() => {
     if (marketAudioReady || typeof window === 'undefined') return undefined;
 
+    let afterLoadTimer = 0;
+    let idleHandle = 0;
+
     const enableMarketAudio = () => setMarketAudioReady(true);
-    const idleHandle = window.requestIdleCallback
-      ? window.requestIdleCallback(enableMarketAudio, { timeout: 5000 })
-      : window.setTimeout(enableMarketAudio, 2500);
+    const scheduleReady = () => {
+      afterLoadTimer = window.setTimeout(() => {
+        idleHandle = window.requestIdleCallback
+          ? window.requestIdleCallback(enableMarketAudio, { timeout: 8000 })
+          : window.setTimeout(enableMarketAudio, 6500);
+      }, 1200);
+    };
+
+    if (document.readyState === 'complete') {
+      scheduleReady();
+    } else {
+      window.addEventListener('load', scheduleReady, { once: true });
+    }
 
     return () => {
+      window.removeEventListener('load', scheduleReady);
+      window.clearTimeout(afterLoadTimer);
       if (window.cancelIdleCallback && typeof idleHandle === 'number') {
         window.cancelIdleCallback(idleHandle);
-        return;
+      } else {
+        window.clearTimeout(idleHandle);
       }
-      window.clearTimeout(idleHandle);
     };
   }, [marketAudioReady]);
 
@@ -654,7 +706,9 @@ export default function ModulePage({ forcedSlug = null }) {
             </div>
           )}
           <div className={`relative min-h-0 ${useResponsiveScroll ? 'min-h-full flex-none' : 'flex-1'}`}>
-            <Component onOpenDonate={() => setDonateOpen(true)} />
+            <Suspense fallback={<ModuleContentFallback title={module.title} />}>
+              <Component onOpenDonate={() => setDonateOpen(true)} />
+            </Suspense>
             {hasBlockingOverlay && (
               <div
                 className="absolute inset-0 z-20 flex items-center justify-center"

@@ -133,6 +133,22 @@ function MetricBox({ label, value, decimals = 2, color = 'var(--text-primary)', 
   );
 }
 
+function MetricPlaceholder({ label, message = 'Unavailable', color = 'rgba(255,255,255,0.45)' }) {
+  return (
+    <div className="rounded-xl border border-white/10 px-3 py-3 text-center">
+      <div
+        className="font-mono font-bold uppercase tracking-widest"
+        style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.6)', marginBottom: 5 }}
+      >
+        {label}
+      </div>
+      <div className="font-mono font-semibold" style={{ fontSize: '0.82rem', color }}>
+        {message}
+      </div>
+    </div>
+  );
+}
+
 export default function S15_BTCvsGold() {
   const [payload, setPayload] = useState(null);
   const [activeLabel, setActiveLabel] = useState('1Y');
@@ -140,6 +156,7 @@ export default function S15_BTCvsGold() {
   const [hoverData, setHoverData] = useState(null);
   const [showGold, setShowGold] = useState(true);
   const [error, setError] = useState(null);
+  const [requestKey, setRequestKey] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -154,7 +171,7 @@ export default function S15_BTCvsGold() {
       } catch {
         if (active) {
           setPayload((current) => current);
-          setError('Live comparison is temporarily unavailable.');
+          setError('Live comparison is temporarily unavailable while the gold market-cap snapshot is missing.');
         }
       } finally {
         if (active) setLoading(false);
@@ -164,7 +181,7 @@ export default function S15_BTCvsGold() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [requestKey]);
 
   const points = useMemo(() => payload?.data?.points || [], [payload]);
   const activeRange = RANGES.find((range) => range.label === activeLabel) ?? RANGES.at(-1);
@@ -182,6 +199,7 @@ export default function S15_BTCvsGold() {
   const latestPoint = chartData.at(-1) || payload?.data?.latest || null;
   const startPoint = chartData[0] || null;
   const hoveredPoint = hoverData || latestPoint;
+  const showUnavailableState = !loading && !latestPoint;
 
   const btcDelta = Number.isFinite(startPoint?.bitcoin) && Number.isFinite(latestPoint?.bitcoin)
     ? latestPoint.bitcoin - startPoint.bitcoin
@@ -207,6 +225,13 @@ export default function S15_BTCvsGold() {
   const updatedLabel = payload?.updated_at
     ? new Date(payload.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : null;
+
+  const handleRetry = () => {
+    setHoverData(null);
+    setError(null);
+    setLoading(true);
+    setRequestKey((current) => current + 1);
+  };
 
   return (
     <div className="flex h-full w-full flex-col bg-[#111111] px-3.5 pb-3.5 pt-4 sm:px-5 sm:pb-4 sm:pt-5 lg:px-[22px] lg:pb-4 lg:pt-5">
@@ -274,6 +299,33 @@ export default function S15_BTCvsGold() {
                 </div>
               ) : null}
             </>
+          ) : showUnavailableState ? (
+            <>
+              <div className="font-mono text-[0.62rem] font-bold uppercase tracking-[0.2em]" style={{ color: 'var(--accent-red)' }}>
+                Live comparison unavailable
+              </div>
+              <div
+                className="mt-2 max-w-2xl font-mono leading-relaxed text-white/70"
+                style={{ fontSize: '0.8rem' }}
+              >
+                The BTC vs Gold chart needs the current gold market-cap snapshot. The module stays visible and will recover automatically when the upstream source responds again.
+              </div>
+              {error ? (
+                <div className="mt-2 font-mono" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)' }}>
+                  {error}
+                </div>
+              ) : null}
+              <div className="mt-3">
+                <button
+                  type="button"
+                  onClick={handleRetry}
+                  className="rounded-full border border-white/12 px-3 py-1.5 font-mono uppercase tracking-[0.16em] text-white transition-colors hover:border-white/25 hover:bg-white/5"
+                  style={{ fontSize: '0.68rem' }}
+                >
+                  Retry
+                </button>
+              </div>
+            </>
           ) : (
             <>
               <div className="flex items-start gap-3 sm:gap-5">
@@ -312,6 +364,23 @@ export default function S15_BTCvsGold() {
       <div className="min-h-0 flex-1" style={{ margin: '20px -4px 0' }}>
         {hasChart ? (
           <ChartSection chartData={chartData} showGold={showGold} yMin={yMin} yMax={yMax} onHoverChange={setHoverData} />
+        ) : showUnavailableState ? (
+          <div className="flex h-full min-h-[220px] items-center justify-center px-2 pb-1">
+            <div className="flex w-full max-w-2xl flex-col items-center rounded-2xl border border-white/10 bg-[#0d0d0d] px-6 py-7 text-center">
+              <div
+                className="font-mono text-[0.7rem] font-bold uppercase tracking-[0.22em]"
+                style={{ color: 'var(--accent-red)' }}
+              >
+                Waiting for gold market-cap snapshot
+              </div>
+              <div className="mt-3 font-mono leading-relaxed text-white/70" style={{ fontSize: '0.82rem' }}>
+                Binance BTC history is available locally, but the current gold market-cap reference did not arrive from the approved upstream source.
+              </div>
+              <div className="mt-2 font-mono text-white/50" style={{ fontSize: '0.74rem' }}>
+                No fake fallback is shown here so the comparison stays honest.
+              </div>
+            </div>
+          </div>
         ) : (
           <div className="flex h-full items-end gap-px pb-1">
             {Array.from({ length: 42 }, (_, index) => (
@@ -336,16 +405,17 @@ export default function S15_BTCvsGold() {
               key={label}
               type="button"
               onClick={() => setActiveLabel(label)}
+              disabled={!hasChart}
               className="relative flex flex-shrink-0 items-center gap-1.5 pb-1.5 font-mono transition-colors"
               style={{
                 fontSize: '0.78rem',
                 fontWeight: isActive ? 700 : 400,
-                color: isActive ? 'white' : 'rgba(255,255,255,0.32)',
+                color: !hasChart ? 'rgba(255,255,255,0.18)' : isActive ? 'white' : 'rgba(255,255,255,0.32)',
                 letterSpacing: '0.05em',
               }}
             >
               {label}
-              {isActive ? <span className="absolute bottom-0 left-0 right-0 rounded-full" style={{ height: 2, background: 'white' }} /> : null}
+              {hasChart && isActive ? <span className="absolute bottom-0 left-0 right-0 rounded-full" style={{ height: 2, background: 'white' }} /> : null}
             </button>
           );
         })}
@@ -364,6 +434,12 @@ export default function S15_BTCvsGold() {
                 <AnimatedMetric value={latestPoint.ratio} variant="percent" decimals={2} inline />
               </div>
             </div>
+          </>
+        ) : showUnavailableState ? (
+          <>
+            <MetricPlaceholder label="BTC HIGH" />
+            <MetricPlaceholder label="GOLD REF" message="Waiting for source" />
+            <MetricPlaceholder label="BTC / GOLD" message="Needs live gold ref" color="rgba(255,255,255,0.38)" />
           </>
         ) : (
           [0, 1, 2].map((index) => (

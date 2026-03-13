@@ -204,6 +204,8 @@ For the default dashboard route (`/`) and any above-the-fold module content load
 2. Avoid manual chunking that forces unrelated route-level libraries into the initial HTML preload chain.
 3. If the home route only needs a micro-visual (sparkline, tiny trend cue, static number), prefer a local lightweight implementation over importing a full chart or animated-counter stack.
 4. Treat repeated PSI warnings about unused JS on the first route as a product bug even when desktop still scores 100.
+5. Do not place the module-player shell behind a tiny app-wide Suspense fallback on the root route; lazy module content must load inside a footprint-stable shell so first paint does not jump into a different layout.
+6. When Vercel Speed Insights is enabled in this SPA, provide stable route labels for root, landing, blog, and module routes so route telemetry does not collapse into `Unknown`.
 
 ## Metric semantics and unit integrity (mandatory)
 
@@ -264,7 +266,16 @@ When a frontend view shows live or periodically refreshed numeric data, avoid ha
 
 8. Keep loading, fallback, and live numerals footprint-stable.
     - Skeletons, fallback text, and final animated values should reserve similar vertical space so cards do not jump when data arrives.
-    - In dense responsive cards, prefer explicit min-height shells around key numerals instead of letting each state define its own height.
+   - In dense responsive cards, prefer explicit min-height shells around key numerals instead of letting each state define its own height.
+
+## First-load failure states (mandatory)
+
+For live modules that depend on remote payloads:
+
+1. If the first request fails and there is no prior successful payload, do not leave the module in an indefinite skeleton/loading state.
+2. Show an explicit unavailable state inside the module footprint with a concise explanation and, when reasonable, a retry affordance.
+3. Keep the module shell, title, controls, and layout visible so the user can distinguish "upstream unavailable" from "module missing" or "blank page".
+4. Do not fabricate comparison data or substitute unofficial proxies just to avoid an empty state; prefer an honest unavailable panel.
 
 ## Required verification for frontend color changes
 
@@ -276,6 +287,7 @@ After any color UX/UI modification:
 4. Run `npm run build` and verify no visual regressions in touched modules.
 5. Clear React Hooks dependency warnings (`react-hooks/exhaustive-deps`) in touched frontend files before delivery.
 6. For maps/charts/heatmaps/canvas/SVG touched by the change, verify at least one normal-browser check and one recolor-resistance check (`forced colors`, high contrast, or dark-mode extension disabled/enabled as applicable).
+7. If the task affects SPA performance telemetry or route-level loading behavior, verify that Speed Insights route grouping remains human-readable and does not regress to `Unknown`.
 
 ## Dual-metric hero section (mandatory pattern)
 
@@ -498,3 +510,18 @@ When creating any new frontend module, agents must follow the project example pa
 - **AcciÃ³n Realizada/CorrecciÃ³n:** Se formalizÃ³ una polÃ­tica de hardening visual para superficies semÃ¡nticas crÃ­ticas y se aÃ±adiÃ³ una verificaciÃ³n explÃ­cita en entornos con recolor/forced colors.
 - **Nueva/Modificada Regla o Directriz:** Mapas, charts, heatmaps, canvas y SVG con significado por color deben usar la capa compartida de protecciÃ³n visual contra recolor automÃ¡tico y validarse tanto en navegador normal como bajo entornos que puedan forzar colores.
 - **JustificaciÃ³n:** Reduce falsos reportes de datos, mejora la fidelidad del render en dispositivos personalizados y evita que futuros mÃ³dulos semÃ¡nticos queden vulnerables a reinterpretaciones visuales externas.
+- **Fecha de la Actualizacion:** `2026-03-13`
+- **Archivo(s) Afectado(s):** `.claude/FRONTEND_COLOR_UX_UI_RULES.md`
+- **Tipo de Evento/Contexto:** Optimizacion del root route y observabilidad SPA
+- **Descripcion del Evento Original:** Speed Insights estaba agrupando trafico del dashboard bajo `Unknown`, y la home podia intercambiar un fallback pequeno por el shell completo mientras ademas arrastraba un micro-chart pesado al primer render.
+- **Accion Realizada/Correccion:** Se reforzo la politica para exigir shell estable en la ruta inicial, micro-visuales ligeros cuando la semantica lo permita y etiquetas de ruta explicitas para Speed Insights en la SPA.
+- **Nueva/Modificada Regla o Directriz:** La ruta raiz no debe esconder el player shell detras de un fallback global pequeno, y la telemetria de Vercel Speed Insights debe usar grupos de ruta estables para que el panel de Routes siga siendo accionable.
+- **Justificacion:** Evita regresiones de CLS y de bytes innecesarios en el arranque, y mantiene util la observabilidad de rendimiento despues de nuevos cambios de routing o lazy loading.
+
+- **Fecha de la Actualizacion:** `2026-03-13`
+- **Archivo(s) Afectado(s):** `.claude/FRONTEND_COLOR_UX_UI_RULES.md`
+- **Tipo de Evento/Contexto:** Honestidad UX ante fallo inicial de payload live
+- **Descripcion del Evento Original:** `S15` podia quedar visualmente "desaparecido" cuando la primera carga del endpoint fallaba, porque el modulo conservaba skeletons indefinidos en vez de mostrar un estado explicito de indisponibilidad.
+- **Accion Realizada/Correccion:** Se anadio una regla para exigir estados de error visibles dentro del footprint del modulo cuando no existe payload previo reutilizable, manteniendo la shell y evitando placeholders eternos.
+- **Nueva/Modificada Regla o Directriz:** Si el primer fetch de un modulo live falla y no hay datos previos, el frontend debe mostrar un unavailable state honesto con layout estable en lugar de aparentar que sigue cargando indefinidamente.
+- **Justificacion:** Reduce falsos diagnosticos de modulos "inexistentes", mejora la transparencia ante fallos upstream y evita repetir skeletons permanentes que parecen bugs de render.

@@ -355,6 +355,7 @@ Useful scripts:
 Development notes:
 
 - Vite proxies `/api` to the API server via `API_PROXY_TARGET`
+- `npm run preview` only serves the built frontend bundle; start `npm run start:api` in another terminal (or use `npm run dev`) before testing routes that call `/api/*`, otherwise preview will show `ECONNREFUSED` against the default local API target `http://127.0.0.1:8787`
 - Frontend alias `@/*` resolves to `src/*` via `vite.config.js` and `jsconfig.json`
 - `vite.config.js` ignores generated cache JSON files to reduce unnecessary reload noise
 - Shared KV is recommended on Vercel to avoid per-instance cache drift
@@ -384,6 +385,7 @@ Notes:
 - Vercel deploys use the same Express app used locally
 - Local `vercel dev` intentionally runs a production preview build instead of raw Vite HMR so SPA rewrites do not hijack Vite internal module URLs such as `/@vite/client`
 - Production traffic analytics and custom events are collected through `@vercel/analytics`, and performance telemetry through `@vercel/speed-insights`; both products must be enabled in the Vercel project dashboard to populate their panels
+- The SPA should emit stable Speed Insights route labels for `/`, `/landingpage`, `/landingpage/blog`, `/landingpage/blog/[slug]`, and `/module/[slug]` so the Vercel `Routes` view stays actionable instead of collapsing visits into `Unknown`
 - Built assets under `/assets/*` are served with `Cache-Control: public, max-age=31536000, immutable`
 - HTML entry routes continue to resolve through rewrites rather than long-lived immutable caching so new deploys propagate cleanly
 - Security headers include `Strict-Transport-Security` plus a CSP hash for the inline JSON-LD block in `index.html`
@@ -542,3 +544,19 @@ Satoshi Dashboard is open-source under the MIT License. See `LICENSE.txt`.
 - **Accion Realizada/Correccion:** Se documento que las comprobaciones de performance para Vercel deben hacerse sobre preview/build desplegable y no sobre HMR, junto con optimizaciones de carga diferida para telemetria y senales no criticas.
 - **Nueva/Modificada Regla o Directriz:** Cuando se optimice performance movil para este proyecto, la validacion debe hacerse sobre artefactos tipo deploy de Vercel y las mejoras deben priorizar diferir telemetria o trabajo no critico antes que eliminar animaciones visibles del producto.
 - **Justificacion:** Mantiene la experiencia visual deseada, mejora la representatividad de Speed Insights y reduce regresiones donde un cambio solo parece rapido en dev local pero no en el bundle real.
+
+- **Fecha de la Actualizacion:** `2026-03-13`
+- **Archivo(s) Afectado(s):** `README.md`
+- **Tipo de Evento/Contexto:** Optimizacion del shell inicial y etiquetado de rutas en Speed Insights
+- **Descripcion del Evento Original:** El dashboard podia cargar la ruta raiz mediante una cascada de lazy loading que favorecia saltos de layout, y Vercel Speed Insights agrupaba gran parte del trafico bajo `Unknown`, dificultando el diagnostico por ruta.
+- **Accion Realizada/Correccion:** Se documento que el shell del dashboard debe mantenerse estable en la ruta inicial y que la instrumentacion SPA de Speed Insights debe emitir labels de ruta consistentes para root, landing, blog y modulos.
+- **Nueva/Modificada Regla o Directriz:** Cuando se optimice el arranque de la SPA o su observabilidad en Vercel, el `README.md` debe reflejar tanto la exigencia de un shell estable en la home como el uso de grupos de ruta legibles en Speed Insights.
+- **Justificacion:** Evita que futuros cambios de Suspense, lazy loading o telemetria degraden el CLS de la home o vuelvan inutil el panel de `Routes` en Vercel.
+
+- **Fecha de la Actualizacion:** `2026-03-13`
+- **Archivo(s) Afectado(s):** `README.md`
+- **Tipo de Evento/Contexto:** Aclaracion del flujo local preview + API
+- **Descripcion del Evento Original:** Ejecutar `npm run preview` por si solo hacia que la SPA respondiera en local pero todas las llamadas `/api/*` fallaran con `ECONNREFUSED` porque el proxy de Vite esperaba la API en `127.0.0.1:8787` y no habia ningun proceso escuchando.
+- **Accion Realizada/Correccion:** Se documento de forma explicita que el preview del bundle necesita `npm run start:api` en paralelo, o alternativamente `npm run dev`, antes de probar rutas con datos live.
+- **Nueva/Modificada Regla o Directriz:** Cuando se valide localmente un build del frontend con `vite preview`, la documentacion debe dejar claro si existe una API separada requerida por el proxy para evitar falsos diagnosticos del bundle.
+- **Justificacion:** Reduce tiempo perdido en debugging local, diferencia mejor errores de build frente a ausencia del backend y deja un flujo reproducible para QA de la SPA.

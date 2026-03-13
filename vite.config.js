@@ -34,15 +34,5 @@ export default defineConfig(({ mode }) => {
         },
       },
     },
-    build: {
-      rollupOptions: {
-        output: {
-          manualChunks: {
-            recharts: ['recharts'],
-            framer: ['framer-motion'],
-          },
-        },
-      },
-    },
   };
 });

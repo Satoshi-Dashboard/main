@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts';
 import { fetchBtcSpot } from '@/shared/services/priceApi.js';
 import { fetchMempoolOverviewBundle } from '@/shared/services/mempoolApi.js';
 import AnimatedMetric from '@/shared/components/common/AnimatedMetric.jsx';
@@ -46,6 +45,35 @@ const UI_COLORS = {
   textPrimary: 'var(--text-primary)',
   textTertiary: 'var(--text-tertiary)',
 };
+
+function buildSparklinePaths(values, width = 220, height = 44, padding = 4) {
+  const numericValues = values.filter((value) => Number.isFinite(value));
+  if (numericValues.length < 2) return null;
+
+  const min = Math.min(...numericValues);
+  const max = Math.max(...numericValues);
+  const range = max - min;
+  const innerWidth = width - (padding * 2);
+  const innerHeight = height - (padding * 2);
+
+  const points = numericValues.map((value, index) => {
+    const x = padding + ((innerWidth * index) / (numericValues.length - 1));
+    const ratio = range === 0 ? 0.5 : (value - min) / range;
+    const y = height - padding - (ratio * innerHeight);
+    return [x, y];
+  });
+
+  const line = points
+    .map(([x, y], index) => `${index === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`)
+    .join(' ');
+
+  const baseline = height - padding;
+  const [firstX] = points[0];
+  const [lastX] = points[points.length - 1];
+  const area = `${line} L ${lastX.toFixed(2)} ${baseline.toFixed(2)} L ${firstX.toFixed(2)} ${baseline.toFixed(2)} Z`;
+
+  return { line, area, width, height };
+}
 
 /* ── Fear & Greed color by value ── */
 function fngColor(v) {
@@ -112,7 +140,11 @@ function Tile({ label, value, variant = 'number', decimals, suffix, accent, sour
 function FearGreedTile({ value, classification, history }) {
   const loading = value == null;
   const color = fngColor(value ?? 0);
-  const chartData = history.map((d, i) => ({ i, v: d.v }));
+  const sparkline = useMemo(
+    () => buildSparklinePaths(history.map((d) => d.v)),
+    [history],
+  );
+
   return (
     <div className="visual-chart-surface flex min-h-[108px] flex-col items-center justify-center gap-0.5 bg-[#111111] px-3 py-2 select-none sm:px-4">
       {loading ? (
@@ -137,32 +169,29 @@ function FearGreedTile({ value, classification, history }) {
         </div>
       )}
       <div style={{ width: '100%', height: 'clamp(34px, 7vw, 44px)', marginTop: 4 }}>
-        {chartData.length > 0 && (
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData} margin={{ top: 2, right: 2, left: 2, bottom: 2 }}>
-              <defs>
-                <linearGradient id="fngGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={color} stopOpacity={0.35} />
-                  <stop offset="95%" stopColor={color} stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <Area
-                type="monotone"
-                dataKey="v"
-                stroke={color}
-                strokeWidth={2}
-                fill="url(#fngGrad)"
-                dot={false}
-                isAnimationActive={false}
-              />
-              <Tooltip
-                contentStyle={{ background: '#12121A', border: `1px solid ${color}`, borderRadius: 4, fontSize: 11 }}
-                formatter={(v) => [v, 'Index']}
-                labelFormatter={() => ''}
-                cursor={{ stroke: color, strokeWidth: 1, strokeDasharray: '3 3' }}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+        {sparkline && (
+          <svg
+            className="visual-svg-surface h-full w-full"
+            viewBox={`0 0 ${sparkline.width} ${sparkline.height}`}
+            preserveAspectRatio="none"
+            aria-hidden="true"
+          >
+            <defs>
+              <linearGradient id="s01FearGreedGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor={color} stopOpacity={0.35} />
+                <stop offset="95%" stopColor={color} stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <path d={sparkline.area} fill="url(#s01FearGreedGrad)" />
+            <path
+              d={sparkline.line}
+              fill="none"
+              stroke={color}
+              strokeWidth="2"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+          </svg>
         )}
       </div>
       <div
@@ -296,12 +325,26 @@ export default function S01_BitcoinOverview() {
 
   useEffect(() => {
     let active = true;
-    const load = async () => {
+
+    const loadSpot = async () => {
       try {
-        const [spot, mempoolBundle] = await Promise.all([
-          fetchBtcSpot(),
-          fetchMempoolOverviewBundle({ timeout: 8000, cache: 'no-store' }),
-        ]);
+        const spot = await fetchBtcSpot();
+        if (!active) return;
+
+        setStats((prev) => ({
+          ...prev,
+          price: spot?.usd || prev.price,
+          priceSource: spot?.source || prev.priceSource,
+          satsPerDollar: spot?.usd ? Math.round(1e8 / spot.usd) : prev.satsPerDollar,
+        }));
+      } catch {
+        /* keep previous values */
+      }
+    };
+
+    const loadOverview = async () => {
+      try {
+        const mempoolBundle = await fetchMempoolOverviewBundle({ timeout: 8000, cache: 'no-store' });
         const overview = mempoolBundle.overview || {};
         const diff = overview.difficulty || {};
         const hashData = overview.hashrate || {};
@@ -312,9 +355,6 @@ export default function S01_BitcoinOverview() {
 
         setStats((prev) => ({
           ...prev,
-          price:         spot?.usd         || prev.price,
-          priceSource:   spot?.source      || prev.priceSource,
-          satsPerDollar: spot?.usd ? Math.round(1e8 / spot.usd) : prev.satsPerDollar,
           circulatingSupply: h ? calculateBitcoinSupply(h) : prev.circulatingSupply,
           avgTxFee:      mempoolBundle.fees.normal ?? prev.avgTxFee,
           blockHeight:   h || prev.blockHeight,
@@ -332,11 +372,16 @@ export default function S01_BitcoinOverview() {
         /* keep previous values */
       }
     };
-    load();
-    const timer = setInterval(load, 30_000);
+
+    loadSpot();
+    loadOverview();
+    const spotTimer = setInterval(loadSpot, 30_000);
+    const overviewTimer = setInterval(loadOverview, 30_000);
+
     return () => {
       active = false;
-      clearInterval(timer);
+      clearInterval(spotTimer);
+      clearInterval(overviewTimer);
     };
   }, []);
 
