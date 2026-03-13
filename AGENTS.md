@@ -24,6 +24,7 @@
    * **Revisar Activamente Todas las Reglas:** Consultar y comprender **todas las reglas y directrices generales** presentes en sus archivos `.md` de conocimiento, incluyendo la "Regla Universal de Automejora y Actualización Continua".
    * **Adhesión Estricta:** Asegurarse de que cualquier acción planificada (especialmente aquellas relacionadas con la manipulación de código: adición, modificación, eliminación o creación) se alinea **perfectamente** con las directrices, estándares y restricciones establecidas en estas reglas. **Cualquier desviación debe ser justificada explícitamente y, si es necesario, llevar a una actualización de las reglas.**
    * **Verificar Documentos de Reglas:** Asegurarse de que cualquier archivo `.md` de reglas relevante para la tarea (existente o recién creado) comienza con esta "Regla Universal". Si no es así, insertarla proactivamente.
+   * **Excepción Protegida para `patch note.md`:** El archivo `patch note.md` puede leerse libremente, pero está **prohibido** agregar, editar, borrar, reescribir o sobrescribir cualquier parte de su contenido sin permiso explícito y directo del usuario. Esta excepción prevalece sobre la inserción automática de la regla universal y sobre cualquier automejora automática.
 3. **Monitoreo y Detección Proactiva (Ciclo de Aprendizaje en Tiempo Real):** Mientras el Agente de IA procesa la solicitud, genera resultados y evalúa internamente:
    * **Monitorear activamente** cualquier posible error (lógico, sintáctico, de datos, de aplicación de reglas, de seguridad) en su propia operación, en los artefactos generados (código, texto, análisis) o en cómo interpreta y aplica sus propias directrices.
    * **Identificar Oportunidades de Mejora:** Reconocer también momentos donde una optimización, una clarificación o una nueva pieza de conocimiento podría mejorar futuros rendimientos.
@@ -75,3 +76,11 @@ For OpenCode, Codex, Claude, and any automated coding agent:
 - **Acción Realizada/Corrección:** Se actualizó la instrucción de análisis inicial para usar `src/features/module-registry/modules.js` como fuente de verdad estructural.
 - **Nueva/Modificada Regla o Directriz:** Las revisiones iniciales del proyecto deben inspeccionar la ruta actual del registro de módulos en la jerarquía `src/features/module-registry/`.
 - **Justificación:** Reduce errores de contexto al iniciar auditorías o cambios que dependan de identidad, slugs y orden de módulos.
+
+- **Fecha de la Actualización:** `2026-03-13`
+- **Archivo(s) Afectado(s):** `AGENTS.md`
+- **Tipo de Evento/Contexto:** Protección explícita de documento de notas para usuario
+- **Descripción del Evento Original:** Un agente escribió contenido no deseado en `patch note.md`, incluyendo una cabecera universal que el owner no quería en ese documento.
+- **Acción Realizada/Corrección:** Se añadió una excepción protegida en la política principal para prohibir cualquier escritura o edición en `patch note.md` sin consentimiento explícito del usuario.
+- **Nueva/Modificada Regla o Directriz:** `patch note.md` puede consultarse, pero ningún agente puede modificarlo, sobrescribirlo o ampliarlo sin una instrucción directa del owner autorizando esa edición.
+- **Justificación:** Protege un documento sensible orientado al usuario final y evita que futuras automatizaciones alteren su tono, estructura o contenido sin permiso.

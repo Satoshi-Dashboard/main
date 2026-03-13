@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 
 export const SITE_URL = 'https://satoshidashboard.com';
-export const DEFAULT_OG_IMAGE = `${SITE_URL}/modulos-referencia/001-main-dashboard.png`;
+export const DEFAULT_OG_IMAGE = `${SITE_URL}/modulos-referencia/foto-metadata.png`;
 export const DEFAULT_ROBOTS = 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1';
 
 function upsertMeta(attributeName, attributeValue, content) {
