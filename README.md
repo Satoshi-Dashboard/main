@@ -389,6 +389,7 @@ Notes:
 - Security headers include `Strict-Transport-Security` plus a CSP hash for the inline JSON-LD block in `index.html`
 - `style-src 'unsafe-inline'` remains in the CSP until the frontend stops relying on inline React style attributes
 - If you add new remote origins, update `vercel.json` CSP and related header rules
+- For production-like mobile perf checks, prefer `vercel build` plus `vercel deploy --prebuilt` or local `vercel dev` over raw HMR so Speed Insights behavior matches the deployed bundle more closely
 
 ## Maintainer docs
 
@@ -533,3 +534,11 @@ Satoshi Dashboard is open-source under the MIT License. See `LICENSE.txt`.
 - **Accion Realizada/Correccion:** Se documento que el flujo local de `vercel dev` debe arrancar un preview build en lugar del dev server HMR para mantener visibles tanto la SPA como las funciones API bajo la misma superficie local.
 - **Nueva/Modificada Regla o Directriz:** Cuando `vercel dev` comparta puerto con una SPA Vite en este repositorio, la documentacion debe preferir `vite preview` sobre el dev server HMR para evitar que las rewrites de Vercel rompan los modulos internos del cliente.
 - **Justificacion:** Evita diagnosticos enganiososos de pantalla en blanco, deja un flujo local reproducible y protege el deploy de Vercel sin degradar el `npm run dev` tradicional.
+
+- **Fecha de la Actualizacion:** `2026-03-13`
+- **Archivo(s) Afectado(s):** `README.md`
+- **Tipo de Evento/Contexto:** Optimizacion mobile para Speed Insights en Vercel
+- **Descripcion del Evento Original:** El runtime cliente cargaba telemetria y senales secundarias demasiado pronto, lo que aumentaba trabajo inicial en movil y hacia menos representativo el analisis local si se media sobre HMR.
+- **Accion Realizada/Correccion:** Se documento que las comprobaciones de performance para Vercel deben hacerse sobre preview/build desplegable y no sobre HMR, junto con optimizaciones de carga diferida para telemetria y senales no criticas.
+- **Nueva/Modificada Regla o Directriz:** Cuando se optimice performance movil para este proyecto, la validacion debe hacerse sobre artefactos tipo deploy de Vercel y las mejoras deben priorizar diferir telemetria o trabajo no critico antes que eliminar animaciones visibles del producto.
+- **Justificacion:** Mantiene la experiencia visual deseada, mejora la representatividad de Speed Insights y reduce regresiones donde un cambio solo parece rapido en dev local pero no en el bundle real.

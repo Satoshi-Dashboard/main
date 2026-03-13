@@ -1,4 +1,11 @@
-import { track } from '@vercel/analytics';
+let analyticsModulePromise = null;
+
+function loadAnalyticsModule() {
+  if (!analyticsModulePromise) {
+    analyticsModulePromise = import('@vercel/analytics').catch(() => null);
+  }
+  return analyticsModulePromise;
+}
 
 function shouldDedupe(dedupeKey, dedupeMs) {
   if (!dedupeKey || typeof window === 'undefined') return false;
@@ -30,11 +37,11 @@ export function trackEvent(name, properties = {}, options = {}) {
 
   if (shouldDedupe(dedupeKey, dedupeMs)) return;
 
-  try {
-    track(name, properties);
-  } catch {
-    // Keep analytics failures from affecting product UX.
-  }
+  loadAnalyticsModule()
+    .then((module) => module?.track?.(name, properties))
+    .catch(() => {
+      // Keep analytics failures from affecting product UX.
+    });
 }
 
 function getModulePayload(module) {

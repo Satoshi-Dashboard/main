@@ -13,7 +13,6 @@ import { getModuleSEO } from '@/features/module-registry/moduleSEO.js';
 import { SEO_HUB_PATH } from '@/features/seo/content/seoRoutes.js';
 import { absoluteUrl, DEFAULT_OG_IMAGE, usePageSEO } from '@/shared/hooks/usePageSEO.js';
 import { trackModuleNavigation, trackModuleViewed, trackSeoNavigationClick } from '@/shared/lib/analytics.js';
-import { fetchBtcSpot } from '@/shared/services/priceApi.js';
 
 const BitcoinDonationQr = lazy(() => import('@/shared/components/common/BitcoinDonationQr.jsx'));
 
@@ -311,6 +310,7 @@ export default function ModulePage({ forcedSlug = null }) {
   const [donateOpen, setDonateOpen] = useState(false);
   const [donateCopied, setDonateCopied] = useState(false);
   const [metaLastAtMs, setMetaLastAtMs] = useState(() => Date.now());
+  const [marketAudioReady, setMarketAudioReady] = useState(false);
   const marketSamplesRef = useRef([]);
 
   const onCopyDonation = async () => {
@@ -477,10 +477,30 @@ export default function ModulePage({ forcedSlug = null }) {
   }, [currentIndex, goToModule]);
 
   useEffect(() => {
+    if (marketAudioReady || typeof window === 'undefined') return undefined;
+
+    const enableMarketAudio = () => setMarketAudioReady(true);
+    const idleHandle = window.requestIdleCallback
+      ? window.requestIdleCallback(enableMarketAudio, { timeout: 5000 })
+      : window.setTimeout(enableMarketAudio, 2500);
+
+    return () => {
+      if (window.cancelIdleCallback && typeof idleHandle === 'number') {
+        window.cancelIdleCallback(idleHandle);
+        return;
+      }
+      window.clearTimeout(idleHandle);
+    };
+  }, [marketAudioReady]);
+
+  useEffect(() => {
+    if (!marketAudioReady) return undefined;
+
     let active = true;
 
     const loadMarketAudioState = async () => {
       try {
+        const { fetchBtcSpot } = await import('@/shared/services/priceApi.js');
         const spot = await fetchBtcSpot();
         if (!active || !spot || !Number.isFinite(spot.usd) || spot.usd <= 0) return;
 
@@ -504,7 +524,7 @@ export default function ModulePage({ forcedSlug = null }) {
       active = false;
       clearInterval(timer);
     };
-  }, []);
+  }, [marketAudioReady]);
 
   useEffect(() => {
     const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
@@ -698,7 +718,10 @@ export default function ModulePage({ forcedSlug = null }) {
         {/* Play / Pause */}
         <button
           type="button"
-          onClick={() => setIsPlaying((v) => !v)}
+          onClick={() => {
+            setMarketAudioReady(true);
+            setIsPlaying((v) => !v);
+          }}
           className="flex h-11 w-11 items-center justify-center rounded-full border transition duration-300 hover:scale-[1.03] sm:h-10 sm:w-10 lg:h-7 lg:w-7"
           style={{
             color: marketAudioTheme.color,
