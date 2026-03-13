@@ -462,3 +462,11 @@ When creating any new frontend module, agents must follow the project example pa
 - **Acción Realizada/Corrección:** Se añadió una guardrail explícita para la ruta inicial: preferir micro-SVGs o render estático en widgets above-the-fold y evitar manual chunking que vuelva críticas librerías pertenecientes a otras rutas o módulos.
 - **Nueva/Modificada Regla o Directriz:** La home del dashboard no debe importar ni preloadear librerías pesadas de charting/animación solo para widgets pequeños cuando exista una alternativa ligera equivalente en semántica y UX.
 - **Justificación:** Reduce bytes críticos, mejora LCP/TBT móvil sin degradar el desktop y evita repetir optimizaciones que parecen correctas en bundle analysis pero empeoran la ruta real más visitada.
+
+- **Fecha de la ActualizaciÃ³n:** `2026-03-13`
+- **Archivo(s) Afectado(s):** `.claude/FRONTEND_COLOR_UX_UI_RULES.md`
+- **Tipo de Evento/Contexto:** CorrecciÃ³n UX en controles de audio del footer
+- **DescripciÃ³n del Evento Original:** El reproductor del footer reiniciaba la pista al pausar y reanudar, y el umbral de activaciÃ³n para la pista alcista era demasiado sensible respecto a la intenciÃ³n del owner.
+- **AcciÃ³n Realizada/CorrecciÃ³n:** Se ajustÃ³ la clasificaciÃ³n para activar el mood alcista solo desde `+4%` en 24h y se corrigiÃ³ el control de pausa para que el audio local reanude desde la posiciÃ³n actual en vez de volver al inicio.
+- **Nueva/Modificada Regla o Directriz:** Los controles media de frontend deben respetar la semÃ¡ntica esperada de pausa/reanudaciÃ³n y no reiniciar reproducciÃ³n salvo que el usuario o un cambio real de pista lo requiera explÃ­citamente.
+- **JustificaciÃ³n:** Evita una UX frustrante en controles bÃ¡sicos, alinea el reproductor con el comportamiento esperado por el usuario y reduce regresiones futuras en audio/vÃ­deo del producto.

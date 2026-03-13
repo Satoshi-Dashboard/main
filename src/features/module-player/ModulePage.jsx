@@ -149,7 +149,7 @@ function getCadenceMs(meta) {
 function classifyMarketAudioMood(spot, samples) {
   const change24h = Number(spot?.change24h ?? 0);
   if (Number.isFinite(change24h) && change24h <= -2) return 'down';
-  if (Number.isFinite(change24h) && change24h >= 2) return 'up';
+  if (Number.isFinite(change24h) && change24h >= 4) return 'up';
 
   const validSamples = Array.isArray(samples)
     ? samples.filter((sample) => Number.isFinite(sample?.usd) && sample.usd > 0)
@@ -544,7 +544,6 @@ export default function ModulePage({ forcedSlug = null }) {
 
     if (!isPlaying) {
       audio.pause();
-      audio.currentTime = 0;
       return;
     }
 
