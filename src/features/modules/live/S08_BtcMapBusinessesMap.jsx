@@ -332,8 +332,8 @@ export default function S08_BtcMapBusinessesMap() {
   const isLoading = apiLoading || geoLoading;
 
   return (
-    <div className="flex h-full w-full flex-col bg-[#111111] lg:flex-row">
-      <div className="relative min-h-[260px] min-w-0 flex-1 sm:min-h-[320px] lg:min-h-0">
+    <div className="visual-integrity-lock flex h-full w-full flex-col bg-[#111111] lg:flex-row">
+      <div className="visual-map-surface relative min-h-[260px] min-w-0 flex-1 sm:min-h-[320px] lg:min-h-0">
         {isLoading ? (
           <div className="h-full w-full p-6">
             <div className="skeleton h-full w-full rounded-md" />
@@ -390,7 +390,7 @@ export default function S08_BtcMapBusinessesMap() {
           </MapContainer>
         )}
 
-        <div className="absolute bottom-2 left-1/2 z-[1000] -translate-x-1/2 rounded-md border border-white/10 bg-black/75 px-3 py-1.5 font-mono text-[11px] backdrop-blur-sm sm:bottom-5 sm:px-5 sm:py-2 sm:text-[12px]">
+        <div className="visual-integrity-lock absolute bottom-2 left-1/2 z-[1000] -translate-x-1/2 rounded-md border border-white/10 bg-[#080808]/92 px-3 py-1.5 font-mono text-[11px] backdrop-blur-sm sm:bottom-5 sm:px-5 sm:py-2 sm:text-[12px]">
           {isLoading ? (
             <div className="skeleton" style={{ width: 210, height: '0.95em' }} />
           ) : (
@@ -407,7 +407,7 @@ export default function S08_BtcMapBusinessesMap() {
               <button
                 type="button"
                 onClick={() => setIsDensityExpanded((prev) => !prev)}
-                className="absolute left-3 top-3 z-[1001] rounded border border-white/15 bg-black/65 px-2 py-1 font-mono text-[11px] text-white/80 backdrop-blur-sm"
+                className="visual-integrity-lock absolute left-3 top-3 z-[1001] rounded border border-white/15 bg-[#080808]/90 px-2 py-1 font-mono text-[11px] text-white/80 backdrop-blur-sm"
               >
                 {isDensityExpanded ? '◧' : '◨'} Density
               </button>
@@ -417,7 +417,7 @@ export default function S08_BtcMapBusinessesMap() {
               const activeScale = viewMode === 'perCapita' ? activePerCapitaScale : BUSINESS_DENSITY_SCALE;
               const legendTitle = viewMode === 'perCapita' ? 'Per-capita business density' : 'Business concentration';
               return (
-                <div className={`absolute z-[1000] rounded border border-white/15 bg-black/55 px-2.5 py-2 font-mono text-[11px] backdrop-blur-sm ${isCompactViewport ? 'left-3 top-12' : 'left-3 top-3 sm:left-4 sm:top-4'}`}>
+                <div className={`visual-integrity-lock absolute z-[1000] rounded border border-white/15 bg-[#080808]/88 px-2.5 py-2 font-mono text-[11px] backdrop-blur-sm ${isCompactViewport ? 'left-3 top-12' : 'left-3 top-3 sm:left-4 sm:top-4'}`}>
                   <div className="mb-0.5 text-white/75">{legendTitle}</div>
                   {viewMode === 'perCapita' && (
                     <div className="mb-1.5 text-white/40" style={{ fontSize: '9px' }}>businesses per million inhabitants</div>
@@ -438,7 +438,7 @@ export default function S08_BtcMapBusinessesMap() {
         )}
       </div>
 
-      <aside className="flex h-[42%] w-full flex-none flex-col border-t border-white/10 bg-[#111111] lg:h-auto lg:w-[300px] lg:border-l lg:border-t-0">
+      <aside className="visual-integrity-lock flex h-[42%] w-full flex-none flex-col border-t border-white/10 bg-[#111111] lg:h-auto lg:w-[300px] lg:border-l lg:border-t-0">
         <div className="border-b border-white/10 px-4 py-3 font-mono text-[12px] tracking-wide text-white/60">
           Bitcoin-Friendly Businesses
         </div>

@@ -215,7 +215,7 @@ export default function S02_PriceChart() {
   const displayPrice = hoverData ? hoverData.price : livePrice;
 
   return (
-    <div className="flex h-full w-full flex-col bg-[#111111] px-3.5 pb-3.5 pt-4 sm:px-5 sm:pb-4 sm:pt-5 lg:px-[22px] lg:pb-4 lg:pt-5">
+    <div className="visual-integrity-lock flex h-full w-full flex-col bg-[#111111] px-3.5 pb-3.5 pt-4 sm:px-5 sm:pb-4 sm:pt-5 lg:px-[22px] lg:pb-4 lg:pt-5">
 
       {/* ── Header ── */}
       <div className="flex flex-shrink-0 flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-start sm:gap-4">
@@ -283,7 +283,7 @@ export default function S02_PriceChart() {
       </div>
 
       {/* ── Chart ── */}
-      <div className="min-h-0 flex-1" style={{ margin: '20px -4px 0' }}>
+      <div className="visual-chart-surface min-h-0 flex-1" style={{ margin: '20px -4px 0' }}>
         {loading || !hasChart ? (
           <div className="flex h-full items-end gap-px pb-1">
             {Array.from({ length: 60 }, (_, i) => (

@@ -109,7 +109,7 @@ function BlockCanvas({ block, selected, onClick, onDoubleClick, side }) {
         border: selected ? `2px solid ${UI_COLORS.brand}` : '1px solid #2a2a2a',
       }}
     >
-      <canvas ref={ref} width={side} height={side} style={{ display: 'block' }} />
+      <canvas className="visual-canvas-surface" ref={ref} width={side} height={side} style={{ display: 'block' }} />
 
       {/* height */}
       <div
@@ -340,7 +340,7 @@ export default function S05_LongTermTrend() {
   const chipW = Math.max(72, Math.min(Math.round(side * 0.44), 120));
 
   return (
-    <div className="flex h-full w-full flex-col bg-[#0d0d0d] overflow-hidden select-none font-mono">
+    <div className="visual-integrity-lock flex h-full w-full flex-col bg-[#0d0d0d] overflow-hidden select-none font-mono">
 
       {/* ── Top bar ── */}
       <div className="flex flex-shrink-0 flex-wrap items-center justify-between gap-3 border-b border-[#1c1c1c] px-3 py-2 sm:px-4">

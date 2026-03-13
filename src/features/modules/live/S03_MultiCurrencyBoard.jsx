@@ -513,7 +513,7 @@ export default function S03_MultiCurrencyBoard() {
   const tickerItems = [...currencies, ...currencies];
 
   return (
-    <div className="flex h-full w-full flex-col overflow-hidden bg-[#111111]">
+    <div className="visual-integrity-lock flex h-full w-full flex-col overflow-hidden bg-[#111111]">
 
       {/* ── Ticker ─────────────────────────────────────────────────────── */}
       <div className="flex-none overflow-hidden" style={{
@@ -545,15 +545,16 @@ export default function S03_MultiCurrencyBoard() {
         {/* Globe canvas */}
         <div
           ref={containerRef}
-          className="relative h-[42vh] min-h-[240px] max-h-[420px] min-w-0 flex-none sm:h-[48vh] sm:min-h-[280px] sm:max-h-[500px] lg:h-auto lg:min-h-0 lg:max-h-none lg:flex-1"
+          className="visual-canvas-surface relative h-[42vh] min-h-[240px] max-h-[420px] min-w-0 flex-none sm:h-[48vh] sm:min-h-[280px] sm:max-h-[500px] lg:h-auto lg:min-h-0 lg:max-h-none lg:flex-1"
         >
           <canvas
             ref={canvasRef}
+            className="visual-canvas-surface"
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
           />
 
           {showDesktopOverlay && (
-            <div className="absolute bottom-3 left-3 z-10 text-left font-mono text-[11px] tracking-wide text-[#7c7c7c]">
+            <div className="visual-integrity-lock absolute bottom-3 left-3 z-10 rounded border border-white/10 bg-[#080808]/90 px-2 py-1.5 text-left font-mono text-[11px] tracking-wide text-[#7c7c7c]">
               <div>
                 <span>src: </span>
                 {parseOverlayProviders(sourceLabel).map((provider, index, arr) => (
@@ -572,7 +573,7 @@ export default function S03_MultiCurrencyBoard() {
         </div>
 
         {/* Right panel */}
-        <div className="h-[clamp(220px,42%,360px)] flex flex-none flex-col border-t border-[#1a1a1a] bg-[#111111] lg:h-auto lg:w-[clamp(180px,22vw,260px)] lg:border-l lg:border-t-0">
+        <div className="visual-integrity-lock h-[clamp(220px,42%,360px)] flex flex-none flex-col border-t border-[#1a1a1a] bg-[#111111] lg:h-auto lg:w-[clamp(180px,22vw,260px)] lg:border-l lg:border-t-0">
           <div style={{ padding: '8px 10px', borderBottom: '1px solid #1a1a1a' }}>
             <div style={{
               display: 'flex', alignItems: 'center', gap: 6,

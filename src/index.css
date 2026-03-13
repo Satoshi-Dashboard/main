@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 :root {
+  color-scheme: dark;
   --bg-primary: #111111;
   --bg-card: #12121A;
   --bg-card-hover: #1A1A25;
@@ -86,6 +87,7 @@
 html, body, #root { min-height: 100%; }
 
 html { scroll-behavior: smooth; font-feature-settings: "tnum" 1; }
+html { color-scheme: dark; }
 
 body {
   margin: 0; padding: 0;
@@ -197,6 +199,43 @@ body {
 .scrollbar-hidden-mobile {
   -ms-overflow-style: auto;
   scrollbar-width: auto;
+}
+
+.visual-integrity-lock,
+.visual-map-surface,
+.visual-chart-surface,
+.visual-canvas-surface,
+.visual-svg-surface {
+  color-scheme: dark;
+  forced-color-adjust: none;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+.visual-integrity-lock *,
+.visual-map-surface *,
+.visual-chart-surface *,
+.visual-canvas-surface *,
+.visual-svg-surface * {
+  forced-color-adjust: none;
+}
+
+.visual-map-surface .leaflet-container,
+.visual-map-surface .leaflet-pane,
+.visual-map-surface .leaflet-overlay-pane,
+.visual-map-surface .leaflet-tooltip,
+.visual-map-surface .leaflet-control-container,
+.visual-chart-surface svg,
+.visual-canvas-surface canvas,
+.visual-svg-surface svg {
+  color-scheme: dark;
+  forced-color-adjust: none;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+.visual-map-surface .leaflet-container {
+  background: #101010 !important;
 }
 
 @media (max-width: 1023px) {

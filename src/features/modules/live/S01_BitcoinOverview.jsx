@@ -62,7 +62,7 @@ function MiniDonut({ pct, className = '' }) {
   const circ = 2 * Math.PI * r;
   const dash = Math.min(Math.max(((pct ?? 0) / 100) * circ, 0), circ);
   return (
-    <svg width="96" height="96" viewBox="0 0 96 96" className={className}>
+    <svg width="96" height="96" viewBox="0 0 96 96" className={`visual-svg-surface ${className}`}>
       <circle cx="48" cy="48" r={r} fill="none" stroke="#2a2a2a" strokeWidth="9" />
       <circle
         cx="48"
@@ -114,7 +114,7 @@ function FearGreedTile({ value, classification, history }) {
   const color = fngColor(value ?? 0);
   const chartData = history.map((d, i) => ({ i, v: d.v }));
   return (
-    <div className="flex min-h-[108px] flex-col items-center justify-center gap-0.5 bg-[#111111] px-3 py-2 select-none sm:px-4">
+    <div className="visual-chart-surface flex min-h-[108px] flex-col items-center justify-center gap-0.5 bg-[#111111] px-3 py-2 select-none sm:px-4">
       {loading ? (
         <div className="skeleton w-3/4 max-w-[14rem]" style={{ height: '2.4em' }} />
       ) : (
@@ -182,7 +182,7 @@ function DifficultyTile({ pct, etaBlocks, changeNext, changePrev }) {
   const nextUp = hasChanges ? changeNext >= 0 : null;
   const prevUp = hasChanges ? changePrev >= 0 : null;
   return (
-    <div className="flex min-h-[160px] flex-col items-center justify-center gap-2 bg-[#111111] px-3 py-3 select-none sm:min-h-[108px] sm:px-4 sm:py-3">
+    <div className="visual-svg-surface flex min-h-[160px] flex-col items-center justify-center gap-2 bg-[#111111] px-3 py-3 select-none sm:min-h-[108px] sm:px-4 sm:py-3">
       <div className="hidden w-full items-center justify-center gap-3 sm:flex">
         <div className="flex flex-col gap-1 text-right" style={{ fontSize: 'var(--fs-caption)' }}>
           {loading || !hasChanges ? (
@@ -359,7 +359,7 @@ export default function S01_BitcoinOverview() {
   );
 
   return (
-    <div className="h-full w-full overflow-visible bg-[#111111] lg:overflow-y-auto">
+    <div className="visual-integrity-lock h-full w-full overflow-visible bg-[#111111] lg:overflow-y-auto">
       <div className="grid h-full min-h-full w-full grid-cols-1 divide-y divide-[#2a2a2a] sm:grid-cols-2 sm:divide-x xl:grid-cols-3">
         {tiles.map((t) => (
           <Tile key={t.label} {...t} />

@@ -56,7 +56,7 @@ function GaugeArc({ usageBytes, maxBytes, loading, centerLabel = 'USAGE' }) {
   const filledLength = (pct / 100) * totalArcLength;
 
   return (
-    <svg width="360" height="190" viewBox="0 0 360 190" className="w-full max-w-[420px]">
+    <svg width="360" height="190" viewBox="0 0 360 190" className="visual-svg-surface w-full max-w-[420px]">
       <path d={arcPath} fill="none" stroke="#2a2a2a" strokeWidth="18" strokeLinecap="round" />
       {!loading && hasData ? (
         <path
@@ -374,7 +374,7 @@ export default function S04_MempoolGauge() {
   const isNode = activeSource === 'node';
 
   return (
-    <div className="flex h-full w-full flex-col items-center justify-start gap-4 bg-[#111111] px-3 py-4 sm:gap-6 sm:px-4">
+    <div className="visual-integrity-lock flex h-full w-full flex-col items-center justify-start gap-4 bg-[#111111] px-3 py-4 sm:gap-6 sm:px-4">
       <div className="text-center">
         <div className="font-mono font-bold uppercase tracking-[0.2em]" style={{ fontSize: 'var(--fs-heading)', color: UI_COLORS.brand }}>
           MEMPOOL STATUS

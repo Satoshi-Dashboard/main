@@ -177,6 +177,25 @@ Use root tokens from `src/index.css` as source of truth:
 3. Mobile + desktop parity:
      - semantic colors must preserve meaning in responsive states.
 
+## Visual integrity hardening (mandatory)
+
+For frontend modules that rely on charts, maps, heatmaps, canvas, SVG, legends, or colored overlays to communicate meaning:
+
+1. Protect semantically critical visual surfaces from forced recolor.
+   - Use explicit frontend protection for critical render surfaces (`forced-color-adjust: none`, explicit `color-scheme`, exact print color handling) instead of assuming the browser/device will preserve authored colors.
+
+2. Apply protection selectively, not blindly to the whole app shell.
+   - Prioritize map surfaces, chart containers, SVG/canvas render roots, legends, and metric overlays where recolor would invert or distort meaning.
+
+3. Critical “no data” states must remain visually distinct from active data states.
+   - Empty countries/tiles/background fills must not be allowed to drift into white/light fallback colors that visually compete with real data.
+
+4. Dark surfaces behind critical legends and overlays must be stable.
+   - Do not rely only on very soft transparency when a recolor-prone environment could wash out the contrast; use an explicit dark backing for map/chart badges when needed.
+
+5. New visual modules must adopt the shared hardening pattern.
+   - Any new chart/map/heatmap/canvas/SVG with semantic color meaning is incomplete if it omits the shared visual-integrity protection layer.
+
 ## Initial-route performance guardrail (mandatory)
 
 For the default dashboard route (`/`) and any above-the-fold module content loaded on first visit:
@@ -256,6 +275,7 @@ After any color UX/UI modification:
 3. Confirm charts with multiple colors include clear semantic interpretation.
 4. Run `npm run build` and verify no visual regressions in touched modules.
 5. Clear React Hooks dependency warnings (`react-hooks/exhaustive-deps`) in touched frontend files before delivery.
+6. For maps/charts/heatmaps/canvas/SVG touched by the change, verify at least one normal-browser check and one recolor-resistance check (`forced colors`, high contrast, or dark-mode extension disabled/enabled as applicable).
 
 ## Dual-metric hero section (mandatory pattern)
 
@@ -470,3 +490,11 @@ When creating any new frontend module, agents must follow the project example pa
 - **AcciÃ³n Realizada/CorrecciÃ³n:** Se ajustÃ³ la clasificaciÃ³n para activar el mood alcista solo desde `+4%` en 24h y se corrigiÃ³ el control de pausa para que el audio local reanude desde la posiciÃ³n actual en vez de volver al inicio.
 - **Nueva/Modificada Regla o Directriz:** Los controles media de frontend deben respetar la semÃ¡ntica esperada de pausa/reanudaciÃ³n y no reiniciar reproducciÃ³n salvo que el usuario o un cambio real de pista lo requiera explÃ­citamente.
 - **JustificaciÃ³n:** Evita una UX frustrante en controles bÃ¡sicos, alinea el reproductor con el comportamiento esperado por el usuario y reduce regresiones futuras en audio/vÃ­deo del producto.
+
+- **Fecha de la ActualizaciÃ³n:** `2026-03-13`
+- **Archivo(s) Afectado(s):** `.claude/FRONTEND_COLOR_UX_UI_RULES.md`
+- **Tipo de Evento/Contexto:** Endurecimiento visual frente a recolor externo
+- **DescripciÃ³n del Evento Original:** Un usuario reportÃ³ mapas donde paÃ­ses sin datos o con menor intensidad aparecÃ­an visualmente mÃ¡s claros de lo esperado, consistente con alteraciones de color desde extensiones, modos de alto contraste o forzado dark-mode del navegador/SO.
+- **AcciÃ³n Realizada/CorrecciÃ³n:** Se formalizÃ³ una polÃ­tica de hardening visual para superficies semÃ¡nticas crÃ­ticas y se aÃ±adiÃ³ una verificaciÃ³n explÃ­cita en entornos con recolor/forced colors.
+- **Nueva/Modificada Regla o Directriz:** Mapas, charts, heatmaps, canvas y SVG con significado por color deben usar la capa compartida de protecciÃ³n visual contra recolor automÃ¡tico y validarse tanto en navegador normal como bajo entornos que puedan forzar colores.
+- **JustificaciÃ³n:** Reduce falsos reportes de datos, mejora la fidelidad del render en dispositivos personalizados y evita que futuros mÃ³dulos semÃ¡nticos queden vulnerables a reinterpretaciones visuales externas.
