@@ -190,7 +190,9 @@ Global behavior:
 
 - Upstream providers are wrapped by cache-first single-flight refresh logic
 - Stale payloads may be served when an upstream refresh fails or another runtime is already refreshing
-- Refresh endpoints require `REFRESH_API_TOKEN` in production and accept either `x-refresh-token` or `Authorization: Bearer ...`
+- Every API response includes `x-request-id` so logs and client-side incidents can be correlated quickly
+- Refresh endpoints require `REFRESH_API_TOKEN` outside explicit localhost traffic and accept either `x-refresh-token` or `Authorization: Bearer ...`
+- `/api/public/*` is rate-limited to 60 requests per minute per IP and `/api/*/refresh` is rate-limited to 10 requests per minute per IP
 - Frontend callers stay on relative `/api/...` routes for local development and Vercel rewrite compatibility
 
 ### BTC rates
@@ -299,12 +301,23 @@ Notes:
 - Each `days + interval` combination gets its own backend cache key
 - The frontend keeps a per-session in-memory cache keyed by `{label}_{interval}` to reduce repeated range fetches
 
+## API security
+
+- Uncaught backend exceptions return a generic `500` payload with `requestId`; the detailed stack stays in server logs only
+- Refresh routes fail closed when `REFRESH_API_TOKEN` is missing unless the request is explicitly loopback localhost traffic
+- The included `npm run check:security` smoke test verifies `x-request-id` headers, public-route throttling, refresh throttling, and the fail-closed refresh guard
+- Vercel edge headers now include `Strict-Transport-Security` and a hashed CSP for the inline JSON-LD block
+- `style-src 'unsafe-inline'` still remains temporarily because the React UI currently uses inline `style={...}` attributes across multiple modules
+
 ## Environment variables
 
 - `API_PORT` (default `8787`)
 - `API_HOST` (default `0.0.0.0`)
 - `API_PROXY_TARGET` (default `http://127.0.0.1:8787`)
 - `REFRESH_API_TOKEN` (recommended for production refresh endpoints)
+- `GENERAL_API_RATE_LIMIT_MAX` (default `240`)
+- `PUBLIC_API_RATE_LIMIT_MAX` (default `60`)
+- `REFRESH_API_RATE_LIMIT_MAX` (default `10`)
 - `CACHE_KEY_PREFIX` (optional shared-cache namespace)
 - `KV_REST_API_URL` / `KV_REST_API_TOKEN` (optional Vercel KV)
 - `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` (optional shared KV aliases)
@@ -334,7 +347,9 @@ Useful scripts:
 - `npm run start` -> API only
 - `npm run start:api` -> API only
 - `npm run build` -> production build
+- `npm run check:security` -> request-id, throttling, and refresh-guard smoke test
 - `npm run preview` -> preview build
+- `npm run preview:vercel-local` -> preview build bound to all interfaces (used by `vercel dev`)
 - `npm run lint` -> ESLint
 
 Development notes:
@@ -367,9 +382,12 @@ Notes:
 
 - The serverless function is pinned to region `fra1`
 - Vercel deploys use the same Express app used locally
+- Local `vercel dev` intentionally runs a production preview build instead of raw Vite HMR so SPA rewrites do not hijack Vite internal module URLs such as `/@vite/client`
 - Production traffic analytics and custom events are collected through `@vercel/analytics`, and performance telemetry through `@vercel/speed-insights`; both products must be enabled in the Vercel project dashboard to populate their panels
 - Built assets under `/assets/*` are served with `Cache-Control: public, max-age=31536000, immutable`
 - HTML entry routes continue to resolve through rewrites rather than long-lived immutable caching so new deploys propagate cleanly
+- Security headers include `Strict-Transport-Security` plus a CSP hash for the inline JSON-LD block in `index.html`
+- `style-src 'unsafe-inline'` remains in the CSP until the frontend stops relying on inline React style attributes
 - If you add new remote origins, update `vercel.json` CSP and related header rules
 
 ## Maintainer docs
@@ -500,3 +518,18 @@ Satoshi Dashboard is open-source under the MIT License. See `LICENSE.txt`.
 - **Acción Realizada/Corrección:** Se actualizó la fila de `S04` y la lista de feeds públicos para incluir `/api/public/mempool/official-usage` junto a `/api/public/mempool/node`, dejando explícito que la UI separa ambas vistas, sus cadencias, el fallback oficial hacia `mempool.space /api/v1/init-data` y el fallback del nodo hacia Tor RPC local.
 - **Nueva/Modificada Regla o Directriz:** Cuando un módulo compare dos alcances de mempool dentro de la misma superficie, el `README.md` debe listar cada feed implicado, aclarar si la UI mantiene esas vistas separadas y documentar cualquier fallback que conserve la misma semántica oficial o node-scoped.
 - **Justificación:** Evita que futuros agentes o maintainers vuelvan a asumir que `S04` representa una sola fuente o que el gauge principal sale del mismo feed que la vista del nodo propio.
+- **Fecha de la ActualizaciÃ³n:** `2026-03-13`
+- **Archivo(s) Afectado(s):** `README.md`
+- **Tipo de Evento/Contexto:** Hardening de seguridad API y despliegue Vercel
+- **DescripciÃ³n del Evento Original:** La documentaciÃ³n principal no reflejaba todavÃ­a el nuevo request ID por respuesta, los lÃ­mites por IP, el fail-closed de refresh fuera de localhost ni el endurecimiento CSP/HSTS en Vercel.
+- **AcciÃ³n Realizada/CorrecciÃ³n:** Se ampliaron las secciones API, variables de entorno, scripts locales y despliegue para explicar el nuevo flujo de seguridad y la verificaciÃ³n automatizada con `npm run check:security`.
+- **Nueva/Modificada Regla o Directriz:** Cuando cambie la postura de seguridad del backend o de los headers edge, el `README.md` debe documentar tanto el comportamiento runtime como la forma de verificarlo localmente sin romper Vercel.
+- **JustificaciÃ³n:** Reduce errores de operaciÃ³n, facilita auditorÃ­as futuras y evita que un deploy seguro quede parcialmente documentado o se revierta por desconocimiento.
+
+- **Fecha de la Actualizacion:** `2026-03-13`
+- **Archivo(s) Afectado(s):** `README.md`
+- **Tipo de Evento/Contexto:** Correccion de preview local Vercel para frontend SPA
+- **Descripcion del Evento Original:** `vercel dev` estaba levantando el frontend con el servidor HMR de Vite y las rewrites SPA interceptaban rutas internas como `/@vite/client` y `/@react-refresh`, dejando la aplicacion en blanco aunque la home respondiera `200`.
+- **Accion Realizada/Correccion:** Se documento que el flujo local de `vercel dev` debe arrancar un preview build en lugar del dev server HMR para mantener visibles tanto la SPA como las funciones API bajo la misma superficie local.
+- **Nueva/Modificada Regla o Directriz:** Cuando `vercel dev` comparta puerto con una SPA Vite en este repositorio, la documentacion debe preferir `vite preview` sobre el dev server HMR para evitar que las rewrites de Vercel rompan los modulos internos del cliente.
+- **Justificacion:** Evita diagnosticos enganiososos de pantalla en blanco, deja un flujo local reproducible y protege el deploy de Vercel sin degradar el `npm run dev` tradicional.

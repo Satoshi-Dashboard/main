@@ -116,6 +116,8 @@ This is a strict global rule for every external API integration (new or existing
 1. Protect mutation/refresh endpoints in production with `REFRESH_API_TOKEN`.
 2. Never log secrets or tokens.
 3. Keep any user/IP handling minimal and privacy-conscious.
+4. Uncaught backend errors must return generic 5xx payloads while detailed diagnostics stay in internal logs with a request correlation ID.
+5. Public and refresh API surfaces must use explicit rate limiting that remains compatible with local dev and Vercel serverless execution.
 
 ## Vercel/runtime compatibility (mandatory)
 
@@ -130,9 +132,10 @@ This is a strict global rule for every external API integration (new or existing
 After backend/API changes, run:
 
 1. `node --check server/app.js`
-2. `npm run build`
-3. Verify serverless compatibility assumptions still match `api/index.js` and `vercel.json`.
-4. Smoke test these endpoints:
+2. `npm run check:security`
+3. `npm run build`
+4. Verify serverless compatibility assumptions still match `api/index.js` and `vercel.json`.
+5. Smoke test these endpoints:
    - `/api/btc/rates`
    - `/api/s03/multi-currency/status`
    - `/api/s10/stablecoins`
@@ -182,3 +185,10 @@ When backend/API behavior changes:
 - **Acción Realizada/Corrección:** Se retiró ese endpoint de la verificación obligatoria y se generalizó la regla de privacidad para no anclarla a un feature ya removido.
 - **Nueva/Modificada Regla o Directriz:** Cuando un endpoint backend se retire, `.claude/BACKEND_API_RULES.md` debe eliminarlo de las smoke checks y conservar solo reglas de seguridad que sigan aplicando al estado real del API.
 - **Justificación:** Evita verificaciones fallidas sobre rutas inexistentes y mantiene la política backend enfocada en contratos realmente soportados.
+- **Fecha de la ActualizaciÃ³n:** `2026-03-13`
+- **Archivo(s) Afectado(s):** `.claude/BACKEND_API_RULES.md`
+- **Tipo de Evento/Contexto:** Hardening operativo de errores, rate limiting y verificaciÃ³n de seguridad
+- **DescripciÃ³n del Evento Original:** La polÃ­tica backend no exigÃ­a de forma explÃ­cita request IDs para correlaciÃ³n de errores, respuestas genÃ©ricas en 5xx no controlados ni una smoke check dedicada para throttling y guardas de refresh.
+- **AcciÃ³n Realizada/CorrecciÃ³n:** Se reforzÃ³ la secciÃ³n de seguridad con reglas sobre request correlation y limitaciÃ³n de tasa, y se aÃ±adiÃ³ `npm run check:security` a la checklist obligatoria de verificaciÃ³n.
+- **Nueva/Modificada Regla o Directriz:** Los cambios backend que afecten seguridad operacional deben verificar tanto compilaciÃ³n/deploy como request IDs, 5xx sanitizados y rate limiting mediante una smoke check dedicada.
+- **JustificaciÃ³n:** Hace repetible la validaciÃ³n de hardening, reduce regresiones silenciosas y mantiene alineadas las expectativas entre entorno local y Vercel.

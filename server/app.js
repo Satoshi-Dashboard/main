@@ -1,4 +1,6 @@
+import { randomUUID } from 'node:crypto';
 import express from 'express';
+import rateLimit from 'express-rate-limit';
 import { ExternalApiError, getBtcRates, updateBtcRates } from './services/btcRates.js';
 import {
   getBitnodesPayload,
@@ -54,16 +56,51 @@ import {
 } from './services/publicDataFeeds.js';
 
 const REFRESH_API_TOKEN = String(process.env.REFRESH_API_TOKEN || '');
-const IS_PRODUCTION = ['production', 'preview'].includes(String(process.env.VERCEL_ENV || '').toLowerCase())
-  || String(process.env.NODE_ENV || '').toLowerCase() === 'production';
+const REQUEST_ID_HEADER = 'x-request-id';
+const LOCALHOST_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
+const LOCALHOST_IPS = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const GENERAL_API_RATE_LIMIT_MAX = Number(process.env.GENERAL_API_RATE_LIMIT_MAX || 240);
+const PUBLIC_API_RATE_LIMIT_MAX = Number(process.env.PUBLIC_API_RATE_LIMIT_MAX || 60);
+const REFRESH_API_RATE_LIMIT_MAX = Number(process.env.REFRESH_API_RATE_LIMIT_MAX || 10);
+
+function getRequestId(req) {
+  const incomingId = String(req.headers[REQUEST_ID_HEADER] || '').trim();
+  return incomingId || randomUUID();
+}
+
+function getSafePath(req) {
+  return req.originalUrl || req.url || req.path || '/';
+}
+
+function logInternalError(req, error) {
+  console.error('[api:error]', {
+    requestId: req.requestId,
+    method: req.method,
+    path: getSafePath(req),
+    message: error instanceof Error ? error.message : String(error),
+    stack: error instanceof Error ? error.stack : undefined,
+  });
+}
+
+function parsePositiveInteger(value, fallback) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : fallback;
+}
 
 function asyncRoute(handler) {
   return async (req, res) => {
     try {
       await handler(req, res);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      res.status(500).json({ error: message });
+      logInternalError(req, error);
+      if (res.headersSent) {
+        return;
+      }
+      res.status(500).json({
+        error: 'Internal server error',
+        requestId: req.requestId,
+      });
     }
   };
 }
@@ -75,6 +112,46 @@ function setDataCacheHeaders(res, { sMaxAge = 30, swr = 60 } = {}) {
 function setNoStoreHeaders(res) {
   res.set('Cache-Control', 'no-store, max-age=0');
 }
+
+function isLoopbackRequest(req) {
+  const hostname = String(req.hostname || '').toLowerCase();
+  const ip = String(req.ip || '').toLowerCase();
+  if (!LOCALHOST_IPS.has(ip)) {
+    return false;
+  }
+  return !hostname || LOCALHOST_HOSTS.has(hostname);
+}
+
+function createRateLimiter({ max, message }) {
+  return rateLimit({
+    windowMs: RATE_LIMIT_WINDOW_MS,
+    max: parsePositiveInteger(max, 1),
+    standardHeaders: true,
+    legacyHeaders: false,
+    validate: { trustProxy: false },
+    handler: (req, res) => {
+      res.status(429).json({
+        error: message,
+        requestId: req.requestId,
+      });
+    },
+  });
+}
+
+const generalApiRateLimiter = createRateLimiter({
+  max: GENERAL_API_RATE_LIMIT_MAX,
+  message: 'Too many API requests',
+});
+
+const publicApiRateLimiter = createRateLimiter({
+  max: PUBLIC_API_RATE_LIMIT_MAX,
+  message: 'Too many public API requests',
+});
+
+const refreshApiRateLimiter = createRateLimiter({
+  max: REFRESH_API_RATE_LIMIT_MAX,
+  message: 'Too many refresh requests',
+});
 
 function sendBtcError(res, error) {
   if (error instanceof ExternalApiError) {
@@ -124,8 +201,8 @@ function sendPublicFeedError(res, error) {
 
 function requireRefreshToken(req, res, next) {
   if (!REFRESH_API_TOKEN) {
-    if (IS_PRODUCTION) {
-      res.status(403).json({ error: 'Refresh endpoints require REFRESH_API_TOKEN in production' });
+    if (!isLoopbackRequest(req)) {
+      res.status(403).json({ error: 'Refresh endpoints require REFRESH_API_TOKEN outside localhost' });
       return;
     }
     next();
@@ -152,12 +229,19 @@ export function createApp() {
   app.set('trust proxy', true);
   app.use(express.json({ limit: '8kb' }));
   app.use((req, res, next) => {
+    req.requestId = getRequestId(req);
+    res.set(REQUEST_ID_HEADER, req.requestId);
+    next();
+  });
+  app.use((req, res, next) => {
     res.set('Referrer-Policy', 'no-referrer');
     res.set('X-Content-Type-Options', 'nosniff');
     res.set('X-Frame-Options', 'DENY');
     res.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
     next();
   });
+  app.use('/api', generalApiRateLimiter);
+  app.use('/api/public', publicApiRateLimiter);
 
   app.get('/api/bitnodes/cache', asyncRoute(async (_req, res) => {
     setDataCacheHeaders(res, { sMaxAge: 21600, swr: 3600 });
@@ -195,7 +279,7 @@ export function createApp() {
     }
   }));
 
-  app.get('/api/btc/refresh', requireRefreshToken, asyncRoute(async (_req, res) => {
+  app.get('/api/btc/refresh', refreshApiRateLimiter, requireRefreshToken, asyncRoute(async (_req, res) => {
     setNoStoreHeaders(res);
     try {
       const payload = await updateBtcRates();
@@ -249,7 +333,7 @@ export function createApp() {
     }
   }));
 
-  app.get('/api/s03/multi-currency/refresh', requireRefreshToken, asyncRoute(async (_req, res) => {
+  app.get('/api/s03/multi-currency/refresh', refreshApiRateLimiter, requireRefreshToken, asyncRoute(async (_req, res) => {
     setNoStoreHeaders(res);
     try {
       const payload = await refreshS03MultiCurrencyPayload();
@@ -339,7 +423,7 @@ export function createApp() {
     }
   };
 
-  app.get('/api/s14/global-assets/refresh', requireRefreshToken, asyncRoute(refreshS14GlobalAssets));
+  app.get('/api/s14/global-assets/refresh', refreshApiRateLimiter, requireRefreshToken, asyncRoute(refreshS14GlobalAssets));
 
   app.get('/api/public/mempool/overview', asyncRoute(async (_req, res) => {
     setDataCacheHeaders(res, { sMaxAge: 5, swr: 20 });
@@ -541,7 +625,7 @@ export function createApp() {
     }
   };
 
-  app.get('/api/s12/btc-distribution/refresh', requireRefreshToken, asyncRoute(refreshS12BtcDistribution));
+  app.get('/api/s12/btc-distribution/refresh', refreshApiRateLimiter, requireRefreshToken, asyncRoute(refreshS12BtcDistribution));
 
   const sendS13AddressesRicherJs = async (_req, res) => {
     setDataCacheHeaders(res, { sMaxAge: 3600, swr: 7200 });
@@ -598,9 +682,9 @@ export function createApp() {
     }
   };
 
-  app.get('/api/s13/addresses-richer/refresh', requireRefreshToken, asyncRoute(refreshS13AddressesRicher));
+  app.get('/api/s13/addresses-richer/refresh', refreshApiRateLimiter, requireRefreshToken, asyncRoute(refreshS13AddressesRicher));
 
-  app.get('/api/bitnodes/cache/refresh', requireRefreshToken, asyncRoute(async (_req, res) => {
+  app.get('/api/bitnodes/cache/refresh', refreshApiRateLimiter, requireRefreshToken, asyncRoute(async (_req, res) => {
     setNoStoreHeaders(res);
     try {
       const payload = await refreshBitnodesCache();
@@ -619,34 +703,36 @@ export function createApp() {
   }));
 
   // ── Cache warm-up on startup ──────────────────────────────────────────────
-  // Kick off heavy feeds in the background so first real requests hit warm cache.
-  setTimeout(() => {
-    getS03MultiCurrencyPayload()
-      .then(() => console.log('[warmup] S03 multi-currency cache ready'))
-      .catch(err => console.warn('[warmup] S03 multi-currency failed:', err?.message));
-  }, 2000);
+  if (process.env.NODE_ENV !== 'test') {
+    // Kick off heavy feeds in the background so first real requests hit warm cache.
+    setTimeout(() => {
+      getS03MultiCurrencyPayload()
+        .then(() => console.log('[warmup] S03 multi-currency cache ready'))
+        .catch(err => console.warn('[warmup] S03 multi-currency failed:', err?.message));
+    }, 2000);
 
-  // S06 Bitnodes: cold start hits Bitnodes API (2-3s) or HTML scraper fallback (5-10s).
-  setTimeout(() => {
-    getBitnodesPayload()
-      .then(() => console.log('[warmup] S06 Bitnodes nodes cache ready'))
-      .catch(err => console.warn('[warmup] S06 Bitnodes failed:', err?.message));
-  }, 4000);
+    // S06 Bitnodes: cold start hits Bitnodes API (2-3s) or HTML scraper fallback (5-10s).
+    setTimeout(() => {
+      getBitnodesPayload()
+        .then(() => console.log('[warmup] S06 Bitnodes nodes cache ready'))
+        .catch(err => console.warn('[warmup] S06 Bitnodes failed:', err?.message));
+    }, 4000);
 
-  // S07 Lightning: mempool.space responds fast but GeoJSON + lock wait adds latency cold.
-  setTimeout(() => {
-    getLightningWorldPayload()
-      .then(() => console.log('[warmup] S07 Lightning world cache ready'))
-      .catch(err => console.warn('[warmup] S07 Lightning failed:', err?.message));
-  }, 6000);
+    // S07 Lightning: mempool.space responds fast but GeoJSON + lock wait adds latency cold.
+    setTimeout(() => {
+      getLightningWorldPayload()
+        .then(() => console.log('[warmup] S07 Lightning world cache ready'))
+        .catch(err => console.warn('[warmup] S07 Lightning failed:', err?.message));
+    }, 6000);
 
-  // S08 BTC Map: paginating ~50k places + point-in-polygon matching takes 20-60s cold.
-  // Warm it up 10s after start so the geo feed and polygon index are ready on first visit.
-  setTimeout(() => {
-    getBtcMapBusinessesByCountryPayload()
-      .then(() => console.log('[warmup] S08 BTC Map businesses cache ready'))
-      .catch(err => console.warn('[warmup] S08 BTC Map failed:', err?.message));
-  }, 10_000);
+    // S08 BTC Map: paginating ~50k places + point-in-polygon matching takes 20-60s cold.
+    // Warm it up 10s after start so the geo feed and polygon index are ready on first visit.
+    setTimeout(() => {
+      getBtcMapBusinessesByCountryPayload()
+        .then(() => console.log('[warmup] S08 BTC Map businesses cache ready'))
+        .catch(err => console.warn('[warmup] S08 BTC Map failed:', err?.message));
+    }, 10_000);
+  }
 
   return app;
 }

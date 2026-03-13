@@ -8,5 +8,5 @@ const app = createApp();
 app.listen(PORT, HOST, () => {
   console.log(`[api] listening on http://${HOST}:${PORT}`);
   console.log('[api] request-time refresh mode enabled');
-  console.log('[api] refresh endpoints require REFRESH_API_TOKEN in production');
+  console.log('[api] refresh endpoints require REFRESH_API_TOKEN outside localhost');
 });

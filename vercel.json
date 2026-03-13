@@ -1,4 +1,5 @@
 {
+  "devCommand": "npm run build && npm run preview:vercel-local -- --port $PORT",
   "regions": ["fra1"],
   "functions": {
     "api/index.js": {
@@ -214,8 +215,12 @@
           "value": "camera=(), microphone=(), geolocation=()"
         },
         {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=31536000; includeSubDomains"
+        },
+        {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; font-src 'self' data:; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com; media-src 'self' https://www.youtube.com https://www.youtube-nocookie.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
+          "value": "default-src 'self'; script-src 'self' 'sha256-i/O9YHfFBglwX0wU33/gUsgUt8BO/EviH9oJDaN1cxc=' 'sha256-Z2/iFzh9VMlVkEOar1f/oSHWwQk3ve1qk/C2WdsC4Xk='; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https: ws: wss:; font-src 'self' data:; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com; media-src 'self' https://www.youtube.com https://www.youtube-nocookie.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
         }
       ]
     }
@@ -224,6 +229,22 @@
     {
       "source": "/api/(.*)",
       "destination": "/api/index.js"
+    },
+    {
+      "source": "/@vite/(.*)",
+      "destination": "/@vite/$1"
+    },
+    {
+      "source": "/@react-refresh",
+      "destination": "/@react-refresh"
+    },
+    {
+      "source": "/@id/(.*)",
+      "destination": "/@id/$1"
+    },
+    {
+      "source": "/@fs/(.*)",
+      "destination": "/@fs/$1"
     },
     {
       "source": "/module/(.*)",
