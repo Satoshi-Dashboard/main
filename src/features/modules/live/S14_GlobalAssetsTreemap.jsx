@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useEffect, useMemo, useState } from 'react';
 import { fetchJson } from '@/shared/lib/api.js';
 
 const REFRESH_MS = 60 * 60 * 1000;
+let lastGlobalAssetsPayload = null;
 
 const ASSET_STYLE_BY_ID = {
   real_estate:  { color: '#c4a882', displayName: 'Real Estate' },
@@ -188,21 +188,38 @@ function AssetCard({ asset }) {
 
 /* ── Main component ───────────────────────────────────────────── */
 export default function S14_GlobalAssetsTreemap() {
+  const [payload, setPayload] = useState(() => lastGlobalAssetsPayload);
+  const [isLoading, setIsLoading] = useState(() => !lastGlobalAssetsPayload);
   const [loadFailed, setLoadFailed] = useState(false);
-  const { data: payload, isLoading } = useQuery({
-    queryKey: ['global-assets'],
-    queryFn: async () => {
+
+  useEffect(() => {
+    let active = true;
+
+    const loadAssets = async () => {
       try {
-        const response = await fetchJson('/api/s14/global-assets', { cache: 'no-store' });
+        const response = await fetchJson('/api/s14/global-assets');
+        if (!active) return;
+        lastGlobalAssetsPayload = response;
+        setPayload(response);
         setLoadFailed(false);
-        return response;
-      } catch (error) {
-        setLoadFailed(true);
-        throw error;
+      } catch {
+        if (!active) return;
+        setLoadFailed(!lastGlobalAssetsPayload);
+      } finally {
+        if (active) {
+          setIsLoading(false);
+        }
       }
-    },
-    refetchInterval: REFRESH_MS,
-  });
+    };
+
+    loadAssets();
+    const timer = window.setInterval(loadAssets, REFRESH_MS);
+
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, []);
 
   const assetData = useMemo(() => normalizeAssetData(payload), [payload]);
   const error = loadFailed ? 'Global asset values are temporarily unavailable.' : null;

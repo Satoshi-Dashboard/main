@@ -704,34 +704,46 @@ export function createApp() {
 
   // ── Cache warm-up on startup ──────────────────────────────────────────────
   if (process.env.NODE_ENV !== 'test') {
-    // Kick off heavy feeds in the background so first real requests hit warm cache.
-    setTimeout(() => {
-      getS03MultiCurrencyPayload()
-        .then(() => console.log('[warmup] S03 multi-currency cache ready'))
-        .catch(err => console.warn('[warmup] S03 multi-currency failed:', err?.message));
-    }, 2000);
+    const scheduleWarmup = (label, delayMs, task) => {
+      setTimeout(() => {
+        Promise.resolve()
+          .then(task)
+          .then(() => console.log(`[warmup] ${label} cache ready`))
+          .catch((err) => console.warn(`[warmup] ${label} failed:`, err?.message));
+      }, delayMs);
+    };
+
+    scheduleWarmup('BTC spot', 500, () => getBtcRates());
+    scheduleWarmup('S01 mempool overview', 1200, () => getMempoolOverviewPayload());
+    scheduleWarmup('S04 mempool official usage', 1800, () => getMempoolOfficialUsagePayload());
+    scheduleWarmup('S05 mempool live', 2400, () => getMempoolLivePayload());
+    scheduleWarmup('S03 multi-currency', 3000, () => getS03MultiCurrencyPayload());
+    scheduleWarmup('S10 stablecoin list', 3600, () => getS10StablecoinList());
+    scheduleWarmup('S10 stablecoin live prices', 4200, () => getS10StablecoinLivePrices());
 
     // S06 Bitnodes: cold start hits Bitnodes API (2-3s) or HTML scraper fallback (5-10s).
-    setTimeout(() => {
-      getBitnodesPayload()
-        .then(() => console.log('[warmup] S06 Bitnodes nodes cache ready'))
-        .catch(err => console.warn('[warmup] S06 Bitnodes failed:', err?.message));
-    }, 4000);
+    scheduleWarmup('S06 Bitnodes nodes', 5000, () => getBitnodesPayload());
 
     // S07 Lightning: mempool.space responds fast but GeoJSON + lock wait adds latency cold.
-    setTimeout(() => {
-      getLightningWorldPayload()
-        .then(() => console.log('[warmup] S07 Lightning world cache ready'))
-        .catch(err => console.warn('[warmup] S07 Lightning failed:', err?.message));
-    }, 6000);
+    scheduleWarmup('S07 Lightning world', 6000, () => getLightningWorldPayload());
+    scheduleWarmup('geo countries', 6500, () => getCountriesGeoPayload());
+
+    // S14/S15/S30 benefit from having composed real payloads ready before the first visit.
+    scheduleWarmup('S14 global assets', 7500, () => getS14GlobalAssetsPayload());
+    scheduleWarmup('S30 U.S. debt', 8200, () => getUsNationalDebtPayload());
+    scheduleWarmup('S15 BTC vs Gold', 9000, () => getS15BtcVsGoldMarketCapPayload());
+
+    // S02/S16 history ranges share the same Binance history cache family.
+    scheduleWarmup('S02 history 1D', 9800, () => getBinanceBtcHistoryPayload({ days: 1, interval: '5m' }));
+    scheduleWarmup('S02 history 1W', 10_400, () => getBinanceBtcHistoryPayload({ days: 7, interval: '1h' }));
+    scheduleWarmup('S02 history 1M', 11_000, () => getBinanceBtcHistoryPayload({ days: 30, interval: '1h' }));
+    scheduleWarmup('S02 history 1Y', 11_600, () => getBinanceBtcHistoryPayload({ days: 365, interval: '1d' }));
+    scheduleWarmup('S02 history 5Y', 12_200, () => getBinanceBtcHistoryPayload({ days: 1825, interval: '1d' }));
+    scheduleWarmup('S16 history 2025d', 12_800, () => getBinanceBtcHistoryPayload({ days: 2025, interval: '1d' }));
 
     // S08 BTC Map: paginating ~50k places + point-in-polygon matching takes 20-60s cold.
-    // Warm it up 10s after start so the geo feed and polygon index are ready on first visit.
-    setTimeout(() => {
-      getBtcMapBusinessesByCountryPayload()
-        .then(() => console.log('[warmup] S08 BTC Map businesses cache ready'))
-        .catch(err => console.warn('[warmup] S08 BTC Map failed:', err?.message));
-    }, 10_000);
+    // Warm it up after core modules so long-running aggregation does not delay more common feeds.
+    scheduleWarmup('S08 BTC Map businesses', 14_000, () => getBtcMapBusinessesByCountryPayload());
   }
 
   return app;

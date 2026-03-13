@@ -18,6 +18,7 @@ const RANGES = [
   { label: '1Y', days: 365 },
   { label: 'MAX', days: Infinity },
 ];
+let lastBtcVsGoldPayload = null;
 
 const RANGE_TEXT = {
   '3M': 'Past 3 Months',
@@ -150,9 +151,9 @@ function MetricPlaceholder({ label, message = 'Unavailable', color = 'rgba(255,2
 }
 
 export default function S15_BTCvsGold() {
-  const [payload, setPayload] = useState(null);
+  const [payload, setPayload] = useState(() => lastBtcVsGoldPayload);
   const [activeLabel, setActiveLabel] = useState('1Y');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !lastBtcVsGoldPayload);
   const [hoverData, setHoverData] = useState(null);
   const [showGold, setShowGold] = useState(true);
   const [error, setError] = useState(null);
@@ -163,8 +164,9 @@ export default function S15_BTCvsGold() {
 
     (async () => {
       try {
-        const nextPayload = await fetchJson('/api/s15/btc-vs-gold-market-cap', { timeout: 8000, cache: 'no-store' });
+        const nextPayload = await fetchJson('/api/s15/btc-vs-gold-market-cap', { timeout: 8000 });
         if (active) {
+          lastBtcVsGoldPayload = nextPayload;
           setPayload(nextPayload);
           setError(null);
         }

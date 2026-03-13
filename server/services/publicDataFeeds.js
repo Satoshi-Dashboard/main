@@ -33,7 +33,12 @@ const BTC_MAX_SUPPLY = 21_000_000;
 const BTC_CURRENT_HALVING_REWARD = 3.125;
 
 const memCache = new Map();
+const composedCache = new Map();
 const BITCOIN_TOR_PROXY_URL = BITCOIN_TOR_SOCKS_PORT ? `socks5h://127.0.0.1:${BITCOIN_TOR_SOCKS_PORT}` : '';
+const S15_COMPOSED_CACHE_KEY = 'public:s15:btc-vs-gold:composed';
+const S15_COMPOSED_LOCK_KEY = 'public:s15:btc-vs-gold:composed:refresh';
+const US_DEBT_COMPOSED_CACHE_KEY = 'public:us-national-debt:composed';
+const US_DEBT_COMPOSED_LOCK_KEY = 'public:us-national-debt:composed:refresh';
 
 const FEED_DEFS = {
   mempoolOverview: {
@@ -1025,6 +1030,93 @@ async function getFeed(feedKey, fetchData, validateData = validateObject) {
 
     if (error instanceof PublicFeedError) throw error;
     throw new PublicFeedError(error instanceof Error ? error.message : String(error));
+  }
+}
+
+function isPayloadLikeFresh(payload, nowMs = Date.now()) {
+  if (!payload || typeof payload !== 'object') return false;
+  const nextUpdate = parseIsoDate(payload.next_update_at);
+  return Boolean(nextUpdate && nowMs < nextUpdate.getTime());
+}
+
+function getComposedCacheTtlSeconds(payload, fallbackSeconds = 300, bufferSeconds = 120) {
+  const nextUpdate = parseIsoDate(payload?.next_update_at);
+  if (!nextUpdate) return fallbackSeconds;
+  const ttlSeconds = Math.ceil(Math.max(30_000, (nextUpdate.getTime() - Date.now()) + (bufferSeconds * 1000)) / 1000);
+  return Math.max(30, ttlSeconds);
+}
+
+async function getComposedPayload({
+  cacheKey,
+  lockKey,
+  fallbackTtlSeconds,
+  buildPayload,
+  validatePayload = validateObject,
+  staleWhileRefreshing,
+  staleWhileRecovering,
+}) {
+  const fromMemory = composedCache.get(cacheKey);
+  if (validatePayload(fromMemory) && isPayloadLikeFresh(fromMemory)) {
+    return fromMemory;
+  }
+
+  const shared = await cacheGetJson(cacheKey);
+  if (validatePayload(shared)) {
+    composedCache.set(cacheKey, shared);
+    if (isPayloadLikeFresh(shared)) {
+      return shared;
+    }
+  }
+
+  const refreshed = await withCacheLock(
+    lockKey,
+    async () => {
+      const payload = await buildPayload();
+      composedCache.set(cacheKey, payload);
+      await cacheSetJson(cacheKey, payload, {
+        ttlSeconds: getComposedCacheTtlSeconds(payload, fallbackTtlSeconds),
+      });
+      return payload;
+    },
+    { ttlSeconds: 30, waitMs: 3200, pollMs: 120 },
+  ).catch(() => null);
+
+  if (validatePayload(refreshed)) {
+    return refreshed;
+  }
+
+  const sharedAfterLock = await cacheGetJson(cacheKey);
+  if (validatePayload(sharedAfterLock)) {
+    composedCache.set(cacheKey, sharedAfterLock);
+    if (isPayloadLikeFresh(sharedAfterLock)) {
+      return sharedAfterLock;
+    }
+    return stalePayload(sharedAfterLock, staleWhileRefreshing);
+  }
+
+  const staleSource = validatePayload(shared)
+    ? shared
+    : (validatePayload(fromMemory) ? fromMemory : null);
+
+  if (staleSource) {
+    return stalePayload(staleSource, staleWhileRefreshing);
+  }
+
+  try {
+    const payload = await buildPayload();
+    composedCache.set(cacheKey, payload);
+    await cacheSetJson(cacheKey, payload, {
+      ttlSeconds: getComposedCacheTtlSeconds(payload, fallbackTtlSeconds),
+    });
+    return payload;
+  } catch (error) {
+    const staleFallback = validatePayload(shared)
+      ? shared
+      : (validatePayload(fromMemory) ? fromMemory : null);
+    if (staleFallback) {
+      return stalePayload(staleFallback, staleWhileRecovering);
+    }
+    throw error;
   }
 }
 
@@ -2057,99 +2149,108 @@ async function getS15GoldMarketCapSnapshotPayload() {
 }
 
 export async function getS15BtcVsGoldMarketCapPayload() {
-  const [historyPayload, btcRatesPayload, goldPayload] = await Promise.all([
-    getBinanceBtcHistoryPayload({ days: 1825, interval: '1d' }),
-    getBtcRates(),
-    getS15GoldMarketCapSnapshotPayload(),
-  ]);
+  return getComposedPayload({
+    cacheKey: S15_COMPOSED_CACHE_KEY,
+    lockKey: S15_COMPOSED_LOCK_KEY,
+    fallbackTtlSeconds: 600,
+    staleWhileRefreshing: 'Serving stale BTC vs Gold comparison while shared refresh completes',
+    staleWhileRecovering: 'Serving stale BTC vs Gold comparison while upstream refresh recovers',
+    buildPayload: async () => {
+      const [historyPayload, btcRatesPayload, goldPayload] = await Promise.all([
+        getBinanceBtcHistoryPayload({ days: 1825, interval: '1d' }),
+        getBtcRates(),
+        getS15GoldMarketCapSnapshotPayload(),
+      ]);
 
-  const historyPoints = Array.isArray(historyPayload?.data) ? historyPayload.data : [];
-  const goldSnapshot = goldPayload?.data || goldPayload;
-  const gold = Number(goldSnapshot?.market_cap_trillions);
-  const currentBtcUsd = Number(btcRatesPayload?.btc_usd);
-  const currentTs = Date.now();
+      const historyPoints = Array.isArray(historyPayload?.data) ? historyPayload.data : [];
+      const goldSnapshot = goldPayload?.data || goldPayload;
+      const gold = Number(goldSnapshot?.market_cap_trillions);
+      const currentBtcUsd = Number(btcRatesPayload?.btc_usd);
+      const currentTs = Date.now();
 
-  if (!Number.isFinite(gold) || gold <= 0) {
-    throw new PublicFeedError('Gold market-cap snapshot is unavailable');
-  }
-
-  const points = historyPoints
-    .filter((point, index) => index % 3 === 0)
-    .map((point) => {
-      const ts = Number(point?.ts);
-      const price = Number(point?.price);
-      const supply = estimateBitcoinCirculatingSupply(ts);
-      if (!Number.isFinite(ts) || !Number.isFinite(price) || price <= 0 || !Number.isFinite(supply) || supply <= 0) {
-        return null;
+      if (!Number.isFinite(gold) || gold <= 0) {
+        throw new PublicFeedError('Gold market-cap snapshot is unavailable');
       }
 
-      const bitcoin = Number(((price * supply) / 1e12).toFixed(2));
-      const ratio = Number(((bitcoin / gold) * 100).toFixed(2));
-      const gap = Number((gold - bitcoin).toFixed(2));
+      const points = historyPoints
+        .filter((point, index) => index % 3 === 0)
+        .map((point) => {
+          const ts = Number(point?.ts);
+          const price = Number(point?.price);
+          const supply = estimateBitcoinCirculatingSupply(ts);
+          if (!Number.isFinite(ts) || !Number.isFinite(price) || price <= 0 || !Number.isFinite(supply) || supply <= 0) {
+            return null;
+          }
+
+          const bitcoin = Number(((price * supply) / 1e12).toFixed(2));
+          const ratio = Number(((bitcoin / gold) * 100).toFixed(2));
+          const gap = Number((gold - bitcoin).toFixed(2));
+
+          return {
+            ts,
+            date: new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit', timeZone: 'UTC' }),
+            bitcoin,
+            gold,
+            ratio,
+            gap,
+          };
+        })
+        .filter(Boolean);
+
+      if (Number.isFinite(currentBtcUsd) && currentBtcUsd > 0) {
+        const latestSupply = estimateBitcoinCirculatingSupply(currentTs);
+        const latestBitcoin = Number(((currentBtcUsd * latestSupply) / 1e12).toFixed(2));
+        const latestPoint = {
+          ts: currentTs,
+          date: new Date(currentTs).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit', timeZone: 'UTC' }),
+          bitcoin: latestBitcoin,
+          gold,
+          ratio: Number(((latestBitcoin / gold) * 100).toFixed(2)),
+          gap: Number((gold - latestBitcoin).toFixed(2)),
+        };
+
+        const previousTs = Number(points.at(-1)?.ts);
+        if (!Number.isFinite(previousTs) || currentTs - previousTs > (12 * 60 * 60 * 1000)) {
+          points.push(latestPoint);
+        } else {
+          points[points.length - 1] = latestPoint;
+        }
+      }
+
+      if (!points.length) {
+        throw new PublicFeedError('BTC vs Gold comparison has no chart points');
+      }
+
+      const latest = points.at(-1) || null;
+      const updatedAtCandidates = [historyPayload?.updated_at, btcRatesPayload?.updated_at, goldPayload?.updated_at]
+        .map((value) => parseIsoDate(value)?.getTime())
+        .filter(Number.isFinite);
+      const nextUpdateCandidates = [historyPayload?.next_update_at, btcRatesPayload?.next_update_at, goldPayload?.next_update_at]
+        .map((value) => parseIsoDate(value)?.getTime())
+        .filter(Number.isFinite);
+      const isFallback = Boolean(historyPayload?.is_fallback || goldPayload?.is_fallback);
+      const fallbackParts = [historyPayload?.fallback_note, goldPayload?.fallback_note].filter(Boolean);
 
       return {
-        ts,
-        date: new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit', timeZone: 'UTC' }),
-        bitcoin,
-        gold,
-        ratio,
-        gap,
+        data: {
+          points,
+          latest,
+          gold_reference: 'current_market_cap_snapshot',
+          gold_market_cap_trillions: gold,
+          gold_price_usd_per_ounce: goldSnapshot?.price_usd_per_ounce ?? null,
+          gold_change_today_pct: goldSnapshot?.change_today_pct ?? null,
+          btc_supply_methodology: `Estimated from Bitcoin issuance schedule using ${BTC_CURRENT_HALVING_REWARD} BTC block reward and 10-minute target blocks`,
+        },
+        updated_at: updatedAtCandidates.length ? normalizeTimestamp(new Date(Math.max(...updatedAtCandidates))) : new Date().toISOString(),
+        next_update_at: nextUpdateCandidates.length ? normalizeTimestamp(new Date(Math.min(...nextUpdateCandidates))) : null,
+        source_provider: 'binance + zatobox',
+        source_url: `${historyPayload?.source_url || ''} | ${goldPayload?.source_url || ''}`,
+        comparison_source: 'binance_price_x_protocol_supply_vs_zatobox_companiesmarketcap_gold',
+        is_fallback: isFallback,
+        fallback_note: fallbackParts.length ? fallbackParts.join(' | ') : null,
       };
-    })
-    .filter(Boolean);
-
-  if (Number.isFinite(currentBtcUsd) && currentBtcUsd > 0) {
-    const latestSupply = estimateBitcoinCirculatingSupply(currentTs);
-    const latestBitcoin = Number(((currentBtcUsd * latestSupply) / 1e12).toFixed(2));
-    const latestPoint = {
-      ts: currentTs,
-      date: new Date(currentTs).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit', timeZone: 'UTC' }),
-      bitcoin: latestBitcoin,
-      gold,
-      ratio: Number(((latestBitcoin / gold) * 100).toFixed(2)),
-      gap: Number((gold - latestBitcoin).toFixed(2)),
-    };
-
-    const previousTs = Number(points.at(-1)?.ts);
-    if (!Number.isFinite(previousTs) || currentTs - previousTs > (12 * 60 * 60 * 1000)) {
-      points.push(latestPoint);
-    } else {
-      points[points.length - 1] = latestPoint;
-    }
-  }
-
-  if (!points.length) {
-    throw new PublicFeedError('BTC vs Gold comparison has no chart points');
-  }
-
-  const latest = points.at(-1) || null;
-  const updatedAtCandidates = [historyPayload?.updated_at, btcRatesPayload?.updated_at, goldPayload?.updated_at]
-    .map((value) => parseIsoDate(value)?.getTime())
-    .filter(Number.isFinite);
-  const nextUpdateCandidates = [historyPayload?.next_update_at, btcRatesPayload?.next_update_at, goldPayload?.next_update_at]
-    .map((value) => parseIsoDate(value)?.getTime())
-    .filter(Number.isFinite);
-  const isFallback = Boolean(historyPayload?.is_fallback || goldPayload?.is_fallback);
-  const fallbackParts = [historyPayload?.fallback_note, goldPayload?.fallback_note].filter(Boolean);
-
-  return {
-    data: {
-      points,
-      latest,
-      gold_reference: 'current_market_cap_snapshot',
-      gold_market_cap_trillions: gold,
-      gold_price_usd_per_ounce: goldSnapshot?.price_usd_per_ounce ?? null,
-      gold_change_today_pct: goldSnapshot?.change_today_pct ?? null,
-      btc_supply_methodology: `Estimated from Bitcoin issuance schedule using ${BTC_CURRENT_HALVING_REWARD} BTC block reward and 10-minute target blocks`,
     },
-    updated_at: updatedAtCandidates.length ? normalizeTimestamp(new Date(Math.max(...updatedAtCandidates))) : new Date().toISOString(),
-    next_update_at: nextUpdateCandidates.length ? normalizeTimestamp(new Date(Math.min(...nextUpdateCandidates))) : null,
-    source_provider: 'binance + zatobox',
-    source_url: `${historyPayload?.source_url || ''} | ${goldPayload?.source_url || ''}`,
-    comparison_source: 'binance_price_x_protocol_supply_vs_zatobox_companiesmarketcap_gold',
-    is_fallback: isFallback,
-    fallback_note: fallbackParts.length ? fallbackParts.join(' | ') : null,
-  };
+  });
 }
 
 const VALID_HISTORY_INTERVALS = new Set(['5m', '15m', '30m', '1h', '1d']);
@@ -2284,38 +2385,47 @@ async function getUsPopulationEstimatePayload() {
 }
 
 export async function getUsNationalDebtPayload() {
-  const [debtPayload, populationPayload] = await Promise.all([
-    getUsNationalDebtSeriesPayload(),
-    getUsPopulationEstimatePayload(),
-  ]);
+  return getComposedPayload({
+    cacheKey: US_DEBT_COMPOSED_CACHE_KEY,
+    lockKey: US_DEBT_COMPOSED_LOCK_KEY,
+    fallbackTtlSeconds: 900,
+    staleWhileRefreshing: 'Serving stale U.S. debt snapshot while shared refresh completes',
+    staleWhileRecovering: 'Serving stale U.S. debt snapshot while upstream refresh recovers',
+    buildPayload: async () => {
+      const [debtPayload, populationPayload] = await Promise.all([
+        getUsNationalDebtSeriesPayload(),
+        getUsPopulationEstimatePayload(),
+      ]);
 
-  const projectionBaseAt = String(debtPayload?.updated_at || normalizeTimestamp());
-  const populationYear = Number(populationPayload?.data?.dataset_year);
-  const populationUrl = Number.isFinite(populationYear)
-    ? `https://api.census.gov/data/${populationYear}/acs/acs1?get=NAME,B01003_001E&for=us:1`
-    : 'https://api.census.gov/data/{year}/acs/acs1?get=NAME,B01003_001E&for=us:1';
-  const data = buildUsNationalDebtSnapshot(
-    Array.isArray(debtPayload?.data) ? debtPayload.data : [],
-    populationPayload?.data || null,
-    projectionBaseAt,
-  );
+      const projectionBaseAt = String(debtPayload?.updated_at || normalizeTimestamp());
+      const populationYear = Number(populationPayload?.data?.dataset_year);
+      const populationUrl = Number.isFinite(populationYear)
+        ? `https://api.census.gov/data/${populationYear}/acs/acs1?get=NAME,B01003_001E&for=us:1`
+        : 'https://api.census.gov/data/{year}/acs/acs1?get=NAME,B01003_001E&for=us:1';
+      const data = buildUsNationalDebtSnapshot(
+        Array.isArray(debtPayload?.data) ? debtPayload.data : [],
+        populationPayload?.data || null,
+        projectionBaseAt,
+      );
 
-  return {
-    updated_at: projectionBaseAt,
-    next_update_at: String(debtPayload?.next_update_at || normalizeTimestamp(new Date(Date.now() + 15 * 60_000))),
-    source_provider: 'U.S. Treasury FiscalData + U.S. Census ACS 1-Year',
-    source_url: `${debtPayload?.source_url || 'https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/debt_to_penny'} + ${populationUrl}`,
-    is_fallback: Boolean(debtPayload?.is_fallback || populationPayload?.is_fallback),
-    fallback_note: [debtPayload?.fallback_note, populationPayload?.fallback_note].filter(Boolean).join(' | ') || null,
-    refresh_policy: {
-      min_interval_ms: FEED_DEFS.usNationalDebtSeries.refreshMs,
-      hard_minute_limit: FEED_DEFS.usNationalDebtSeries.hardMinuteLimit || null,
-      hard_daily_limit: FEED_DEFS.usNationalDebtSeries.hardDailyLimit || null,
-      safe_minute_budget: FEED_DEFS.usNationalDebtSeries.safeMinuteBudget || null,
-      safe_daily_budget: FEED_DEFS.usNationalDebtSeries.safeDailyBudget || null,
+      return {
+        updated_at: projectionBaseAt,
+        next_update_at: String(debtPayload?.next_update_at || normalizeTimestamp(new Date(Date.now() + 15 * 60_000))),
+        source_provider: 'U.S. Treasury FiscalData + U.S. Census ACS 1-Year',
+        source_url: `${debtPayload?.source_url || 'https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/debt_to_penny'} + ${populationUrl}`,
+        is_fallback: Boolean(debtPayload?.is_fallback || populationPayload?.is_fallback),
+        fallback_note: [debtPayload?.fallback_note, populationPayload?.fallback_note].filter(Boolean).join(' | ') || null,
+        refresh_policy: {
+          min_interval_ms: FEED_DEFS.usNationalDebtSeries.refreshMs,
+          hard_minute_limit: FEED_DEFS.usNationalDebtSeries.hardMinuteLimit || null,
+          hard_daily_limit: FEED_DEFS.usNationalDebtSeries.hardDailyLimit || null,
+          safe_minute_budget: FEED_DEFS.usNationalDebtSeries.safeMinuteBudget || null,
+          safe_daily_budget: FEED_DEFS.usNationalDebtSeries.safeDailyBudget || null,
+        },
+        data,
+      };
     },
-    data,
-  };
+  });
 }
 
 async function getS21BigMacUsdPayload() {

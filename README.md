@@ -92,6 +92,7 @@ It is designed for people who want more than a price ticker: Bitcoin builders, c
 - Local in-process memory cache first
 - Optional shared KV / Upstash Redis second
 - Single-flight refresh locking for expensive upstream refreshes
+- Startup warm-up now primes the most visited real-data feeds plus composed payloads such as `S15` and `S30` to reduce cold first-visit waits
 - Stale payload fallback when a provider fails or a refresh is already in progress
 - Frontend modules usually preserve last good UI state during transient failures
 
@@ -359,6 +360,7 @@ Development notes:
 - Frontend alias `@/*` resolves to `src/*` via `vite.config.js` and `jsconfig.json`
 - `vite.config.js` ignores generated cache JSON files to reduce unnecessary reload noise
 - Shared KV is recommended on Vercel to avoid per-instance cache drift
+- For best first-data latency in production, enable shared KV and keep the scraper cache volume persistent so cold instances can reuse real snapshots immediately
 
 ## SEO and public assets
 
@@ -560,3 +562,11 @@ Satoshi Dashboard is open-source under the MIT License. See `LICENSE.txt`.
 - **Accion Realizada/Correccion:** Se documento de forma explicita que el preview del bundle necesita `npm run start:api` en paralelo, o alternativamente `npm run dev`, antes de probar rutas con datos live.
 - **Nueva/Modificada Regla o Directriz:** Cuando se valide localmente un build del frontend con `vite preview`, la documentacion debe dejar claro si existe una API separada requerida por el proxy para evitar falsos diagnosticos del bundle.
 - **Justificacion:** Reduce tiempo perdido en debugging local, diferencia mejor errores de build frente a ausencia del backend y deja un flujo reproducible para QA de la SPA.
+
+- **Fecha de la Actualizacion:** `2026-03-13`
+- **Archivo(s) Afectado(s):** `README.md`
+- **Tipo de Evento/Contexto:** Optimizacion de first-data latency con datos reales
+- **Descripcion del Evento Original:** Varias rutas del dashboard seguian dependiendo de refreshes en frio y composiciones costosas dentro del request del usuario, lo que retrasaba la primera pincelada real de datos por modulo.
+- **Accion Realizada/Correccion:** Se documento la estrategia actualizada de warm-up para feeds criticos y payloads compuestos, junto con la recomendacion operativa de combinar shared KV en dashboard y persistencia del cache del scraper.
+- **Nueva/Modificada Regla o Directriz:** Cuando se optimice la latencia de primeros datos en este proyecto, la documentacion principal debe reflejar tanto el precalentamiento de caches/payloads compuestos como los prerrequisitos de infraestructura que permiten reutilizar snapshots reales tras cold starts.
+- **Justificacion:** Evita que futuros cambios vuelvan a empujar trabajo pesado al request inicial y deja explicito que la mejora depende de snapshots reales compartidos, no de fallbacks falsos.

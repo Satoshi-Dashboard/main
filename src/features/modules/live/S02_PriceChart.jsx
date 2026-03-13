@@ -162,7 +162,6 @@ export default function S02_PriceChart() {
     }
 
     setLoading(true);
-    setChartData([]);
     (async () => {
       try {
         const hist = await fetchBtcHistory(activeRange.days, activeRange.interval);

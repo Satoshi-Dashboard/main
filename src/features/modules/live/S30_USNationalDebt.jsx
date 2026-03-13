@@ -213,7 +213,7 @@ export default function S30_USNationalDebt() {
   }, []);
 
   useEffect(() => {
-    load({ force: true });
+    load();
     const refreshTimer = setInterval(() => {
       load({ silent: true, force: true });
     }, DATA_REFRESH_MS);
