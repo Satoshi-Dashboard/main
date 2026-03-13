@@ -13,6 +13,7 @@
 
 - Fixed the footer play button so when you pause the music and press play again, it continues from where you left it instead of restarting the song from the beginning.
 - Improved the logic for the bottom audio button so the bullish soundtrack is not triggered too early and now waits for a clearer bullish move.
+- Hardened critical maps, charts, SVG, and canvas surfaces so external dark-mode tools, forced-color modes, and device-level recolor settings are less likely to distort the intended visual palette.
 
 ## Removed
 
