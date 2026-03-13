@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { GeoJSON, MapContainer } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+import { useWorldBankPopulation } from '@/shared/hooks/useWorldBankPopulation.js';
+import { ISO_COUNTRY_NAMES, getFeatureCountryCode, getFeatureCountryName } from '@/shared/lib/geoCountryUtils.js';
 import { fmt } from '@/shared/utils/formatters.js';
 
 const BUSINESSES_ENDPOINT = '/api/public/btcmap/businesses-by-country';
 const COUNTRIES_URL = '/api/public/geo/countries';
-const WB_POP_URL = 'https://api.worldbank.org/v2/country/all/indicator/SP.POP.TOTL?format=json&per_page=500&mrv=1';
 const REFRESH_INTERVAL_MS = 10 * 60_000;
 
 const UI_COLORS = {
@@ -14,22 +15,6 @@ const UI_COLORS = {
   greenSoft: '#8EF0C8',
   warning: 'var(--accent-warning)',
   danger: 'var(--accent-red)',
-};
-
-// Built-in population estimates (millions) — fallback until World Bank API responds
-const POPULATION_FALLBACK = {
-  US: 335, DE: 84, FR: 68, GB: 68, CA: 40, NL: 17.9, CH: 8.7,
-  RU: 145, AU: 26, ES: 47, KR: 52, CZ: 10.9, SE: 10.5, IT: 60,
-  AT: 9.1, FI: 5.5, NO: 5.5, DK: 5.9, PL: 37.7, BE: 11.6,
-  SG: 6, HK: 7.5, JP: 125, CN: 1410, IN: 1440, BR: 215,
-  ZA: 62, MX: 130, AR: 46, CL: 19.6, CO: 52, PE: 33,
-  TR: 85, UA: 43, RO: 19, HU: 9.7, GR: 10.4, PT: 10.2,
-  IL: 9.7, AE: 9.9, SA: 36, EG: 105, NG: 220, KE: 56,
-  TH: 72, ID: 275, MY: 33, PH: 115, VN: 98, PK: 230,
-  BD: 170, TW: 23.6, NZ: 5.1, IE: 5.1, LU: 0.66, IS: 0.37,
-  LT: 2.8, LV: 1.8, EE: 1.3, SK: 5.5, SI: 2.1, HR: 3.9,
-  BG: 6.5, RS: 6.8, MD: 2.5, GE: 3.7, AM: 3, AZ: 10.1,
-  KZ: 19.5, UZ: 36, BY: 9.4, CY: 1.2, MT: 0.54,
 };
 
 const BUSINESS_DENSITY_SCALE = [
@@ -48,57 +33,6 @@ const PERCAPITA_SCALE_FALLBACK = [
   { key: 'low',       label: 'Low',       color: '#2FD48C', minVal: 5,     legend: '> 5 /M'   },
   { key: 'trace',     label: 'Trace',     color: '#8EF0C8', minVal: 0.001, legend: '> 0 /M'   },
 ];
-
-// Static fallback names for territories/microstates absent from most GeoJSON datasets
-const ISO_COUNTRY_NAMES = {
-  AD: 'Andorra',      AE: 'UAE',            AG: 'Antigua & Barbuda',
-  AI: 'Anguilla',     AW: 'Aruba',          BB: 'Barbados',
-  BH: 'Bahrain',      BL: 'St. Barthélemy', BM: 'Bermuda',
-  BN: 'Brunei',       BQ: 'Bonaire',        BS: 'Bahamas',
-  BT: 'Bhutan',       BV: 'Bouvet Island',  CC: 'Cocos Islands',
-  CK: 'Cook Islands', CV: 'Cape Verde',     CW: 'Curaçao',
-  CX: 'Christmas Island', DJ: 'Djibouti',   DM: 'Dominica',
-  EH: 'W. Sahara',    FJ: 'Fiji',           FK: 'Falkland Islands',
-  FM: 'Micronesia',   FO: 'Faroe Islands',  GD: 'Grenada',
-  GG: 'Guernsey',     GI: 'Gibraltar',      GL: 'Greenland',
-  GP: 'Guadeloupe',   GQ: 'Eq. Guinea',     GU: 'Guam',
-  GW: 'Guinea-Bissau',HK: 'Hong Kong',      HM: 'Heard Island',
-  IM: 'Isle of Man',  IO: 'British Indian Ocean',
-  JE: 'Jersey',       KI: 'Kiribati',       KM: 'Comoros',
-  KN: 'St. Kitts & Nevis', KY: 'Cayman Islands',
-  LC: 'St. Lucia',    LI: 'Liechtenstein',  MF: 'St. Martin',
-  MH: 'Marshall Islands', MO: 'Macao',      MP: 'N. Mariana Islands',
-  MQ: 'Martinique',   MS: 'Montserrat',     MT: 'Malta',
-  MU: 'Mauritius',    MV: 'Maldives',       NF: 'Norfolk Island',
-  NR: 'Nauru',        NU: 'Niue',           PF: 'French Polynesia',
-  PM: 'St. Pierre & Miquelon', PN: 'Pitcairn', PR: 'Puerto Rico',
-  PW: 'Palau',        RE: 'Réunion',        SC: 'Seychelles',
-  SH: 'St. Helena',   SJ: 'Svalbard',       SM: 'San Marino',
-  SS: 'South Sudan',  ST: 'São Tomé & Príncipe', SX: 'Sint Maarten',
-  TC: 'Turks & Caicos', TF: 'French S. Territories',
-  TK: 'Tokelau',      TL: 'Timor-Leste',    TO: 'Tonga',
-  TV: 'Tuvalu',       UM: 'U.S. Minor Islands',
-  VA: 'Vatican',      VC: 'St. Vincent',    VG: 'British Virgin Islands',
-  VI: 'U.S. Virgin Islands', VU: 'Vanuatu', WF: 'Wallis & Futuna',
-  WS: 'Samoa',        XK: 'Kosovo',         YT: 'Mayotte',
-};
-
-function getFeatureCountryCode(feature) {
-  const primary = String(feature?.properties?.ISO_A2 || feature?.properties?.iso_a2 || feature?.properties?.['ISO3166-1-Alpha-2'] || '').toUpperCase();
-  const fallback = String(feature?.properties?.ISO_A2_EH || '').toUpperCase();
-  if (/^[A-Z]{2}$/.test(primary)) return primary;
-  if (/^[A-Z]{2}$/.test(fallback)) return fallback;
-  return primary || fallback;
-}
-
-function getFeatureCountryName(feature, idx) {
-  return (
-    feature?.properties?.ADMIN
-    || feature?.properties?.NAME
-    || feature?.properties?.name
-    || `Country ${idx + 1}`
-  );
-}
 
 function getDensityStepByCount(count) {
   const value = Number(count) || 0;
@@ -138,6 +72,12 @@ function getFillColorByPerCapita(perCapita, scale) {
   return ((scale || PERCAPITA_SCALE_FALLBACK).find((s) => v >= s.minVal) || {}).color || '#8EF0C8';
 }
 
+function formatPerCapitaValue(value) {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue) || numericValue <= 0) return '0.0 /M';
+  return numericValue >= 10 ? `${numericValue.toFixed(1)} /M` : `${numericValue.toFixed(2)} /M`;
+}
+
 function formatNextUpdateDelay(nextUpdateIso) {
   const next = new Date(String(nextUpdateIso || ''));
   if (!Number.isFinite(next.getTime())) return 'N/A';
@@ -164,10 +104,6 @@ export default function S08_BtcMapBusinessesMap() {
   const [isMetaExpanded, setIsMetaExpanded] = useState(false);
   const [isDensityExpanded, setIsDensityExpanded] = useState(false);
   const [viewMode, setViewMode] = useState('country'); // 'country' | 'perCapita'
-  const [populationMap, setPopulationMap] = useState(POPULATION_FALLBACK);
-  const [popDataYear, setPopDataYear] = useState(null);
-  const [popSource, setPopSource] = useState('fallback'); // 'fallback' | 'worldbank' | 'cache'
-  const [popLastFetched, setPopLastFetched] = useState(null);
   const [isCompactViewport, setIsCompactViewport] = useState(() => {
     if (typeof window === 'undefined') return false;
     return window.matchMedia('(max-width: 1023px)').matches;
@@ -185,6 +121,8 @@ export default function S08_BtcMapBusinessesMap() {
     return () => media.removeListener(handleChange);
   }, []);
 
+  const { populationMap, popDataYear, popSource, popLastFetched } = useWorldBankPopulation();
+
   useEffect(() => {
     if (isCompactViewport) setIsDensityExpanded(false);
   }, [isCompactViewport]);
@@ -193,7 +131,7 @@ export default function S08_BtcMapBusinessesMap() {
     let active = true;
     const load = async () => {
       try {
-        const res = await fetch(BUSINESSES_ENDPOINT, { cache: 'no-store' });
+        const res = await fetch(BUSINESSES_ENDPOINT);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = await res.json();
         if (!active) return;
@@ -215,7 +153,7 @@ export default function S08_BtcMapBusinessesMap() {
     let active = true;
     (async () => {
       try {
-        const res = await fetch(COUNTRIES_URL, { cache: 'no-store' });
+        const res = await fetch(COUNTRIES_URL);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         const geo = data?.data || data;
@@ -227,59 +165,6 @@ export default function S08_BtcMapBusinessesMap() {
         if (active) setGeoLoading(false);
       }
     })();
-    return () => { active = false; };
-  }, []);
-
-  // World Bank population — localStorage cache, TTL 24 h (data is annual)
-  useEffect(() => {
-    const CACHE_KEY = 'wb_pop_v1';
-    const TTL_MS = 24 * 60 * 60 * 1000;
-    let active = true;
-
-    const apply = (map, year, fetchedAt, source) => {
-      if (!active) return;
-      setPopulationMap((prev) => ({ ...prev, ...map }));
-      setPopDataYear(year);
-      setPopSource(source);
-      setPopLastFetched(fetchedAt);
-    };
-
-    try {
-      const raw = localStorage.getItem(CACHE_KEY);
-      if (raw) {
-        const cached = JSON.parse(raw);
-        if (Date.now() - Number(cached.fetchedAt || 0) < TTL_MS && Object.keys(cached.map || {}).length > 0) {
-          apply(cached.map, cached.year, new Date(cached.fetchedAt).toISOString(), 'cache');
-          return () => { active = false; };
-        }
-      }
-    } catch { /* ignore */ }
-
-    (async () => {
-      try {
-        const res = await fetch(WB_POP_URL);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const json = await res.json();
-        if (!active) return;
-        const entries = json[1];
-        if (!Array.isArray(entries)) return;
-        const map = {};
-        let year = null;
-        entries.forEach((entry) => {
-          const code = String(entry?.country?.id || '').toUpperCase();
-          const pop = Number(entry?.value);
-          if (!/^[A-Z]{2}$/.test(code) || !Number.isFinite(pop) || pop <= 0) return;
-          map[code] = pop / 1_000_000;
-          if (!year) year = entry.date;
-        });
-        if (active && Object.keys(map).length > 0) {
-          const fetchedAt = Date.now();
-          try { localStorage.setItem(CACHE_KEY, JSON.stringify({ map, year, fetchedAt })); } catch { /* storage full */ }
-          apply(map, year, new Date(fetchedAt).toISOString(), 'worldbank');
-        }
-      } catch { /* keep fallback */ }
-    })();
-
     return () => { active = false; };
   }, []);
 
@@ -329,12 +214,14 @@ export default function S08_BtcMapBusinessesMap() {
   const isFallback = Boolean(payload?.is_fallback);
   const showBreakdownPanel = !isCompactViewport || isBreakdownExpanded;
   const showDensityLegend = !isCompactViewport || isDensityExpanded;
-  const isLoading = apiLoading || geoLoading;
+  const hasCountryData = countryCounts.length > 0;
+  const isLoading = (!hasCountryData && apiLoading) || (!hasCountryData && geoLoading);
+  const isMapLoading = (!payload && apiLoading) || (!countriesGeo && geoLoading);
 
   return (
     <div className="visual-integrity-lock flex h-full w-full flex-col bg-[#111111] lg:flex-row">
       <div className="visual-map-surface relative min-h-[260px] min-w-0 flex-1 sm:min-h-[320px] lg:min-h-0">
-        {isLoading ? (
+        {isMapLoading ? (
           <div className="h-full w-full p-6">
             <div className="skeleton h-full w-full rounded-md" />
           </div>
@@ -380,7 +267,7 @@ export default function S08_BtcMapBusinessesMap() {
                         const pc = perCapitaByCode[code];
                         if (pc == null || pc <= 0) return `${name} (${displayCode}): no data`;
                         const step = activePerCapitaScale.find((s) => pc >= s.minVal);
-                        return `${name} (${displayCode}): ${Math.round(pc)} /M — ${step?.label ?? 'Trace'}`;
+                        return `${name} (${displayCode}): ${formatPerCapitaValue(pc)} — ${step?.label ?? 'Trace'}`;
                       })()
                     : `${name} (${displayCode}): ${fmt.num(row.businesses)} businesses — ${fmt.num(row.verified_businesses)} verified — ${getDensityLabel(row.businesses)}`;
                   layer.bindTooltip(tooltipText, { sticky: true, opacity: 0.95 });
@@ -401,7 +288,7 @@ export default function S08_BtcMapBusinessesMap() {
           )}
         </div>
 
-        {!isLoading && countryCounts.length > 0 && (
+        {!isMapLoading && countryCounts.length > 0 && (
           <>
             {isCompactViewport && (
               <button
@@ -518,7 +405,7 @@ export default function S08_BtcMapBusinessesMap() {
                   ? getFillColorByPerCapita(item.perCapita, activePerCapitaScale)
                   : getFillColor(item.businesses);
                 const valueLabel = viewMode === 'perCapita' && item.perCapita != null
-                  ? `${Math.round(item.perCapita)} /M`
+                  ? formatPerCapitaValue(item.perCapita)
                   : fmt.num(item.businesses);
                 const label = resolveCountryLabel(item.country_code, item.country_name);
                 return (

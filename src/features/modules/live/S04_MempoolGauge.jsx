@@ -56,7 +56,12 @@ function GaugeArc({ usageBytes, maxBytes, loading, centerLabel = 'USAGE' }) {
   const filledLength = (pct / 100) * totalArcLength;
 
   return (
-    <svg width="360" height="190" viewBox="0 0 360 190" className="visual-svg-surface w-full max-w-[420px]">
+    <svg
+      width="360"
+      height="190"
+      viewBox="0 0 360 190"
+      className="visual-svg-surface h-auto w-full max-w-[300px] min-[430px]:max-w-[360px] sm:max-w-[420px]"
+    >
       <path d={arcPath} fill="none" stroke="#2a2a2a" strokeWidth="18" strokeLinecap="round" />
       {!loading && hasData ? (
         <path
@@ -82,22 +87,22 @@ function GaugeArc({ usageBytes, maxBytes, loading, centerLabel = 'USAGE' }) {
       ) : hasData ? (
         <>
           <text x={cx} y={cy - 18} textAnchor="middle" fill={UI_COLORS.brand}
-            fontSize="42" fontFamily="JetBrains Mono, monospace" fontWeight="700">
+            fontSize="39" fontFamily="JetBrains Mono, monospace" fontWeight="700">
             {pct.toFixed(1)}%
           </text>
           <text x={cx} y={cy + 14} textAnchor="middle" fill="rgba(255,255,255,0.35)"
-            fontSize="18" fontFamily="JetBrains Mono, monospace" letterSpacing="3">
+            fontSize="16" fontFamily="JetBrains Mono, monospace" letterSpacing="3">
             {centerLabel}
           </text>
         </>
       ) : (
         <>
           <text x={cx} y={cy - 18} textAnchor="middle" fill="#333"
-            fontSize="42" fontFamily="JetBrains Mono, monospace" fontWeight="700">
+            fontSize="39" fontFamily="JetBrains Mono, monospace" fontWeight="700">
             --%
           </text>
           <text x={cx} y={cy + 14} textAnchor="middle" fill="rgba(255,255,255,0.12)"
-            fontSize="18" fontFamily="JetBrains Mono, monospace" letterSpacing="3">
+            fontSize="16" fontFamily="JetBrains Mono, monospace" letterSpacing="3">
             {centerLabel}
           </text>
         </>
@@ -111,16 +116,16 @@ function MetricTile({ label, value, unit = null, decimals = 0, loading }) {
   const hasValue = value != null;
 
   return (
-    <div className="flex w-full min-w-0 flex-col items-center gap-2 text-center">
+    <div className="flex w-full min-w-0 flex-col items-center gap-1.5 text-center">
       {loading ? (
         <div className="skeleton" style={{ width: 96, height: '1.8em' }} />
       ) : hasValue ? (
-        <div className="flex min-h-[2em] items-center font-mono font-bold text-white tabular-nums" style={{ fontSize: 'var(--fs-title)' }}>
+        <div className="flex min-h-[1.8em] items-center font-mono font-bold text-white tabular-nums" style={{ fontSize: 'clamp(2.3rem, 4.4vw, 3.25rem)' }}>
           <AnimatedMetric value={value} variant="number" decimals={decimals} inline />
           {unit ? <span className="ml-1 text-[0.4em] text-white/50">{unit}</span> : null}
         </div>
       ) : (
-        <div className="flex min-h-[2em] items-center font-mono font-bold text-[#333333]" style={{ fontSize: 'var(--fs-title)' }}>
+        <div className="flex min-h-[1.8em] items-center font-mono font-bold text-[#333333]" style={{ fontSize: 'clamp(2.3rem, 4.4vw, 3.25rem)' }}>
           --
         </div>
       )}
@@ -135,15 +140,15 @@ function BottomTile({ label, value, unit = null, decimals = 0, loading, color = 
   const hasValue = value != null;
 
   return (
-    <div className="flex w-full min-w-0 flex-col items-center gap-2 border-[#2a2a2a] px-2 py-1 text-center sm:px-4">
+    <div className="flex w-full min-w-0 flex-col items-center gap-1 border-[#2a2a2a] px-2 py-1 text-center sm:px-4">
       {loading ? (
         <div className="skeleton" style={{ width: 56, height: '2em' }} />
       ) : hasValue ? (
-        <div className="flex min-h-[2.1em] items-center font-mono font-bold tabular-nums" style={{ fontSize: 'var(--fs-title)', color }}>
+        <div className="flex min-h-[1.65em] items-center font-mono font-bold tabular-nums" style={{ fontSize: 'clamp(2.15rem, 4.1vw, 3rem)', color }}>
           <AnimatedMetric value={value} variant="number" decimals={decimals} inline />
         </div>
       ) : (
-        <div className="flex min-h-[2.1em] items-center font-mono font-bold text-[#333333]" style={{ fontSize: 'var(--fs-title)' }}>
+        <div className="flex min-h-[1.65em] items-center font-mono font-bold text-[#333333]" style={{ fontSize: 'clamp(2.15rem, 4.1vw, 3rem)' }}>
           --
         </div>
       )}
@@ -158,7 +163,7 @@ function SourceButton({ label, description, active, onClick }) {
     <button
       type="button"
       onClick={onClick}
-      className="min-w-[150px] rounded-lg border px-3 py-2 text-left transition-colors"
+      className="w-full min-w-0 rounded-lg border px-3 py-2 text-left transition-colors sm:w-auto sm:min-w-[150px]"
       style={{
         borderColor: active ? UI_COLORS.brand : 'rgba(255,255,255,0.10)',
         background: active ? 'rgba(247,147,26,0.08)' : '#121212',
@@ -189,8 +194,8 @@ function MempoolPanel({
   const hasGaugeData = usageBytes != null && maxBytes != null && maxBytes > 0;
 
   return (
-    <div className="flex min-h-0 flex-1 w-full flex-col items-center justify-center gap-4 sm:gap-6">
-      <div className="flex w-full flex-col items-center justify-center gap-1">
+    <div className="flex min-h-0 w-full flex-1 flex-col items-center justify-start gap-3 pt-1 pb-18 sm:gap-4 sm:pb-20 sm:pt-2 lg:pb-12">
+      <div className="flex w-full flex-col items-center justify-center gap-1.5 sm:gap-2.5">
         <GaugeArc usageBytes={usageBytes} maxBytes={maxBytes} loading={loading} centerLabel="USAGE" />
         {loading ? null : hasGaugeData ? (
           <div className="font-mono text-white/25" style={{ fontSize: 'var(--fs-micro)' }}>
@@ -204,11 +209,11 @@ function MempoolPanel({
         )}
       </div>
 
-      <div className="grid w-full max-w-[760px] grid-cols-1 border-y border-[#2a2a2a] px-3 py-2 md:grid-cols-3 md:divide-x md:divide-[#2a2a2a] md:px-6">
+      <div className="grid w-full max-w-[760px] grid-cols-1 border-y border-[#2a2a2a] px-3 py-1.5 md:grid-cols-3 md:divide-x md:divide-[#2a2a2a] md:px-6">
         {stats.map((stat, index) => (
           <div
             key={stat.label}
-            className={`flex justify-center py-4 ${index > 0 ? 'border-t border-[#2a2a2a] md:border-t-0' : ''}`}
+            className={`flex justify-center py-3 ${index > 0 ? 'border-t border-[#2a2a2a] md:border-t-0' : ''}`}
           >
             <MetricTile {...stat} loading={loading} />
           </div>
@@ -340,8 +345,8 @@ export default function S04_MempoolGauge() {
   const nodeMemory = useMemo(() => formatMemory(nodeView.usageBytes), [nodeView.usageBytes]);
   const officialUsageLabel = officialUsage.usageBytes != null && officialUsage.maxBytes != null
     ? (officialUsage.label
-        ? `official mempool usage · ${officialUsage.label}`
-        : `official mempool usage · ${officialMemory.value} ${officialMemory.unit} / ${(officialUsage.maxBytes / 1e6).toFixed(0)} MB`)
+        ? `mempool usage · ${officialUsage.label}`
+        : `mempool usage · ${officialMemory.value} ${officialMemory.unit} / ${(officialUsage.maxBytes / 1e6).toFixed(0)} MB`)
     : 'official mempool usage unavailable';
   const nodeUsageLabel = nodeView.usageBytes != null && nodeView.maxBytes != null
     ? `bitcoin knots mempool · ${nodeMemory.value} ${nodeMemory.unit} / ${(nodeView.maxBytes / 1e6).toFixed(0)} MB`
@@ -374,14 +379,14 @@ export default function S04_MempoolGauge() {
   const isNode = activeSource === 'node';
 
   return (
-    <div className="visual-integrity-lock flex h-full w-full flex-col items-center justify-start gap-4 bg-[#111111] px-3 py-4 sm:gap-6 sm:px-4">
+    <div className="visual-integrity-lock flex h-full w-full flex-col items-center justify-start gap-3 overflow-y-auto bg-[#111111] px-3 py-3 sm:gap-4 sm:px-4 sm:py-4">
       <div className="text-center">
         <div className="font-mono font-bold uppercase tracking-[0.2em]" style={{ fontSize: 'var(--fs-heading)', color: UI_COLORS.brand }}>
           MEMPOOL STATUS
         </div>
       </div>
 
-      <div className="flex w-full max-w-[560px] flex-wrap items-center justify-center gap-2">
+      <div className="flex w-full max-w-[560px] flex-wrap items-stretch justify-center gap-2">
         <SourceButton
           label="Network View"
           description="mempool.space public data"

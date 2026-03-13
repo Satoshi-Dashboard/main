@@ -99,13 +99,13 @@ export default function S31_ThankYouSatoshi() {
       <div className="flex h-full w-full items-start justify-center overflow-y-auto bg-[#111111] lg:items-center">
 
         {/* ── CONTENT BLOCK — breathing room on all 4 sides ── */}
-        <div className="w-full max-w-[1280px] px-5 py-8 sm:px-10 sm:py-10 lg:px-16 lg:py-10 xl:px-24 xl:py-12">
+        <div className="w-full max-w-[1240px] px-5 py-6 pb-20 sm:px-9 sm:py-8 sm:pb-24 lg:px-14 lg:py-8 lg:pb-16 xl:px-20 xl:py-10 xl:pb-18">
 
           {/* ── HERO: rotating "thank you" ── */}
           <button
             type="button"
             onClick={() => window.open('https://bitcoin.org/bitcoin.pdf', '_blank')}
-            className="mb-8 w-full cursor-pointer text-center sm:mb-10"
+            className="mb-6 w-full cursor-pointer text-center sm:mb-8"
           >
             <div
               className="font-mono uppercase tracking-[0.24em]"
@@ -114,13 +114,13 @@ export default function S31_ThankYouSatoshi() {
               Global Gratitude
             </div>
 
-            <div className="mx-auto mt-4 flex h-[clamp(72px,9vw,120px)] max-w-[1100px] items-center justify-center overflow-hidden px-2">
+            <div className="mx-auto mt-3 flex h-[clamp(68px,8vw,108px)] max-w-[1040px] items-center justify-center overflow-hidden px-2">
               <span
                 className="font-semibold leading-tight"
                 style={{
                   fontFamily: THANKS_FONT_STACK,
                   letterSpacing: '-0.015em',
-                  fontSize: 'clamp(1.35rem, 4vw, 3rem)',
+                  fontSize: 'clamp(1.25rem, 3.6vw, 2.7rem)',
                   color: 'var(--text-primary)',
                   textShadow: '0 0 32px rgba(247,147,26,0.22)',
                   opacity: thanksVisible ? 1 : 0,
@@ -134,7 +134,7 @@ export default function S31_ThankYouSatoshi() {
 
             {/* orange accent line */}
             <div
-              className="glow-pulse mx-auto mt-3 h-[2px] w-28 rounded-full"
+              className="glow-pulse mx-auto mt-2.5 h-[2px] w-24 rounded-full"
               style={{
                 background: 'linear-gradient(90deg, rgba(247,147,26,0) 0%, rgba(247,147,26,0.9) 50%, rgba(247,147,26,0) 100%)',
                 boxShadow: '0 0 16px rgba(247,147,26,0.35)',
@@ -143,16 +143,16 @@ export default function S31_ThankYouSatoshi() {
           </button>
 
           {/* ── CARD GRID ── */}
-          <div className="grid gap-4 sm:gap-5 lg:grid-cols-2">
+          <div className="grid gap-3.5 sm:gap-4 lg:grid-cols-2">
 
             {/* Genesis Block */}
-            <article className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-5 sm:p-6">
+            <article className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-4.5 sm:p-5.5">
               <div className="flex items-center gap-2 font-mono text-white" style={{ fontSize: 'var(--fs-section)' }}>
                 <span style={{ color: 'var(--accent-bitcoin)' }}>•</span>
                 Genesis Block Information
               </div>
               <div className="mt-3 h-px bg-white/10" />
-              <div className="mt-4 space-y-2 font-mono" style={{ fontSize: 'var(--fs-body)' }}>
+              <div className="mt-3.5 space-y-1.5 font-mono" style={{ fontSize: 'var(--fs-body)' }}>
                 <div style={{ color: 'var(--text-secondary)' }}>Genesis Block Hash</div>
                 <div className="break-all text-white">{GENESIS_HASH}</div>
                 <div style={{ color: 'var(--text-secondary)' }}>Block Height 0 — January 3, 2009</div>
@@ -160,14 +160,14 @@ export default function S31_ThankYouSatoshi() {
             </article>
 
             {/* Bitcoin Principles */}
-            <article className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-5 sm:p-6">
+            <article className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-4.5 sm:p-5.5">
               <div className="font-mono text-white" style={{ fontSize: 'var(--fs-section)' }}>
                 Bitcoin Principles
               </div>
               <div className="mt-3 h-px bg-white/10" />
-              <ul className="mt-4 space-y-2.5 font-mono" style={{ fontSize: 'var(--fs-body)' }}>
+              <ul className="mt-3.5 space-y-2 font-mono" style={{ fontSize: 'var(--fs-body)' }}>
                 {PRINCIPLES.map((item) => (
-                  <li key={item} className="flex items-start gap-3" style={{ color: 'var(--text-secondary)' }}>
+                  <li key={item} className="flex items-start gap-2.5" style={{ color: 'var(--text-secondary)' }}>
                     <span
                       className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full"
                       style={{ background: 'var(--accent-bitcoin)' }}
@@ -179,15 +179,15 @@ export default function S31_ThankYouSatoshi() {
             </article>
 
             {/* Whitepaper quote */}
-            <article className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-5 sm:p-6">
+            <article className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-4.5 sm:p-5.5">
               <div
                 className="font-mono italic leading-relaxed text-white"
-                style={{ fontSize: 'var(--fs-heading)' }}
+                style={{ fontSize: 'clamp(1.08rem, 1.8vw, 1.35rem)' }}
               >
                 &ldquo;{WHITEPAPER}&rdquo;
               </div>
               <div
-                className="mt-3 font-mono"
+                className="mt-2.5 font-mono"
                 style={{ color: 'var(--text-secondary)', fontSize: 'var(--fs-body)' }}
               >
                 — Bitcoin Whitepaper Abstract, 2008
@@ -195,18 +195,18 @@ export default function S31_ThankYouSatoshi() {
             </article>
 
             {/* Donation */}
-            <article className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-5 sm:p-6">
+            <article className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-4.5 sm:p-5.5">
               <div className="font-mono text-white" style={{ fontSize: 'var(--fs-section)' }}>
                 Support this Dashboard
               </div>
               <p
-                className="mt-2 font-mono"
+                className="mt-1.5 font-mono"
                 style={{ color: 'var(--text-secondary)', fontSize: 'var(--fs-caption)' }}
               >
                 If this website is useful to you consider donating to this wallet.
               </p>
 
-              <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-start">
+              <div className="mt-3.5 flex flex-col gap-2.5 sm:flex-row sm:items-start">
                 <button
                   type="button"
                   onClick={onCopyAddress}
@@ -216,7 +216,7 @@ export default function S31_ThankYouSatoshi() {
                     borderColor: copied ? 'rgba(0,216,151,0.55)' : 'rgba(255,255,255,0.1)',
                     background: copied ? 'rgba(0,216,151,0.08)' : 'transparent',
                     color: copied ? 'var(--accent-green)' : '#fff',
-                    height: '48px',
+                     height: '44px',
                   }}
                   title="Click to copy"
                 >
@@ -241,21 +241,33 @@ export default function S31_ThankYouSatoshi() {
                 </button>
 
                 <div className="flex shrink-0 flex-col items-center self-center sm:self-start">
-                  <BitcoinDonationQr value={DONATION_ADDRESS} size={112} />
+                  <BitcoinDonationQr value={DONATION_ADDRESS} size={104} />
                 </div>
               </div>
 
-              {/* GitHub link */}
-              <a
-                href="https://github.com/Satoshi-Dashboard"
-                target="_blank"
-                rel="noreferrer"
-                className="mt-3 flex items-center gap-2 font-mono transition-opacity hover:opacity-80"
-                style={{ color: 'var(--text-secondary)', fontSize: 'var(--fs-caption)' }}
-              >
-                <Github size={14} />
-                <span>github.com/Satoshi-Dashboard</span>
-              </a>
+              {/* GitHub links */}
+              <div className="mt-2.5 flex flex-col gap-2">
+                <a
+                  href="https://github.com/Satoshi-Dashboard"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-2 font-mono transition-opacity hover:opacity-80"
+                  style={{ color: 'var(--text-secondary)', fontSize: 'var(--fs-caption)' }}
+                >
+                  <Github size={14} />
+                  <span>github.com/Satoshi-Dashboard</span>
+                </a>
+                <a
+                  href="https://github.com/Satoshi-Dashboard/project-supporters/blob/main/README.md"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-2 font-mono transition-opacity hover:opacity-80"
+                  style={{ color: 'var(--text-secondary)', fontSize: 'var(--fs-caption)' }}
+                >
+                  <Github size={14} />
+                  <span>Project supporters</span>
+                </a>
+              </div>
             </article>
 
           </div>

@@ -206,6 +206,8 @@ For the default dashboard route (`/`) and any above-the-fold module content load
 4. Treat repeated PSI warnings about unused JS on the first route as a product bug even when desktop still scores 100.
 5. Do not place the module-player shell behind a tiny app-wide Suspense fallback on the root route; lazy module content must load inside a footprint-stable shell so first paint does not jump into a different layout.
 6. When Vercel Speed Insights is enabled in this SPA, provide stable route labels for root, landing, blog, and module routes so route telemetry does not collapse into `Unknown`.
+ 7. Keep route-local data/state libraries out of the global app shell when only one module uses them.
+ 8. Optional media, soundtrack, or secondary telemetry work must not start polling or importing heavy code on the initial route before the user expresses intent or the owning route actually needs it.
 
 ## Metric semantics and unit integrity (mandatory)
 
@@ -525,3 +527,59 @@ When creating any new frontend module, agents must follow the project example pa
 - **Accion Realizada/Correccion:** Se anadio una regla para exigir estados de error visibles dentro del footprint del modulo cuando no existe payload previo reutilizable, manteniendo la shell y evitando placeholders eternos.
 - **Nueva/Modificada Regla o Directriz:** Si el primer fetch de un modulo live falla y no hay datos previos, el frontend debe mostrar un unavailable state honesto con layout estable en lugar de aparentar que sigue cargando indefinidamente.
 - **Justificacion:** Reduce falsos diagnosticos de modulos "inexistentes", mejora la transparencia ante fallos upstream y evita repetir skeletons permanentes que parecen bugs de render.
+
+- **Fecha de la Actualizacion:** `2026-03-13`
+- **Archivo(s) Afectado(s):** `.claude/FRONTEND_COLOR_UX_UI_RULES.md`
+- **Tipo de Evento/Contexto:** Optimizacion transversal del bundle inicial y cargas opcionales
+- **Descripcion del Evento Original:** El shell global estaba arrastrando dependencias y trabajo que solo pertenecian a modulos concretos u opciones secundarias, como React Query para un unico modulo, el contador animado en el arranque base y el polling del soundtrack antes de que el usuario lo activara.
+- **Accion Realizada/Correccion:** Se reforzo la politica para mantener librerias route-local fuera del app shell, cargar el contador animado bajo demanda sin cambiar su comportamiento visible y retrasar sistemas opcionales como el soundtrack hasta una interaccion real del usuario.
+- **Nueva/Modificada Regla o Directriz:** Las optimizaciones del root route deben vigilar no solo charts pesados, sino tambien providers globales, librerias de animacion compartidas y side effects opcionales que puedan inflar el preload chain o arrancar polling sin necesidad.
+- **Justificacion:** Evita que futuras mejoras modulares vuelvan a degradar la velocidad del dashboard por dependencias globalizadas o trabajo no critico en primer render, manteniendo intacta la UX principal y las animaciones numericas aprobadas.
+
+- **Fecha de la Actualizacion:** `2026-03-13`
+- **Archivo(s) Afectado(s):** `.claude/FRONTEND_COLOR_UX_UI_RULES.md`
+- **Tipo de Evento/Contexto:** Optimizacion de previews bloqueados y rutas de mapas
+- **Descripcion del Evento Original:** Varias rutas preview seguian montando charts pesados aunque una overlay bloqueante ocultaba la experiencia real, y los tres mapas repetian tablas/herramientas geograficas similares en cada modulo, encareciendo sus bundles por ruta.
+- **Accion Realizada/Correccion:** Se formalizo que las previews bloqueadas deben renderizar una poster shell ligera hasta que el modulo quede habilitado, y que utilidades repetidas de geografia/poblacion deben extraerse a capas compartidas para reducir duplicacion entre mapas.
+- **Nueva/Modificada Regla o Directriz:** Cuando una ruta este bloqueada por overlay, no debe montar el contenido analitico pesado por debajo; y cuando varios mapas compartan normalizacion geoespacial o fuentes auxiliares, esas piezas deben centralizarse antes de duplicarse otra vez por modulo.
+- **Justificacion:** Protege la velocidad de las rutas no terminadas, evita pagar costo de librerias que el usuario no puede usar todavia y reduce la probabilidad de que nuevos mapas vuelvan a inflar bundles con helpers copiados.
+
+- **Fecha de la Actualizacion:** `2026-03-13`
+- **Archivo(s) Afectado(s):** `.claude/FRONTEND_COLOR_UX_UI_RULES.md`
+- **Tipo de Evento/Contexto:** Correccion responsive de gauge SVG y controles superiores
+- **Descripcion del Evento Original:** En `S04` el gauge podia invadir visualmente el bloque de botones de fuente en ciertos zooms del navegador o anchos intermedios, porque el SVG mantenia una huella demasiado grande y el panel centraba contenido pesado con poco slack vertical.
+- **Accion Realizada/Correccion:** Se ajusto el responsive del gauge para escalar antes en anchos intermedios y se reforzo la separacion estructural entre controles superiores y visual principal, evitando colisiones en zoom/emulacion.
+- **Nueva/Modificada Regla o Directriz:** Los modulos con controles arriba y charts/gauges SVG debajo deben reducir la huella del visual en breakpoints intermedios y usar separacion vertical suficiente; no se debe confiar en desktop puro si a 110-125% zoom el visual ya compite con botones o metadata.
+- **Justificacion:** Previene solapamientos faciles de pasar por alto en desktop normal, mejora la robustez del responsive real y obliga a validar tambien los anchos intermedios donde suelen aparecer colisiones de layout.
+
+- **Fecha de la Actualizacion:** `2026-03-13`
+- **Archivo(s) Afectado(s):** `.claude/FRONTEND_COLOR_UX_UI_RULES.md`
+- **Tipo de Evento/Contexto:** Precision visible en rankings per-capita
+- **Descripcion del Evento Original:** En los modulos de mapas per-capita varios paises podian verse empatados visualmente porque el frontend redondeaba a enteros por millon, ocultando diferencias reales pequenas entre resultados cercanos.
+- **Accion Realizada/Correccion:** Se anadio formato decimal visible en listas y tooltips per-capita para distinguir mejor paises con valores proximos sin cambiar la unidad principal por millon.
+- **Nueva/Modificada Regla o Directriz:** Cuando rankings o tooltips per-capita usen una unidad agregada como `/M`, no deben redondear agresivamente a enteros si eso crea empates visuales falsos; mostrar al menos una o dos decimales segun magnitud para preservar legibilidad y diferenciacion real.
+- **Justificacion:** Mejora la interpretacion comparativa de rankings densos, evita falsas igualdades visuales y responde mejor a feedback de usuarios que buscan discriminar paises cercanos sin perder claridad.
+
+- **Fecha de la Actualizacion:** `2026-03-13`
+- **Archivo(s) Afectado(s):** `.claude/FRONTEND_COLOR_UX_UI_RULES.md`
+- **Tipo de Evento/Contexto:** Proteccion de contenido inferior frente a barras fijas
+- **Descripcion del Evento Original:** En `S04` la fila inferior de fees podia quedar parcialmente tapada por la barra fija del player aunque el resto del modulo ya se viera correcto, especialmente en alturas intermedias y zooms no default.
+- **Accion Realizada/Correccion:** Se reforzo el patron para dejar slack inferior explicito y/o scroll interno controlado cuando un modulo analitico alto comparte pantalla con una bottom bar fija.
+- **Nueva/Modificada Regla o Directriz:** Los modulos con filas de KPIs o tablas cerca del borde inferior deben reservar padding inferior real acorde a overlays/barras fijas y no asumir que `h-full` por si solo protege la ultima fila visible.
+- **Justificacion:** Evita que metricas importantes queden cortadas en layouts aparentemente correctos y mejora la robustez del dashboard en alturas reales de navegador, zoom y emulacion.
+
+- **Fecha de la Actualizacion:** `2026-03-13`
+- **Archivo(s) Afectado(s):** `.claude/FRONTEND_COLOR_UX_UI_RULES.md`
+- **Tipo de Evento/Contexto:** Compresion proporcional en modulos altos
+- **Descripcion del Evento Original:** Incluso tras resolver un solapamiento principal, `S04` seguia sintiendose justo verticalmente porque chart, KPIs y fees mantenian escalas muy generosas para alturas de laptop/zoom intermedio, reduciendo el aire entre top strip y footer.
+- **Accion Realizada/Correccion:** Se formalizo que en modulos altos puede aplicarse una reduccion pequena y proporcional de tipografias, gaps y shells antes de aceptar layouts al limite o dependientes de scroll innecesario.
+- **Nueva/Modificada Regla o Directriz:** Cuando un modulo analitico casi entra pero queda visualmente apretado en alturas intermedias, preferir una compresion ligera y coherente de 1-3px en tipografia/spacing de varias capas en lugar de dejar un layout al borde del corte.
+- **Justificacion:** Produce una composicion mas respirable, evita depender de un solo parche grande de padding y mejora la calidad percibida en laptops, zoom 110-125% y emulaciones responsive realistas.
+
+- **Fecha de la Actualizacion:** `2026-03-13`
+- **Archivo(s) Afectado(s):** `.claude/FRONTEND_COLOR_UX_UI_RULES.md`
+- **Tipo de Evento/Contexto:** Aplicacion del patron de compresion a modulos editoriales
+- **Descripcion del Evento Original:** Un modulo no analitico como `S31` tambien podia quedar demasiado justo verticalmente por combinar hero, cards y footer fijo, mostrando que el problema no era exclusivo de gauges o dashboards densos.
+- **Accion Realizada/Correccion:** Se extendio el mismo patron de compresion proporcional y padding inferior de seguridad a un modulo editorial/landing-like para mantener aire visual sin perder contenido.
+- **Nueva/Modificada Regla o Directriz:** El ajuste de compresion ligera por altura intermedia aplica tambien a modulos editoriales con hero + grid de cards cuando comparten viewport con barras fijas; no limitar este patron solo a charts o KPIs.
+- **Justificacion:** Generaliza una solucion reusable para layouts altos de distinta naturaleza y evita que futuros modulos narrativos vuelvan a chocar con el footer aunque no tengan graficas complejas.
