@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { fetchJson } from '@/shared/lib/api.js';
+import { formatSourceUtcTimestamp } from '@/shared/utils/formatters.js';
 
 const MODULE_COLORS = {
   '--bg-main': '#0B0B0B',
@@ -47,25 +48,6 @@ const TIER_SPECS = [
 ];
 
 const REFRESH_MS = 1_800_000;
-
-function formatTopClockTime(utcTimestamp) {
-  if (!utcTimestamp) return '';
-  const date = new Date(String(utcTimestamp).replace(' UTC', 'Z').replace(' ', 'T'));
-  if (!Number.isFinite(date.getTime())) return '';
-
-  const dateStr = date.toLocaleDateString('en-US', {
-    month: '2-digit',
-    day: '2-digit',
-    year: 'numeric',
-  });
-  const timeStr = date.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  });
-
-  return `${dateStr}, ${timeStr}`;
-}
 
 function round2(value) {
   return Math.round((value + Number.EPSILON) * 100) / 100;
@@ -123,9 +105,9 @@ export default function S12_AddressDistribution() {
         if (typeof payload?.updatedAt === 'string' || typeof payload?.fetchedAt === 'string') {
           setMeta({
             updatedAt: payload?.updatedAt || '',
-            updatedAtLocal: formatTopClockTime(payload?.updatedAt),
+            updatedAtLocal: formatSourceUtcTimestamp(payload?.updatedAt),
             fetchedAt: payload?.fetchedAt || '',
-            fetchedAtLocal: formatTopClockTime(payload?.fetchedAt),
+            fetchedAtLocal: formatSourceUtcTimestamp(payload?.fetchedAt),
           });
         }
       } catch {

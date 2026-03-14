@@ -17,6 +17,10 @@
      * **Justificación:** Explicación concisa de por qué esta actualización es importante para el aprendizaje y la mejora del Agente de IA.
    * **Prioridad Recursiva:** Si una actualización afecta directamente la forma en que esta "Regla Universal de Automejora" debe aplicarse o describirse, entonces **esta misma regla debe ser ajustada** para reflejar la mejora en el proceso de automejora del Agente.
 
+## Addendum Skills-First de Autoridad Tecnica
+
+Las skills instaladas en `.claude/skills/` mandan primero para guidance tecnico general. Este archivo sigue siendo la capa local no negociable para identidad, orden, slugs y verificacion del registro de modulos, porque esa informacion depende del producto real y no de heuristicas genericas.
+
 ## Module Registry Rules (Strict)
 
 These rules apply to any change in:
@@ -81,3 +85,19 @@ Even when changes are not directly editing `src/features/module-registry/modules
 - **Acción Realizada/Corrección:** Se amplió la regla de verificación para exigir revisar cualquier set de preview/overlay/noindex vigente en `ModulePage.jsx`, no solo un nombre histórico de constante.
 - **Nueva/Modificada Regla o Directriz:** Las reglas del registro deben contemplar que el estado de preview SEO y el bloqueo UX pueden separarse; al tocar módulos preview, agentes deben validar ambas capas del shell y mantener la documentación alineada.
 - **Justificación:** Evita que futuros agentes vuelvan a acoplar overlay y noindex por inercia, lo que podría romper revisiones internas o publicar previews antes de tiempo.
+
+- **Fecha de la Actualizacion:** `2026-03-13`
+- **Archivo(s) Afectado(s):** `.claude/MODULE_REGISTRY_RULES.md`
+- **Tipo de Evento/Contexto:** Alineacion del registro con jerarquia skills-first
+- **Descripcion del Evento Original:** La nueva prioridad tecnica basada en skills podia interpretarse como permiso para aplicar heuristicas genericas tambien sobre identidad u orden de modulos, aunque esa parte sigue siendo especifica del repo.
+- **Accion Realizada/Correccion:** Se añadió un addendum para dejar claro que la base tecnica viene de `.claude/skills/`, pero la identidad y secuencia de modulos siguen ancladas al registry local.
+- **Nueva/Modificada Regla o Directriz:** El registro de modulos se mantiene como restriccion local no negociable incluso dentro de una jerarquia skills-first, y las skills no deben usarse para inferir orden/slugs fuera de `modules.js`.
+- **Justificacion:** Protege contra reindexaciones o suposiciones genericas que no respeten la fuente de verdad del dashboard.
+
+- **Fecha de la Actualizacion:** `2026-03-13`
+- **Archivo(s) Afectado(s):** `.claude/MODULE_REGISTRY_RULES.md`
+- **Tipo de Evento/Contexto:** Alineacion del registro con jerarquia skills-first
+- **Descripcion del Evento Original:** La nueva prioridad tecnica basada en skills podia interpretarse como permiso para aplicar heuristicas genericas tambien sobre identidad u orden de modulos, aunque esa parte sigue siendo especifica del repo.
+- **Accion Realizada/Correccion:** Se añadió un addendum para dejar claro que la base tecnica viene de `.claude/skills/`, pero la identidad y secuencia de modulos siguen ancladas al registry local.
+- **Nueva/Modificada Regla o Directriz:** El registro de modulos se mantiene como restriccion local no negociable incluso dentro de una jerarquia skills-first, y las skills no deben usarse para inferir orden/slugs fuera de `modules.js`.
+- **Justificacion:** Protege contra reindexaciones o suposiciones genericas que no respeten la fuente de verdad del dashboard.

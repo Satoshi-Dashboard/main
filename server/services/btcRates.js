@@ -1,8 +1,8 @@
 import { readFile, writeFile } from 'node:fs/promises';
-import path from 'node:path';
 import { cacheGetJson, cacheSetJson, withCacheLock } from '../core/runtimeCache.js';
+import { ensureRuntimeCacheDir, resolveRuntimeCacheFile } from '../core/runtimePaths.js';
 
-const CACHE_FILE = path.resolve(process.cwd(), 'btc_rates_cache.json');
+const CACHE_FILE = resolveRuntimeCacheFile('btc_rates_cache.json');
 
 const BINANCE_BTC_24H_URLS = [
   'https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT',
@@ -230,6 +230,7 @@ async function readDiskCache() {
 
 async function writeDiskCache(payload) {
   try {
+    await ensureRuntimeCacheDir();
     await writeFile(CACHE_FILE, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
   } catch {
     /* ignore write errors in serverless/read-only environments */

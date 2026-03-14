@@ -2118,19 +2118,6 @@ export async function getBtcMapBusinessesByCountryPayload() {
   );
 }
 
-export async function getCoingeckoBitcoinMarketChartPayload({ days = 365 } = {}) {
-  const normalizedDays = Number(days);
-  if (normalizedDays !== 365) {
-    throw new PublicFeedError('Unsupported days value for market chart');
-  }
-
-  return getFeed(
-    'coingeckoBtcMarketChart365',
-    async () => fetchJsonWithTimeout('https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=365&interval=daily'),
-    validateObject,
-  );
-}
-
 async function getS15GoldMarketCapSnapshotPayload() {
   const proxyUrl = `${SCRAPER_BASE_URL}${S15_GOLD_SCRAPER_PATH}`;
 

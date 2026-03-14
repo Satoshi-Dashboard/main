@@ -1,10 +1,10 @@
 import { readFile, writeFile } from 'node:fs/promises';
-import path from 'node:path';
 import { cacheGetJson, cacheSetJson, withCacheLock } from '../../core/runtimeCache.js';
+import { ensureRuntimeCacheDir, resolveRuntimeCacheFile } from '../../core/runtimePaths.js';
 import { getBitinfochartsHtmlPayload } from '../../services/bitinfochartsShared.js';
 
 const SOURCE_NAME = 'bitinfocharts.com';
-const CACHE_FILE = path.resolve(process.cwd(), 'btc_distribution_cache.json');
+const CACHE_FILE = resolveRuntimeCacheFile('btc_distribution_cache.json');
 const SHARED_CACHE_KEY = 's10-btc-distribution';
 const SHARED_LOCK_KEY = 's10-btc-distribution-refresh';
 const SHARED_CACHE_TTL_SECONDS = 30 * 60;
@@ -171,43 +171,6 @@ function stalePayload(payload, reason) {
   };
 }
 
-function formatTotalBtc(value) {
-  if (Number.isInteger(value)) return String(value);
-  return String(Number(value.toFixed(8)));
-}
-
-function quote(value) {
-  return String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-}
-
-function toJs(payload) {
-  const lines = [];
-  lines.push('// AUTO-GENERATED — DO NOT EDIT MANUALLY');
-  lines.push(`// Last updated: ${payload.updatedAt}`);
-  lines.push('');
-  lines.push('const BTC_DISTRIBUTION = [');
-
-  payload.distribution.forEach((row) => {
-    lines.push(
-      `  { range: "${quote(row.range)}", addresses: ${row.addresses}, totalBTC: ${formatTotalBtc(row.totalBTC)}, btcPercent: ${row.btcPercent.toFixed(2)} },`,
-    );
-  });
-
-  lines.push('];');
-  lines.push('');
-  lines.push('const BTC_DISTRIBUTION_META = {');
-  lines.push(`  source: "${quote(payload.source)}",`);
-  lines.push(`  updatedAt: "${quote(payload.updatedAt)}",`);
-  lines.push(`  fetchedAt: "${quote(payload.fetchedAt)}",`);
-  lines.push(`  nextUpdateAt: "${quote(payload.nextUpdateAt)}"`);
-  lines.push('};');
-  lines.push('');
-  lines.push('export { BTC_DISTRIBUTION, BTC_DISTRIBUTION_META };');
-  lines.push('');
-
-  return lines.join('\n');
-}
-
 async function readCacheFile() {
   try {
     const text = await readFile(CACHE_FILE, 'utf8');
@@ -220,6 +183,7 @@ async function readCacheFile() {
 
 async function writeCacheFile(payload) {
   try {
+    await ensureRuntimeCacheDir();
     await writeFile(CACHE_FILE, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
   } catch {
     /* ignore write errors in read-only/serverless environments */
@@ -298,11 +262,6 @@ export async function getS12BtcDistributionPayload() {
     }
     throw error;
   }
-}
-
-export async function getS12BtcDistributionJs() {
-  const payload = await getS12BtcDistributionPayload();
-  return toJs(payload);
 }
 
 export async function getS12BtcDistributionStatus() {

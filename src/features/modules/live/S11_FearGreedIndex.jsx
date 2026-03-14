@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { fetchJson } from '@/shared/lib/api.js';
+import { useWindowWidth } from '@/shared/hooks/useWindowWidth.js';
 
 const EMPTY_DATA = {
   value: null,
@@ -121,13 +122,7 @@ function Bubble({ label, value }) {
 
 export default function S11_FearGreedIndex() {
   const [data, setData] = useState(EMPTY_DATA);
-  const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth);
-
-  useEffect(() => {
-    const onResize = () => setViewportWidth(window.innerWidth);
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
+  const viewportWidth = useWindowWidth();
 
   useEffect(() => {
     let active = true;

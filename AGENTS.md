@@ -17,6 +17,13 @@
      * **Justificación:** Explicación concisa de por qué esta actualización es importante para el aprendizaje y la mejora del Agente de IA.
    * **Prioridad Recursiva:** Si una actualización afecta directamente la forma en que esta "Regla Universal de Automejora" debe aplicarse o describirse, entonces **esta misma regla debe ser ajustada** para reflejar la mejora en el proceso de automejora del Agente.
 
+## Addendum Skills-First de Autoridad Tecnica
+
+1. Las skills instaladas bajo `.claude/skills/*/SKILL.md` son la autoridad tecnica primaria para patrones de implementacion, refactors, React/Vercel performance, auditoria UI/UX y workflows de despliegue.
+2. La regla universal y los demas `.md` locales pasan a ser una capa de adaptacion, trazabilidad y restricciones especificas del proyecto; deben complementar y aterrizar las skills, no sustituirlas como base tecnica.
+3. Si una regla local entra en conflicto tecnico con una skill instalada, debe actualizarse la regla local y seguir la skill, salvo cuando el owner haya fijado una restriccion mas fuerte de seguridad, integridad de fuentes, compatibilidad Vercel o contrato publico.
+4. Los `SKILL.md` instalados por tooling upstream quedan exentos de la insercion automatica de esta cabecera universal; deben mantenerse gestionables por `skills` mientras los documentos locales registran como se aplican en este repo.
+
 ## Workflow Paso 0: Ciclo Pre-Entrega de Revisión y Automejora (Universal para Agentes de IA)
 
 1. **Activación por Solicitud:** Cada vez que el Agente de IA reciba una solicitud, un prompt o inicie una tarea que culminará en una salida para el usuario/sistema.
@@ -40,24 +47,26 @@
 
 For OpenCode, Codex, Claude, and any automated coding agent:
 
-1. Before any backend/API task, read `.claude/BACKEND_API_RULES.md`.
-2. Treat that file as strict policy for architecture, compatibility, cache, security, and verification.
-3. Before any backend/API/data-provider/source-priority task, also read `.claude/DATA_SOURCE_INTEGRITY_RULES.md`.
-4. Treat that file as strict policy for approved providers, fallback behavior, refresh cadence, and source-priority integrity.
-5. Do not bypass those backend/data-source rules unless the project owner explicitly asks to change them.
-6. Before any module registry/order task, read `.claude/MODULE_REGISTRY_RULES.md`.
-7. Treat module identity/order rules as strict policy to avoid module numbering confusion.
-8. Before any frontend color/UX/UI request, read `.claude/FRONTEND_COLOR_UX_UI_RULES.md`.
-9. Treat frontend color semantics (titles, statuses, chart palettes) as strict policy unless the owner explicitly asks to override it.
-10. For every frontend module/content/element creation or update, include responsive behavior for mobile and tablet by default.
-11. Treat responsive layout and touch usability as mandatory acceptance criteria, not optional enhancements.
-12. For every frontend update, preserve responsive typography hierarchy and minimum readable font sizes for mobile/tablet.
-13. Treat tiny unreadable text in responsive layouts as a defect that must be corrected before completion.
-14. For every new frontend module, follow the mandatory "New module example rules" section in `.claude/FRONTEND_COLOR_UX_UI_RULES.md`.
-15. For any new frontend user-facing text, use English by default unless the owner explicitly requests another language.
-16. Before any code change (addition, modification, or deletion), verify the planned implementation remains compatible with Vercel deployment.
-17. After finishing each code change, re-verify that the project can still be deployed on Vercel without issues.
-18. Before any project analysis, audit, or improvement review, first inspect `README.md`, `package.json`, `src/features/module-registry/modules.js`, and any relevant policy files in `.claude/`; then report findings prioritized by impact, risk, and effort.
+1. Before any technical implementation, inspect the relevant installed skills in `.claude/skills/` and treat them as the primary technical authority.
+2. Use `.claude/skills/vercel-react-best-practices/` for React/Vercel performance and implementation guidance, `.claude/skills/web-design-guidelines/` for UI/UX/accessibility review, `.claude/skills/vercel-composition-patterns/` for component API/refactor decisions, and `.claude/skills/deploy-to-vercel/` for deployment workflows.
+3. Before any backend/API task, read `.claude/BACKEND_API_RULES.md`.
+4. Treat that file as the repo-specific backend policy for architecture, compatibility, cache, security, and verification.
+5. Before any backend/API/data-provider/source-priority task, also read `.claude/DATA_SOURCE_INTEGRITY_RULES.md`.
+6. Treat that file as the repo-specific policy for approved providers, fallback behavior, refresh cadence, and source-priority integrity.
+7. Do not bypass those backend/data-source rules unless the project owner explicitly asks to change them.
+8. Before any module registry/order task, read `.claude/MODULE_REGISTRY_RULES.md`.
+9. Treat module identity/order rules as strict repo policy to avoid module numbering confusion.
+10. Before any frontend color/UX/UI request, read `.claude/FRONTEND_COLOR_UX_UI_RULES.md`.
+11. Treat frontend color semantics (titles, statuses, chart palettes) as strict repo policy unless the owner explicitly asks to override it.
+12. For every frontend module/content/element creation or update, include responsive behavior for mobile and tablet by default.
+13. Treat responsive layout and touch usability as mandatory acceptance criteria, not optional enhancements.
+14. For every frontend update, preserve responsive typography hierarchy and minimum readable font sizes for mobile/tablet.
+15. Treat tiny unreadable text in responsive layouts as a defect that must be corrected before completion.
+16. For every new frontend module, follow the mandatory "New module example rules" section in `.claude/FRONTEND_COLOR_UX_UI_RULES.md`.
+17. For any new frontend user-facing text, use English by default unless the owner explicitly requests another language.
+18. Before any code change (addition, modification, or deletion), verify the planned implementation remains compatible with Vercel deployment.
+19. After finishing each code change, re-verify that the project can still be deployed on Vercel without issues.
+20. Before any project analysis, audit, or improvement review, first inspect `README.md`, `package.json`, `src/features/module-registry/modules.js`, the installed skills in `.claude/skills/`, and any relevant policy files in `.claude/`; then report findings prioritized by impact, risk, and effort.
 
 ## Registro Histórico de Automejoras y Lecciones Aprendidas
 
@@ -84,3 +93,11 @@ For OpenCode, Codex, Claude, and any automated coding agent:
 - **Acción Realizada/Corrección:** Se añadió una excepción protegida en la política principal para prohibir cualquier escritura o edición en `patch note.md` sin consentimiento explícito del usuario.
 - **Nueva/Modificada Regla o Directriz:** `patch note.md` puede consultarse, pero ningún agente puede modificarlo, sobrescribirlo o ampliarlo sin una instrucción directa del owner autorizando esa edición.
 - **Justificación:** Protege un documento sensible orientado al usuario final y evita que futuras automatizaciones alteren su tono, estructura o contenido sin permiso.
+
+- **Fecha de la Actualización:** `2026-03-13`
+- **Archivo(s) Afectado(s):** `AGENTS.md`
+- **Tipo de Evento/Contexto:** Jerarquia tecnica skills-first y limpieza guiada por auditoria
+- **Descripción del Evento Original:** El repositorio ya tenia politicas locales muy detalladas, pero no reconocia formalmente a las skills instaladas como autoridad tecnica primaria ni dejaba claro como debian adaptarse la regla universal y las politicas locales tras instalar `vercel-labs/agent-skills`.
+- **Acción Realizada/Corrección:** Se añadió un addendum skills-first, se reordeno la politica runtime para leer primero las skills relevantes y se documento la excepcion de cabecera universal para `SKILL.md` gestionados por tooling upstream.
+- **Nueva/Modificada Regla o Directriz:** Las skills instaladas en `.claude/skills/` mandan primero en lo tecnico; `AGENTS.md` y las politicas locales se reinterpretan como capa de adaptacion, negocio, seguridad, integridad y trazabilidad del proyecto.
+- **Justificación:** Evita conflictos entre guidance tecnico upstream y reglas locales envejecidas, y deja explicita la nueva jerarquia pedida por el owner antes de futuras limpiezas o refactors.

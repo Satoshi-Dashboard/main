@@ -1,5 +1,11 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Hammer, Maximize2, Minimize2, Pause, Play, SkipBack, SkipForward } from 'lucide-react';
+import Hammer from 'lucide-react/dist/esm/icons/hammer';
+import Maximize2 from 'lucide-react/dist/esm/icons/maximize-2';
+import Minimize2 from 'lucide-react/dist/esm/icons/minimize-2';
+import Pause from 'lucide-react/dist/esm/icons/pause';
+import Play from 'lucide-react/dist/esm/icons/play';
+import SkipBack from 'lucide-react/dist/esm/icons/skip-back';
+import SkipForward from 'lucide-react/dist/esm/icons/skip-forward';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   FIRST_MODULE,
@@ -7,14 +13,22 @@ import {
   LEGACY_MODULE_REDIRECTS,
   MODULES,
   MODULES_BY_SLUG,
+  preloadModule,
 } from '@/features/module-registry/modules.js';
 import { getModuleDataMeta } from '@/features/module-registry/moduleDataMeta.js';
 import { getModuleSEO } from '@/features/module-registry/moduleSEO.js';
-import { SEO_HUB_PATH } from '@/features/seo/content/seoRoutes.js';
+import { preloadSeoHubRoute, SEO_HUB_PATH } from '@/features/seo/content/seoRoutes.js';
+import {
+  SharedMetaAbsoluteCard,
+  SharedMetaBottomStrip,
+  SharedMetaTopStrip,
+} from '@/features/module-player/components/SharedModuleMeta.jsx';
+import { useMediaQuery } from '@/shared/hooks/useMediaQuery.js';
 import { absoluteUrl, DEFAULT_OG_IMAGE, usePageSEO } from '@/shared/hooks/usePageSEO.js';
 import { trackModuleNavigation, trackModuleViewed, trackSeoNavigationClick } from '@/shared/lib/analytics.js';
 
-const BitcoinDonationQr = lazy(() => import('@/shared/components/common/BitcoinDonationQr.jsx'));
+const BlockedPreviewPoster = lazy(() => import('@/features/module-player/components/BlockedPreviewPoster.jsx'));
+const ModuleDonateModal = lazy(() => import('@/features/module-player/components/ModuleDonateModal.jsx'));
 
 const MARKET_AUDIO_POLL_MS = 15_000;
 const MARKET_AUDIO_HISTORY_MS = 20 * 60 * 1000;
@@ -118,24 +132,6 @@ function renderProviderLinks(providers) {
   ));
 }
 
-function formatMetaTimestamp(value) {
-  const date = value instanceof Date ? value : new Date(value);
-  if (!Number.isFinite(date.getTime())) return 'N/A';
-
-  const dateStr = date.toLocaleDateString('en-US', {
-    month: '2-digit',
-    day: '2-digit',
-    year: 'numeric',
-  });
-  const timeStr = date.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  });
-
-  return `${dateStr}, ${timeStr}`;
-}
-
 function getCadenceMs(meta) {
   const seconds = Number(meta?.refreshSeconds);
   if (Number.isFinite(seconds) && seconds > 0) return Math.round(seconds * 1000);
@@ -195,18 +191,6 @@ function LiveClock() {
   );
 }
 
-function DonationQrFallback({ size }) {
-  return (
-    <div
-      className="flex items-center justify-center rounded-xl border border-[rgba(247,147,26,0.2)] bg-white p-2 text-center font-mono shadow-[0_8px_24px_rgba(0,0,0,0.28)]"
-      style={{ color: 'var(--bg-primary)', width: size + 16, minWidth: size + 16, minHeight: size + 16, fontSize: 'var(--fs-micro)' }}
-      aria-label="Loading Bitcoin donation QR"
-    >
-      Loading QR...
-    </div>
-  );
-}
-
 function ModuleContentFallback({ title }) {
   return (
     <div className="flex h-full w-full flex-col bg-[#111111] px-3.5 pb-3.5 pt-4 sm:px-5 sm:pb-4 sm:pt-5 lg:px-[22px] lg:pb-4 lg:pt-5">
@@ -239,55 +223,6 @@ function ModuleContentFallback({ title }) {
             </div>
           ))}
         </div>
-      </div>
-    </div>
-  );
-}
-
-function BlockedPreviewPoster({ title, onOpenDonate }) {
-  return (
-    <div className="flex h-full w-full flex-col bg-[#111111] px-4 py-5 sm:px-5 lg:px-6">
-      <div className="max-w-3xl rounded-3xl border border-white/10 bg-[linear-gradient(180deg,rgba(247,147,26,0.08),rgba(255,255,255,0.02))] p-5 shadow-[0_24px_70px_rgba(0,0,0,0.34)] sm:p-6">
-        <div className="inline-flex items-center gap-2 rounded-full border border-[rgba(247,147,26,0.22)] bg-[rgba(247,147,26,0.12)] px-3 py-1 font-mono text-[11px] uppercase tracking-[0.18em] text-[var(--accent-bitcoin)]">
-          <Hammer size={14} />
-          Under Construction
-        </div>
-        <h2 className="mt-4 font-mono text-[clamp(24px,4vw,42px)] font-bold leading-[0.95] text-white">
-          {title}
-        </h2>
-        <p className="mt-3 max-w-2xl font-mono text-[13px] leading-6 text-white/62 sm:text-[14px]">
-          This preview route stays visible in the player, but the heavy chart payload is deferred until the module is ready for interactive review.
-        </p>
-        <div className="mt-5 flex flex-wrap gap-3 font-mono text-[12px] text-white/58">
-          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5">Preview route active</span>
-          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5">SEO noindex preserved</span>
-          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5">Heavy charts deferred</span>
-        </div>
-        <div className="mt-6 flex flex-wrap gap-3">
-          <button
-            type="button"
-            onClick={onOpenDonate}
-            className="rounded-full border border-[rgba(247,147,26,0.28)] bg-[rgba(247,147,26,0.14)] px-4 py-2 font-mono text-[12px] text-[var(--accent-bitcoin)] transition hover:bg-[rgba(247,147,26,0.2)]"
-          >
-            Support development
-          </button>
-          <div className="rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 font-mono text-[12px] text-white/50">
-            Full interactive module loads after release
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-5 grid flex-1 min-h-0 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {Array.from({ length: 6 }, (_, index) => (
-          <div
-            key={index}
-            className="rounded-2xl border border-white/[0.06] bg-[#0f0f0f] p-4"
-          >
-            <div className="skeleton h-4 w-24 rounded-full" />
-            <div className="skeleton mt-4 h-14 w-full rounded-2xl" />
-            <div className="skeleton mt-4 h-4 w-2/3 rounded-full" />
-          </div>
-        ))}
       </div>
     </div>
   );
@@ -405,10 +340,7 @@ export default function ModulePage({ forcedSlug = null }) {
       } catch { /* ignore */ }
     }
   };
-  const [isResponsiveViewport, setIsResponsiveViewport] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return window.matchMedia('(max-width: 1023px)').matches;
-  });
+  const isResponsiveViewport = useMediaQuery('(max-width: 1023px)');
   const contentScrollRef = useRef(null);
 
   const moduleMeta = useMemo(() => getModuleDataMeta(module), [module]);
@@ -427,26 +359,6 @@ export default function ModulePage({ forcedSlug = null }) {
   const showBottomMeta = showSharedMeta && isResponsiveViewport;
   const useResponsiveScroll = isResponsiveViewport && (showBottomMeta || moduleMeta?.responsiveScroll === true);
   const metaLastAt = new Date(metaLastAtMs);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
-
-    const mobileMedia = window.matchMedia('(max-width: 1023px)');
-
-    const onMobile = (event) => setIsResponsiveViewport(event.matches);
-
-    if (typeof mobileMedia.addEventListener === 'function') {
-      mobileMedia.addEventListener('change', onMobile);
-      return () => {
-        mobileMedia.removeEventListener('change', onMobile);
-      };
-    }
-
-    mobileMedia.addListener(onMobile);
-    return () => {
-      mobileMedia.removeListener(onMobile);
-    };
-  }, []);
 
   useEffect(() => {
     if (!isResponsiveViewport) return;
@@ -519,6 +431,11 @@ export default function ModulePage({ forcedSlug = null }) {
       destination: SEO_HUB_PATH,
       surface: 'module-footer-brand',
     });
+  }, []);
+
+  const preloadModuleDirection = useCallback((index) => {
+    const targetModule = MODULES[getWrappedIndex(index)];
+    void preloadModule(targetModule);
   }, []);
 
   useEffect(() => {
@@ -693,38 +610,28 @@ export default function ModulePage({ forcedSlug = null }) {
           className={`scrollbar-hidden-mobile relative flex h-full min-h-0 flex-col ${useResponsiveScroll ? 'overflow-y-auto' : 'overflow-hidden'} lg:overflow-hidden`}
         >
           {showAbsoluteMetaCard && (
-            <div className="pointer-events-none absolute right-2 top-2 z-30 sm:right-3 sm:top-3 lg:hidden">
-              <div className="pointer-events-auto rounded-md border border-white/10 bg-black/85 px-3 py-2 text-right font-mono text-[11px] tracking-wide shadow-[0_8px_28px_rgba(0,0,0,0.38)] backdrop-blur-sm sm:text-[12px]" style={{ color: 'var(--text-secondary)' }}>
-                <div>
-                  <span>src: </span>
-                  {renderProviderLinks(moduleMeta.providers)}
-                </div>
-                <div>Auto update: {cadenceLabel}</div>
-                <div>Last: {formatMetaTimestamp(metaLastAt)}</div>
-              </div>
-            </div>
+            <SharedMetaAbsoluteCard
+              cadenceLabel={cadenceLabel}
+              metaLastAt={metaLastAt}
+              providers={moduleMeta.providers}
+              renderProviderLinks={renderProviderLinks}
+            />
           )}
 
           {showTopMeta && (
-            <div className="flex flex-none items-center justify-between px-2 py-1 sm:px-3 lg:px-4">
-              {moduleMeta?.showTitleInStrip ? (
-                <div className="min-w-0" style={{ color: 'var(--accent-bitcoin)', fontFamily: 'monospace', fontSize: 'var(--fs-subtitle)', fontWeight: 700 }}>
-                  {moduleMeta.stripTitle || module.title}
-                </div>
-              ) : <div className="min-w-0" />}
-              <div className="text-right font-mono text-[11px] tracking-wide" style={{ color: 'var(--text-secondary)' }}>
-                <div>
-                  <span>src: </span>
-                  {renderProviderLinks(moduleMeta.providers)}
-                </div>
-                <div>Auto update: {cadenceLabel}</div>
-                <div>Last: {formatMetaTimestamp(metaLastAt)}</div>
-              </div>
-            </div>
+            <SharedMetaTopStrip
+              cadenceLabel={cadenceLabel}
+              metaLastAt={metaLastAt}
+              providers={moduleMeta.providers}
+              renderProviderLinks={renderProviderLinks}
+              title={moduleMeta?.showTitleInStrip ? (moduleMeta.stripTitle || module.title) : ''}
+            />
           )}
           <div className={`relative min-h-0 ${useResponsiveScroll ? 'min-h-full flex-none' : 'flex-1'}`}>
             {hasBlockingOverlay ? (
-              <BlockedPreviewPoster title={module.title} onOpenDonate={() => setDonateOpen(true)} />
+              <Suspense fallback={<ModuleContentFallback title={module.title} />}>
+                <BlockedPreviewPoster title={module.title} onOpenDonate={() => setDonateOpen(true)} />
+              </Suspense>
             ) : (
               <Suspense fallback={<ModuleContentFallback title={module.title} />}>
                 <Component onOpenDonate={() => setDonateOpen(true)} />
@@ -770,16 +677,12 @@ export default function ModulePage({ forcedSlug = null }) {
           </div>
 
           {showBottomMeta && (
-            <div className="flex flex-none justify-end px-3 pb-24 pt-3 sm:px-4">
-              <div className="text-right font-mono text-[11px] tracking-wide" style={{ color: 'var(--text-secondary)' }}>
-                <div>
-                  <span>src: </span>
-                  {renderProviderLinks(moduleMeta.providers)}
-                </div>
-                <div>Auto update: {cadenceLabel}</div>
-                <div>Last: {formatMetaTimestamp(metaLastAt)}</div>
-              </div>
-            </div>
+            <SharedMetaBottomStrip
+              cadenceLabel={cadenceLabel}
+              metaLastAt={metaLastAt}
+              providers={moduleMeta.providers}
+              renderProviderLinks={renderProviderLinks}
+            />
           )}
         </div>
       </div>
@@ -810,6 +713,8 @@ export default function ModulePage({ forcedSlug = null }) {
         <Link
           to={SEO_HUB_PATH}
           onClick={onOpenLanding}
+          onMouseEnter={preloadSeoHubRoute}
+          onFocus={preloadSeoHubRoute}
           className="absolute left-1/2 top-1/2 hidden max-w-[34vw] -translate-x-1/2 -translate-y-1/2 items-center justify-center text-center tracking-[0.18em] text-white/56 transition-colors hover:text-white/80 sm:flex lg:max-w-none"
           style={{ fontSize: 'var(--fs-tag)' }}
           aria-label="Open landing page"
@@ -822,6 +727,8 @@ export default function ModulePage({ forcedSlug = null }) {
           <button
             type="button"
             onClick={() => goToModule(currentIndex - 1, { action: 'previous', surface: 'pagination' })}
+            onMouseEnter={() => preloadModuleDirection(currentIndex - 1)}
+            onFocus={() => preloadModuleDirection(currentIndex - 1)}
             className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 transition hover:border-white/35 hover:text-white sm:h-9 sm:w-9 lg:h-7 lg:w-7 lg:border-0"
             aria-label="Previous module"
           >
@@ -833,6 +740,8 @@ export default function ModulePage({ forcedSlug = null }) {
           <button
             type="button"
             onClick={() => goToModule(currentIndex + 1, { action: 'next', surface: 'pagination' })}
+            onMouseEnter={() => preloadModuleDirection(currentIndex + 1)}
+            onFocus={() => preloadModuleDirection(currentIndex + 1)}
             className="flex h-10 w-10 items-center justify-center rounded-full border border-white/15 transition hover:border-white/35 hover:text-white sm:h-9 sm:w-9 lg:h-7 lg:w-7 lg:border-0"
             aria-label="Next module"
           >
@@ -843,61 +752,14 @@ export default function ModulePage({ forcedSlug = null }) {
 
       {/* ── DONATE MODAL ── */}
       {donateOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
-          onClick={() => setDonateOpen(false)}
-        >
-          <div
-            className="w-full max-w-sm rounded-2xl border border-white/15 bg-[#0b0f18] p-5"
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-              aria-label="Bitcoin donation options"
-            >
-            <div
-              className="text-center font-mono"
-              style={{ color: 'var(--accent-bitcoin)', fontSize: 'var(--fs-label)' }}
-            >
-              Support the Dashboard
-            </div>
-            <div className="mt-4 flex justify-center">
-              <div className="flex flex-col items-center gap-3">
-                <Suspense fallback={<DonationQrFallback size={176} />}>
-                  <BitcoinDonationQr value={DONATION_ADDRESS} size={176} />
-                </Suspense>
-                <div className="text-center font-mono text-white/65" style={{ fontSize: 'var(--fs-caption)' }}>
-                  Scan to donate BTC
-                </div>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={onCopyDonation}
-              className="group/addr mt-3 w-full overflow-hidden rounded border px-2 py-2 text-center font-mono text-white transition-colors"
-              style={{
-                fontSize: 'var(--fs-caption)',
-                borderColor: donateCopied ? 'rgba(0,216,151,0.55)' : 'rgba(255,255,255,0.1)',
-                background: donateCopied ? 'rgba(0,216,151,0.08)' : 'rgba(255,255,255,0.04)',
-                color: donateCopied ? 'var(--accent-green)' : '#fff',
-              }}
-            >
-              {donateCopied ? '✓ Copied!' : (
-                <>
-                  <span className="block truncate group-hover/addr:hidden">{DONATION_ADDRESS}</span>
-                  <span className="hidden group-hover/addr:block text-white/60">Click to copy</span>
-                </>
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={() => setDonateOpen(false)}
-              className="mt-3 w-full rounded border border-white/10 py-1.5 font-mono text-white/50 transition hover:border-white/25 hover:text-white/80"
-              style={{ fontSize: 'var(--fs-caption)' }}
-            >
-              Close
-            </button>
-          </div>
-        </div>
+        <Suspense fallback={null}>
+          <ModuleDonateModal
+            donateCopied={donateCopied}
+            donationAddress={DONATION_ADDRESS}
+            onClose={() => setDonateOpen(false)}
+            onCopyDonation={onCopyDonation}
+          />
+        </Suspense>
       )}
     </main>
   );

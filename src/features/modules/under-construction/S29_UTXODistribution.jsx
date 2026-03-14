@@ -1,5 +1,6 @@
 import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, Cell } from 'recharts';
-import { Layers, QrCode } from 'lucide-react';
+import Layers from 'lucide-react/dist/esm/icons/layers';
+import QrCode from 'lucide-react/dist/esm/icons/qr-code';
 import { fmt } from '@/shared/utils/formatters.js';
 
 const ageData = [

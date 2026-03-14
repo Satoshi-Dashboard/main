@@ -17,6 +17,10 @@
      * **Justificación:** Explicación concisa de por qué esta actualización es importante para el aprendizaje y la mejora del Agente de IA.
    * **Prioridad Recursiva:** Si una actualización afecta directamente la forma en que esta "Regla Universal de Automejora" debe aplicarse o describirse, entonces **esta misma regla debe ser ajustada** para reflejar la mejora en el proceso de automejora del Agente.
 
+## Addendum Skills-First de Autoridad Tecnica
+
+Las skills instaladas en `.claude/skills/` son la base tecnica primaria para UI review, performance React/Vercel y composicion de componentes. Este archivo aterriza esa base al lenguaje visual real del dashboard: semantica de color, responsive, copy en ingles, integridad visual y reglas de modulos.
+
 ## Frontend Color UX/UI Rules (Strict)
 
 These rules apply to any frontend change that introduces, modifies, or reviews color usage in modules, cards, charts, labels, badges, and titles.
@@ -583,3 +587,19 @@ When creating any new frontend module, agents must follow the project example pa
 - **Accion Realizada/Correccion:** Se extendio el mismo patron de compresion proporcional y padding inferior de seguridad a un modulo editorial/landing-like para mantener aire visual sin perder contenido.
 - **Nueva/Modificada Regla o Directriz:** El ajuste de compresion ligera por altura intermedia aplica tambien a modulos editoriales con hero + grid de cards cuando comparten viewport con barras fijas; no limitar este patron solo a charts o KPIs.
 - **Justificacion:** Generaliza una solucion reusable para layouts altos de distinta naturaleza y evita que futuros modulos narrativos vuelvan a chocar con el footer aunque no tengan graficas complejas.
+
+- **Fecha de la Actualizacion:** `2026-03-13`
+- **Archivo(s) Afectado(s):** `.claude/FRONTEND_COLOR_UX_UI_RULES.md`
+- **Tipo de Evento/Contexto:** Jerarquia skills-first y limpieza de superficie frontend
+- **Descripcion del Evento Original:** Tras instalar skills de Vercel, las reglas frontend seguian presentandose como guia tecnica primaria y el repo aun arrastraba superficie UI muerta o duplicada como el sistema de toast desconectado y formatters repetidos.
+- **Accion Realizada/Correccion:** Se añadió el addendum skills-first y se consolidaron utilidades compartidas de formato temporal mientras se retiraba la infraestructura de toast sin consumidores.
+- **Nueva/Modificada Regla o Directriz:** Las reglas frontend locales deben especializar la base tecnica de `.claude/skills/` y favorecer superficie UI activa, helpers compartidos y eliminacion de shells sin consumidores antes de introducir nuevas capas globales.
+- **Justificacion:** Refuerza una UI mas liviana y coherente, y evita reintroducir wrappers globales o duplicaciones que las skills y la auditoria del repo ya consideran innecesarias.
+
+- **Fecha de la Actualizacion:** `2026-03-13`
+- **Archivo(s) Afectado(s):** `.claude/FRONTEND_COLOR_UX_UI_RULES.md`
+- **Tipo de Evento/Contexto:** Refactor de shell inicial y deduplicacion responsive
+- **Descripcion del Evento Original:** El player shell y varios modulos seguian duplicando listeners `matchMedia`/`resize`, manteniendo imports barrel de iconos y mezclando variantes de metadata inline dentro del mismo shell.
+- **Accion Realizada/Correccion:** Se introdujeron hooks compartidos de viewport, variantes explicitas para metadata del shell y imports directos de iconos en rutas activas para reducir listeners y bundle surface.
+- **Nueva/Modificada Regla o Directriz:** Los cambios frontend deben preferir hooks compartidos para viewport/responsive state, imports directos de iconos en rutas shipped y variantes de shell explicitas antes que bloques inline duplicados.
+- **Justificacion:** Reduce coste del chunk inicial, evita drift de comportamiento responsive y deja un patron mas reutilizable para futuras superficies del dashboard.

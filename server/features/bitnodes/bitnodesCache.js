@@ -1,8 +1,8 @@
 import { readFile, writeFile } from 'node:fs/promises';
-import path from 'node:path';
 import { cacheDelete, cacheGetJson, cacheSetJson, withCacheLock } from '../../core/runtimeCache.js';
+import { ensureRuntimeCacheDir, resolveRuntimeCacheFile } from '../../core/runtimePaths.js';
 
-const CACHE_FILE = path.resolve(process.cwd(), 'bitnodes_cache.json');
+const CACHE_FILE = resolveRuntimeCacheFile('bitnodes_cache.json');
 const BITNODES_URL = 'https://bitnodes.io/api/v1/snapshots/latest/?field=sorted_asns';
 const BITNODES_SNAPSHOT_URL = 'https://bitnodes.io/api/v1/snapshots/latest/';
 const BITNODES_NODES_PAGE_URL = 'https://bitnodes.io/nodes/';
@@ -408,6 +408,7 @@ async function writeCachePayload(payload) {
   memoryCache = payload;
 
   try {
+    await ensureRuntimeCacheDir();
     await writeFile(CACHE_FILE, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
   } catch {
     /* keep runtime payload even if filesystem is not writable */
@@ -656,6 +657,7 @@ export async function clearBitnodesCacheData() {
   await cacheDelete(SHARED_CACHE_KEY);
 
   try {
+    await ensureRuntimeCacheDir();
     await writeFile(CACHE_FILE, '', 'utf8');
   } catch {
     /* ignore clear failures */

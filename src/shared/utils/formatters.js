@@ -67,3 +67,29 @@ export const getChangeColor = (n) =>
 
 export const getChangeClass = (n) =>
   n >= 0 ? 'text-[var(--accent-green)]' : 'text-[var(--accent-red)]';
+
+export function formatMetaTimestamp(value) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (!Number.isFinite(date.getTime())) return 'N/A';
+
+  const dateStr = date.toLocaleDateString('en-US', {
+    month: '2-digit',
+    day: '2-digit',
+    year: 'numeric',
+  });
+  const timeStr = date.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+
+  return `${dateStr}, ${timeStr}`;
+}
+
+export function formatSourceUtcTimestamp(value) {
+  if (!value) return '';
+  const date = new Date(String(value).replace(' UTC', 'Z').replace(' ', 'T'));
+  if (!Number.isFinite(date.getTime())) return '';
+
+  return formatMetaTimestamp(date);
+}

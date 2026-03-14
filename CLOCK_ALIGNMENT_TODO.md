@@ -27,15 +27,15 @@
 
 Corregir textos que implican "tiempo real" cuando la fuente no lo es.
 
-- [ ] **S10 Fear & Greed** — cambiar indicador de `60s` → `"Actualización diaria · alternative.me"` y mostrar timestamp de última actualización real de la fuente
-- [ ] **S14 BitInfoCharts (TransactionCount)** — cambiar `"Auto update: 60s"` → `"Datos on-chain · actualización diaria"`
-- [ ] **S10 BitInfoCharts (BtcDistribution)** — mismo patrón que S14: `"Datos on-chain · actualización diaria"`
+- [ ] **S11 Fear & Greed** — cambiar indicador de `60s` → `"Actualización diaria · alternative.me"` y mostrar timestamp de última actualización real de la fuente
+- [ ] **S13 Wealth Pyramid (BitInfoCharts)** — cambiar `"Auto update: 60s"` → `"Datos on-chain · actualización diaria"`
+- [ ] **S12 Address Distribution (BitInfoCharts)** — mismo patrón que S13: `"Datos on-chain · actualización diaria"`
 - [ ] **S08 Bitnodes (NodesMap)** — verificar que el texto `"Next update: in X min"` refleje los snapshots reales de bitnodes (6h UTC 6:05 / 18:05) y no el intervalo del scraper Docker
 - [ ] **S21 Big Mac Sats** — eliminar `"(live 5m)"` del precio BTC/USD mostrado en esa sección; reemplazar por `"Índice anual · The Economist"` como badge secundario
-- [ ] **S13 Global Assets** — verificar que muestre `"Newhedge API · update: 1h"` (ya parece correcto — confirmar y dejar)
+- [ ] **S14 Global Assets** — verificar que muestre `"Newhedge API · update: 1h"` (ya parece correcto — confirmar y dejar)
 - [ ] **S01 + S04 Mempool** — S01 usa 15s internamente; ajustar el texto UX a `"~30s"` una vez que se unifique el polling en Fase 2
 - [ ] **S03 Multi-Currency** — confirmar que `"Auto update: 30s"` ya está correcto (dinámico con `REFRESH_MS`) — sin cambios si ya es así
-- [ ] **S09b Stablecoins** — cambiar footer `"↻ list 60s · peg 60s"` → `"↻ list 2min · peg 2min"` una vez ajustado el polling en Fase 2
+- [ ] **S10 Stablecoin Peg Health** — cambiar footer `"↻ list 60s · peg 60s"` → `"↻ list 2min · peg 2min"` una vez ajustado el polling en Fase 2
 
 ---
 
@@ -43,21 +43,21 @@ Corregir textos que implican "tiempo real" cuando la fuente no lo es.
 
 | Componente | Endpoint | Antes | Después |
 |---|---|---|---|
-| S10 FearGreedIndex | `/api/public/fear-greed` | 60s | fetch-once-on-mount (sin setInterval) |
+| S11 FearGreedIndex | `/api/public/fear-greed` | 60s | fetch-once-on-mount (sin setInterval) |
 | S01 BitcoinOverview | `/api/public/mempool/overview` | 15s | 30s (unificar con S04) |
-| S13 TransactionCount | `/api/s13/addresses-richer` | 60s | 1h (3 600 000ms) |
+| S13 WealthPyramid | `/api/s13/addresses-richer` | 60s | 1h (3 600 000ms) |
 | S08 NodesMap | `/api/bitnodes/cache` | 60s | 10min (600 000ms) |
 | S10 Stablecoins (list) | `/api/s10/stablecoins` | 60s | 2min (120 000ms) |
 | S10 Stablecoins (peg) | `/api/s10/stablecoins/live-prices` | 60s | 2min (120 000ms) |
 
-- [ ] **S10** — reemplazar `setInterval(load, 60_000)` por llamada única en mount; no re-polling (dato diario)
+- [ ] **S11** — reemplazar `setInterval(load, 60_000)` por llamada única en mount; no re-polling (dato diario)
 - [ ] **S01** — cambiar `setInterval(load, 15_000)` → `setInterval(load, 30_000)`
-- [ ] **S14** — cambiar `setInterval(load, 60_000)` → `setInterval(load, 3_600_000)`
+- [ ] **S13** — cambiar `setInterval(load, 60_000)` → `setInterval(load, 3_600_000)`
 - [ ] **S08** — cambiar `setInterval(load, 60_000)` → `setInterval(load, 600_000)`
 - [ ] **S10 (list)** — cambiar `setInterval(load, LIST_REFRESH_MS)` donde `LIST_REFRESH_MS = 60_000` → `120_000`
 - [ ] **S10 (peg)** — cambiar `setInterval(loadLivePegPrices, LIVE_PEG_REFRESH_MS)` donde `LIVE_PEG_REFRESH_MS = 60_000` → `120_000`
 - [ ] **Eliminar `{ cache: 'no-store' }`** en estos endpoints estables para que el CDN Vercel pueda servir desde el edge:
-  - `S10` → `/api/public/fear-greed`
+  - `S11` → `/api/public/fear-greed`
   - `S12/S13` → `/api/s12/btc-distribution`, `/api/s13/addresses-richer`
   - `S08` → `/api/bitnodes/cache`
   - `S21` → `/api/public/s21/big-mac-sats-data`
@@ -172,13 +172,13 @@ Corregir textos que implican "tiempo real" cuando la fuente no lo es.
 | Endpoint / Módulo | Invocaciones/día antes | Invocaciones/día después | Ahorro |
 |---|---|---|---|
 | Fear & Greed (frontend) | 1 440 | 1 (fetch-once) | −99.9% |
-| BitInfoCharts S10 (scraper) | 48 | 1 | −97.9% |
-| BitInfoCharts S14 (scraper) | 48 | 1 | −97.9% |
+| BitInfoCharts S12 (scraper) | 48 | 1 | −97.9% |
+| BitInfoCharts S13 (scraper) | 48 | 1 | −97.9% |
 | Bitnodes (scraper) | 144 | 2 | −98.6% |
 | Bitnodes (frontend) | 1 440 | 144 | −90.0% |
-| S14 TransactionCount (frontend) | 1 440 | 24 | −98.3% |
+| S13 Wealth Pyramid (frontend) | 1 440 | 24 | −98.3% |
 | Visitor counter frontend consumer | n/a | n/a | No hay consumidor montado actualmente |
-| S09b Stablecoins (frontend) | 2 880 | 720 | −75.0% |
+| S10 Stablecoins (frontend) | 2 880 | 720 | −75.0% |
 | S01 Mempool (frontend) | 5 760 | 2 880 | −50.0% |
 | Investing.com (scraper) | 2 880 | 1 440 | −50.0% |
 
@@ -213,3 +213,11 @@ Corregir textos que implican "tiempo real" cuando la fuente no lo es.
 - **Acción Realizada/Corrección:** Se retiraron la fila y la tarea asociadas al visitor counter del plan operativo actual.
 - **Nueva/Modificada Regla o Directriz:** Si un endpoint o feature deja de existir, los TODOs operativos deben eliminarlo del plan activo en lugar de mantenerlo como pendiente condicional.
 - **Justificación:** Evita ruido en auditorías de polling y deja el documento enfocado en superficies que realmente siguen formando parte del producto.
+
+- **Fecha de la Actualizacion:** `2026-03-13`
+- **Archivo(s) Afectado(s):** `CLOCK_ALIGNMENT_TODO.md`
+- **Tipo de Evento/Contexto:** Correccion de drift de modulos en plan historico
+- **Descripcion del Evento Original:** El documento seguia usando nombres/codigos obsoletos como `S10 Fear & Greed`, `S14 TransactionCount` y `S09b Stablecoins`, ya desalineados con el registro actual de modulos.
+- **Accion Realizada/Correccion:** Se actualizaron referencias del plan para que apunten a `S11 Fear & Greed`, `S12 Address Distribution`, `S13 Wealth Pyramid`, `S14 Global Assets` y `S10 Stablecoin Peg Health`.
+- **Nueva/Modificada Regla o Directriz:** Los TODOs historicos que nombren modulos deben revalidarse contra `src/features/module-registry/modules.js` antes de seguir usandose como base de auditoria o refactor.
+- **Justificacion:** Evita planes de limpieza o performance sobre identidades de modulo ya obsoletas y reduce confusiones entre auditorias viejas y la estructura viva del repo.

@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AlertCircle, RefreshCw } from 'lucide-react';
+import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle';
+import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw';
 import { fetchUsNationalDebtPayload } from '@/shared/services/usNationalDebtApi.js';
 import AnimatedMetric from '@/shared/components/common/AnimatedMetric.jsx';
+import { useMediaQuery } from '@/shared/hooks/useMediaQuery.js';
 import {
   buildUsDebtRateCards,
   formatDateLabel,
@@ -189,10 +191,7 @@ export default function S30_USNationalDebt() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [nowMs, setNowMs] = useState(() => Date.now());
-  const [isPhoneViewport, setIsPhoneViewport] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return window.matchMedia(PHONE_MEDIA_QUERY).matches;
-  });
+  const isPhoneViewport = useMediaQuery(PHONE_MEDIA_QUERY);
 
   const load = useCallback(async ({ silent = false, force = false } = {}) => {
     if (silent) setRefreshing(true);
@@ -223,23 +222,6 @@ export default function S30_USNationalDebt() {
   useEffect(() => {
     const tick = setInterval(() => setNowMs(Date.now()), LIVE_TICK_MS);
     return () => clearInterval(tick);
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
-
-    const phoneMedia = window.matchMedia(PHONE_MEDIA_QUERY);
-    const onPhoneChange = (event) => setIsPhoneViewport(event.matches);
-
-    setIsPhoneViewport(phoneMedia.matches);
-
-    if (typeof phoneMedia.addEventListener === 'function') {
-      phoneMedia.addEventListener('change', onPhoneChange);
-      return () => phoneMedia.removeEventListener('change', onPhoneChange);
-    }
-
-    phoneMedia.addListener(onPhoneChange);
-    return () => phoneMedia.removeListener(onPhoneChange);
   }, []);
 
   const model = payload?.data || null;

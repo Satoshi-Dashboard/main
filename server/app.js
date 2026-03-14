@@ -8,13 +8,11 @@ import {
   refreshBitnodesCache,
 } from './features/bitnodes/bitnodesCache.js';
 import {
-  getS12BtcDistributionJs,
   getS12BtcDistributionPayload,
   getS12BtcDistributionStatus,
   updateBtcDistributionCache,
 } from './features/bitinfocharts/s12BtcDistribution.js';
 import {
-  getS13AddressesRicherJs,
   getS13AddressesRicherPayload,
   getS13AddressesRicherStatus,
   updateS13AddressesRicherCache,
@@ -40,7 +38,6 @@ import {
 import {
   getBinanceBtcHistoryPayload,
   getBtcMapBusinessesByCountryPayload,
-  getCoingeckoBitcoinMarketChartPayload,
   getCountriesGeoPayload,
   getFearGreedPayload,
   getLandGeoPayload,
@@ -517,17 +514,6 @@ export function createApp() {
     }
   }));
 
-  app.get('/api/public/coingecko/bitcoin-market-chart', asyncRoute(async (req, res) => {
-    setDataCacheHeaders(res, { sMaxAge: 120, swr: 600 });
-    try {
-      const days = Number(req.query?.days || 365);
-      const payload = await getCoingeckoBitcoinMarketChartPayload({ days });
-      res.json(payload);
-    } catch (error) {
-      sendPublicFeedError(res, error);
-    }
-  }));
-
   app.get('/api/s15/btc-vs-gold-market-cap', asyncRoute(async (_req, res) => {
     setDataCacheHeaders(res, { sMaxAge: 120, swr: 600 });
     try {
@@ -569,19 +555,6 @@ export function createApp() {
       sendPublicFeedError(res, error);
     }
   }));
-
-  const sendS12BtcDistributionJs = async (_req, res) => {
-    setDataCacheHeaders(res, { sMaxAge: 3600, swr: 7200 });
-    try {
-      const js = await getS12BtcDistributionJs();
-      res.type('application/javascript; charset=utf-8').send(js);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      res.status(502).json({ error: `BitInfoCharts unavailable: ${message}` });
-    }
-  };
-
-  app.get('/api/s12/btc-distribution.js', asyncRoute(sendS12BtcDistributionJs));
 
   const sendS12BtcDistribution = async (_req, res) => {
     setDataCacheHeaders(res, { sMaxAge: 3600, swr: 7200 });
@@ -626,19 +599,6 @@ export function createApp() {
   };
 
   app.get('/api/s12/btc-distribution/refresh', refreshApiRateLimiter, requireRefreshToken, asyncRoute(refreshS12BtcDistribution));
-
-  const sendS13AddressesRicherJs = async (_req, res) => {
-    setDataCacheHeaders(res, { sMaxAge: 3600, swr: 7200 });
-    try {
-      const js = await getS13AddressesRicherJs();
-      res.type('application/javascript; charset=utf-8').send(js);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      res.status(502).json({ error: `BitInfoCharts unavailable: ${message}` });
-    }
-  };
-
-  app.get('/api/s13/addresses-richer.js', asyncRoute(sendS13AddressesRicherJs));
 
   const sendS13AddressesRicher = async (_req, res) => {
     setDataCacheHeaders(res, { sMaxAge: 3600, swr: 7200 });

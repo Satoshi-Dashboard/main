@@ -26,10 +26,7 @@ export default defineConfig(({ mode }) => {
       host: true,
       watch: {
         ignored: [
-          '**/bitnodes_cache.json',
-          '**/btc_rates_cache.json',
-          '**/btc_distribution_cache.json',
-          '**/btc_addresses_richer_cache.json',
+          '**/server/.runtime-cache/*.json',
         ],
       },
       proxy: {

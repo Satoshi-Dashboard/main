@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { fetchJson } from '@/shared/lib/api.js';
+import { fetchBtcSpot } from '@/shared/services/priceApi.js';
 
 // Big Mac price in USD (global average approx.)
 const BIG_MAC_USD = 5.69;
@@ -24,12 +24,8 @@ export default function S23_BigMacIndex() {
 
   useEffect(() => {
     (async () => {
-      try {
-        const j = await fetchJson('/api/btc/rates', { timeout: 8000, cache: 'no-store' });
-        setBtcPrice(Number(j?.btc_usd));
-      } catch {
-        setBtcPrice(84000);
-      }
+      const spot = await fetchBtcSpot().catch(() => null);
+      setBtcPrice(spot?.usd ?? 84000);
     })();
   }, []);
 

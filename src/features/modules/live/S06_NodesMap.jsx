@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { GeoJSON, MapContainer } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+import {
+  useCompactViewport,
+  useCountriesGeoJson,
+} from '@/features/modules/live/shared/worldMapHooks.js';
 import { useWorldBankPopulation } from '@/shared/hooks/useWorldBankPopulation.js';
 import {
   COUNTRY_NAME_ALIASES,
@@ -13,7 +17,6 @@ import {
 import { fmt } from '@/shared/utils/formatters.js';
 
 const CACHE_ENDPOINT = '/api/bitnodes/cache';
-const COUNTRIES_URL = '/api/public/geo/countries';
 const UNKNOWN_COUNTRY_LABEL = 'TOR Cyberspace';
 
 const UI_COLORS = {
@@ -144,33 +147,18 @@ function isTorCyberspaceRow(label) {
 
 export default function S06_NodesMap() {
   const [payload, setPayload] = useState(null);
-  const [countriesGeo, setCountriesGeo] = useState(null);
   const [cacheLoading, setCacheLoading] = useState(true);
-  const [geoLoading, setGeoLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isBreakdownExpanded, setIsBreakdownExpanded] = useState(false);
   const [isMetaExpanded, setIsMetaExpanded] = useState(false);
   const [isDensityExpanded, setIsDensityExpanded] = useState(false);
   const [viewMode, setViewMode] = useState('country'); // 'country' | 'perCapita'
-  const [isCompactViewport, setIsCompactViewport] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return window.matchMedia('(max-width: 1023px)').matches;
-  });
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
-
-    const media = window.matchMedia('(max-width: 1023px)');
-    const handleChange = (event) => setIsCompactViewport(event.matches);
-
-    if (typeof media.addEventListener === 'function') {
-      media.addEventListener('change', handleChange);
-      return () => media.removeEventListener('change', handleChange);
-    }
-
-    media.addListener(handleChange);
-    return () => media.removeListener(handleChange);
-  }, []);
+  const isCompactViewport = useCompactViewport();
+  const {
+    data: countriesGeo,
+    loading: geoLoading,
+    error: geoError,
+  } = useCountriesGeoJson();
 
   const { populationMap, popDataYear, popSource, popLastFetched } = useWorldBankPopulation();
 
@@ -209,26 +197,10 @@ export default function S06_NodesMap() {
   }, []);
 
   useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        const res = await fetch(COUNTRIES_URL);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const payload = await res.json();
-        const geo = payload?.data || payload;
-        if (!active) return;
-        setCountriesGeo(geo);
-      } catch {
-        if (active) setError((prev) => prev || 'Could not load country boundaries.');
-      } finally {
-        if (active) setGeoLoading(false);
-      }
-    })();
-
-    return () => {
-      active = false;
-    };
-  }, []);
+    if (geoError) {
+      setError((prev) => prev || geoError);
+    }
+  }, [geoError]);
 
   const isPending = payload?.status === 'pending' || !payload?.data;
   const isFallback = Boolean(payload?.is_fallback);

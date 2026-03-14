@@ -1,13 +1,18 @@
 import { Suspense, lazy } from 'react';
 import { Navigate, Route, Routes, useParams } from 'react-router-dom';
-import { ToastProvider } from '@/shared/components/common/Toast.jsx';
 import { FIRST_MODULE } from '@/features/module-registry/modules.js';
-import { SEO_BLOG_PATH, SEO_HUB_PATH } from '@/features/seo/content/seoRoutes.js';
-import ModulePage from '@/features/module-player/ModulePage.jsx';
+import {
+  loadSeoBlogIndexPage,
+  loadSeoBlogPostPage,
+  loadSeoLandingPage,
+  SEO_BLOG_PATH,
+  SEO_HUB_PATH,
+} from '@/features/seo/content/seoRoutes.js';
 
-const SeoLandingPage = lazy(() => import('@/features/seo/pages/SeoLandingPage.jsx'));
-const SeoBlogIndexPage = lazy(() => import('@/features/seo/pages/SeoBlogIndexPage.jsx'));
-const SeoBlogPostPage = lazy(() => import('@/features/seo/pages/SeoBlogPostPage.jsx'));
+const ModulePage = lazy(() => import('@/features/module-player/ModulePage.jsx'));
+const SeoLandingPage = lazy(loadSeoLandingPage);
+const SeoBlogIndexPage = lazy(loadSeoBlogIndexPage);
+const SeoBlogPostPage = lazy(loadSeoBlogPostPage);
 
 function SeoRouteFallback() {
   return (
@@ -48,20 +53,18 @@ function LegacyBlogRedirect() {
 
 export default function App() {
   return (
-    <ToastProvider>
-      <div className="min-h-screen bg-gray-950">
-        <Routes>
-          <Route path="/" element={<ModulePage forcedSlug={FIRST_MODULE.slug} />} />
-          <Route path={SEO_HUB_PATH} element={<LazyRoute><SeoLandingPage /></LazyRoute>} />
-          <Route path={SEO_BLOG_PATH} element={<LazyRoute><SeoBlogIndexPage /></LazyRoute>} />
-          <Route path={`${SEO_BLOG_PATH}/:slug`} element={<LazyRoute><SeoBlogPostPage /></LazyRoute>} />
-          <Route path="/bitcoin-dashboard" element={<Navigate to={SEO_HUB_PATH} replace />} />
-          <Route path="/bitcoin-dashboard/blog" element={<Navigate to={SEO_BLOG_PATH} replace />} />
-          <Route path="/bitcoin-dashboard/blog/:slug" element={<LegacyBlogRedirect />} />
-          <Route path="/module/:slug" element={<ModulePage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </div>
-    </ToastProvider>
+    <div className="min-h-screen bg-gray-950">
+      <Routes>
+        <Route path="/" element={<LazyRoute><ModulePage forcedSlug={FIRST_MODULE.slug} /></LazyRoute>} />
+        <Route path={SEO_HUB_PATH} element={<LazyRoute><SeoLandingPage /></LazyRoute>} />
+        <Route path={SEO_BLOG_PATH} element={<LazyRoute><SeoBlogIndexPage /></LazyRoute>} />
+        <Route path={`${SEO_BLOG_PATH}/:slug`} element={<LazyRoute><SeoBlogPostPage /></LazyRoute>} />
+        <Route path="/bitcoin-dashboard" element={<Navigate to={SEO_HUB_PATH} replace />} />
+        <Route path="/bitcoin-dashboard/blog" element={<Navigate to={SEO_BLOG_PATH} replace />} />
+        <Route path="/bitcoin-dashboard/blog/:slug" element={<LegacyBlogRedirect />} />
+        <Route path="/module/:slug" element={<LazyRoute><ModulePage /></LazyRoute>} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </div>
   );
 }

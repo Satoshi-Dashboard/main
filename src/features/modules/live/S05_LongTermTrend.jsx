@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchJson } from '@/shared/lib/api.js';
+import { useMediaQuery } from '@/shared/hooks/useMediaQuery.js';
+import { useWindowWidth } from '@/shared/hooks/useWindowWidth.js';
+import { formatMetaTimestamp } from '@/shared/utils/formatters.js';
 
 const UI_COLORS = {
   brand: 'var(--accent-bitcoin)',
@@ -16,24 +19,6 @@ const FEE_SCALE = [
 
 function feeColor(satVb) {
   return FEE_SCALE.find((step) => satVb < step.max)?.color ?? '#FF8C00';
-}
-
-function formatMetaTimestamp(value) {
-  const date = value instanceof Date ? value : new Date(value);
-  if (!Number.isFinite(date.getTime())) return 'N/A';
-
-  const dateStr = date.toLocaleDateString('en-US', {
-    month: '2-digit',
-    day: '2-digit',
-    year: 'numeric',
-  });
-  const timeStr = date.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  });
-
-  return `${dateStr}, ${timeStr}`;
 }
 
 /* ─── Binary treemap (recursive halving) ──────────────────── */
@@ -243,33 +228,10 @@ export default function S05_LongTermTrend() {
   const [selected,      setSelected]      = useState(null);
   const [wsStatus,      setWsStatus]      = useState('connecting');
   const [side,          setSide]          = useState(BASE_SIDE);
-  const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth);
+  const viewportWidth = useWindowWidth();
   const [lastUpdatedAt, setLastUpdatedAt] = useState(() => new Date());
-  const [showDesktopOverlay, setShowDesktopOverlay] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return window.matchMedia('(min-width: 1024px)').matches;
-  });
+  const showDesktopOverlay = useMediaQuery('(min-width: 1024px)');
   const scrollRef    = useRef(null);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
-    const media = window.matchMedia('(min-width: 1024px)');
-    const onChange = (event) => setShowDesktopOverlay(event.matches);
-
-    if (typeof media.addEventListener === 'function') {
-      media.addEventListener('change', onChange);
-      return () => media.removeEventListener('change', onChange);
-    }
-
-    media.addListener(onChange);
-    return () => media.removeListener(onChange);
-  }, []);
-
-  useEffect(() => {
-    const onResize = () => setViewportWidth(window.innerWidth);
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
 
   /* Responsive block size via ResizeObserver */
   useEffect(() => {

@@ -6,6 +6,8 @@ import { useEffect, useRef, useState } from 'react';
 import { fetchJson } from '@/shared/lib/api.js';
 import { fetchMultiCurrencyBtc } from '@/shared/services/priceApi.js';
 import AnimatedMetric from '@/shared/components/common/AnimatedMetric.jsx';
+import { useMediaQuery } from '@/shared/hooks/useMediaQuery.js';
+import { formatMetaTimestamp } from '@/shared/utils/formatters.js';
 
 // ─── Currency data ──────────────────────────────────────────────────────────────
 const BASE_CURRENCY_META = [
@@ -52,24 +54,6 @@ const UI_COLORS = {
   textSecondary: 'var(--text-secondary)',
   textTertiary: 'var(--text-tertiary)',
 };
-
-function formatMetaTimestamp(value) {
-  const date = value instanceof Date ? value : new Date(value);
-  if (!Number.isFinite(date.getTime())) return 'N/A';
-
-  const dateStr = date.toLocaleDateString('en-US', {
-    month: '2-digit',
-    day: '2-digit',
-    year: 'numeric',
-  });
-  const timeStr = date.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  });
-
-  return `${dateStr}, ${timeStr}`;
-}
 
 function parseOverlayProviders(sourceLabel) {
   const src = String(sourceLabel || '').toUpperCase();
@@ -397,25 +381,7 @@ export default function S03_MultiCurrencyBoard() {
   const [isPriceLoading, setIsPriceLoading] = useState(true);
   const [lastUpdatedAt, setLastUpdatedAt] = useState(() => new Date());
   const [sourceLabel, setSourceLabel] = useState('/API/BTC/RATES + INVESTING');
-  const [showDesktopOverlay, setShowDesktopOverlay] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return window.matchMedia('(min-width: 1024px)').matches;
-  });
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
-    const media = window.matchMedia('(min-width: 1024px)');
-    const onChange = (event) => setShowDesktopOverlay(event.matches);
-    setShowDesktopOverlay(media.matches);
-
-    if (typeof media.addEventListener === 'function') {
-      media.addEventListener('change', onChange);
-      return () => media.removeEventListener('change', onChange);
-    }
-
-    media.addListener(onChange);
-    return () => media.removeListener(onChange);
-  }, []);
+  const showDesktopOverlay = useMediaQuery('(min-width: 1024px)');
 
   // Multi-currency fetch via internal TradingEconomics scraper cache.
   useEffect(() => {

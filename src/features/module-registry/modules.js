@@ -1,36 +1,43 @@
 import { lazy } from 'react';
+import { buildLegacyModuleRedirects } from '@/features/module-registry/legacyModuleRedirects.js';
 
-const S01_BitcoinOverview = lazy(() => import('@/features/modules/live/S01_BitcoinOverview'));
-const S02_PriceChart = lazy(() => import('@/features/modules/live/S02_PriceChart'));
-const S03_MultiCurrencyBoard = lazy(() => import('@/features/modules/live/S03_MultiCurrencyBoard'));
-const S04_MempoolGauge = lazy(() => import('@/features/modules/live/S04_MempoolGauge'));
-const S05_LongTermTrend = lazy(() => import('@/features/modules/live/S05_LongTermTrend'));
-const S06_NodesMap = lazy(() => import('@/features/modules/live/S06_NodesMap'));
-const S07_LightningNodesMap = lazy(() => import('@/features/modules/live/S07_LightningNodesMap'));
-const S08_BtcMapBusinessesMap = lazy(() => import('@/features/modules/live/S08_BtcMapBusinessesMap'));
-const S09_LightningNetwork = lazy(() => import('@/features/modules/live/S09_LightningNetwork'));
-const S10_StablecoinPegHealth = lazy(() => import('@/features/modules/live/S10_StablecoinPegHealth'));
-const S11_FearGreedIndex = lazy(() => import('@/features/modules/live/S11_FearGreedIndex'));
-const S12_AddressDistribution = lazy(() => import('@/features/modules/live/S12_AddressDistribution'));
-const S13_WealthPyramid = lazy(() => import('@/features/modules/live/S13_WealthPyramid'));
-const S14_GlobalAssetsTreemap = lazy(() => import('@/features/modules/live/S14_GlobalAssetsTreemap'));
-const S15_BTCvsGold = lazy(() => import('@/features/modules/live/S15_BTCvsGold'));
-const S16_MayerMultiple = lazy(() => import('@/features/modules/under-construction/S16_MayerMultiple'));
-const S17_PricePerformance = lazy(() => import('@/features/modules/under-construction/S17_PricePerformance'));
-const S18_CycleSpiral = lazy(() => import('@/features/modules/under-construction/S18_CycleSpiral'));
-const S19_PowerLawModel = lazy(() => import('@/features/modules/under-construction/S19_PowerLawModel'));
-const S20_StockToFlow = lazy(() => import('@/features/modules/under-construction/S20_StockToFlow'));
-const S21_BigMacSatsTracker = lazy(() => import('@/features/modules/under-construction/S21_BigMacSatsTracker'));
-const S22_SeasonalityHeatmap = lazy(() => import('@/features/modules/under-construction/S22_SeasonalityHeatmap'));
-const S23_BigMacIndex = lazy(() => import('@/features/modules/under-construction/S23_BigMacIndex'));
-const S24_NetworkActivity = lazy(() => import('@/features/modules/under-construction/S24_NetworkActivity'));
-const S25_LogRegression = lazy(() => import('@/features/modules/under-construction/S25_LogRegression'));
-const S26_MVRVScore = lazy(() => import('@/features/modules/under-construction/S26_MVRVScore'));
-const S27_GoogleTrends = lazy(() => import('@/features/modules/under-construction/S27_GoogleTrends'));
-const S28_BTCDominance = lazy(() => import('@/features/modules/under-construction/S28_BTCDominance'));
-const S29_UTXODistribution = lazy(() => import('@/features/modules/under-construction/S29_UTXODistribution'));
-const S30_USNationalDebt = lazy(() => import('@/features/modules/live/S30_USNationalDebt'));
-const S31_ThankYouSatoshi = lazy(() => import('@/features/modules/live/S31_ThankYouSatoshi'));
+function lazyWithPreload(loader) {
+  const Component = lazy(loader);
+  Component.preload = loader;
+  return Component;
+}
+
+const S01_BitcoinOverview = lazyWithPreload(() => import('@/features/modules/live/S01_BitcoinOverview'));
+const S02_PriceChart = lazyWithPreload(() => import('@/features/modules/live/S02_PriceChart'));
+const S03_MultiCurrencyBoard = lazyWithPreload(() => import('@/features/modules/live/S03_MultiCurrencyBoard'));
+const S04_MempoolGauge = lazyWithPreload(() => import('@/features/modules/live/S04_MempoolGauge'));
+const S05_LongTermTrend = lazyWithPreload(() => import('@/features/modules/live/S05_LongTermTrend'));
+const S06_NodesMap = lazyWithPreload(() => import('@/features/modules/live/S06_NodesMap'));
+const S07_LightningNodesMap = lazyWithPreload(() => import('@/features/modules/live/S07_LightningNodesMap'));
+const S08_BtcMapBusinessesMap = lazyWithPreload(() => import('@/features/modules/live/S08_BtcMapBusinessesMap'));
+const S09_LightningNetwork = lazyWithPreload(() => import('@/features/modules/live/S09_LightningNetwork'));
+const S10_StablecoinPegHealth = lazyWithPreload(() => import('@/features/modules/live/S10_StablecoinPegHealth'));
+const S11_FearGreedIndex = lazyWithPreload(() => import('@/features/modules/live/S11_FearGreedIndex'));
+const S12_AddressDistribution = lazyWithPreload(() => import('@/features/modules/live/S12_AddressDistribution'));
+const S13_WealthPyramid = lazyWithPreload(() => import('@/features/modules/live/S13_WealthPyramid'));
+const S14_GlobalAssetsTreemap = lazyWithPreload(() => import('@/features/modules/live/S14_GlobalAssetsTreemap'));
+const S15_BTCvsGold = lazyWithPreload(() => import('@/features/modules/live/S15_BTCvsGold'));
+const S16_MayerMultiple = lazyWithPreload(() => import('@/features/modules/under-construction/S16_MayerMultiple'));
+const S17_PricePerformance = lazyWithPreload(() => import('@/features/modules/under-construction/S17_PricePerformance'));
+const S18_CycleSpiral = lazyWithPreload(() => import('@/features/modules/under-construction/S18_CycleSpiral'));
+const S19_PowerLawModel = lazyWithPreload(() => import('@/features/modules/under-construction/S19_PowerLawModel'));
+const S20_StockToFlow = lazyWithPreload(() => import('@/features/modules/under-construction/S20_StockToFlow'));
+const S21_BigMacSatsTracker = lazyWithPreload(() => import('@/features/modules/under-construction/S21_BigMacSatsTracker'));
+const S22_SeasonalityHeatmap = lazyWithPreload(() => import('@/features/modules/under-construction/S22_SeasonalityHeatmap'));
+const S23_BigMacIndex = lazyWithPreload(() => import('@/features/modules/under-construction/S23_BigMacIndex'));
+const S24_NetworkActivity = lazyWithPreload(() => import('@/features/modules/under-construction/S24_NetworkActivity'));
+const S25_LogRegression = lazyWithPreload(() => import('@/features/modules/under-construction/S25_LogRegression'));
+const S26_MVRVScore = lazyWithPreload(() => import('@/features/modules/under-construction/S26_MVRVScore'));
+const S27_GoogleTrends = lazyWithPreload(() => import('@/features/modules/under-construction/S27_GoogleTrends'));
+const S28_BTCDominance = lazyWithPreload(() => import('@/features/modules/under-construction/S28_BTCDominance'));
+const S29_UTXODistribution = lazyWithPreload(() => import('@/features/modules/under-construction/S29_UTXODistribution'));
+const S30_USNationalDebt = lazyWithPreload(() => import('@/features/modules/live/S30_USNationalDebt'));
+const S31_ThankYouSatoshi = lazyWithPreload(() => import('@/features/modules/live/S31_ThankYouSatoshi'));
 
 const MODULE_DEFS = [
   { slugBase: 'bitcoin-price-market-overview', title: 'Bitcoin Overview', component: S01_BitcoinOverview },
@@ -113,46 +120,17 @@ export const FIRST_MODULE = MODULES[0];
 export const MODULES_BY_SLUG = Object.fromEntries(MODULES.map((module) => [module.slug, module]));
 export const MODULES_BY_CODE = Object.fromEntries(MODULES.map((module) => [module.code, module]));
 
-const LEGACY_MODULE_SLUGS = [
-  's01-bitcoin-overview',
-  's02-price-chart',
-  's03-multi-currency',
-  's04-mempool-gauge',
-  's05-long-term-trend',
-  's06-nodes-map',
-  's07-lightning-nodes-map',
-  's08-btcmap-business-density',
-  's09-lightning-network',
-  's10-stablecoin-peg',
-  's11-fear-greed',
-  's12-address-distribution',
-  's13-wealth-pyramid',
-  's14-global-assets',
-  's15-btc-vs-gold',
-  's16-mayer-multiple',
-  's17-price-performance',
-  's18-cycle-spiral',
-  's19-power-law-model',
-  's20-stock-to-flow',
-  's21-node-versions',
-  's22-seasonality',
-  's23-big-mac-index',
-  's24-network-activity',
-  's25-log-regression',
-  's26-mvrv-score',
-  's27-google-trends',
-  's28-btc-dominance',
-  's29-utxo-distribution',
-  's30-us-national-debt',
-  's31-thank-you-satoshi',
-];
-
-export const LEGACY_MODULE_REDIRECTS = Object.fromEntries(
-  LEGACY_MODULE_SLUGS.map((slug, index) => [slug, index === 0 ? '/' : `/module/${MODULES[index].slug}`]),
-);
+export const LEGACY_MODULE_REDIRECTS = buildLegacyModuleRedirects(MODULES);
 
 export function getModulePath(moduleOrCode) {
   const module = typeof moduleOrCode === 'string' ? MODULES_BY_CODE[moduleOrCode] : moduleOrCode;
   if (!module) return '/';
   return module.code === FIRST_MODULE.code ? '/' : `/module/${module.slug}`;
+}
+
+export function preloadModule(moduleOrSlugOrCode) {
+  const module = typeof moduleOrSlugOrCode === 'string'
+    ? MODULES_BY_SLUG[moduleOrSlugOrCode] || MODULES_BY_CODE[moduleOrSlugOrCode]
+    : moduleOrSlugOrCode;
+  return module?.component?.preload?.() ?? Promise.resolve();
 }

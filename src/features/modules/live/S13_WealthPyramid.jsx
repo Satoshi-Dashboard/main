@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { fetchJson } from '@/shared/lib/api.js';
+import { useWindowWidth } from '@/shared/hooks/useWindowWidth.js';
+import { formatSourceUtcTimestamp } from '@/shared/utils/formatters.js';
 
 const REFRESH_MS = 1_800_000;
 
@@ -53,35 +55,10 @@ function hw(y) {
   return MIN_HW + (MAX_HW - MIN_HW) * (y - PY_TOP) / (PY_BOT - PY_TOP);
 }
 
-function formatTopClockTime(utcTimestamp) {
-  if (!utcTimestamp) return '';
-  const date = new Date(String(utcTimestamp).replace(' UTC', 'Z').replace(' ', 'T'));
-  if (!Number.isFinite(date.getTime())) return '';
-
-  const dateStr = date.toLocaleDateString('en-US', {
-    month: '2-digit',
-    day: '2-digit',
-    year: 'numeric',
-  });
-  const timeStr = date.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  });
-
-  return `${dateStr}, ${timeStr}`;
-}
-
 export default function S13_WealthPyramid() {
   const [tiers, setTiers] = useState(() => TIER_TEMPLATE.map((tier) => ({ ...tier, addresses: null })));
   const [meta, setMeta] = useState({ updatedAt: '', updatedAtLocal: '', fetchedAt: '', fetchedAtLocal: '' });
-  const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth);
-
-  useEffect(() => {
-    const onResize = () => setViewportWidth(window.innerWidth);
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
+  const viewportWidth = useWindowWidth();
 
   useEffect(() => {
     let active = true;
@@ -95,9 +72,9 @@ export default function S13_WealthPyramid() {
         if (typeof payload?.updatedAt === 'string' || typeof payload?.fetchedAt === 'string') {
           setMeta({
             updatedAt: payload?.updatedAt || '',
-            updatedAtLocal: formatTopClockTime(payload?.updatedAt),
+            updatedAtLocal: formatSourceUtcTimestamp(payload?.updatedAt),
             fetchedAt: payload?.fetchedAt || '',
-            fetchedAtLocal: formatTopClockTime(payload?.fetchedAt),
+            fetchedAtLocal: formatSourceUtcTimestamp(payload?.fetchedAt),
           });
         }
       } catch {

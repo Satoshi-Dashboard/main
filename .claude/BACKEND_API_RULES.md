@@ -17,6 +17,10 @@
      * **Justificación:** Explicación concisa de por qué esta actualización es importante para el aprendizaje y la mejora del Agente de IA.
    * **Prioridad Recursiva:** Si una actualización afecta directamente la forma en que esta "Regla Universal de Automejora" debe aplicarse o describirse, entonces **esta misma regla debe ser ajustada** para reflejar la mejora en el proceso de automejora del Agente.
 
+## Addendum Skills-First de Autoridad Tecnica
+
+Las skills instaladas en `.claude/skills/` son la base tecnica primaria del repo. Este archivo no las reemplaza: las adapta al backend real del proyecto y agrega guardrails locales sobre contratos publicos, seguridad operativa, cache, compatibilidad Vercel e integridad de rutas.
+
 ## Backend/API Rules (Strict)
 
 This file is mandatory for any backend or API change in this repository.
@@ -54,6 +58,7 @@ Before applying any backend/API change that references modules by number, slug, 
 - Local runtime entrypoint is `server/index.js`.
 - Serverless entrypoint is `api/index.js`.
 - Shared runtime cache layer is `server/core/runtimeCache.js`.
+- Runtime disk snapshot files live under `server/.runtime-cache/`.
 - Shared backend pipelines live in `server/services/` and module-specific backends live in `server/features/<domain>/`.
 - Endpoint refresh policy is request-time with stale fallback + lock.
 
@@ -192,3 +197,19 @@ When backend/API behavior changes:
 - **AcciÃ³n Realizada/CorrecciÃ³n:** Se reforzÃ³ la secciÃ³n de seguridad con reglas sobre request correlation y limitaciÃ³n de tasa, y se aÃ±adiÃ³ `npm run check:security` a la checklist obligatoria de verificaciÃ³n.
 - **Nueva/Modificada Regla o Directriz:** Los cambios backend que afecten seguridad operacional deben verificar tanto compilaciÃ³n/deploy como request IDs, 5xx sanitizados y rate limiting mediante una smoke check dedicada.
 - **JustificaciÃ³n:** Hace repetible la validaciÃ³n de hardening, reduce regresiones silenciosas y mantiene alineadas las expectativas entre entorno local y Vercel.
+
+- **Fecha de la Actualizacion:** `2026-03-13`
+- **Archivo(s) Afectado(s):** `.claude/BACKEND_API_RULES.md`
+- **Tipo de Evento/Contexto:** Alineacion backend con jerarquia skills-first
+- **Descripcion del Evento Original:** Las reglas backend seguian presentandose como autoridad tecnica primaria, aunque el owner redefinio que las skills instaladas deben liderar la guia tecnica y las politicas locales solo adaptar restricciones del repo.
+- **Accion Realizada/Correccion:** Se añadio un addendum skills-first para dejar claro que este archivo especializa el guidance tecnico upstream con restricciones locales de contratos, seguridad, cache y compatibilidad Vercel.
+- **Nueva/Modificada Regla o Directriz:** `.claude/BACKEND_API_RULES.md` ahora se interpreta como capa local de backend sobre la base tecnica de `.claude/skills/`, no como sustituto de esa base.
+- **Justificacion:** Reduce conflictos entre futuras refactorizaciones guiadas por skills y requisitos no negociables del API real del proyecto.
+
+- **Fecha de la Actualizacion:** `2026-03-13`
+- **Archivo(s) Afectado(s):** `.claude/BACKEND_API_RULES.md`
+- **Tipo de Evento/Contexto:** Migracion de snapshots runtime fuera de la raiz del repo
+- **Descripcion del Evento Original:** Los caches backend persistidos seguian viviendo en la raiz del proyecto, lo que obligaba a excepciones de watch/ignore dispersas y mezclaba artefactos runtime con codigo fuente.
+- **Accion Realizada/Correccion:** Se formalizo `server/.runtime-cache/` como ubicacion de snapshots backend y se actualizaron las rutas consumidoras para escribir ahi tras asegurar la carpeta en runtime.
+- **Nueva/Modificada Regla o Directriz:** Los caches persistidos de backend deben vivir en una carpeta runtime dedicada bajo `server/`, no en la raiz del repo, y cualquier cambio de rutas debe mantener compatibilidad con Vercel/local fallback.
+- **Justificacion:** Mantiene el workspace mas limpio, reduce ruido de tooling y deja mas clara la separacion entre codigo versionado y artefactos operativos.

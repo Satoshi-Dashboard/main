@@ -17,6 +17,10 @@
      * **Justificación:** Explicación concisa de por qué esta actualización es importante para el aprendizaje y la mejora del Agente de IA.
    * **Prioridad Recursiva:** Si una actualización afecta directamente la forma en que esta "Regla Universal de Automejora" debe aplicarse o describirse, entonces **esta misma regla debe ser ajustada** para reflejar la mejora en el proceso de automejora del Agente.
 
+## Addendum Skills-First de Autoridad Tecnica
+
+Las skills instaladas bajo `.claude/skills/` son ahora la base tecnica primaria del repositorio para decisiones de implementacion, performance, UI review, composicion de componentes y despliegue. Los documentos locales (`AGENTS.md`, `.claude/*.md` y este `README.md`) funcionan como capa de adaptacion al contexto real del proyecto: reglas del owner, Vercel compatibility, integridad de fuentes, identidad de modulos y trazabilidad historica.
+
 ## Satoshi Dashboard
 
 Satoshi Dashboard is an open-source Bitcoin dashboard built to make complex market, macro, network, and adoption data easier to explore in one place.
@@ -245,11 +249,9 @@ Notes:
 ### BitInfoCharts-backed data
 
 - `GET /api/s12/btc-distribution`
-- `GET /api/s12/btc-distribution.js`
 - `GET /api/s12/btc-distribution/status`
 - `GET /api/s12/btc-distribution/refresh`
 - `GET /api/s13/addresses-richer`
-- `GET /api/s13/addresses-richer.js`
 - `GET /api/s13/addresses-richer/status`
 - `GET /api/s13/addresses-richer/refresh`
 
@@ -267,7 +269,6 @@ Notes:
 - `GET /api/public/geo/land`
 - `GET /api/public/lightning/world`
 - `GET /api/public/btcmap/businesses-by-country`
-- `GET /api/public/coingecko/bitcoin-market-chart?days=365`
 - `GET /api/s15/btc-vs-gold-market-cap`
 - `GET /api/public/binance/btc-history?days=1|7|30|90|365|1825|2025&interval=5m|15m|30m|1h|1d`
 - `GET /api/public/s21/big-mac-sats-data`
@@ -358,7 +359,7 @@ Development notes:
 - Vite proxies `/api` to the API server via `API_PROXY_TARGET`
 - `npm run preview` only serves the built frontend bundle; start `npm run start:api` in another terminal (or use `npm run dev`) before testing routes that call `/api/*`, otherwise preview will show `ECONNREFUSED` against the default local API target `http://127.0.0.1:8787`
 - Frontend alias `@/*` resolves to `src/*` via `vite.config.js` and `jsconfig.json`
-- `vite.config.js` ignores generated cache JSON files to reduce unnecessary reload noise
+- `vite.config.js` ignores generated cache JSON files under `server/.runtime-cache/` to reduce unnecessary reload noise
 - Shared KV is recommended on Vercel to avoid per-instance cache drift
 - For best first-data latency in production, enable shared KV and keep the scraper cache volume persistent so cold instances can reuse real snapshots immediately
 
@@ -399,10 +400,12 @@ Notes:
 
 - `PROJECT_STRUCTURE.md` -> folder ownership and placement rules
 - `AGENTS.md` -> runtime policy entrypoint for coding agents
+- `.claude/skills/` -> installed upstream technical skills that now lead implementation guidance
 - `.claude/BACKEND_API_RULES.md` -> backend and API constraints
 - `.claude/DATA_SOURCE_INTEGRITY_RULES.md` -> approved data sources and fallback rules
 - `.claude/MODULE_REGISTRY_RULES.md` -> module order and slug rules
 - `.claude/FRONTEND_COLOR_UX_UI_RULES.md` -> frontend color, responsive, and UX rules
+- `src/features/module-registry/legacyModuleRedirects.js` -> client-side source of truth for legacy module slug redirects mirrored by `vercel.json`
 
 ## Contributing
 
@@ -570,3 +573,19 @@ Satoshi Dashboard is open-source under the MIT License. See `LICENSE.txt`.
 - **Accion Realizada/Correccion:** Se documento la estrategia actualizada de warm-up para feeds criticos y payloads compuestos, junto con la recomendacion operativa de combinar shared KV en dashboard y persistencia del cache del scraper.
 - **Nueva/Modificada Regla o Directriz:** Cuando se optimice la latencia de primeros datos en este proyecto, la documentacion principal debe reflejar tanto el precalentamiento de caches/payloads compuestos como los prerrequisitos de infraestructura que permiten reutilizar snapshots reales tras cold starts.
 - **Justificacion:** Evita que futuros cambios vuelvan a empujar trabajo pesado al request inicial y deja explicito que la mejora depende de snapshots reales compartidos, no de fallbacks falsos.
+
+- **Fecha de la Actualizacion:** `2026-03-13`
+- **Archivo(s) Afectado(s):** `README.md`
+- **Tipo de Evento/Contexto:** Jerarquia tecnica skills-first y limpieza documental del repo
+- **Descripcion del Evento Original:** La documentacion principal no reflejaba que el proyecto adopto skills tecnicas instaladas como nueva base de implementacion, y ademas seguia listando endpoints/debug artefactos SEO ya retirados en la limpieza del repo.
+- **Accion Realizada/Correccion:** Se documento la nueva capa skills-first en el README, se añadió `.claude/skills/` a la seccion de docs de mantenedor y se eliminaron referencias a endpoints legacy `.js` y al feed publico de CoinGecko sin consumidores actuales.
+- **Nueva/Modificada Regla o Directriz:** El README debe describir la jerarquia tecnica real del repositorio y retirar del inventario publico cualquier superficie legacy o artefacto generado que deje de formar parte del producto soportado.
+- **Justificacion:** Mantiene onboarding y documentacion publica alineados con el estado real del repo tras la adopcion de skills y la limpieza de endpoints/artefactos sobrantes.
+
+- **Fecha de la Actualizacion:** `2026-03-13`
+- **Archivo(s) Afectado(s):** `README.md`
+- **Tipo de Evento/Contexto:** Limpieza estructural de rutas legacy y caches runtime
+- **Descripcion del Evento Original:** El repo seguia documentando caches JSON como artefactos en la raiz y no dejaba visible cual es la fuente de verdad local para redirects legacy del player tras empezar a desacoplar esa logica.
+- **Accion Realizada/Correccion:** Se actualizo la nota de desarrollo para apuntar a `server/.runtime-cache/` y se añadió `src/features/module-registry/legacyModuleRedirects.js` a los docs de mantenedor.
+- **Nueva/Modificada Regla o Directriz:** La documentacion principal debe reflejar la ubicacion real de caches runtime y la fuente local de verdad usada para redirects legacy antes de sincronizar equivalentes en `vercel.json`.
+- **Justificacion:** Reduce deriva operativa, evita seguir ignorando artefactos en la raiz y hace mas claro donde tocar la logica de compatibilidad al mantener rutas historicas.

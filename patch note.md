@@ -12,6 +12,10 @@
 - Added shared composed-cache preparation for heavy live views like BTC vs Gold and U.S. National Debt to reduce first-load waiting time.
 - Added scraper readiness checks and stronger snapshot reuse so real upstream data can be served faster after restarts.
 - Added clearer decimal precision in per-capita rankings for node, Lightning, and business density maps so nearby countries no longer look falsely tied.
+- Added a new skills-first technical workflow for the project so future maintenance, audits, and refactors follow the installed Vercel agent skills first and adapt the local rules around them.
+- Added smarter module preloading so nearby modules and landing routes can start loading earlier when users hover or focus navigation controls.
+- Added shared responsive hooks and shared map helpers so repeated viewport and geo-loading logic is more consistent across the dashboard.
+- Added a dedicated runtime cache folder for backend snapshot files, making the project cleaner and reducing root-level noise.
 
 ## Fixes
 
@@ -24,7 +28,16 @@
 - Reduced unnecessary no-store behavior on some live requests, improving reuse of already-fetched real data.
 - Fixed the mempool usage label so it now reads more cleanly as `mempool usage` instead of `official mempool usage` in the gauge section.
 - Fixed the mempool gauge responsive layout so the chart no longer crowds or overlaps the source buttons at intermediate zoom levels like 125%.
+- Improved the initial dashboard shell so heavy optional player features such as donation UI and blocked-preview overlays are split more cleanly instead of inflating the first load unnecessarily.
+- Fixed several active modules to use more direct icon imports and shared UI helpers, reducing repeated code and improving bundle efficiency.
+- Improved the player metadata strip so its desktop, absolute, and mobile variants are now handled more clearly and consistently.
+- Fixed duplicated BTC spot-price logic by centralizing shared fetching behavior for multiple preview modules.
+- Improved responsive behavior across several modules by replacing repeated viewport listeners with shared hooks.
+- Fixed documentation drift in internal project rules and maintenance docs so the current module structure, cache locations, and technical hierarchy are documented correctly.
 
 ## Removed
 
-- Nothing was removed in this update.
+- Removed the disconnected toast system that was mounted globally but had no active usage.
+- Removed an unused local prefetch hook and other leftover local-only cleanup artifacts that were not part of the real product.
+- Removed legacy public endpoints and generated SEO backup/report files that were no longer connected to the live app.
+- Removed several unused dependencies to keep the project leaner and easier to maintain.

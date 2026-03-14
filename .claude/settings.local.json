@@ -1,7 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm install recharts d3 zustand @tanstack/react-query framer-motion lucide-react html2canvas file-saver leaflet react-leaflet tailwindcss @tailwindcss/vite autoprefixer)",
+      "Bash(npm install recharts lucide-react leaflet react-leaflet tailwindcss @tailwindcss/vite)",
       "mcp__Claude_Preview__preview_start",
       "Bash(\"/c/Program Files/nodejs/node_modules/npm/bin/npm-cli.js\" install)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173)",

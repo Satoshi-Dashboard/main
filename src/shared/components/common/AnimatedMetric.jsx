@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useMediaQuery } from '@/shared/hooks/useMediaQuery.js';
 
 let animatedCounterPromise;
 
@@ -131,14 +132,8 @@ export default function AnimatedMetric({
   const config = buildMetricConfig({ value, variant, decimals, signed, prefix, suffix });
   const wrapperRef = useRef(null);
   const [counterFontSize, setCounterFontSize] = useState('16px');
-  const [isResponsiveViewport, setIsResponsiveViewport] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return window.matchMedia(RESPONSIVE_MEDIA_QUERY).matches;
-  });
-  const [isPhoneViewport, setIsPhoneViewport] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return window.matchMedia(PHONE_MEDIA_QUERY).matches;
-  });
+  const isResponsiveViewport = useMediaQuery(RESPONSIVE_MEDIA_QUERY);
+  const isPhoneViewport = useMediaQuery(PHONE_MEDIA_QUERY);
   const [preferStaticResponsive, setPreferStaticResponsive] = useState(false);
   const [CounterComponent, setCounterComponent] = useState(null);
   const display = inline ? 'inline-flex' : 'flex';
@@ -160,35 +155,6 @@ export default function AnimatedMetric({
     [config?.prefix, config?.suffix, formattedValue],
   );
   const shouldAnimateCounter = Boolean(config && animate && !preferStaticResponsive);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
-
-    const responsiveMedia = window.matchMedia(RESPONSIVE_MEDIA_QUERY);
-    const phoneMedia = window.matchMedia(PHONE_MEDIA_QUERY);
-    const updateViewportState = () => {
-      setIsResponsiveViewport(responsiveMedia.matches);
-      setIsPhoneViewport(phoneMedia.matches);
-    };
-
-    updateViewportState();
-
-    if (typeof responsiveMedia.addEventListener === 'function') {
-      responsiveMedia.addEventListener('change', updateViewportState);
-      phoneMedia.addEventListener('change', updateViewportState);
-      return () => {
-        responsiveMedia.removeEventListener('change', updateViewportState);
-        phoneMedia.removeEventListener('change', updateViewportState);
-      };
-    }
-
-    responsiveMedia.addListener(updateViewportState);
-    phoneMedia.addListener(updateViewportState);
-    return () => {
-      responsiveMedia.removeListener(updateViewportState);
-      phoneMedia.removeListener(updateViewportState);
-    };
-  }, []);
 
   useLayoutEffect(() => {
     if (!wrapperRef.current || typeof window === 'undefined') return undefined;

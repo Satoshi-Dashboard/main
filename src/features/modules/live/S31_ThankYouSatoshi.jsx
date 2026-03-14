@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Copy, Github } from 'lucide-react';
+import Copy from 'lucide-react/dist/esm/icons/copy';
+import Github from 'lucide-react/dist/esm/icons/github';
 import BitcoinDonationQr from '@/shared/components/common/BitcoinDonationQr.jsx';
 
 const DONATION_ADDRESS = 'BC1QC2GD3YN8DTLMZG4UW786MFN085WE69F60V4R6F';
