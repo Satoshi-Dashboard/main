@@ -1,3 +1,17 @@
+---
+aliases:
+  - Module Registry Policy
+  - Module Registry Rules
+tags:
+  - claude/policy
+  - claude/modules
+  - claude/rag-source
+note_type: policy
+domain: module-registry
+agent_priority: high
+source_status: canonical-local
+---
+
 # Regla Universal de Automejora y Actualización Continua de Documentos de Reglas
 
 **Objetivo Primordial:** Este documento y **todos los demás archivos `.md` que contienen reglas, directrices o conocimientos operativos** deben ser actualizados proactivamente por el Agente de IA. La actualización se activará cada vez que se identifique y corrija un error (en código generado, recomendaciones, datos procesados, o en la aplicación de las propias reglas), o cuando se detecte una oportunidad significativa de mejora en la eficacia o el conocimiento del Agente. El propósito central es que el Agente de IA aprenda continuamente de sus experiencias, optimizando sus directrices internas, su coherencia y su relevancia a través de todos los documentos de conocimiento.
@@ -20,6 +34,13 @@
 ## Addendum Skills-First de Autoridad Tecnica
 
 Las skills instaladas en `.claude/skills/` mandan primero para guidance tecnico general. Este archivo sigue siendo la capa local no negociable para identidad, orden, slugs y verificacion del registro de modulos, porque esa informacion depende del producto real y no de heuristicas genericas.
+
+## Obsidian Context
+
+- Home: [[VAULT_HOME]]
+- Retrieval: [[RAG_OPERATING_SYSTEM]]
+- Policy cluster: [[POLICY_INDEX]]
+- Related: [[BACKEND_API_RULES]], [[DATA_SOURCE_INTEGRITY_RULES]], [[FRONTEND_COLOR_UX_UI_RULES]]
 
 ## Module Registry Rules (Strict)
 
@@ -93,6 +114,14 @@ Even when changes are not directly editing `src/features/module-registry/modules
 - **Accion Realizada/Correccion:** Se añadió un addendum para dejar claro que la base tecnica viene de `.claude/skills/`, pero la identidad y secuencia de modulos siguen ancladas al registry local.
 - **Nueva/Modificada Regla o Directriz:** El registro de modulos se mantiene como restriccion local no negociable incluso dentro de una jerarquia skills-first, y las skills no deben usarse para inferir orden/slugs fuera de `modules.js`.
 - **Justificacion:** Protege contra reindexaciones o suposiciones genericas que no respeten la fuente de verdad del dashboard.
+
+- **Fecha de la Actualizacion:** `2026-03-13`
+- **Archivo(s) Afectado(s):** `.claude/MODULE_REGISTRY_RULES.md`
+- **Tipo de Evento/Contexto:** Adaptacion de politica a vault Obsidian y flujo RAG
+- **Descripcion del Evento Original:** La politica del registro era fuerte como restriccion local, pero no estaba conectada explicitamente al home del vault ni al flujo de recuperacion compartido entre Obsidian y el agente.
+- **Accion Realizada/Correccion:** Se añadió frontmatter compatible con Obsidian y un bloque de contexto con enlaces hacia las notas de entrada y las politicas vecinas del grafo.
+- **Nueva/Modificada Regla o Directriz:** El registro de modulos debe permanecer como nota canonica enlazada dentro del vault `.claude/` para que la identidad de modulos sea recuperable por backlinks, tags y navegacion jerarquica.
+- **Justificacion:** Reduce errores de identidad cuando la tarea arranca desde el grafo visual o desde una consulta RAG en lugar de una ruta directa.
 
 - **Fecha de la Actualizacion:** `2026-03-13`
 - **Archivo(s) Afectado(s):** `.claude/MODULE_REGISTRY_RULES.md`

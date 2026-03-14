@@ -192,13 +192,13 @@ function DetailPanel({ block, onClose, className = '' }) {
         <span className="font-mono font-bold text-[11px] tracking-widest uppercase" style={{ color: UI_COLORS.brand }}>
           Block Detail
         </span>
-        <button onClick={onClose} className="text-white/30 hover:text-white/70 text-xs">✕</button>
+        <button type="button" onClick={onClose} className="inline-flex min-h-[32px] min-w-[32px] items-center justify-center rounded-full text-sm text-white/30 transition hover:bg-white/6 hover:text-white/70">✕</button>
       </div>
       <div className="border-t border-[#1c1c1c]" />
       {rows.map(([label, val]) => (
         <div key={label} className="flex justify-between items-baseline gap-2">
-          <span className="text-[11px] font-mono text-white/30 uppercase tracking-wide flex-shrink-0">{label}</span>
-          <span className="text-[11px] font-mono text-white text-right truncate">{val}</span>
+          <span className="text-[12px] font-mono text-white/30 uppercase tracking-wide flex-shrink-0">{label}</span>
+          <span className="text-[12px] font-mono text-white text-right truncate">{val}</span>
         </div>
       ))}
     </div>
@@ -212,10 +212,10 @@ function FeeLegend() {
       {FEE_SCALE.map(({ color, label }) => (
         <div key={label} className="flex items-center gap-1">
           <div className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: color }} />
-          <span className="text-[11px] font-mono text-white/30">{label}</span>
+          <span className="text-[12px] font-mono text-white/30">{label}</span>
         </div>
       ))}
-      <span className="text-[11px] font-mono text-white/20">s/vB</span>
+      <span className="text-[12px] font-mono text-white/20">s/vB</span>
     </div>
   );
 }
@@ -315,7 +315,7 @@ export default function S05_LongTermTrend() {
               boxShadow: `0 0 6px ${wsStatus === 'connected' ? UI_COLORS.positive : UI_COLORS.warning}`,
             }}
           />
-          <span className="text-[11px] uppercase tracking-widest text-white/30">
+            <span className="text-[12px] uppercase tracking-widest text-white/30">
             {wsStatus === 'connected' ? 'LIVE BLOCKS' : wsStatus.toUpperCase()}
           </span>
         </div>
@@ -329,9 +329,9 @@ export default function S05_LongTermTrend() {
               { label: 'FAST', val: fees.fastest,  col: '#FF8C00' },
             ].map(({ label, val, col }) => (
               <div key={label} className="flex items-center gap-0.5">
-                <span className="text-[11px] text-white/30 mr-0.5">{label}</span>
+                <span className="text-[12px] text-white/30 mr-0.5">{label}</span>
                 <span className="text-[13px] font-bold" style={{ color: col }}>{val}</span>
-                <span className="text-[11px] text-white/20"> s/vB</span>
+                <span className="text-[12px] text-white/20"> s/vB</span>
               </div>
             ))}
           </div>
@@ -352,15 +352,15 @@ export default function S05_LongTermTrend() {
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden p-2 sm:p-3 lg:flex-row">
         <div className="relative flex min-w-0 flex-1 flex-col gap-2">
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            <span className="text-[11px] uppercase tracking-[0.2em] text-white/20">Confirmed Blocks</span>
-            <span className="text-[11px] font-mono text-white/15 border border-white/10 rounded px-1.5 py-px">
+            <span className="text-[12px] uppercase tracking-[0.2em] text-white/20">Confirmed Blocks</span>
+            <span className="text-[12px] font-mono text-white/15 border border-white/10 rounded px-2 py-1">
               ↗ dbl-click → mempool.space
             </span>
           </div>
           <div
             ref={scrollRef}
             className={isMobile
-              ? 'grid flex-1 grid-cols-2 auto-rows-max gap-2 overflow-y-auto pb-1 pr-1'
+              ? 'grid flex-1 grid-cols-2 auto-rows-max gap-2 pb-1 pr-1'
               : 'flex flex-1 items-start gap-2 overflow-x-auto pb-1'}
           >
             {visibleBlocks.length === 0
@@ -386,7 +386,7 @@ export default function S05_LongTermTrend() {
           </div>
 
           {selected && (
-            <div className="absolute right-1 top-8 z-10 w-[min(320px,92%)] max-h-[calc(100%-2.2rem)] overflow-y-auto rounded-lg shadow-[0_10px_30px_rgba(0,0,0,0.55)] lg:hidden">
+            <div className="absolute right-1 top-8 z-10 w-[min(320px,92%)] max-h-[calc(100%-2.2rem)] rounded-lg shadow-[0_10px_30px_rgba(0,0,0,0.55)] lg:hidden">
               <DetailPanel block={selected} onClose={() => setSelected(null)} />
             </div>
           )}
@@ -401,7 +401,7 @@ export default function S05_LongTermTrend() {
 
       {/* ── Mempool queue ── */}
       <div className="relative flex-shrink-0 border-t border-[#1c1c1c] px-2 pt-2 pb-3 sm:px-3">
-        <span className="text-[11px] uppercase tracking-[0.2em] text-white/20 block mb-2">
+        <span className="text-[12px] uppercase tracking-[0.2em] text-white/20 block mb-2">
           Mempool Queue
         </span>
         <div className="flex gap-2 overflow-x-auto">
@@ -415,7 +415,7 @@ export default function S05_LongTermTrend() {
 
         {showDesktopOverlay && (
           <div className="mt-2 flex justify-end">
-            <div className="text-right font-mono text-[11px] tracking-wide text-[#7c7c7c]">
+            <div className="text-right font-mono text-[12px] tracking-wide text-[#7c7c7c]">
             <div>
               <span>src: </span>
               <a href="https://mempool.space" target="_blank" rel="noreferrer" style={{ color: 'var(--accent-bitcoin)', textDecoration: 'none' }}>

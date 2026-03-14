@@ -127,6 +127,8 @@ export default function AnimatedMetric({
   incrementColor = 'var(--accent-green)',
   decrementColor = 'var(--accent-red)',
   blockAlign = 'center',
+  justify = 'start',
+  align = 'baseline',
   animate = true,
 }) {
   const config = buildMetricConfig({ value, variant, decimals, signed, prefix, suffix });
@@ -219,8 +221,10 @@ export default function AnimatedMetric({
     ...style,
     color: textColor,
     display,
-    alignItems: 'baseline',
-    justifyContent: inline ? 'flex-start' : (blockAlign === 'start' ? 'flex-start' : 'center'),
+    alignItems: align,
+    justifyContent: inline
+      ? (justify === 'end' ? 'flex-end' : justify === 'center' ? 'center' : 'flex-start')
+      : (justify === 'end' ? 'flex-end' : justify === 'center' ? 'center' : (blockAlign === 'start' ? 'flex-start' : 'center')),
     gap: 0,
     lineHeight: 1,
     whiteSpace: 'nowrap',
@@ -269,7 +273,7 @@ export default function AnimatedMetric({
         includeDecimals={config.decimals > 0}
         decimalPrecision={config.decimals}
         includeCommas={config.includeCommas}
-        containerStyles={{ display: 'inline-flex', alignItems: 'baseline', fontFamily: 'inherit', height: counterFontSize, lineHeight: counterFontSize, whiteSpace: 'nowrap', flexShrink: 0, margin: 0, minWidth: 0, maxWidth: '100%' }}
+        containerStyles={{ display: 'inline-flex', alignItems: align, fontFamily: 'inherit', height: counterFontSize, lineHeight: counterFontSize, whiteSpace: 'nowrap', flexShrink: 0, margin: 0, minWidth: 0, maxWidth: '100%' }}
         digitStyles={{ fontFamily: 'inherit', lineHeight: counterFontSize }}
       />
       {config.suffix ? <span style={{ lineHeight: 1, flexShrink: 0 }}>{config.suffix}</span> : null}

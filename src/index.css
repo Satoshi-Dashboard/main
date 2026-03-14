@@ -19,6 +19,10 @@
   --glow-bitcoin: 0 0 20px rgba(247, 147, 26, 0.15);
   --glow-card: 0 4px 24px rgba(0, 0, 0, 0.4);
   --font-mono: 'SFMono-Regular', 'Cascadia Code', 'Fira Code', 'Consolas', 'Liberation Mono', monospace;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
 
   /* ── Typography Scale — optimised for 1920×1080+ ─────────────────── */
   --fs-display:  clamp(2.5rem,  5.5vw,  6.5rem);   /* ~104px — hero BTC price      */
@@ -99,6 +103,28 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+a,
+button,
+input,
+select,
+textarea,
+[role="button"],
+[tabindex]:not([tabindex="-1"]) {
+  -webkit-tap-highlight-color: rgba(247, 147, 26, 0.18);
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role="button"]:focus-visible,
+[tabindex]:not([tabindex="-1"]):focus-visible {
+  outline: 2px solid var(--accent-bitcoin);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 4px rgba(247, 147, 26, 0.18);
+}
+
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: var(--bg-primary); }
 ::-webkit-scrollbar-thumb { background: #2A2A3A; border-radius: 3px; }
@@ -131,6 +157,7 @@ body {
 
 .recharts-cartesian-axis-tick-value { fill: var(--text-tertiary) !important; font-size: var(--fs-tag); font-family: var(--font-mono) !important; }
 .recharts-tooltip-wrapper { outline: none; }
+.recharts-tooltip-wrapper:focus-visible { outline: 2px solid var(--accent-bitcoin); outline-offset: 2px; }
 
 .player-module-shell > div { height: 100%; }
 

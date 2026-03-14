@@ -399,7 +399,7 @@ export default function S15_BTCvsGold() {
         )}
       </div>
 
-      <div className="flex flex-shrink-0 items-center gap-5 overflow-x-auto" style={{ margin: '14px 0 16px', paddingBottom: 2 }}>
+      <div className="scrollbar-hidden-mobile flex flex-shrink-0 items-center gap-3 overflow-x-auto sm:gap-5" style={{ margin: '14px 0 16px', paddingBottom: 2 }}>
         {RANGES.map(({ label }) => {
           const isActive = activeLabel === label;
           return (
@@ -408,13 +408,13 @@ export default function S15_BTCvsGold() {
               type="button"
               onClick={() => setActiveLabel(label)}
               disabled={!hasChart}
-              className="relative flex flex-shrink-0 items-center gap-1.5 pb-1.5 font-mono transition-colors"
-              style={{
-                fontSize: '0.78rem',
-                fontWeight: isActive ? 700 : 400,
-                color: !hasChart ? 'rgba(255,255,255,0.18)' : isActive ? 'white' : 'rgba(255,255,255,0.32)',
-                letterSpacing: '0.05em',
-              }}
+                className="relative flex min-h-[40px] flex-shrink-0 items-center gap-1.5 rounded-md px-2 pb-1.5 pt-1 font-mono transition-colors sm:min-h-[36px]"
+                style={{
+                  fontSize: '0.82rem',
+                  fontWeight: isActive ? 700 : 400,
+                  color: !hasChart ? 'rgba(255,255,255,0.18)' : isActive ? 'white' : 'rgba(255,255,255,0.32)',
+                  letterSpacing: '0.05em',
+                }}
             >
               {label}
               {hasChart && isActive ? <span className="absolute bottom-0 left-0 right-0 rounded-full" style={{ height: 2, background: 'white' }} /> : null}

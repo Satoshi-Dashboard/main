@@ -676,7 +676,7 @@ export default function S10_StablecoinPegHealth() {
     <div className="flex h-full w-full flex-col bg-[#0d0d0d] overflow-hidden select-none font-mono">
 
       {/* ── Cards grid ── */}
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-3 pb-2 pt-3 sm:px-5 sm:pt-4">
+      <div className="flex min-h-0 flex-1 flex-col px-3 pb-2 pt-3 sm:px-5 sm:pt-4 lg:overflow-y-auto">
         {loading ? (
           <div className="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
             {Array.from({ length: 6 }).map((_, i) => (
@@ -730,8 +730,8 @@ export default function S10_StablecoinPegHealth() {
               </div>
             )}
             {/* Refresh cadence hint — intentionally very dim */}
-            <div style={{ textAlign: 'right', paddingTop: 4, paddingRight: 2, flexShrink: 0 }}>
-              <span style={{ fontSize: 'var(--fs-micro)', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
+            <div className="mt-3 flex justify-end" style={{ flexShrink: 0 }}>
+              <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-2 text-right" style={{ fontSize: 'var(--fs-micro)', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
                 src {listSource} · ↻ list 2min · peg 2min
                 {liveUpdatedAt
                   ? ` · live ${new Date(liveUpdatedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`

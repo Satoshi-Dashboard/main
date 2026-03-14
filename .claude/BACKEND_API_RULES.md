@@ -1,3 +1,17 @@
+---
+aliases:
+  - Backend API Policy
+  - Backend Rules
+tags:
+  - claude/policy
+  - claude/backend
+  - claude/rag-source
+note_type: policy
+domain: backend
+agent_priority: high
+source_status: canonical-local
+---
+
 # Regla Universal de Automejora y Actualización Continua de Documentos de Reglas
 
 **Objetivo Primordial:** Este documento y **todos los demás archivos `.md` que contienen reglas, directrices o conocimientos operativos** deben ser actualizados proactivamente por el Agente de IA. La actualización se activará cada vez que se identifique y corrija un error (en código generado, recomendaciones, datos procesados, o en la aplicación de las propias reglas), o cuando se detecte una oportunidad significativa de mejora en la eficacia o el conocimiento del Agente. El propósito central es que el Agente de IA aprenda continuamente de sus experiencias, optimizando sus directrices internas, su coherencia y su relevancia a través de todos los documentos de conocimiento.
@@ -20,6 +34,13 @@
 ## Addendum Skills-First de Autoridad Tecnica
 
 Las skills instaladas en `.claude/skills/` son la base tecnica primaria del repo. Este archivo no las reemplaza: las adapta al backend real del proyecto y agrega guardrails locales sobre contratos publicos, seguridad operativa, cache, compatibilidad Vercel e integridad de rutas.
+
+## Obsidian Context
+
+- Home: [[VAULT_HOME]]
+- Retrieval: [[RAG_OPERATING_SYSTEM]]
+- Policy cluster: [[POLICY_INDEX]]
+- Related: [[DATA_SOURCE_INTEGRITY_RULES]], [[MODULE_REGISTRY_RULES]], [[SKILLS_INDEX]]
 
 ## Backend/API Rules (Strict)
 
@@ -153,7 +174,7 @@ After backend/API changes, run:
 
 When backend/API behavior changes:
 
-1. Update `README.md` backend/API sections.
+1. Update `README.md` backend/API sections only if the owner explicitly requested a README change in the current task.
 2. Update issue templates if reporting requirements changed.
 3. Do not create throwaway docs; keep docs minimal and current.
 
@@ -213,3 +234,11 @@ When backend/API behavior changes:
 - **Accion Realizada/Correccion:** Se formalizo `server/.runtime-cache/` como ubicacion de snapshots backend y se actualizaron las rutas consumidoras para escribir ahi tras asegurar la carpeta en runtime.
 - **Nueva/Modificada Regla o Directriz:** Los caches persistidos de backend deben vivir en una carpeta runtime dedicada bajo `server/`, no en la raiz del repo, y cualquier cambio de rutas debe mantener compatibilidad con Vercel/local fallback.
 - **Justificacion:** Mantiene el workspace mas limpio, reduce ruido de tooling y deja mas clara la separacion entre codigo versionado y artefactos operativos.
+
+- **Fecha de la Actualizacion:** `2026-03-13`
+- **Archivo(s) Afectado(s):** `.claude/BACKEND_API_RULES.md`
+- **Tipo de Evento/Contexto:** Adaptacion de politica a vault Obsidian y flujo RAG
+- **Descripcion del Evento Original:** La politica backend era consumible por ruta directa, pero no estaba preparada para navegacion visual en Obsidian ni para ser descubierta mediante enlaces y metadata uniforme dentro de `.claude/`.
+- **Accion Realizada/Correccion:** Se añadió frontmatter compatible con Obsidian y un bloque de contexto con enlaces al home del vault, al sistema RAG y al indice de politicas relacionadas.
+- **Nueva/Modificada Regla o Directriz:** Esta politica backend debe mantenerse como nota canonica local enlazada dentro del vault `.claude/`, con metadata y backlinks suficientes para recuperacion humana y del agente.
+- **Justificacion:** Mejora la trazabilidad en grafo, reduce perdida de contexto entre sesiones y facilita que Obsidian y el agente converjan sobre la misma fuente de verdad.

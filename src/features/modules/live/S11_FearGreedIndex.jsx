@@ -188,7 +188,7 @@ export default function S11_FearGreedIndex() {
   const labelVals = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
 
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center gap-2 overflow-y-auto bg-[#111111] px-2 py-3 sm:px-3 sm:py-4">
+    <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-[#111111] px-2 py-3 sm:px-3 sm:py-4">
       {/* Title row */}
       <div className="flex flex-shrink-0 flex-wrap items-center justify-center gap-2 sm:gap-3">
         <span className="font-mono text-white/70" style={{ fontSize: 'var(--fs-section)' }}>

@@ -1,3 +1,17 @@
+---
+aliases:
+  - Clock Alignment Plan
+  - Polling Alignment TODO
+tags:
+  - claude/operations
+  - claude/todo
+  - claude/rag-source
+note_type: log
+domain: operations
+agent_priority: medium
+source_status: canonical-local
+---
+
 # Regla Universal de Automejora y Actualización Continua de Documentos de Reglas
 
 **Objetivo Primordial:** Este documento y **todos los demás archivos `.md` que contienen reglas, directrices o conocimientos operativos** deben ser actualizados proactivamente por el Agente de IA. La actualización se activará cada vez que se identifique y corrija un error (en código generado, recomendaciones, datos procesados, o en la aplicación de las propias reglas), o cuando se detecte una oportunidad significativa de mejora en la eficacia o el conocimiento del Agente. El propósito central es que el Agente de IA aprenda continuamente de sus experiencias, optimizando sus directrices internas, su coherencia y su relevancia a través de todos los documentos de conocimiento.
@@ -20,6 +34,13 @@
 ## Clock Alignment — Plan de Alineación de Relojes del Sistema
 > Satoshi Dashboard · Auditoría y corrección de polling, TTL, scrapers y UX
 > Fecha: 2026-03-07
+
+## Obsidian Context
+
+- Home: [[VAULT_HOME]]
+- Retrieval: [[RAG_OPERATING_SYSTEM]]
+- Agent docs: [[AGENT_DOCS_INDEX]]
+- Related: [[agent-runtime/AGENTS]], [[BACKEND_API_RULES]], [[DATA_SOURCE_INTEGRITY_RULES]]
 
 ---
 
@@ -221,3 +242,11 @@ Corregir textos que implican "tiempo real" cuando la fuente no lo es.
 - **Accion Realizada/Correccion:** Se actualizaron referencias del plan para que apunten a `S11 Fear & Greed`, `S12 Address Distribution`, `S13 Wealth Pyramid`, `S14 Global Assets` y `S10 Stablecoin Peg Health`.
 - **Nueva/Modificada Regla o Directriz:** Los TODOs historicos que nombren modulos deben revalidarse contra `src/features/module-registry/modules.js` antes de seguir usandose como base de auditoria o refactor.
 - **Justificacion:** Evita planes de limpieza o performance sobre identidades de modulo ya obsoletas y reduce confusiones entre auditorias viejas y la estructura viva del repo.
+
+- **Fecha de la Actualizacion:** `2026-03-13`
+- **Archivo(s) Afectado(s):** `.claude/operations/CLOCK_ALIGNMENT_TODO.md`
+- **Tipo de Evento/Contexto:** Reubicacion canonica de TODO operativo al vault Obsidian
+- **Descripcion del Evento Original:** El plan de alineacion de relojes seguia en la raiz del repo, fuera de la boveda `.claude/`, aunque es conocimiento operativo principalmente para humanos y agentes de mantenimiento.
+- **Accion Realizada/Correccion:** Se movio la version canonica a `.claude/operations/CLOCK_ALIGNMENT_TODO.md`, se añadieron metadatos/links de Obsidian y el vault pasa a indexarlo desde `AGENT_DOCS_INDEX`.
+- **Nueva/Modificada Regla o Directriz:** Los TODOs operativos agenticos deben residir canonicamente dentro de `.claude/` para quedar incluidos en navegacion, backlinks y flujo RAG compartido.
+- **Justificacion:** Evita perder backlog operativo fuera del grafo del vault y unifica la memoria de mantenimiento en una sola superficie visual.

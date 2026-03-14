@@ -402,7 +402,9 @@ export default function S07_LightningNodesMap() {
               <button
                 type="button"
                 onClick={() => setIsDensityExpanded((prev) => !prev)}
-                className="visual-integrity-lock absolute left-3 top-3 z-[1001] rounded border border-white/15 bg-[#080808]/90 px-2 py-1 font-mono text-[11px] text-white/80 backdrop-blur-sm"
+                className="visual-integrity-lock absolute left-3 top-3 z-[1001] min-h-[40px] rounded border border-white/15 bg-[#080808]/90 px-3 py-2 font-mono text-[12px] text-white/80 backdrop-blur-sm"
+                aria-expanded={showDensityLegend}
+                aria-controls="s07-density-legend"
               >
                 {isDensityExpanded ? '◧' : '◨'} Density
               </button>
@@ -412,10 +414,10 @@ export default function S07_LightningNodesMap() {
               const activeScale = viewMode === 'perCapita' ? activePerCapitaScale : NODE_DENSITY_SCALE;
               const legendTitle = viewMode === 'perCapita' ? 'Per-capita Lightning density' : 'Lightning node concentration';
               return (
-                <div className={`visual-integrity-lock absolute z-[1000] rounded border border-white/15 bg-[#080808]/88 px-2.5 py-2 font-mono text-[11px] backdrop-blur-sm ${isCompactViewport ? 'left-3 top-12' : 'left-3 top-3 sm:left-4 sm:top-4'}`}>
+                <div id="s07-density-legend" className={`visual-integrity-lock absolute z-[1000] max-w-[calc(100%-1.5rem)] rounded border border-white/15 bg-[#080808]/88 px-3 py-2.5 font-mono text-[12px] backdrop-blur-sm ${isCompactViewport ? 'left-3 top-14' : 'left-3 top-3 sm:left-4 sm:top-4'}`}>
                   <div className="mb-0.5 text-white/75">{legendTitle}</div>
                   {viewMode === 'perCapita' && (
-                    <div className="mb-1.5 text-white/40" style={{ fontSize: '9px' }}>nodes per million inhabitants</div>
+                    <div className="mb-1.5 text-[11px] text-white/40">nodes per million inhabitants</div>
                   )}
                   <div className="flex flex-wrap items-center gap-2.5">
                     {activeScale.map((step) => (
@@ -433,7 +435,7 @@ export default function S07_LightningNodesMap() {
         )}
       </div>
 
-      <aside className="visual-integrity-lock flex h-[42%] w-full flex-none flex-col border-t border-white/10 bg-[#111111] lg:h-auto lg:w-[300px] lg:border-l lg:border-t-0">
+      <aside className="visual-integrity-lock relative flex h-[42%] min-h-0 w-full flex-none flex-col border-t border-white/10 bg-[#111111] lg:h-auto lg:w-[300px] lg:border-l lg:border-t-0">
         <div className="border-b border-white/10 px-4 py-3 font-mono text-[12px] tracking-wide text-white/60">
           Global Lightning Network
         </div>
@@ -443,7 +445,9 @@ export default function S07_LightningNodesMap() {
             <button
               type="button"
               onClick={() => setIsBreakdownExpanded((prev) => !prev)}
-              className="flex w-full items-center justify-between rounded border border-white/10 bg-white/[0.02] px-2 py-1.5 text-left font-mono text-[11px] text-white/70 transition hover:border-white/20"
+              className="flex min-h-[42px] w-full items-center justify-between rounded border border-white/10 bg-white/[0.02] px-3 py-2 text-left font-mono text-[12px] text-white/70 transition hover:border-white/20"
+              aria-expanded={showBreakdownPanel}
+              aria-controls="s07-breakdown-panel"
             >
               <span>Network summary (Tor excluded) · {fmt.num(totals.nodes)} nodes</span>
               <span style={{ color: UI_COLORS.lightning }}>{isBreakdownExpanded ? 'Hide' : 'Show'}</span>
@@ -451,7 +455,7 @@ export default function S07_LightningNodesMap() {
           )}
 
           {showBreakdownPanel && (
-            <div className={`${isCompactViewport ? 'mt-2' : ''} grid grid-cols-2 gap-1.5 font-mono text-[11px]`}>
+            <div id="s07-breakdown-panel" className={`${isCompactViewport ? 'mt-2' : ''} grid grid-cols-2 gap-1.5 font-mono text-[12px]`}>
               <div className="rounded border border-white/10 bg-white/[0.02] px-2 py-1">
                 <div className="text-white/50">Nodes</div>
                 <div className="text-white/85">{fmt.num(totals.nodes)}</div>
@@ -477,7 +481,7 @@ export default function S07_LightningNodesMap() {
             <button
               type="button"
               onClick={() => setViewMode('country')}
-              className="flex-1 rounded border px-2 py-1 font-mono text-[10px] transition"
+               className="flex-1 rounded border px-3 py-2 font-mono text-[12px] transition"
               style={viewMode === 'country'
                 ? { borderColor: UI_COLORS.lightning, color: UI_COLORS.lightning, backgroundColor: 'rgba(59,163,255,0.1)' }
                 : { borderColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', backgroundColor: 'transparent' }}
@@ -487,7 +491,7 @@ export default function S07_LightningNodesMap() {
             <button
               type="button"
               onClick={() => setViewMode('perCapita')}
-              className="flex-1 rounded border px-2 py-1 font-mono text-[10px] transition"
+               className="flex-1 rounded border px-3 py-2 font-mono text-[12px] transition"
               style={viewMode === 'perCapita'
                 ? { borderColor: UI_COLORS.lightning, color: UI_COLORS.lightning, backgroundColor: 'rgba(59,163,255,0.1)' }
                 : { borderColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', backgroundColor: 'transparent' }}
@@ -497,7 +501,7 @@ export default function S07_LightningNodesMap() {
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-3 py-2">
+        <div className="scrollbar-hidden-mobile min-h-0 flex-1 overflow-y-auto px-3 py-2">
           {isLoading ? (
             <div className="space-y-2">
               {Array.from({ length: 10 }).map((_, i) => (
@@ -520,11 +524,11 @@ export default function S07_LightningNodesMap() {
                   >
                     <span className="flex min-w-0 items-center gap-1.5">
                       <span className="inline-block h-2 w-2 flex-none rounded-sm" style={{ background: dotColor, boxShadow: `0 0 4px ${dotColor}` }} />
-                      <span className="truncate font-mono text-[11px]" style={{ color: 'rgba(255,255,255,0.8)' }}>
+                      <span className="truncate font-mono text-[12px] sm:text-[13px]" style={{ color: 'rgba(255,255,255,0.8)' }}>
                         {item.country_label}
                       </span>
                     </span>
-                    <span className="flex-none font-mono text-[11px]" style={{ color: dotColor }}>
+                    <span className="flex-none font-mono text-[12px] sm:text-[13px]" style={{ color: dotColor }}>
                       {valueLabel}
                     </span>
                   </div>
@@ -534,11 +538,13 @@ export default function S07_LightningNodesMap() {
           )}
         </div>
 
-        <div className="border-t border-white/10 px-3 py-2 font-mono text-[11px]">
+        <div className="relative border-t border-white/10 px-3 py-2 font-mono text-[11px]">
           <button
             type="button"
             onClick={() => setIsMetaExpanded((prev) => !prev)}
-            className="w-full rounded border border-white/10 bg-white/[0.03] px-2 py-1.5 text-left text-white/75 transition hover:border-white/20 lg:hidden"
+            className="w-full rounded border border-white/10 bg-white/[0.03] px-3 py-2 text-left text-[12px] text-white/75 transition hover:border-white/20 lg:hidden"
+            aria-expanded={isMetaExpanded}
+            aria-controls="s07-meta-panel"
           >
             Data info {isMetaExpanded ? 'Hide' : 'Show'}
           </button>
@@ -567,14 +573,16 @@ export default function S07_LightningNodesMap() {
             <button
               type="button"
               onClick={() => setIsMetaExpanded((prev) => !prev)}
-              className="ml-auto rounded border border-white/10 bg-white/[0.02] px-1.5 py-0.5 text-white/70 transition hover:border-white/20"
+              className="ml-auto rounded border border-white/10 bg-white/[0.02] px-2 py-1 text-white/70 transition hover:border-white/20"
+              aria-expanded={isMetaExpanded}
+              aria-controls="s07-meta-panel"
             >
               {isMetaExpanded ? 'Less' : 'Details'}
             </button>
           </div>
 
           {isMetaExpanded && (
-            <div className="mt-2 rounded border border-white/10 bg-white/[0.02] px-2 py-1.5 text-white/55">
+            <div id="s07-meta-panel" className="scrollbar-hidden-mobile absolute inset-x-3 bottom-[calc(100%+0.5rem)] z-20 max-h-[min(42vh,20rem)] overflow-y-auto rounded border border-white/10 bg-[#111111]/96 px-2 py-1.5 text-white/55 shadow-[0_14px_36px_rgba(0,0,0,0.42)] backdrop-blur-sm lg:static lg:inset-auto lg:bottom-auto lg:mt-2 lg:max-h-none lg:overflow-visible lg:bg-white/[0.02] lg:shadow-none lg:backdrop-blur-0">
               <div>
                 Source:{' '}
                 <a href="https://mempool.space/graphs/lightning/nodes-channels-map" target="_blank" rel="noreferrer" style={{ color: UI_COLORS.lightningSoft, textDecoration: 'none' }}>

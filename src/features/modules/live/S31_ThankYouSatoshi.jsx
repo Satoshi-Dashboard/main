@@ -97,7 +97,7 @@ export default function S31_ThankYouSatoshi() {
     <>
       {/* ── FULL VIEWPORT WRAPPER ── */}
       {/* mobile/tablet: scrollable from top; desktop: vertically centered */}
-      <div className="flex h-full w-full items-start justify-center overflow-y-auto bg-[#111111] lg:items-center">
+      <div className="flex h-full w-full items-start justify-center bg-[#111111] lg:items-center">
 
         {/* ── CONTENT BLOCK — breathing room on all 4 sides ── */}
         <div className="w-full max-w-[1240px] px-5 py-6 pb-20 sm:px-9 sm:py-8 sm:pb-24 lg:px-14 lg:py-8 lg:pb-16 xl:px-20 xl:py-10 xl:pb-18">

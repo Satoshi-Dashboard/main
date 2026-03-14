@@ -191,11 +191,24 @@ function fmtPrice(price) {
   if (price >= 1_000)     return Math.round(price).toLocaleString('en-US');
   return price.toFixed(2);
 }
-function CurrencyMetric({ value }) {
+function CurrencyMetric({ value, className = '' }) {
   if (!Number.isFinite(value)) return '--';
-  if (value >= 1_000_000) return <AnimatedMetric value={value} variant="compact" decimals={2} inline />;
-  if (value >= 1_000) return <AnimatedMetric value={value} variant="number" decimals={0} inline />;
-  return <AnimatedMetric value={value} variant="number" decimals={2} inline />;
+  if (value >= 1_000_000) return <AnimatedMetric value={value} variant="compact" decimals={2} inline justify="end" align="center" className={className} />;
+  if (value >= 1_000) return <AnimatedMetric value={value} variant="number" decimals={0} inline justify="end" align="center" className={className} />;
+  return <AnimatedMetric value={value} variant="number" decimals={2} inline justify="end" align="center" className={className} />;
+}
+
+function formatCurrencyValueStatic(value) {
+  if (!Number.isFinite(value)) return '--';
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(2)}M`;
+  if (value >= 1_000) return Math.round(value).toLocaleString('en-US');
+  return value.toFixed(2);
+}
+
+function formatPercentStatic(value) {
+  if (!Number.isFinite(value)) return '--';
+  const sign = value > 0 ? '+' : '';
+  return `${sign}${value.toFixed(2)}%`;
 }
 
 // ─── Canvas renderer ──────────────────────────────────────────────────────────
@@ -347,7 +360,7 @@ function renderGlobe(canvas, elapsed, dots, bandData) {
 }
 
 // ─── Ticker item ──────────────────────────────────────────────────────────────
-function TickerItem({ code, change }) {
+function TickerItem({ code, change, useStaticMetrics = false }) {
   const hasChange = Number.isFinite(change);
   const up = hasChange ? change >= 0 : null;
   return (
@@ -362,7 +375,9 @@ function TickerItem({ code, change }) {
       </span>
       <span style={{ color: '#bbb', fontWeight: 700 }}>{code}</span>
       <span style={{ color: up == null ? UI_COLORS.textTertiary : (up ? UI_COLORS.positive : UI_COLORS.negative) }}>
-        <AnimatedMetric value={change} variant="percent" decimals={2} signed inline color={up == null ? UI_COLORS.textTertiary : (up ? UI_COLORS.positive : UI_COLORS.negative)} />
+        {useStaticMetrics
+          ? formatPercentStatic(change)
+          : <AnimatedMetric value={change} variant="percent" decimals={2} signed inline justify="end" align="center" color={up == null ? UI_COLORS.textTertiary : (up ? UI_COLORS.positive : UI_COLORS.negative)} />}
       </span>
     </span>
   );
@@ -382,6 +397,7 @@ export default function S03_MultiCurrencyBoard() {
   const [lastUpdatedAt, setLastUpdatedAt] = useState(() => new Date());
   const [sourceLabel, setSourceLabel] = useState('/API/BTC/RATES + INVESTING');
   const showDesktopOverlay = useMediaQuery('(min-width: 1024px)');
+  const useStaticResponsiveMetrics = useMediaQuery('(max-width: 1023px)');
 
   // Multi-currency fetch via internal TradingEconomics scraper cache.
   useEffect(() => {
@@ -499,8 +515,8 @@ export default function S03_MultiCurrencyBoard() {
           opacity: isPriceLoading ? 0 : 1,
           transition: 'opacity 0.4s ease',
         }}>
-          {tickerItems.map((c, i) => (
-            <TickerItem key={i} code={c.code} change={c.change} />
+            {tickerItems.map((c, i) => (
+            <TickerItem key={i} code={c.code} change={c.change} useStaticMetrics={useStaticResponsiveMetrics} />
           ))}
         </div>
       </div>
@@ -520,7 +536,7 @@ export default function S03_MultiCurrencyBoard() {
           />
 
           {showDesktopOverlay && (
-            <div className="visual-integrity-lock absolute bottom-3 left-3 z-10 rounded border border-white/10 bg-[#080808]/90 px-2 py-1.5 text-left font-mono text-[11px] tracking-wide text-[#7c7c7c]">
+            <div className="visual-integrity-lock absolute bottom-3 left-3 z-10 rounded border border-white/10 bg-[#080808]/90 px-3 py-2 text-left font-mono text-[12px] tracking-wide text-[#7c7c7c]">
               <div>
                 <span>src: </span>
                 {parseOverlayProviders(sourceLabel).map((provider, index, arr) => (
@@ -539,14 +555,14 @@ export default function S03_MultiCurrencyBoard() {
         </div>
 
         {/* Right panel */}
-        <div className="visual-integrity-lock h-[clamp(220px,42%,360px)] flex flex-none flex-col border-t border-[#1a1a1a] bg-[#111111] lg:h-auto lg:w-[clamp(180px,22vw,260px)] lg:border-l lg:border-t-0">
+        <div className="visual-integrity-lock flex h-[min(40vh,360px)] min-h-[280px] flex-none flex-col border-t border-[#1a1a1a] bg-[#111111] sm:h-[min(42vh,420px)] sm:min-h-[320px] lg:h-auto lg:min-h-0 lg:w-[clamp(180px,22vw,260px)] lg:border-l lg:border-t-0">
           <div style={{ padding: '8px 10px', borderBottom: '1px solid #1a1a1a' }}>
             <div style={{
               display: 'flex', alignItems: 'center', gap: 6,
               background: '#141418', border: '1px solid #252530',
-              borderRadius: 5, padding: '4px 8px',
+              borderRadius: 8, padding: '8px 10px', minHeight: 42,
             }}>
-              <span style={{ color: '#444', fontSize: 11 }}>⌕</span>
+              <span style={{ color: '#444', fontSize: 12 }}>⌕</span>
               <input
                 value={search}
                 onChange={e => setSearch(e.target.value)}
@@ -554,7 +570,7 @@ export default function S03_MultiCurrencyBoard() {
                 style={{
                   background: 'transparent', border: 'none', outline: 'none',
                   color: '#aaa', fontFamily: 'monospace',
-                  fontSize: 'var(--fs-micro)',
+                  fontSize: 'var(--fs-caption)',
                   width: '100%',
                 }}
                 />
@@ -562,9 +578,10 @@ export default function S03_MultiCurrencyBoard() {
           </div>
 
           <div
-            className="scrollbar-hidden-mobile flex-1 overflow-y-auto"
+            className="scrollbar-hidden-mobile min-h-0 flex-1 overflow-y-auto pb-3"
             style={{
               scrollbarWidth: 'thin', scrollbarColor: '#2a2a2a transparent',
+              WebkitOverflowScrolling: 'touch',
               opacity: isPriceLoading ? 0 : 1,
               transition: 'opacity 0.4s ease',
             }}
@@ -575,7 +592,7 @@ export default function S03_MultiCurrencyBoard() {
               return (
                 <div key={c.code} style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '5px 10px', borderBottom: '1px solid #141418',
+                  padding: '8px 10px', borderBottom: '1px solid #141418', minHeight: 46,
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
                     <div style={{
@@ -584,19 +601,21 @@ export default function S03_MultiCurrencyBoard() {
                     }} />
                     <span style={{
                       color: '#bbb', fontFamily: 'monospace',
-                      fontSize: 'var(--fs-micro)', fontWeight: 700,
+                      fontSize: 'var(--fs-caption)', fontWeight: 700,
                     }}>{c.code}</span>
                   </div>
-                  <div style={{ textAlign: 'right', minWidth: 84 }}>
+                  <div style={{ textAlign: 'right', minWidth: 96, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
                     <div style={{
                       color: '#eee', fontFamily: 'monospace',
-                      fontSize: 'var(--fs-micro)', fontWeight: 600, minHeight: '1.2em',
-                    }}><CurrencyMetric value={c.price} /></div>
+                      fontSize: 'var(--fs-caption)', fontWeight: 600, minHeight: '1.2em', display: 'flex', justifyContent: 'flex-end', alignItems: 'center',
+                      width: '100%',
+                    }}>{useStaticResponsiveMetrics ? formatCurrencyValueStatic(c.price) : <CurrencyMetric value={c.price} className="w-full" />}</div>
                     <div style={{
                       color: up == null ? UI_COLORS.textTertiary : (up ? UI_COLORS.positive : UI_COLORS.negative),
                       fontFamily: 'monospace',
-                      fontSize: 'var(--fs-tag)', minHeight: '1.1em',
-                    }}><AnimatedMetric value={c.change} variant="percent" decimals={2} signed inline color={up == null ? UI_COLORS.textTertiary : (up ? UI_COLORS.positive : UI_COLORS.negative)} /></div>
+                      fontSize: 'var(--fs-tag)', minHeight: '1.1em', display: 'flex', justifyContent: 'flex-end', alignItems: 'center',
+                      width: '100%',
+                    }}>{useStaticResponsiveMetrics ? formatPercentStatic(c.change) : <AnimatedMetric value={c.change} variant="percent" decimals={2} signed inline justify="end" align="center" className="w-full" color={up == null ? UI_COLORS.textTertiary : (up ? UI_COLORS.positive : UI_COLORS.negative)} />}</div>
                   </div>
                 </div>
               );

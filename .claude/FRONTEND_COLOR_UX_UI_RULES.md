@@ -1,3 +1,17 @@
+---
+aliases:
+  - Frontend UX UI Policy
+  - Frontend Color Rules
+tags:
+  - claude/policy
+  - claude/frontend
+  - claude/rag-source
+note_type: policy
+domain: frontend
+agent_priority: high
+source_status: canonical-local
+---
+
 # Regla Universal de Automejora y Actualización Continua de Documentos de Reglas
 
 **Objetivo Primordial:** Este documento y **todos los demás archivos `.md` que contienen reglas, directrices o conocimientos operativos** deben ser actualizados proactivamente por el Agente de IA. La actualización se activará cada vez que se identifique y corrija un error (en código generado, recomendaciones, datos procesados, o en la aplicación de las propias reglas), o cuando se detecte una oportunidad significativa de mejora en la eficacia o el conocimiento del Agente. El propósito central es que el Agente de IA aprenda continuamente de sus experiencias, optimizando sus directrices internas, su coherencia y su relevancia a través de todos los documentos de conocimiento.
@@ -20,6 +34,13 @@
 ## Addendum Skills-First de Autoridad Tecnica
 
 Las skills instaladas en `.claude/skills/` son la base tecnica primaria para UI review, performance React/Vercel y composicion de componentes. Este archivo aterriza esa base al lenguaje visual real del dashboard: semantica de color, responsive, copy en ingles, integridad visual y reglas de modulos.
+
+## Obsidian Context
+
+- Home: [[VAULT_HOME]]
+- Retrieval: [[RAG_OPERATING_SYSTEM]]
+- Policy cluster: [[POLICY_INDEX]]
+- Related: [[MODULE_REGISTRY_RULES]], [[SKILLS_INDEX]], [[KNOWLEDGE_GRAPH]]
 
 ## Frontend Color UX/UI Rules (Strict)
 
@@ -603,3 +624,19 @@ When creating any new frontend module, agents must follow the project example pa
 - **Accion Realizada/Correccion:** Se introdujeron hooks compartidos de viewport, variantes explicitas para metadata del shell y imports directos de iconos en rutas activas para reducir listeners y bundle surface.
 - **Nueva/Modificada Regla o Directriz:** Los cambios frontend deben preferir hooks compartidos para viewport/responsive state, imports directos de iconos en rutas shipped y variantes de shell explicitas antes que bloques inline duplicados.
 - **Justificacion:** Reduce coste del chunk inicial, evita drift de comportamiento responsive y deja un patron mas reutilizable para futuras superficies del dashboard.
+
+- **Fecha de la Actualizacion:** `2026-03-13`
+- **Archivo(s) Afectado(s):** `.claude/FRONTEND_COLOR_UX_UI_RULES.md`
+- **Tipo de Evento/Contexto:** Adaptacion de politica a vault Obsidian y flujo RAG
+- **Descripcion del Evento Original:** La politica frontend era extensa pero no estaba preparada para navegacion jerarquica por Obsidian ni discovery uniforme mediante metadata y enlaces locales.
+- **Accion Realizada/Correccion:** Se añadió frontmatter compatible con Obsidian y un bloque de contexto con enlaces al home del vault, al sistema RAG y a notas relacionadas.
+- **Nueva/Modificada Regla o Directriz:** Esta politica frontend debe mantenerse como nota canonica enlazada y etiquetada dentro del vault `.claude/` para que humans y agentes la recuperen desde el mismo grafo de conocimiento.
+- **Justificacion:** Mejora la localizacion de reglas visuales criticas, evita notas huerfanas y hace mas fiable la recuperacion contextual antes de cambios UX/UI.
+
+- **Fecha de la Actualizacion:** `2026-03-13`
+- **Archivo(s) Afectado(s):** `.claude/FRONTEND_COLOR_UX_UI_RULES.md`
+- **Tipo de Evento/Contexto:** Auditoria UX/UI general y responsive con correccion transversal
+- **Descripcion del Evento Original:** La auditoria basada en skills detecto scroll vertical anidado en responsive, barras fijas sin safe-area, controles pequenos en mapas/SEO, falta de estados `focus-visible`, toggles sin `aria-expanded` y una jerarquia de titulos/meta inconsistente entre shell y modulos.
+- **Accion Realizada/Correccion:** Se consolidaron mejoras de shell y modulos: safe-area en top/bottom bars, foco visible global, reduccion de nested scroll en movil, aumento de targets tipograficos/tactiles, metadata responsive menos invasiva, toggles con atributos ARIA y CTAs/tablas editoriales mas utilizables en pantallas pequenas.
+- **Nueva/Modificada Regla o Directriz:** Todo ajuste frontend debe validar de forma conjunta cuatro capas: 1) un solo scroll owner en movil/tablet, 2) barras fijas compatibles con safe-area, 3) controles con `focus-visible` y estado ARIA cuando expanden/colapsan contenido, y 4) superficies editoriales/SEO sin depender de tablas o links demasiado pequenos para touch.
+- **Justificacion:** Evita que la UI parezca correcta solo en desktop, mejora accesibilidad real y reduce regresiones donde shell, modulos densos y paginas editoriales se rompen por separado en responsive.

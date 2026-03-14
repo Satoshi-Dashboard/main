@@ -219,7 +219,7 @@ export default function S12_AddressDistribution() {
           ))}
         </div>
 
-        <div className="flex h-full flex-col gap-2 overflow-y-auto lg:hidden">
+        <div className="flex h-full flex-col gap-2 lg:hidden">
           {tiers.map((tier) => (
             <article
               key={tier.name}

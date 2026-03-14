@@ -379,7 +379,7 @@ export default function S04_MempoolGauge() {
   const isNode = activeSource === 'node';
 
   return (
-    <div className="visual-integrity-lock flex h-full w-full flex-col items-center justify-start gap-3 overflow-y-auto bg-[#111111] px-3 py-3 sm:gap-4 sm:px-4 sm:py-4">
+    <div className="visual-integrity-lock flex h-full w-full flex-col items-center justify-start gap-3 bg-[#111111] px-3 py-3 sm:gap-4 sm:px-4 sm:py-4">
       <div className="text-center">
         <div className="font-mono font-bold uppercase tracking-[0.2em]" style={{ fontSize: 'var(--fs-heading)', color: UI_COLORS.brand }}>
           MEMPOOL STATUS

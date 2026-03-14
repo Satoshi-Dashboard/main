@@ -142,7 +142,7 @@ export default function S09_LightningNetwork() {
       </div>
 
       {/* Dot grid */}
-      <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden">
+      <div className="flex min-h-0 flex-1 items-center justify-center overflow-visible px-1">
         {hasData ? <SatGrid sats={sats} /> : <SkeletonSatGrid />}
       </div>
 

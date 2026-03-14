@@ -138,18 +138,18 @@ export default function SeoLandingPage() {
             The main product still lives at the root URL. The landing page and blog simply give broader search traffic a calmer entry point before moving people into the live dashboard or a specific module.
           </p>
 
-          <div className="mt-8 flex flex-wrap gap-6 text-[12px] uppercase tracking-[0.18em] text-white/66">
+          <div className="mt-8 flex flex-wrap gap-3 text-[12px] uppercase tracking-[0.18em] text-white/66 sm:gap-4">
             <Link
               to={getModulePath(FIRST_MODULE)}
               onClick={() => trackLandingCtaClick({ label: 'Open dashboard', destination: getModulePath(FIRST_MODULE), section: 'hero-cta' })}
-              className="border-b border-[color:var(--accent-bitcoin)] pb-1 text-white transition hover:text-[color:var(--accent-bitcoin)]"
+              className="inline-flex min-h-[44px] items-center rounded-full border border-[color:var(--accent-bitcoin)] px-4 py-2 text-white transition hover:bg-[rgba(247,147,26,0.08)] hover:text-[color:var(--accent-bitcoin)]"
             >
               Open dashboard
             </Link>
             <Link
               to={SEO_BLOG_PATH}
               onClick={() => trackLandingCtaClick({ label: 'Open blog', destination: SEO_BLOG_PATH, section: 'hero-cta' })}
-              className="border-b border-white/20 pb-1 transition hover:text-white"
+              className="inline-flex min-h-[44px] items-center rounded-full border border-white/20 px-4 py-2 transition hover:border-white/35 hover:text-white"
             >
               Open blog
             </Link>
@@ -238,7 +238,7 @@ export default function SeoLandingPage() {
           body="The Spanish keyword phrases stay here intentionally because they help capture search demand. The surrounding explanatory copy remains in English so the interface keeps one primary language."
         />
 
-        <div className="overflow-x-auto">
+        <div className="hidden overflow-x-auto md:block">
           <table className="min-w-full border-collapse text-left text-[13px] sm:text-[14px]">
             <thead>
               <tr className="border-b border-white/8 text-[11px] uppercase tracking-[0.18em] text-white/40">
@@ -265,6 +265,28 @@ export default function SeoLandingPage() {
               ))}
             </tbody>
           </table>
+        </div>
+
+        <div className="grid gap-3 md:hidden">
+          {SEO_KEYWORD_ROWS.map((row) => (
+            <article key={row.keyword} className="rounded-2xl border border-white/8 bg-white/[0.02] p-4">
+              <div className="font-mono text-[11px] uppercase tracking-[0.18em] text-[color:var(--accent-bitcoin)]">{row.category}</div>
+              <div className="mt-2 text-[15px] leading-7 text-white">{row.keyword}</div>
+              <div className="mt-3 grid grid-cols-2 gap-2 text-[13px] text-white/60">
+                <div>
+                  <div className="text-white/35">Language</div>
+                  <div>{row.language}</div>
+                </div>
+                <div>
+                  <div className="text-white/35">Intent</div>
+                  <div>{row.intent}</div>
+                </div>
+              </div>
+              <Link to={row.pagePath} className="mt-4 inline-flex min-h-[42px] items-center rounded-full border border-[color:var(--accent-bitcoin)] px-4 py-2 text-[12px] uppercase tracking-[0.18em] text-[color:var(--accent-bitcoin)] transition hover:bg-[rgba(247,147,26,0.08)] hover:text-white">
+                {row.pageLabel}
+              </Link>
+            </article>
+          ))}
         </div>
       </section>
 

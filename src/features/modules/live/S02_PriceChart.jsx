@@ -263,7 +263,7 @@ export default function S02_PriceChart() {
           type="button"
           onClick={() => setShowAvgLine(v => !v)}
           disabled={!hasAvg}
-          className="relative flex w-full flex-shrink-0 items-center justify-end gap-1.5 self-start pb-1.5 font-mono transition-colors disabled:cursor-not-allowed disabled:opacity-25 sm:w-auto sm:justify-start"
+          className="relative flex min-h-[40px] w-full flex-shrink-0 items-center justify-end gap-1.5 self-start rounded-md px-2 pb-1.5 pt-1 font-mono transition-colors disabled:cursor-not-allowed disabled:opacity-25 sm:min-h-[36px] sm:w-auto sm:justify-start"
           style={{
             fontSize: '0.78rem',
             fontWeight: showAvgLine ? 700 : 400,
@@ -314,7 +314,7 @@ export default function S02_PriceChart() {
 
       {/* ── Range Tabs ── */}
       <div
-        className="flex-shrink-0 flex items-center gap-5 overflow-x-auto"
+        className="scrollbar-hidden-mobile flex flex-shrink-0 items-center gap-3 overflow-x-auto sm:gap-5"
         style={{ margin: '14px 0 16px', paddingBottom: 2 }}
       >
         {RANGES.map(({ label, live }) => {
@@ -324,9 +324,9 @@ export default function S02_PriceChart() {
               key={label}
               type="button"
               onClick={() => setActiveLabel(label)}
-              className="relative flex flex-shrink-0 items-center gap-1.5 pb-1.5 font-mono transition-colors"
+              className="relative flex min-h-[40px] flex-shrink-0 items-center gap-1.5 rounded-md px-2 pb-1.5 pt-1 font-mono transition-colors sm:min-h-[36px]"
               style={{
-                fontSize: '0.78rem',
+                fontSize: '0.82rem',
                 fontWeight: isActive ? 700 : 400,
                 color: isActive ? 'white' : 'rgba(255,255,255,0.32)',
                 letterSpacing: '0.05em',

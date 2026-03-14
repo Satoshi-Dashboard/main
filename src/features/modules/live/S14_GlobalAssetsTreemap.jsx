@@ -55,7 +55,7 @@ function StackedBar({ data }) {
   const totalPct = data.reduce((s, d) => s + (Number.isFinite(d.pct_total) ? d.pct_total : 0), 0) || 100;
 
   // 1% visual minimum per segment, then re-normalize so all widths still sum to 100%
-  const MIN_VIS = 1; // percent
+  const MIN_VIS = 2.4; // percent
   const rawSegs = data.map(asset => {
     const pct = Number.isFinite(asset.pct_total) ? asset.pct_total : 0;
     return { asset, pct, visW: Math.max((pct / totalPct) * 100, MIN_VIS) };
@@ -65,7 +65,7 @@ function StackedBar({ data }) {
 
   return (
     <div className="relative">
-      <div className="flex w-full overflow-hidden rounded-lg border border-white/10 h-7 sm:h-8">
+      <div className="flex w-full overflow-hidden rounded-lg border border-white/10 h-8 sm:h-9">
         {segments.map(({ asset, pct, normW }) => (
           <div
             key={asset.id}
@@ -109,6 +109,18 @@ function StackedBar({ data }) {
           <span style={{ color: hovered.color, fontWeight: 700 }}>{hovered.pct.toFixed(2)}%</span>
         </div>
       )}
+
+      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {data.map((asset) => (
+          <div key={asset.id} className="rounded-md border border-white/8 bg-white/[0.03] px-2 py-1.5 font-mono text-[11px] text-white/72 sm:text-[12px]">
+            <div className="flex items-center gap-1.5">
+              <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: asset.color }} />
+              <span className="truncate text-white/86">{asset.name}</span>
+            </div>
+            <div className="mt-1 tabular-nums" style={{ color: asset.color }}>{Number.isFinite(asset.pct_total) ? `${asset.pct_total.toFixed(2)}%` : '—'}</div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

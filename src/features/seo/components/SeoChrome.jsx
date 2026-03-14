@@ -10,17 +10,17 @@ const NAV_LINKS = [
 
 function navClassName({ isActive }) {
   return [
-    'border-b pb-1 text-[12px] tracking-[0.16em] uppercase transition',
+    'inline-flex min-h-[42px] items-center rounded-full border px-4 py-2 text-[12px] tracking-[0.16em] uppercase transition sm:min-h-[38px]',
     isActive
-      ? 'border-[color:var(--accent-bitcoin)] text-white'
-      : 'border-transparent text-white/56 hover:text-white',
+      ? 'border-[color:var(--accent-bitcoin)] bg-[rgba(247,147,26,0.08)] text-white'
+      : 'border-white/10 text-white/56 hover:border-white/20 hover:text-white',
   ].join(' ');
 }
 
 export default function SeoChrome({ children }) {
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] text-[color:var(--text-primary)]">
-      <div className="mx-auto max-w-6xl px-5 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-6xl px-5 sm:px-6 lg:px-8" style={{ paddingLeft: 'max(1.25rem, calc(var(--safe-left) + 1rem))', paddingRight: 'max(1.25rem, calc(var(--safe-right) + 1rem))' }}>
         <header className="border-b border-white/8 py-5 sm:py-6">
           <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
             <div className="space-y-2">
@@ -39,7 +39,7 @@ export default function SeoChrome({ children }) {
               </p>
             </div>
 
-            <nav className="flex flex-wrap items-center gap-5">
+            <nav className="flex flex-wrap items-center gap-3 sm:gap-4">
               {NAV_LINKS.map((item) => (
                 <NavLink
                   key={item.to}
@@ -68,10 +68,10 @@ export default function SeoChrome({ children }) {
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-5 text-[12px] uppercase tracking-[0.16em] text-white/58">
-              <Link to="/" onClick={() => trackSeoNavigationClick({ label: 'Open dashboard', destination: '/', surface: 'seo-footer-nav' })} className="transition hover:text-white">Open dashboard</Link>
-              <Link to={SEO_HUB_PATH} onClick={() => trackSeoNavigationClick({ label: 'Open landing', destination: SEO_HUB_PATH, surface: 'seo-footer-nav' })} className="transition hover:text-white">Open landing</Link>
-              <Link to={SEO_BLOG_PATH} onClick={() => trackSeoNavigationClick({ label: 'Read blog', destination: SEO_BLOG_PATH, surface: 'seo-footer-nav' })} className="transition hover:text-white">Read blog</Link>
+            <div className="flex flex-wrap gap-3 text-[12px] uppercase tracking-[0.16em] text-white/58 sm:gap-4">
+              <Link to="/" onClick={() => trackSeoNavigationClick({ label: 'Open dashboard', destination: '/', surface: 'seo-footer-nav' })} className="inline-flex min-h-[42px] items-center rounded-full border border-white/10 px-4 py-2 transition hover:border-white/20 hover:text-white">Open dashboard</Link>
+              <Link to={SEO_HUB_PATH} onClick={() => trackSeoNavigationClick({ label: 'Open landing', destination: SEO_HUB_PATH, surface: 'seo-footer-nav' })} className="inline-flex min-h-[42px] items-center rounded-full border border-white/10 px-4 py-2 transition hover:border-white/20 hover:text-white">Open landing</Link>
+              <Link to={SEO_BLOG_PATH} onClick={() => trackSeoNavigationClick({ label: 'Read blog', destination: SEO_BLOG_PATH, surface: 'seo-footer-nav' })} className="inline-flex min-h-[42px] items-center rounded-full border border-white/10 px-4 py-2 transition hover:border-white/20 hover:text-white">Read blog</Link>
             </div>
           </div>
         </footer>

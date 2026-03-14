@@ -76,9 +76,9 @@ export default function SeoBlogPostPage() {
       <article className="mx-auto max-w-4xl">
         <header className="border-b border-white/8 pb-12 sm:pb-14 lg:pb-16">
           <div className="flex flex-wrap items-center gap-3 font-mono text-[11px] uppercase tracking-[0.18em] text-white/42 sm:text-[12px]">
-            <Link to={SEO_HUB_PATH} className="transition hover:text-white">Landing</Link>
+            <Link to={SEO_HUB_PATH} className="inline-flex min-h-[36px] items-center rounded-full px-2 transition hover:text-white">Landing</Link>
             <span>/</span>
-            <Link to={SEO_BLOG_PATH} className="transition hover:text-white">Blog</Link>
+            <Link to={SEO_BLOG_PATH} className="inline-flex min-h-[36px] items-center rounded-full px-2 transition hover:text-white">Blog</Link>
             <span>/</span>
             <span>{post.readTime}</span>
           </div>
@@ -178,7 +178,7 @@ export default function SeoBlogPostPage() {
                   <p className="mt-3 text-[14px] leading-7 text-white/60">{item.excerpt}</p>
                 </div>
                 <div className="md:text-right">
-                  <Link to={getBlogPostPath(item.slug)} className="border-b border-[color:var(--accent-bitcoin)] pb-1 text-[12px] uppercase tracking-[0.18em] text-[color:var(--accent-bitcoin)] transition hover:text-white">
+                  <Link to={getBlogPostPath(item.slug)} className="inline-flex min-h-[42px] items-center rounded-full border border-[color:var(--accent-bitcoin)] px-4 py-2 text-[12px] uppercase tracking-[0.18em] text-[color:var(--accent-bitcoin)] transition hover:bg-[rgba(247,147,26,0.08)] hover:text-white">
                     Read next
                   </Link>
                 </div>

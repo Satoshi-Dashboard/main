@@ -359,6 +359,7 @@ export default function ModulePage({ forcedSlug = null }) {
   const showBottomMeta = showSharedMeta && isResponsiveViewport;
   const useResponsiveScroll = isResponsiveViewport && (showBottomMeta || moduleMeta?.responsiveScroll === true);
   const metaLastAt = new Date(metaLastAtMs);
+  const stripTitle = moduleMeta?.showTitleInStrip === false ? '' : (moduleMeta?.stripTitle || module.title);
 
   useEffect(() => {
     if (!isResponsiveViewport) return;
@@ -556,7 +557,7 @@ export default function ModulePage({ forcedSlug = null }) {
       </div>
 
       {/* ── TOP BAR ── */}
-      <div className="absolute inset-x-0 top-0 z-40 flex h-14 items-center justify-between gap-3 border-b border-white/[0.06] bg-[#0d0d0d]/95 px-3 backdrop-blur-sm sm:h-14 sm:px-4 lg:h-12 lg:px-5">
+      <div className="absolute inset-x-0 top-0 z-40 flex h-14 items-center justify-between gap-3 border-b border-white/[0.06] bg-[#0d0d0d]/95 px-3 backdrop-blur-sm sm:h-14 sm:px-4 lg:h-12 lg:px-5" style={{ paddingTop: 'var(--safe-top)', paddingLeft: 'max(0.75rem, calc(var(--safe-left) + 0.5rem))', paddingRight: 'max(0.75rem, calc(var(--safe-right) + 0.5rem))', minHeight: 'calc(3.5rem + var(--safe-top))' }}>
         {/* Project logo */}
         <button
           type="button"
@@ -580,12 +581,12 @@ export default function ModulePage({ forcedSlug = null }) {
           <button
             type="button"
             onClick={() => setDonateOpen(true)}
-            className="flex items-center gap-1 rounded-[3px] px-2 py-[4px] font-mono text-[11px] font-black tracking-[0.14em] transition hover:opacity-80"
+            className="flex min-h-[40px] items-center gap-1 rounded-[3px] px-2.5 py-[6px] font-mono text-[11px] font-black tracking-[0.14em] transition hover:opacity-80 sm:min-h-[36px]"
             style={{ background: 'var(--accent-warning)', color: '#111111' }}
           >
             ♥ DONATE
           </button>
-          <div className="flex items-center gap-1.5 rounded-[3px] bg-white px-2 py-[4px]">
+            <div className="flex min-h-[40px] items-center gap-1.5 rounded-[3px] bg-white px-2.5 py-[6px] sm:min-h-[36px]">
             <div className="h-[7px] w-[7px] animate-pulse rounded-full bg-green-500" />
             <span className="text-[11px] font-black tracking-[0.18em] text-black">LIVE</span>
           </div>
@@ -604,7 +605,7 @@ export default function ModulePage({ forcedSlug = null }) {
       </div>
 
       {/* ── MODULE CONTENT ── */}
-      <div className="h-full w-full pt-14 pb-[68px] sm:pb-16 lg:pt-12 lg:pb-10">
+      <div className="h-full w-full pb-[68px] sm:pb-16 lg:pb-10" style={{ paddingTop: 'calc(3.5rem + var(--safe-top))', paddingBottom: 'calc(4.25rem + var(--safe-bottom))' }}>
         <div
           ref={contentScrollRef}
           className={`scrollbar-hidden-mobile relative flex h-full min-h-0 flex-col ${useResponsiveScroll ? 'overflow-y-auto' : 'overflow-hidden'} lg:overflow-hidden`}
@@ -624,9 +625,9 @@ export default function ModulePage({ forcedSlug = null }) {
               metaLastAt={metaLastAt}
               providers={moduleMeta.providers}
               renderProviderLinks={renderProviderLinks}
-              title={moduleMeta?.showTitleInStrip ? (moduleMeta.stripTitle || module.title) : ''}
-            />
-          )}
+               title={stripTitle}
+             />
+           )}
           <div className={`relative min-h-0 ${useResponsiveScroll ? 'min-h-full flex-none' : 'flex-1'}`}>
             {hasBlockingOverlay ? (
               <Suspense fallback={<ModuleContentFallback title={module.title} />}>
@@ -688,7 +689,7 @@ export default function ModulePage({ forcedSlug = null }) {
       </div>
 
       {/* ── BOTTOM BAR ── */}
-      <div className="absolute inset-x-0 bottom-0 z-40 flex h-[68px] items-center justify-between border-t border-white/[0.06] bg-[#0d0d0d]/95 px-3 backdrop-blur-sm sm:h-16 sm:px-4 lg:h-10 lg:px-5">
+      <div className="absolute inset-x-0 bottom-0 z-40 flex h-[68px] items-center justify-between border-t border-white/[0.06] bg-[#0d0d0d]/95 px-3 backdrop-blur-sm sm:h-16 sm:px-4 lg:h-10 lg:px-5" style={{ paddingBottom: 'var(--safe-bottom)', paddingLeft: 'max(0.75rem, calc(var(--safe-left) + 0.5rem))', paddingRight: 'max(0.75rem, calc(var(--safe-right) + 0.5rem))', minHeight: 'calc(4.25rem + var(--safe-bottom))' }}>
         {/* Play / Pause */}
         <button
           type="button"
@@ -696,7 +697,7 @@ export default function ModulePage({ forcedSlug = null }) {
             setMarketAudioReady(true);
             setIsPlaying((v) => !v);
           }}
-          className="flex h-11 w-11 items-center justify-center rounded-full border transition duration-300 hover:scale-[1.03] sm:h-10 sm:w-10 lg:h-7 lg:w-7"
+            className="flex h-11 w-11 items-center justify-center rounded-full border transition duration-300 hover:scale-[1.03] sm:h-10 sm:w-10 lg:h-7 lg:w-7"
           style={{
             color: marketAudioTheme.color,
             borderColor: marketAudioTheme.borderColor,

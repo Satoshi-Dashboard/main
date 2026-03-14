@@ -1,3 +1,17 @@
+---
+aliases:
+  - Data Source Integrity Policy
+  - Data Source Rules
+tags:
+  - claude/policy
+  - claude/data
+  - claude/rag-source
+note_type: policy
+domain: data-source
+agent_priority: high
+source_status: canonical-local
+---
+
 # Regla Universal de Automejora y Actualización Continua de Documentos de Reglas
 
 **Objetivo Primordial:** Este documento y **todos los demás archivos `.md` que contienen reglas, directrices o conocimientos operativos** deben ser actualizados proactivamente por el Agente de IA. La actualización se activará cada vez que se identifique y corrija un error (en código generado, recomendaciones, datos procesados, o en la aplicación de las propias reglas), o cuando se detecte una oportunidad significativa de mejora en la eficacia o el conocimiento del Agente. El propósito central es que el Agente de IA aprenda continuamente de sus experiencias, optimizando sus directrices internas, su coherencia y su relevancia a través de todos los documentos de conocimiento.
@@ -20,6 +34,13 @@
 ## Addendum Skills-First de Autoridad Tecnica
 
 Las skills instaladas en `.claude/skills/` mandan primero para guidance tecnico general. Este archivo sigue fijando la capa local no negociable sobre providers aprobados, rutas internas, fallback y cadence del producto; si una skill propone una simplificacion generica que rompa esa historia de fuentes, este archivo la restringe para el contexto del repo.
+
+## Obsidian Context
+
+- Home: [[VAULT_HOME]]
+- Retrieval: [[RAG_OPERATING_SYSTEM]]
+- Policy cluster: [[POLICY_INDEX]]
+- Related: [[BACKEND_API_RULES]], [[MODULE_REGISTRY_RULES]], [[SKILLS_INDEX]]
 
 ## Data Source Integrity Rules (Strict)
 
@@ -137,7 +158,7 @@ If you change a provider, scrape path, internal API route, refresh cadence, or f
 
 1. Update the Human table.
 2. Update the Technical table.
-3. Update `README.md` if user-facing documentation changed.
+3. Update `README.md` only if the owner explicitly requested a README change in the current task.
 4. Keep `src/features/module-registry/moduleDataMeta.js` aligned with the real provider story.
 5. Run the verification required by `.claude/BACKEND_API_RULES.md`.
 
@@ -233,3 +254,11 @@ That means:
 - **Accion Realizada/Correccion:** Se añadio el addendum skills-first y se actualizaron las filas tecnicas de S17/S23 para reflejar el uso real de `fetchBtcSpot()` con fallback local a `84000` solo si el helper compartido no entrega valor.
 - **Nueva/Modificada Regla o Directriz:** Los consumidores frontend que reutilicen un helper compartido aprobado deben documentarse por ese helper y no como llamadas directas legacy al endpoint subyacente cuando la abstraccion ya es la interfaz real del modulo.
 - **Justificacion:** Mantiene la tabla de integridad alineada con la implementacion actual y evita que futuros agentes reintroduzcan fetches duplicados o divergentes al mismo feed BTC.
+
+- **Fecha de la Actualizacion:** `2026-03-13`
+- **Archivo(s) Afectado(s):** `.claude/DATA_SOURCE_INTEGRITY_RULES.md`
+- **Tipo de Evento/Contexto:** Adaptacion de politica a vault Obsidian y flujo RAG
+- **Descripcion del Evento Original:** La politica de integridad de fuentes contenia conocimiento critico, pero no tenia metadata uniforme ni enlaces explicitos para discovery dentro de la boveda `.claude/`.
+- **Accion Realizada/Correccion:** Se añadió frontmatter compatible con Obsidian y un bloque de navegacion hacia el home del vault, el sistema RAG y politicas relacionadas.
+- **Nueva/Modificada Regla o Directriz:** Esta politica de fuentes debe mantenerse enlazada como nodo canonico del grafo Obsidian/RAG para que humanos y agentes lleguen a la historia real de providers, fallback y cadence desde la misma entrada.
+- **Justificacion:** Refuerza la recuperacion contextual en tareas de backend o integracion de datos y reduce el riesgo de saltarse una restriccion de fuente aprobada.

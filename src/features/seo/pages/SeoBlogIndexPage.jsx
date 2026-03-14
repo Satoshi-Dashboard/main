@@ -68,7 +68,7 @@ export default function SeoBlogIndexPage() {
             </div>
 
             <div className="flex items-start lg:justify-end">
-              <Link to={getBlogPostPath(post.slug)} className="border-b border-[color:var(--accent-bitcoin)] pb-1 text-[12px] uppercase tracking-[0.18em] text-[color:var(--accent-bitcoin)] transition hover:text-white">
+              <Link to={getBlogPostPath(post.slug)} className="inline-flex min-h-[42px] items-center rounded-full border border-[color:var(--accent-bitcoin)] px-4 py-2 text-[12px] uppercase tracking-[0.18em] text-[color:var(--accent-bitcoin)] transition hover:bg-[rgba(247,147,26,0.08)] hover:text-white">
                 Read article
               </Link>
             </div>

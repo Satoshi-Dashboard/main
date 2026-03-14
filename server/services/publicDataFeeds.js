@@ -535,7 +535,7 @@ async function isLocalTcpPortReachable(port, host = '127.0.0.1', timeoutMs = 600
   });
 }
 
-async function callBitcoinRpcOverTor(method, params = []) {
+async function _callBitcoinRpcOverTor(method, params = []) {
   const rpcUrl = buildBitcoinRpcUrl();
   if (!rpcUrl) {
     throw new PublicFeedError('Bitcoin Tor RPC is not configured');

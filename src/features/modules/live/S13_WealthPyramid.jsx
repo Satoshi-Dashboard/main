@@ -109,7 +109,7 @@ export default function S13_WealthPyramid() {
           >
             Bitcoin Wealth Distribution
           </h1>
-          <div className="text-right font-mono text-[11px] tracking-wide" style={{ color: UI_COLORS.textSecondary }}>
+          <div className="rounded-xl border border-white/8 bg-white/[0.02] px-3 py-2 text-right font-mono text-[12px] tracking-wide" style={{ color: UI_COLORS.textSecondary }}>
             <div>
               src:{' '}
               <a href="https://bitinfocharts.com" target="_blank" rel="noreferrer" style={{ color: UI_COLORS.brand, textDecoration: 'none' }}>
@@ -128,7 +128,7 @@ export default function S13_WealthPyramid() {
           {tiers.map((tier) => {
             const ratio = Number.isFinite(tier.addresses) ? Math.max(0.06, tier.addresses / maxAddresses) : 0.06;
             return (
-              <article key={tier.key} className="rounded border border-white/10 bg-[#151515] p-3">
+              <article key={tier.key} className="rounded-xl border border-white/10 bg-[#151515] p-3.5 shadow-[0_10px_24px_rgba(0,0,0,0.18)]">
                 <div className="mb-2 flex items-center justify-between gap-2">
                   <span className="font-mono font-bold" style={{ fontSize: 'var(--fs-label)', color: UI_COLORS.brand }}>{tier.threshold}</span>
                   <span className="font-mono text-white/75" style={{ fontSize: 'var(--fs-caption)' }}>
