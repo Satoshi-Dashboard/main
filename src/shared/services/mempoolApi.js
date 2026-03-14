@@ -29,12 +29,9 @@ export function resolveMempoolOverviewBundle(overviewPayload, livePayload) {
       vsize: toFiniteNumber(mempool.vsize),
     },
     fees: {
-      economy: firstFiniteNumber(lastBlock?.feeRange?.[0], feeSnapshot.economyFee),
-      normal: firstFiniteNumber(firstBlock?.feeRange?.[0], feeSnapshot.halfHourFee),
-      priority: firstFiniteNumber(
-        feeSnapshot.fastestFee,
-        firstBlockFeeRange[firstBlockFeeRange.length - 2],
-      ),
+      economy: firstFiniteNumber(feeSnapshot.economyFee, lastBlock?.feeRange?.[0]),
+      normal: firstFiniteNumber(feeSnapshot.halfHourFee, firstBlock?.feeRange?.[0]),
+      priority: firstFiniteNumber(feeSnapshot.fastestFee, firstBlockFeeRange[firstBlockFeeRange.length - 2]),
     },
   };
 }

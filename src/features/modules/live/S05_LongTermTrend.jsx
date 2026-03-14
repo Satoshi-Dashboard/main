@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchJson } from '@/shared/lib/api.js';
+import { fetchMempoolOverviewBundle } from '@/shared/services/mempoolApi.js';
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery.js';
 import { useWindowWidth } from '@/shared/hooks/useWindowWidth.js';
 import { formatMetaTimestamp } from '@/shared/utils/formatters.js';
@@ -257,20 +258,22 @@ export default function S05_LongTermTrend() {
 
     const load = async () => {
       try {
-        const payload = await fetchJson('/api/public/mempool/live', { cache: 'no-store' });
+        const [payload, bundle] = await Promise.all([
+          fetchJson('/api/public/mempool/live', { cache: 'no-store' }),
+          fetchMempoolOverviewBundle({ cache: 'no-store' }),
+        ]);
         if (!active) return;
 
         const live = payload?.data || {};
         const blocksData = Array.isArray(live.blocks) ? live.blocks : [];
         const mempoolQueue = Array.isArray(live.mempool_blocks) ? live.mempool_blocks : [];
-        const feePayload = live.fees || {};
 
         setBlocks(blocksData.slice(0, 8));
         setMempoolBlocks(mempoolQueue.slice(0, 8));
         setFees({
-          fastest: Number(feePayload.fastestFee) || null,
-          halfHour: Number(feePayload.halfHourFee) || null,
-          economy: Number(feePayload.economyFee) || null,
+          fastest: bundle.fees.priority,
+          halfHour: bundle.fees.normal,
+          economy: bundle.fees.economy,
         });
         setLastUpdatedAt(payload?.updated_at || new Date());
         setWsStatus('connected');
