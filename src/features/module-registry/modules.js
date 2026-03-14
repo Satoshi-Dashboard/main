@@ -1,6 +1,6 @@
 import { lazy } from 'react';
-import S01_BitcoinOverview from '@/features/modules/live/S01_BitcoinOverview';
 
+const S01_BitcoinOverview = lazy(() => import('@/features/modules/live/S01_BitcoinOverview'));
 const S02_PriceChart = lazy(() => import('@/features/modules/live/S02_PriceChart'));
 const S03_MultiCurrencyBoard = lazy(() => import('@/features/modules/live/S03_MultiCurrencyBoard'));
 const S04_MempoolGauge = lazy(() => import('@/features/modules/live/S04_MempoolGauge'));

@@ -17,6 +17,11 @@ export default defineConfig(({ mode }) => {
         '@': fileURLToPath(new URL('./src', import.meta.url)),
       },
     },
+    build: {
+      minify: 'esbuild',
+      cssCodeSplit: true,
+      target: ['es2020', 'edge88', 'firefox78', 'chrome87', 'safari14'],
+    },
     server: {
       host: true,
       watch: {

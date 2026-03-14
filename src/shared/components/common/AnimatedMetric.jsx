@@ -1,5 +1,13 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { AnimatedCounter } from 'react-animated-counter';
+
+let animatedCounterPromise;
+
+function loadAnimatedCounter() {
+  if (!animatedCounterPromise) {
+    animatedCounterPromise = import('react-animated-counter').then((module) => module.AnimatedCounter);
+  }
+  return animatedCounterPromise;
+}
 
 const RESPONSIVE_MEDIA_QUERY = '(max-width: 1023px)';
 const PHONE_MEDIA_QUERY = '(max-width: 639px)';
@@ -132,6 +140,7 @@ export default function AnimatedMetric({
     return window.matchMedia(PHONE_MEDIA_QUERY).matches;
   });
   const [preferStaticResponsive, setPreferStaticResponsive] = useState(false);
+  const [CounterComponent, setCounterComponent] = useState(null);
   const display = inline ? 'inline-flex' : 'flex';
   const textColor = color ?? 'white';
   const metricMinHeight = useMemo(() => {
@@ -150,6 +159,7 @@ export default function AnimatedMetric({
     () => `${config?.prefix ?? ''}${formattedValue}${config?.suffix ?? ''}`,
     [config?.prefix, config?.suffix, formattedValue],
   );
+  const shouldAnimateCounter = Boolean(config && animate && !preferStaticResponsive);
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
@@ -223,6 +233,22 @@ export default function AnimatedMetric({
     };
   }, [style?.fontSize, className, counterFontSize, inline, isPhoneViewport, isResponsiveViewport, metricText]);
 
+  useEffect(() => {
+    if (!shouldAnimateCounter || typeof window === 'undefined') return undefined;
+
+    let cancelled = false;
+
+    loadAnimatedCounter().then((Counter) => {
+      if (!cancelled) {
+        setCounterComponent(() => Counter);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [shouldAnimateCounter]);
+
   const wrapperStyle = {
     ...style,
     color: textColor,
@@ -247,7 +273,7 @@ export default function AnimatedMetric({
     );
   }
 
-  if (!animate || preferStaticResponsive) {
+  if (!shouldAnimateCounter || !CounterComponent) {
     return (
       <span
         ref={wrapperRef}
@@ -268,7 +294,7 @@ export default function AnimatedMetric({
       style={wrapperStyle}
     >
       {config.prefix ? <span style={{ lineHeight: 1, flexShrink: 0 }}>{config.prefix}</span> : null}
-      <AnimatedCounter
+      <CounterComponent
         value={config.value}
         color={textColor}
         fontSize={counterFontSize}

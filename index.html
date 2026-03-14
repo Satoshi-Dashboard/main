@@ -3,10 +3,20 @@
   <head>
     <meta charset="UTF-8" />
 
+    <!-- Critical resource hints for performance -->
+    <link rel="preconnect" href="https://api.zatobox.io" />
+    <link rel="preconnect" href="https://api.mempool.space" />
+    <link rel="preconnect" href="https://assets.zatobox.io" />
+    <link rel="dns-prefetch" href="https://api.zatobox.io" />
+    <link rel="dns-prefetch" href="https://api.mempool.space" />
+    <link rel="dns-prefetch" href="https://api.coingecko.com" />
+    <link rel="dns-prefetch" href="https://api.binance.com" />
+    <link rel="dns-prefetch" href="https://api.binance.us" />
+
     <!-- Favicons and PWA -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="shortcut icon" href="/favicon.svg" />
-    <link rel="preload" as="image" href="/logo.svg" type="image/svg+xml" />
+    <link rel="preload" as="image" href="/logo.svg" type="image/svg+xml" fetchpriority="high" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2" />
     <link rel="manifest" href="/site.webmanifest" />
 
