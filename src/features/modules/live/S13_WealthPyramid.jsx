@@ -98,29 +98,16 @@ export default function S13_WealthPyramid() {
     <div className="flex h-full w-full flex-col bg-[#111111]">
       {/* Title */}
       <div className="flex-none px-4 pb-1 pt-4 sm:px-8 sm:pt-6 lg:px-10">
-        <div className="flex items-end justify-between gap-4">
-          <h1
-            style={{
-              color: UI_COLORS.brand,
-              fontFamily: 'monospace',
-              fontSize: 'var(--fs-subtitle)',
-              fontWeight: 700,
-            }}
-          >
-            Bitcoin Wealth Distribution
-          </h1>
-          <div className="rounded-xl border border-white/8 bg-white/[0.02] px-3 py-2 text-right font-mono text-[12px] tracking-wide" style={{ color: UI_COLORS.textSecondary }}>
-            <div>
-              src:{' '}
-              <a href="https://bitinfocharts.com" target="_blank" rel="noreferrer" style={{ color: UI_COLORS.brand, textDecoration: 'none' }}>
-                BitInfoCharts
-              </a>
-            </div>
-            <div>Refresh target: 30m</div>
-            {meta.updatedAtLocal ? <div>Source snapshot: {meta.updatedAtLocal}</div> : null}
-            {meta.fetchedAtLocal ? <div>Last checked: {meta.fetchedAtLocal}</div> : null}
-          </div>
-        </div>
+        <h1
+          style={{
+            color: UI_COLORS.brand,
+            fontFamily: 'monospace',
+            fontSize: 'var(--fs-subtitle)',
+            fontWeight: 700,
+          }}
+        >
+          Bitcoin Wealth Distribution
+        </h1>
       </div>
 
       {isCompact ? (
@@ -236,6 +223,21 @@ export default function S13_WealthPyramid() {
           </svg>
         </div>
       )}
+
+      {/* Source info — bottom strip (matches SharedMetaBottomStrip style) */}
+      <div className="flex flex-none justify-end px-3 pb-6 pt-3 sm:px-4" style={{ paddingBottom: 'max(1.5rem, calc(var(--safe-bottom) + 0.75rem))' }}>
+        <div className="text-right font-mono text-[11px] tracking-wide" style={{ color: UI_COLORS.textSecondary }}>
+          <div>
+            src:{' '}
+            <a href="https://bitinfocharts.com" target="_blank" rel="noreferrer" style={{ color: UI_COLORS.brand, textDecoration: 'none' }}>
+              BitInfoCharts
+            </a>
+          </div>
+          <div>Refresh target: 30m</div>
+          {meta.updatedAtLocal ? <div>Source snapshot: {meta.updatedAtLocal}</div> : null}
+          {meta.fetchedAtLocal ? <div>Last checked: {meta.fetchedAtLocal}</div> : null}
+        </div>
+      </div>
     </div>
   );
 }

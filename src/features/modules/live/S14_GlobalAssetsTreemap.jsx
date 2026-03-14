@@ -110,17 +110,6 @@ function StackedBar({ data }) {
         </div>
       )}
 
-      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {data.map((asset) => (
-          <div key={asset.id} className="rounded-md border border-white/8 bg-white/[0.03] px-2 py-1.5 font-mono text-[11px] text-white/72 sm:text-[12px]">
-            <div className="flex items-center gap-1.5">
-              <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: asset.color }} />
-              <span className="truncate text-white/86">{asset.name}</span>
-            </div>
-            <div className="mt-1 tabular-nums" style={{ color: asset.color }}>{Number.isFinite(asset.pct_total) ? `${asset.pct_total.toFixed(2)}%` : '—'}</div>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }

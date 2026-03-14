@@ -596,7 +596,7 @@ export default function ModulePage({ forcedSlug = null }) {
           <button
             type="button"
             onClick={toggleFullscreen}
-            className="flex h-9 w-9 items-center justify-center rounded-full text-white/40 transition hover:bg-white/10 hover:text-white/80"
+            className="hidden lg:flex h-9 w-9 items-center justify-center rounded-full text-white/40 transition hover:bg-white/10 hover:text-white/80"
             aria-label="Toggle fullscreen"
           >
             {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}

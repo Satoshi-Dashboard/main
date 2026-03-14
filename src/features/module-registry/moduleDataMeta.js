@@ -164,6 +164,7 @@ const MODULE_DATA_META = {
   },
   'satoshi-nakamoto-bitcoin-whitepaper': {
     showSharedStrip: false,
+    responsiveScroll: true,
   },
 };
 

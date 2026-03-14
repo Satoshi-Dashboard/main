@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import Info from 'lucide-react/dist/esm/icons/info';
 import { GeoJSON, MapContainer } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import {
@@ -306,8 +307,18 @@ export default function S08_BtcMapBusinessesMap() {
       </div>
 
       <aside className="visual-integrity-lock relative flex h-[42%] min-h-0 w-full flex-none flex-col border-t border-white/10 bg-[#111111] lg:h-auto lg:w-[300px] lg:border-l lg:border-t-0">
-        <div className="border-b border-white/10 px-4 py-3 font-mono text-[12px] tracking-wide text-white/60">
+        <div className="flex items-center justify-between border-b border-white/10 px-4 py-3 font-mono text-[12px] tracking-wide text-white/60">
           Bitcoin-Friendly Businesses
+          <button
+            type="button"
+            onClick={() => setIsMetaExpanded((prev) => !prev)}
+            className="lg:hidden flex h-8 w-8 items-center justify-center rounded-full border border-white/15 bg-white/[0.03] transition hover:border-white/25 hover:bg-white/[0.06]"
+            aria-label="Data info"
+            aria-expanded={isMetaExpanded}
+            aria-controls="s08-meta-panel"
+          >
+            <Info size={13} style={{ color: isMetaExpanded ? 'var(--accent-bitcoin)' : 'rgba(255,255,255,0.55)' }} />
+          </button>
         </div>
 
         <div className="border-b border-white/10 px-3 py-2">
@@ -415,16 +426,6 @@ export default function S08_BtcMapBusinessesMap() {
         </div>
 
         <div className="relative border-t border-white/10 px-3 py-2 font-mono text-[11px]">
-          <button
-            type="button"
-            onClick={() => setIsMetaExpanded((prev) => !prev)}
-            className="w-full rounded border border-white/10 bg-white/[0.03] px-3 py-2 text-left text-[12px] text-white/75 transition hover:border-white/20 lg:hidden"
-            aria-expanded={isMetaExpanded}
-            aria-controls="s08-meta-panel"
-          >
-            Data info {isMetaExpanded ? 'Hide' : 'Show'}
-          </button>
-
           <div className="hidden flex-wrap items-center gap-2 text-white/65 lg:flex">
             <span className="rounded border border-white/10 bg-white/[0.03] px-1.5 py-0.5">
               src:{' '}

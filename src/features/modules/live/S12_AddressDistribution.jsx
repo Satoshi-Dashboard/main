@@ -127,30 +127,17 @@ export default function S12_AddressDistribution() {
   return (
     <div className="flex h-full w-full flex-col" style={{ ...MODULE_COLORS, backgroundColor: 'var(--bg-main)' }}>
       <div className="flex-none px-4 pb-3 pt-4 sm:px-6 sm:pt-6 lg:px-10">
-        <div className="flex items-end justify-between gap-4">
-          <h1
-            style={{
-              color: 'var(--btc-orange)',
-              fontFamily: 'monospace',
-              fontSize: 'var(--fs-subtitle)',
-              fontWeight: 700,
-              letterSpacing: '0.05em',
-            }}
-          >
-            Address Distribution
-          </h1>
-          <div className="text-right font-mono text-[11px] tracking-wide text-[#7c7c7c]">
-            <div>
-              src:{' '}
-              <a href="https://bitinfocharts.com" target="_blank" rel="noreferrer" style={{ color: 'var(--btc-orange)', textDecoration: 'none' }}>
-                BitInfoCharts
-              </a>
-            </div>
-            <div>Refresh target: 30m</div>
-            {meta.updatedAtLocal ? <div>Source snapshot: {meta.updatedAtLocal}</div> : null}
-            {meta.fetchedAtLocal ? <div>Last checked: {meta.fetchedAtLocal}</div> : null}
-          </div>
-        </div>
+        <h1
+          style={{
+            color: 'var(--btc-orange)',
+            fontFamily: 'monospace',
+            fontSize: 'var(--fs-subtitle)',
+            fontWeight: 700,
+            letterSpacing: '0.05em',
+          }}
+        >
+          Address Distribution
+        </h1>
       </div>
 
       <div className="min-h-0 flex-1 px-3 pb-4 sm:px-6 sm:pb-6">
@@ -219,7 +206,7 @@ export default function S12_AddressDistribution() {
           ))}
         </div>
 
-        <div className="flex h-full flex-col gap-2 lg:hidden">
+        <div className="flex h-full flex-col gap-2 overflow-y-auto lg:hidden">
           {tiers.map((tier) => (
             <article
               key={tier.name}
@@ -255,6 +242,36 @@ export default function S12_AddressDistribution() {
               </div>
             </article>
           ))}
+
+          {/* Source info — inside scroll area on mobile (visible only after scrolling) */}
+          <div className="flex justify-end px-1 pb-4 pt-3">
+            <div className="text-right font-mono text-[11px] tracking-wide" style={{ color: 'var(--text-secondary)' }}>
+              <div>
+                src:{' '}
+                <a href="https://bitinfocharts.com" target="_blank" rel="noreferrer" style={{ color: 'var(--btc-orange)', textDecoration: 'none' }}>
+                  BitInfoCharts
+                </a>
+              </div>
+              <div>Refresh target: 30m</div>
+              {meta.updatedAtLocal ? <div>Source snapshot: {meta.updatedAtLocal}</div> : null}
+              {meta.fetchedAtLocal ? <div>Last checked: {meta.fetchedAtLocal}</div> : null}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Source info — desktop only fixed bottom strip */}
+      <div className="hidden lg:flex flex-none justify-end px-3 pb-6 pt-3 sm:px-4" style={{ paddingBottom: 'max(1.5rem, calc(var(--safe-bottom) + 0.75rem))' }}>
+        <div className="text-right font-mono text-[11px] tracking-wide" style={{ color: 'var(--text-secondary)' }}>
+          <div>
+            src:{' '}
+            <a href="https://bitinfocharts.com" target="_blank" rel="noreferrer" style={{ color: 'var(--btc-orange)', textDecoration: 'none' }}>
+              BitInfoCharts
+            </a>
+          </div>
+          <div>Refresh target: 30m</div>
+          {meta.updatedAtLocal ? <div>Source snapshot: {meta.updatedAtLocal}</div> : null}
+          {meta.fetchedAtLocal ? <div>Last checked: {meta.fetchedAtLocal}</div> : null}
         </div>
       </div>
     </div>

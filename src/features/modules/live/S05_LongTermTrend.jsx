@@ -320,32 +320,31 @@ export default function S05_LongTermTrend() {
           </span>
         </div>
 
-        {/* Fee indicator */}
-        {fees ? (
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            {[
-              { label: 'ECO',  val: fees.economy,  col: '#00FFCC' },
-              { label: '30M',  val: fees.halfHour, col: '#00FF88' },
-              { label: 'FAST', val: fees.fastest,  col: '#FF8C00' },
-            ].map(({ label, val, col }) => (
-              <div key={label} className="flex items-center gap-0.5">
-                <span className="text-[12px] text-white/30 mr-0.5">{label}</span>
-                <span className="text-[13px] font-bold" style={{ color: col }}>{val}</span>
-                <span className="text-[12px] text-white/20"> s/vB</span>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="flex items-center gap-2">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="skeleton" style={{ width: 54, height: '1em' }} />
-            ))}
-          </div>
-        )}
 
         <div className="hidden sm:block">
           <FeeLegend />
         </div>
+      </div>
+
+      {/* ── Fee tiles: Economy / Normal / Priority ── */}
+      <div className="flex flex-shrink-0 divide-x divide-[#2a2a2a] border-b border-[#1c1c1c]">
+        {[
+          { label: 'Economy',  val: fees?.economy,  col: '#00FFCC' },
+          { label: 'Normal',   val: fees?.halfHour, col: '#FF8C00' },
+          { label: 'Priority', val: fees?.fastest,  col: '#FF6B6B' },
+        ].map(({ label, val, col }) => (
+          <div key={label} className="flex flex-1 flex-col items-center gap-0.5 px-2 py-2 text-center">
+            {val != null ? (
+              <span className="font-mono font-bold tabular-nums leading-none" style={{ fontSize: 'clamp(1.6rem,3.8vw,2.4rem)', color: col }}>
+                {Number(val).toFixed(2)}
+              </span>
+            ) : (
+              <span className="font-mono font-bold text-[#333]" style={{ fontSize: 'clamp(1.6rem,3.8vw,2.4rem)' }}>--</span>
+            )}
+            <span className="font-mono uppercase tracking-[0.18em] text-white/30" style={{ fontSize: 'var(--fs-tag)' }}>{label}</span>
+            <span className="font-mono text-white/20" style={{ fontSize: 'var(--fs-micro)' }}>sat/vB</span>
+          </div>
+        ))}
       </div>
 
       {/* ── Confirmed blocks ── */}

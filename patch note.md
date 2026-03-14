@@ -1,5 +1,26 @@
 # Patch Notes
 
+## [2026-03-14]
+
+### New
+- Added Economy / Normal / Priority fee tiles row in S05 (Long-Term Mempool Trend) visible on all screen sizes with large decimal values.
+- Added ℹ info icon button in the title bar of S06, S07, S08 map modules (mobile/tablet only) to toggle the data-info panel, replacing the old footer text button.
+
+### Fixes
+- Fixed S31 (Satoshi Whitepaper) not being scrollable on mobile/tablet by enabling `responsiveScroll` in the module registry.
+- Fixed fullscreen/maximize button in ModulePage now hidden on mobile and tablet, shown only on desktop.
+- Fixed S12 (Address Distribution) mobile cards not scrollable — added `overflow-y-auto` to the card list; src info moved inside the scroll area so it appears only when the user scrolls down.
+- Fixed S13 (Wealth Pyramid) and S12 src info boxes that were floating in the header — moved both to a bottom strip matching the SharedMetaBottomStrip style.
+- Fixed S14 (Global Assets Treemap) percentage grid cards inside StackedBar — removed the redundant duplicate grid below the bar.
+- Fixed S05 fee header bar inline chips (ECO/30M/FAST) removed to avoid duplication with the new large fee tiles row.
+- Fixed donate modal backdrop from `bg-black/70 backdrop-blur-sm` to solid `bg-black/90 z-[9999]` so the QR code no longer blends with map backgrounds.
+- Fixed S05 fee tile values to display with 2 decimal places instead of rounded integers.
+
+### Removed
+- Removed inline ECO/30M/FAST fee indicator chips from S05 header bar (replaced by the full fee tiles row below).
+
+---
+
 ## New
 
 - Added a stronger shared knowledge-vault workflow under `.claude/` so project rules, skills, and maintenance notes are organized more clearly for future development.
