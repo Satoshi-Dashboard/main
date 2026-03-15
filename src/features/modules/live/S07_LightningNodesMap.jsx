@@ -1,4 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import S07Worker from './s07DataWorker.js?worker';
 import Info from 'lucide-react/dist/esm/icons/info';
 import { CircleMarker, GeoJSON, MapContainer, Tooltip, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -791,12 +792,9 @@ export default function S07_LightningNodesMap() {
     // ERROR: silently keep previous result so the map stays visible
   }, []);
 
-  // Create worker once
+  // Create worker once — Vite ?worker import ensures correct bundling in dev + prod
   useEffect(() => {
-    const worker = new Worker(
-      new URL('./s07DataWorker.js', import.meta.url),
-      { type: 'module' },
-    );
+    const worker = new S07Worker();
     worker.addEventListener('message', handleWorkerMessage);
     workerRef.current = worker;
     return () => {
