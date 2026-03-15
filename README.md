@@ -35,7 +35,7 @@
   </p>
 
   <p>
-    <a href="https://www.satoshidashboard.com"><img src="https://img.shields.io/badge/Live%20Demo-Visit%20Site-F7931A?style=flat-square&logo=bitcoin&logoColor=white" alt="Live Demo"></a>
+    <a href="https://www.satoshidashboard.com"><img src="https://img.shields.io/badge/Live%20Demo-Visit%20Site-F7931A?style=flat-square&logo=bitcoin&logoColor=white" alt="Live Web"></a>
     <a href="https://github.com/Satoshi-Dashboard/Satoshi-Dashboard"><img src="https://img.shields.io/github/stars/Satoshi-Dashboard/Satoshi-Dashboard?style=flat-square" alt="GitHub stars"></a>
     <a href="https://github.com/Satoshi-Dashboard/Satoshi-Dashboard/issues"><img src="https://img.shields.io/github/issues/Satoshi-Dashboard/Satoshi-Dashboard?style=flat-square" alt="GitHub issues"></a>
     <a href="https://github.com/Satoshi-Dashboard/Satoshi-Dashboard/network/members"><img src="https://img.shields.io/github/forks/Satoshi-Dashboard/Satoshi-Dashboard?style=flat-square" alt="GitHub forks"></a>
