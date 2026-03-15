@@ -21,6 +21,10 @@ const LIGHTNING_WORLD_ENDPOINT        = '/api/public/lightning/world';
 const LIGHTNING_CHANNELS_GEO_ENDPOINT = '/api/public/lightning/channels-geo';
 const REFRESH_INTERVAL_MS = 60_000;
 const CHANNELS_GEO_REFRESH_MS = 5 * 60_000; // 5 min
+const INITIAL_NETWORK_ROWS = 160;
+const NETWORK_ROWS_BATCH = 180;
+const NETWORK_ROWS_BATCH_DELAY_MS = 90;
+const DEFER_ALL_LINES_MS = 900;
 const UNKNOWN_COUNTRY_LABEL = 'Unknown region';
 
 const UI_COLORS = {
@@ -621,6 +625,8 @@ export default function S07_LightningNodesMap() {
   const [layerMode,            setLayerMode]            = useState('choropleth'); // 'choropleth'|'bubble'
   const [channelsGeoLines,     setChannelsGeoLines]     = useState([]);           // parsed line segments for canvas
   const [showAllConnectionLines, setShowAllConnectionLines] = useState(true);
+  const [canRenderAllConnectionLines, setCanRenderAllConnectionLines] = useState(false);
+  const [visibleNetworkNodeCount, setVisibleNetworkNodeCount] = useState(INITIAL_NETWORK_ROWS);
   const [selectedPubkey,       setSelectedPubkey]       = useState(null);         // click-isolated node pubkey
   const [expandedCountries,    setExpandedCountries]    = useState(new Set());    // expanded country groups in network sidebar
   const [networkSortCol,       setNetworkSortCol]       = useState('capacity');   // 'capacity'|'channels'|'alias'|'dist'
@@ -645,6 +651,20 @@ export default function S07_LightningNodesMap() {
       setMetricType('channels');
     }
   }, [layerMode, metricType]);
+
+  useEffect(() => {
+    if (layerMode !== 'bubble') {
+      setCanRenderAllConnectionLines(false);
+      return undefined;
+    }
+
+    setCanRenderAllConnectionLines(false);
+    const timer = setTimeout(() => {
+      setCanRenderAllConnectionLines(true);
+    }, DEFER_ALL_LINES_MS);
+
+    return () => clearTimeout(timer);
+  }, [layerMode, channelsGeoLines.length, metricType]);
 
   useEffect(() => {
     let active = true;
@@ -933,6 +953,41 @@ export default function S07_LightningNodesMap() {
     });
   }, [layerMode, networkData.points, networkSortCol, networkSortDir, avgDistByPubkey]);
 
+  useEffect(() => {
+    if (layerMode !== 'bubble') return undefined;
+
+    setVisibleNetworkNodeCount(INITIAL_NETWORK_ROWS);
+    if (sortedNetworkNodes.length <= INITIAL_NETWORK_ROWS) return undefined;
+
+    let cancelled = false;
+    let timer = null;
+
+    const pump = () => {
+      timer = setTimeout(() => {
+        if (cancelled) return;
+        setVisibleNetworkNodeCount((current) => {
+          const next = Math.min(sortedNetworkNodes.length, current + NETWORK_ROWS_BATCH);
+          if (next < sortedNetworkNodes.length) pump();
+          return next;
+        });
+      }, NETWORK_ROWS_BATCH_DELAY_MS);
+    };
+
+    pump();
+
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [layerMode, sortedNetworkNodes, metricType, networkSortCol, networkSortDir]);
+
+  const visibleNetworkNodes = useMemo(
+    () => sortedNetworkNodes.slice(0, visibleNetworkNodeCount),
+    [sortedNetworkNodes, visibleNetworkNodeCount],
+  );
+
+  const remainingNetworkNodes = Math.max(0, sortedNetworkNodes.length - visibleNetworkNodes.length);
+
   const handleNetworkSort = (col) => {
     if (networkSortCol === col) setNetworkSortDir((d) => (d === 'desc' ? 'asc' : 'desc'));
     else { setNetworkSortCol(col); setNetworkSortDir('desc'); }
@@ -1086,7 +1141,7 @@ export default function S07_LightningNodesMap() {
                 maxMetricValue={maxMetricValue}
                 selectedPubkey={selectedPubkey}
                 onNodeClick={setSelectedPubkey}
-                showAllConnectionLines={showAllConnectionLines}
+                showAllConnectionLines={showAllConnectionLines && canRenderAllConnectionLines}
                 metricType={metricType}
                 nodeColorScale={activeScale}
                 avgDistByPubkey={avgDistByPubkey}
@@ -1168,12 +1223,20 @@ export default function S07_LightningNodesMap() {
               {layerMode === 'bubble' && (
                 <button
                   type="button"
-                  onClick={() => setShowAllConnectionLines((prev) => !prev)}
+                  onClick={() => {
+                    setShowAllConnectionLines((prev) => {
+                      const next = !prev;
+                      if (next) setCanRenderAllConnectionLines(true);
+                      return next;
+                    });
+                  }}
                   className="visual-integrity-lock self-start rounded border border-white/15 bg-[#080808]/90 px-3 py-1.5 font-mono text-[12px] text-white/75 backdrop-blur-sm transition hover:border-white/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3BA3FF]/60"
                   style={{ color: showAllConnectionLines ? 'rgba(255,255,255,0.75)' : UI_COLORS.lightning }}
                   title={showAllConnectionLines ? 'Hide background connection lines' : 'Show background connection lines'}
                 >
-                  {showAllConnectionLines ? 'Hide all lines' : 'Show all lines'}
+                  {showAllConnectionLines
+                    ? (canRenderAllConnectionLines ? 'Hide all lines' : 'Loading all lines...')
+                    : 'Show all lines'}
                 </button>
               )}
 
@@ -1328,9 +1391,14 @@ export default function S07_LightningNodesMap() {
           ) : layerMode === 'bubble' ? (
             /* ── Network mode: tabla plana con cabeceras ordenables ── */
             <div className="w-full font-mono">
+              {remainingNetworkNodes > 0 && (
+                <div className="mb-2 rounded border border-white/8 bg-white/[0.02] px-2.5 py-2 text-[11px] text-white/55">
+                  Showing {fmt.num(visibleNetworkNodes.length)} of {fmt.num(sortedNetworkNodes.length)} nodes. Loading the rest in the background...
+                </div>
+              )}
               {isCompactViewport ? (
                 <div className="space-y-2">
-                  {sortedNetworkNodes.map((node, i) => {
+                  {visibleNetworkNodes.map((node, i) => {
                     const color = getNetworkNodeMetricColor(node, metricType, activeScale, avgDistByPubkey);
                     const isNodeSelected = node.pubkey === selectedPubkey;
                     const avgDist = avgDistByPubkey[node.pubkey];
@@ -1421,7 +1489,7 @@ export default function S07_LightningNodesMap() {
                     </button>
                   </div>
 
-                  {sortedNetworkNodes.map((node, i) => {
+                  {visibleNetworkNodes.map((node, i) => {
                     const color = getNetworkNodeMetricColor(node, metricType, activeScale, avgDistByPubkey);
                     const isNodeSelected = node.pubkey === selectedPubkey;
                     const avgDist = avgDistByPubkey[node.pubkey];
