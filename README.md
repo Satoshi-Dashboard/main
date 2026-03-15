@@ -1,9 +1,6 @@
 <div align="center">
   <h1>Satoshi Dashboard</h1>
-</div>
-public/modulos-referencia/foto-metadata.png
-</div>
-  
+ <img src="public/modulos-referencia/foto-metadata.png" alt="Foto metadata" width="800"/>
   <p>
     <strong>An open-source Bitcoin dashboard focused on market context, network data, macro comparison, and honest source attribution.</strong>
   </p>
