@@ -41,6 +41,7 @@ import {
   getCountriesGeoPayload,
   getFearGreedPayload,
   getLandGeoPayload,
+  getLightningChannelsGeoPayload,
   getLightningWorldPayload,
   getMempoolLivePayload,
   getMempoolNodePayload,
@@ -498,6 +499,16 @@ export function createApp() {
     setDataCacheHeaders(res, { sMaxAge: 15, swr: 45 });
     try {
       const payload = await getLightningWorldPayload();
+      res.json(payload);
+    } catch (error) {
+      sendPublicFeedError(res, error);
+    }
+  }));
+
+  app.get('/api/public/lightning/channels-geo', asyncRoute(async (_req, res) => {
+    setDataCacheHeaders(res, { sMaxAge: 60, swr: 240 });
+    try {
+      const payload = await getLightningChannelsGeoPayload();
       res.json(payload);
     } catch (error) {
       sendPublicFeedError(res, error);

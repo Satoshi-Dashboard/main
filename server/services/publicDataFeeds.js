@@ -122,6 +122,15 @@ const FEED_DEFS = {
     safeMinuteBudget: 1,
     safeDailyBudget: 1440,
   },
+  lightningChannelsGeo: {
+    cacheKey: 'public:lightning:channels-geo',
+    lockKey: 'public:lightning:channels-geo:refresh',
+    refreshMs: 5 * 60_000,          // 5 min — channels change less often than node counts
+    sourceProvider: 'mempool.space',
+    sourceUrl: 'https://mempool.space/api/v1/lightning/channels-geo',
+    safeMinuteBudget: 1,
+    safeDailyBudget: 288,
+  },
   btcMapBusinessesByCountry: {
     cacheKey: 'public:btcmap:businesses-by-country',
     lockKey: 'public:btcmap:businesses-by-country:refresh',
@@ -2099,6 +2108,14 @@ export async function getLightningWorldPayload() {
     'lightningWorld',
     async () => fetchJsonWithTimeout('https://mempool.space/api/v1/lightning/nodes/world'),
     validateObject,
+  );
+}
+
+export async function getLightningChannelsGeoPayload() {
+  return getFeed(
+    'lightningChannelsGeo',
+    async () => fetchJsonWithTimeout('https://mempool.space/api/v1/lightning/channels-geo'),
+    validateArray,
   );
 }
 
