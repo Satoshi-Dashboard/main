@@ -1,12 +1,11 @@
-import { memo, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Area,
-  AreaChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
+  AreaSeries,
+  createChart,
+  CrosshairMode,
+  LineSeries,
+  LineStyle,
+} from 'lightweight-charts';
 import AnimatedMetric from '@/shared/components/common/AnimatedMetric.jsx';
 import { fetchJson } from '@/shared/lib/api.js';
 
@@ -18,116 +17,274 @@ const RANGES = [
   { label: '1Y', days: 365 },
   { label: 'MAX', days: Infinity },
 ];
-let lastBtcVsGoldPayload = null;
 
 const RANGE_TEXT = {
   '3M': 'Past 3 Months',
   '6M': 'Past 6 Months',
   '1Y': 'Past Year',
-  'MAX': 'All Available History',
+  MAX: 'All Available History',
 };
 
-function ComparisonCursor({ points, height }) {
-  if (!points?.length) return null;
+const CHART_FONT =
+  'JetBrains Mono, SFMono-Regular, Cascadia Code, Fira Code, Consolas, Liberation Mono, monospace';
+const PANEL_BG = '#111111';
+const BTC_COLOR = '#F7931A';
+const GOLD_COLOR = 'rgba(214,214,214,0.92)';
 
-  const x = points[0]?.x;
-  if (!Number.isFinite(x)) return null;
+let lastBtcVsGoldPayload = null;
 
-  return (
-    <g>
-      <line x1={x} y1={0} x2={x} y2={height} stroke="rgba(255,255,255,0.16)" strokeWidth={1} />
-      {points.map((point, index) => (
-        <circle
-          key={`${point.dataKey}-${index}`}
-          cx={point.x}
-          cy={point.y}
-          r={index === 0 ? 4 : 3.5}
-          fill={point.dataKey === 'bitcoin' ? 'var(--accent-bitcoin)' : 'rgba(214,214,214,0.95)'}
-          stroke="#111111"
-          strokeWidth={2}
-        />
-      ))}
-    </g>
-  );
-}
+// ── Dual-series lightweight-charts canvas chart ───────────────────────────────
+const ChartSection = memo(function ChartSection({
+  chartData,
+  showGold,
+  onHoverChange,
+}) {
+  const containerRef = useRef(null);
+  const chartRef = useRef(null);
+  const btcSeriesRef = useRef(null);
+  const goldSeriesRef = useRef(null);
+  const touchActiveRef = useRef(false);
 
-function HoverBridge({ active, payload, onHover }) {
-  useLayoutEffect(() => {
-    if (active && payload?.[0]?.payload) {
-      onHover(payload[0].payload);
-      return;
+  // Map unix-second timestamps → human date strings for hover label
+  const labelMap = useMemo(() => {
+    const map = new Map();
+    chartData.forEach((point) => {
+      const time = Math.floor(Number(point.ts) / 1000);
+      map.set(time, point.date ?? null);
+    });
+    return map;
+  }, [chartData]);
+
+  // Chart init — runs once per mount
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return undefined;
+
+    const chart = createChart(container, {
+      autoSize: true,
+      layout: {
+        background: { color: PANEL_BG },
+        textColor: 'rgba(255,255,255,0.45)',
+        fontFamily: CHART_FONT,
+        attributionLogo: false,
+      },
+      localization: { locale: 'en-US' },
+      grid: {
+        vertLines: { color: 'transparent' },
+        horzLines: { color: 'transparent' },
+      },
+      crosshair: {
+        mode: CrosshairMode.Normal,
+        vertLine: {
+          color: 'rgba(255,255,255,0.22)',
+          width: 1,
+          style: LineStyle.Solid,
+          labelVisible: false,
+        },
+        horzLine: {
+          color: 'rgba(255,255,255,0.10)',
+          width: 1,
+          style: LineStyle.Dashed,
+          labelVisible: false,
+        },
+      },
+      rightPriceScale: { visible: false, borderVisible: false, scaleMargins: { top: 0.08, bottom: 0.08 } },
+      leftPriceScale:  { visible: false, borderVisible: false },
+      timeScale: {
+        visible: false,
+        borderVisible: false,
+        timeVisible: true,
+        secondsVisible: false,
+        rightOffset: 0,
+        barSpacing: 7,
+        minBarSpacing: 1.8,
+      },
+      handleScroll: false,
+      handleScale: false,
+    });
+
+    // Gold series — rendered first so BTC sits on top visually
+    const goldSeries = chart.addSeries(AreaSeries, {
+      lineColor: GOLD_COLOR,
+      topColor: 'rgba(214,214,214,0.14)',
+      bottomColor: 'rgba(214,214,214,0.00)',
+      lineWidth: 2,
+      lineType: 2,
+      priceLineVisible: false,
+      lastValueVisible: false,
+      crosshairMarkerVisible: true,
+      crosshairMarkerRadius: 3.5,
+      crosshairMarkerBorderWidth: 2,
+      crosshairMarkerBorderColor: PANEL_BG,
+      crosshairMarkerBackgroundColor: GOLD_COLOR,
+    });
+
+    // BTC series — on top
+    const btcSeries = chart.addSeries(AreaSeries, {
+      lineColor: BTC_COLOR,
+      topColor: `${BTC_COLOR}40`,
+      bottomColor: `${BTC_COLOR}00`,
+      lineWidth: 2.3,
+      lineType: 2,
+      priceLineVisible: false,
+      lastValueVisible: false,
+      crosshairMarkerVisible: true,
+      crosshairMarkerRadius: 4,
+      crosshairMarkerBorderWidth: 2,
+      crosshairMarkerBorderColor: PANEL_BG,
+      crosshairMarkerBackgroundColor: BTC_COLOR,
+    });
+
+    chartRef.current = chart;
+    btcSeriesRef.current = btcSeries;
+    goldSeriesRef.current = goldSeries;
+
+    // ── Mouse/pointer crosshair ──────────────────────────────────────────
+    const handleCrosshairMove = (param) => {
+      const point = param?.point;
+      const time = typeof param?.time === 'number' ? param.time : null;
+      if (!point || time === null || point.x < 0 || point.y < 0) {
+        if (!touchActiveRef.current) onHoverChange(null);
+        return;
+      }
+      const btcVal = param.seriesData.get(btcSeries);
+      const goldVal = param.seriesData.get(goldSeries);
+      const btcPrice = typeof btcVal === 'number' ? btcVal : btcVal?.value ?? null;
+      const goldPrice = typeof goldVal === 'number' ? goldVal : goldVal?.value ?? null;
+      if (!Number.isFinite(btcPrice)) {
+        if (!touchActiveRef.current) onHoverChange(null);
+        return;
+      }
+      onHoverChange({
+        bitcoin: btcPrice,
+        gold: Number.isFinite(goldPrice) ? goldPrice : null,
+        date: labelMap.get(time) ?? null,
+      });
+    };
+
+    chart.subscribeCrosshairMove(handleCrosshairMove);
+
+    // ── Touch scrub (same pattern as S02) ───────────────────────────────
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let isScrubbing = false;
+
+    const handleTouchStart = (e) => {
+      if (e.touches.length !== 1) return;
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+      isScrubbing = false;
+      touchActiveRef.current = false;
+    };
+
+    const handleTouchMove = (e) => {
+      if (e.touches.length !== 1) return;
+      const touch = e.touches[0];
+      const dx = Math.abs(touch.clientX - touchStartX);
+      const dy = Math.abs(touch.clientY - touchStartY);
+
+      if (!isScrubbing && dx < 4 && dy < 4) return;
+      if (!isScrubbing) {
+        isScrubbing = dx > dy;
+      }
+      if (!isScrubbing) return;
+
+      e.preventDefault();
+      touchActiveRef.current = true;
+
+      const rect = container.getBoundingClientRect();
+      const x = touch.clientX - rect.left;
+
+      const logical = chart.timeScale().coordinateToLogical(x);
+      if (logical === null) return;
+
+      const rounded = Math.round(logical);
+      const btcBar = btcSeries.dataByIndex(rounded, -1);
+      if (!btcBar) return;
+
+      const goldBar = goldSeries.dataByIndex(rounded, -1);
+      chart.setCrosshairPosition(btcBar.value, btcBar.time, btcSeries);
+
+      onHoverChange({
+        bitcoin: btcBar.value,
+        gold: goldBar?.value ?? null,
+        date: labelMap.get(
+          typeof btcBar.time === 'number' ? btcBar.time : null,
+        ) ?? null,
+      });
+    };
+
+    const handleTouchEnd = () => {
+      isScrubbing = false;
+      touchActiveRef.current = false;
+      chart.clearCrosshairPosition();
+      onHoverChange(null);
+    };
+
+    container.addEventListener('touchstart', handleTouchStart, { passive: true });
+    container.addEventListener('touchmove', handleTouchMove, { passive: false });
+    container.addEventListener('touchend', handleTouchEnd, { passive: true });
+    container.addEventListener('touchcancel', handleTouchEnd, { passive: true });
+
+    return () => {
+      chart.unsubscribeCrosshairMove(handleCrosshairMove);
+      container.removeEventListener('touchstart', handleTouchStart);
+      container.removeEventListener('touchmove', handleTouchMove);
+      container.removeEventListener('touchend', handleTouchEnd);
+      container.removeEventListener('touchcancel', handleTouchEnd);
+      chart.remove();
+      chartRef.current = null;
+      btcSeriesRef.current = null;
+      goldSeriesRef.current = null;
+      touchActiveRef.current = false;
+      onHoverChange(null);
+    };
+  }, [labelMap, onHoverChange]);
+
+  // Data + visibility update — runs when data or showGold changes
+  useEffect(() => {
+    const chart = chartRef.current;
+    const btcSeries = btcSeriesRef.current;
+    const goldSeries = goldSeriesRef.current;
+    if (!chart || !btcSeries || !goldSeries) return;
+
+    const btcData = chartData
+      .filter((p) => Number.isFinite(p.bitcoin) && Number.isFinite(p.ts))
+      .map((p) => ({ time: Math.floor(p.ts / 1000), value: p.bitcoin }));
+
+    const goldData = chartData
+      .filter((p) => Number.isFinite(p.gold) && Number.isFinite(p.ts))
+      .map((p) => ({ time: Math.floor(p.ts / 1000), value: p.gold }));
+
+    btcSeries.setData(btcData);
+
+    if (showGold && goldData.length > 1) {
+      goldSeries.applyOptions({ visible: true });
+      goldSeries.setData(goldData);
+    } else {
+      goldSeries.applyOptions({ visible: false });
+      goldSeries.setData([]);
     }
-    onHover(null);
-  });
 
-  return null;
-}
+    chart.timeScale().fitContent();
+  }, [chartData, showGold]);
 
-const ChartSection = memo(function ChartSection({ chartData, showGold, yMin, yMax, onHoverChange }) {
   return (
-    <ResponsiveContainer width="100%" height="100%">
-      <AreaChart data={chartData} margin={{ top: 6, right: 4, left: 4, bottom: 2 }}>
-        <defs>
-          <linearGradient id="s15BtcFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--accent-bitcoin)" stopOpacity="0.38" />
-            <stop offset="100%" stopColor="var(--accent-bitcoin)" stopOpacity="0" />
-          </linearGradient>
-          <linearGradient id="s15GoldFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="rgba(210,210,210,0.4)" stopOpacity="0.26" />
-            <stop offset="100%" stopColor="rgba(210,210,210,0.22)" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-
-        <XAxis dataKey="ts" hide />
-        <YAxis domain={[yMin, yMax]} hide />
-
-        <Tooltip
-          content={(props) => <HoverBridge {...props} onHover={onHoverChange} />}
-          cursor={<ComparisonCursor />}
-        />
-
-        {showGold ? (
-          <Area
-            type="monotone"
-            dataKey="gold"
-            stroke="rgba(214,214,214,0.92)"
-            strokeWidth={2}
-            fill="url(#s15GoldFill)"
-            dot={false}
-            activeDot={false}
-            isAnimationActive
-            animationDuration={650}
-            animationEasing="ease-out"
-          />
-        ) : null}
-
-        <Area
-          type="monotone"
-          dataKey="bitcoin"
-          stroke="var(--accent-bitcoin)"
-          strokeWidth={2.3}
-          fill="url(#s15BtcFill)"
-          dot={false}
-          activeDot={false}
-          isAnimationActive
-          animationDuration={700}
-          animationEasing="ease-out"
-        />
-      </AreaChart>
-    </ResponsiveContainer>
+    <div
+      ref={containerRef}
+      className="h-full w-full overflow-hidden rounded-[6px] sm:rounded-[10px]"
+    />
   );
 });
 
+// ── Stat card atoms ───────────────────────────────────────────────────────────
 function MetricBox({ label, value, decimals = 2, color = 'var(--text-primary)', suffix = 'T' }) {
   return (
-    <div className="rounded-xl border border-white/10 px-3 py-3 text-center">
-      <div
-        className="font-mono font-bold uppercase tracking-widest"
-        style={{ fontSize: '0.62rem', color, marginBottom: 5 }}
-      >
+    <div className="rounded-lg border border-white/10 px-2 py-2.5 text-center sm:rounded-xl sm:px-3 sm:py-3">
+      <div className="font-mono font-bold uppercase tracking-widest" style={{ fontSize: 'clamp(0.58rem,1.6vw,0.62rem)', color, marginBottom: 4 }}>
         {label}
       </div>
-      <div className="font-mono tabular-nums font-semibold text-white" style={{ fontSize: '0.82rem' }}>
+      <div className="flex min-h-[1.1em] items-center justify-center font-mono tabular-nums font-semibold text-white" style={{ fontSize: 'clamp(0.72rem,2vw,0.82rem)' }}>
         <AnimatedMetric value={value} variant="number" decimals={decimals} prefix="$" suffix={suffix} inline />
       </div>
     </div>
@@ -136,57 +293,47 @@ function MetricBox({ label, value, decimals = 2, color = 'var(--text-primary)', 
 
 function MetricPlaceholder({ label, message = 'Unavailable', color = 'rgba(255,255,255,0.45)' }) {
   return (
-    <div className="rounded-xl border border-white/10 px-3 py-3 text-center">
-      <div
-        className="font-mono font-bold uppercase tracking-widest"
-        style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.6)', marginBottom: 5 }}
-      >
+    <div className="rounded-lg border border-white/10 px-2 py-2.5 text-center sm:rounded-xl sm:px-3 sm:py-3">
+      <div className="font-mono font-bold uppercase tracking-widest" style={{ fontSize: 'clamp(0.58rem,1.6vw,0.62rem)', color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>
         {label}
       </div>
-      <div className="font-mono font-semibold" style={{ fontSize: '0.82rem', color }}>
+      <div className="font-mono font-semibold" style={{ fontSize: 'clamp(0.72rem,2vw,0.82rem)', color }}>
         {message}
       </div>
     </div>
   );
 }
 
+// ── Main module ───────────────────────────────────────────────────────────────
 export default function S15_BTCvsGold() {
-  const [payload, setPayload] = useState(() => lastBtcVsGoldPayload);
+  const [payload, setPayload]       = useState(() => lastBtcVsGoldPayload);
   const [activeLabel, setActiveLabel] = useState('1Y');
-  const [loading, setLoading] = useState(() => !lastBtcVsGoldPayload);
-  const [hoverData, setHoverData] = useState(null);
-  const [showGold, setShowGold] = useState(true);
-  const [error, setError] = useState(null);
+  const [loading, setLoading]       = useState(() => !lastBtcVsGoldPayload);
+  const [hoverData, setHoverData]   = useState(null);
+  const [showGold, setShowGold]     = useState(true);
+  const [error, setError]           = useState(null);
   const [requestKey, setRequestKey] = useState(0);
 
   useEffect(() => {
     let active = true;
-
     (async () => {
       try {
-        const nextPayload = await fetchJson('/api/s15/btc-vs-gold-market-cap', { timeout: 8000 });
-        if (active) {
-          lastBtcVsGoldPayload = nextPayload;
-          setPayload(nextPayload);
-          setError(null);
-        }
+        const next = await fetchJson('/api/s15/btc-vs-gold-market-cap', { timeout: 8000 });
+        if (active) { lastBtcVsGoldPayload = next; setPayload(next); setError(null); }
       } catch {
         if (active) {
-          setPayload((current) => current);
+          setPayload((c) => c);
           setError('Live comparison is temporarily unavailable while the gold market-cap snapshot is missing.');
         }
       } finally {
         if (active) setLoading(false);
       }
     })();
-
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, [requestKey]);
 
-  const points = useMemo(() => payload?.data?.points || [], [payload]);
-  const activeRange = RANGES.find((range) => range.label === activeLabel) ?? RANGES.at(-1);
+  const points     = useMemo(() => payload?.data?.points || [], [payload]);
+  const activeRange = RANGES.find((r) => r.label === activeLabel) ?? RANGES.at(-1);
 
   const chartData = useMemo(() => {
     if (!points.length) return [];
@@ -194,80 +341,65 @@ export default function S15_BTCvsGold() {
     const lastTs = Number(points.at(-1)?.ts);
     if (!Number.isFinite(lastTs)) return points;
     const cutoff = lastTs - activeRange.days * DAY_MS;
-    return points.filter((point) => Number(point.ts) >= cutoff);
+    return points.filter((p) => Number(p.ts) >= cutoff);
   }, [activeRange.days, points]);
 
-  const hasChart = chartData.length > 1;
-  const latestPoint = chartData.at(-1) || payload?.data?.latest || null;
-  const startPoint = chartData[0] || null;
-  const hoveredPoint = hoverData || latestPoint;
-  const showUnavailableState = !loading && !latestPoint;
+  const hasChart          = chartData.length > 1;
+  const latestPoint       = chartData.at(-1) || payload?.data?.latest || null;
+  const startPoint        = chartData[0] || null;
+  const hoveredPoint      = hoverData || latestPoint;
+  const showUnavailable   = !loading && !latestPoint;
 
   const btcDelta = Number.isFinite(startPoint?.bitcoin) && Number.isFinite(latestPoint?.bitcoin)
-    ? latestPoint.bitcoin - startPoint.bitcoin
-    : null;
-  const btcDeltaPct = Number.isFinite(startPoint?.bitcoin) && startPoint.bitcoin > 0 && Number.isFinite(latestPoint?.bitcoin)
-    ? ((latestPoint.bitcoin - startPoint.bitcoin) / startPoint.bitcoin) * 100
-    : null;
+    ? latestPoint.bitcoin - startPoint.bitcoin : null;
+  const btcDeltaPct = Number.isFinite(startPoint?.bitcoin) && startPoint.bitcoin > 0
+    && Number.isFinite(latestPoint?.bitcoin)
+    ? ((latestPoint.bitcoin - startPoint.bitcoin) / startPoint.bitcoin) * 100 : null;
   const hasDelta = Number.isFinite(btcDelta) && Number.isFinite(btcDeltaPct);
-  const isUp = hasDelta ? btcDelta >= 0 : true;
+  const isUp     = hasDelta ? btcDelta >= 0 : true;
 
-  const values = useMemo(() => {
-    if (!chartData.length) return [];
-    return chartData.flatMap((point) => (showGold ? [point.bitcoin, point.gold] : [point.bitcoin])).filter(Number.isFinite);
-  }, [chartData, showGold]);
-
-  const high = values.length ? Math.max(...values) : null;
-  const low = values.length ? Math.min(...values) : null;
-  const yPad = high !== null && low !== null ? Math.max((high - low) * 0.08, 0.8) : 1;
-  const yMin = low !== null ? Math.max(0, low - yPad) : 0;
-  const yMax = high !== null ? high + yPad : 1;
-
-  const rangeText = RANGE_TEXT[activeLabel] ?? 'Past Year';
+  const rangeText    = RANGE_TEXT[activeLabel] ?? 'Past Year';
   const updatedLabel = payload?.updated_at
     ? new Date(payload.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : null;
 
-  const handleRetry = () => {
-    setHoverData(null);
-    setError(null);
-    setLoading(true);
-    setRequestKey((current) => current + 1);
-  };
+  const btcHigh = hasChart ? Math.max(...chartData.map((p) => p.bitcoin).filter(Number.isFinite)) : null;
+
+  const handleRetry = () => { setHoverData(null); setError(null); setLoading(true); setRequestKey((k) => k + 1); };
 
   return (
-    <div className="flex h-full w-full flex-col bg-[#111111] px-3.5 pb-3.5 pt-4 sm:px-5 sm:pb-4 sm:pt-5 lg:px-[22px] lg:pb-4 lg:pt-5">
-      <div className="flex flex-shrink-0 flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-start sm:gap-4">
+    <div className="visual-integrity-lock flex h-full w-full flex-col bg-[#111111] px-3.5 pb-3 pt-3 sm:px-5 sm:pb-4 sm:pt-4 lg:px-[22px] lg:pb-4 lg:pt-5">
+
+      {/* ── HEADER ── */}
+      <div className="flex flex-shrink-0 flex-row items-start justify-between gap-2 sm:gap-4">
         <div className="min-w-0 flex-1">
           {!loading && hoveredPoint ? (
             <>
-              {/* Dual market cap hero — flex row */}
-              <div className="flex min-w-0 items-start gap-3 sm:gap-5">
-                {/* BTC market cap */}
+              {/* Dual price hero */}
+              <div className="flex min-w-0 items-start gap-2 sm:gap-5">
                 <div className="min-w-0 flex-1">
-                  <div className="mb-1 font-mono text-[0.58rem] font-bold uppercase tracking-widest" style={{ color: 'var(--accent-bitcoin)' }}>
+                  <div className="mb-0.5 font-mono text-[0.58rem] font-bold uppercase tracking-widest" style={{ color: BTC_COLOR }}>
                     Bitcoin
                   </div>
-                  <div className="flex min-h-[2.8rem] max-w-full items-center font-mono font-bold tabular-nums leading-none" style={{ fontSize: 'clamp(1.25rem, 4.5vw, 2.4rem)' }}>
+                  <div className="flex max-w-full items-center font-mono font-bold tabular-nums leading-none" style={{ fontSize: 'clamp(1.15rem,4vw,2.4rem)' }}>
                     <AnimatedMetric value={hoveredPoint.bitcoin} variant="number" decimals={2} prefix="$" suffix="T" inline />
                   </div>
                 </div>
 
-                {/* Divider */}
-                <div className="mt-5 w-px self-stretch opacity-20" style={{ background: 'white' }} />
+                <div className="mt-4 w-px self-stretch opacity-20" style={{ background: 'white' }} />
 
-                {/* Gold market cap */}
                 <div className="min-w-0 flex-1">
-                  <div className="mb-1 font-mono text-[0.58rem] font-bold uppercase tracking-widest" style={{ color: 'rgba(214,214,214,0.72)' }}>
+                  <div className="mb-0.5 font-mono text-[0.58rem] font-bold uppercase tracking-widest" style={{ color: 'rgba(214,214,214,0.72)' }}>
                     Gold
                   </div>
-                  <div className="flex min-h-[2.8rem] max-w-full items-center font-mono font-bold tabular-nums leading-none" style={{ fontSize: 'clamp(1.25rem, 4.5vw, 2.4rem)', color: 'rgba(214,214,214,0.95)' }}>
+                  <div className="flex max-w-full items-center font-mono font-bold tabular-nums leading-none" style={{ fontSize: 'clamp(1.15rem,4vw,2.4rem)', color: 'rgba(214,214,214,0.95)' }}>
                     <AnimatedMetric value={hoveredPoint.gold} variant="number" decimals={2} prefix="$" suffix="T" inline color="rgba(214,214,214,0.95)" />
                   </div>
                 </div>
               </div>
 
-              <div className="mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 font-mono tabular-nums" style={{ fontSize: '0.82rem' }}>
+              {/* Delta / hover date */}
+              <div className="mt-1.5 flex flex-wrap items-center gap-x-1 gap-y-0.5 font-mono tabular-nums" style={{ fontSize: 'clamp(0.72rem,2.2vw,0.82rem)' }}>
                 {hoverData ? (
                   <span className="uppercase tracking-wide" style={{ color: 'rgba(255,255,255,0.5)' }}>{hoveredPoint.date}</span>
                 ) : hasDelta ? (
@@ -278,128 +410,132 @@ export default function S15_BTCvsGold() {
                     <span style={{ color: isUp ? 'var(--accent-green)' : 'var(--accent-red)' }}>
                       (<AnimatedMetric value={btcDeltaPct} variant="percent" decimals={2} signed inline color={isUp ? 'var(--accent-green)' : 'var(--accent-red)'} />)
                     </span>
-                    <span style={{ color: 'rgba(255,255,255,0.38)' }}>{rangeText}</span>
+                    <span className="hidden xs:inline" style={{ color: 'rgba(255,255,255,0.38)' }}>{rangeText}</span>
                   </>
                 ) : (
                   <span style={{ color: 'rgba(255,255,255,0.25)' }}>Loading...</span>
                 )}
               </div>
 
-              <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono" style={{ fontSize: 'var(--fs-micro)', color: 'var(--text-secondary)' }}>
+              {/* Sub-meta row */}
+              <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono" style={{ fontSize: 'var(--fs-micro)', color: 'var(--text-secondary)' }}>
                 {latestPoint ? (
                   <>
-                    <span>BTC = <AnimatedMetric value={latestPoint.ratio} variant="percent" decimals={2} inline color="var(--accent-bitcoin)" /> of gold</span>
+                    <span>BTC = <AnimatedMetric value={latestPoint.ratio} variant="percent" decimals={2} inline color={BTC_COLOR} /> of gold</span>
                     {updatedLabel ? <><span className="hidden h-1 w-1 rounded-full bg-white/20 sm:block" /><span>Synced {updatedLabel}</span></> : null}
-                    {payload?.data?.gold_reference === 'current_market_cap_snapshot' ? <><span className="hidden h-1 w-1 rounded-full bg-white/20 sm:block" /><span>Gold line uses current market cap snapshot</span></> : null}
                   </>
                 ) : null}
               </div>
 
               {error ? (
-                <div className="mt-2 font-mono" style={{ fontSize: '0.72rem', color: 'var(--accent-red)' }}>
-                  {error}
-                </div>
+                <div className="mt-1.5 font-mono" style={{ fontSize: '0.72rem', color: 'var(--accent-red)' }}>{error}</div>
               ) : null}
             </>
-          ) : showUnavailableState ? (
+          ) : showUnavailable ? (
             <>
               <div className="font-mono text-[0.62rem] font-bold uppercase tracking-[0.2em]" style={{ color: 'var(--accent-red)' }}>
                 Live comparison unavailable
               </div>
-              <div
-                className="mt-2 max-w-2xl font-mono leading-relaxed text-white/70"
-                style={{ fontSize: '0.8rem' }}
+              <div className="mt-2 max-w-2xl font-mono leading-relaxed text-white/70" style={{ fontSize: '0.8rem' }}>
+                The BTC vs Gold chart needs the current gold market-cap snapshot. It will recover automatically when the upstream source responds.
+              </div>
+              {error ? <div className="mt-2 font-mono" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)' }}>{error}</div> : null}
+              <button
+                type="button"
+                onClick={handleRetry}
+                className="mt-3 rounded-full border border-white/12 px-3 py-1.5 font-mono uppercase tracking-[0.16em] text-white transition-colors hover:border-white/25 hover:bg-white/5"
+                style={{ fontSize: '0.68rem' }}
               >
-                The BTC vs Gold chart needs the current gold market-cap snapshot. The module stays visible and will recover automatically when the upstream source responds again.
-              </div>
-              {error ? (
-                <div className="mt-2 font-mono" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)' }}>
-                  {error}
-                </div>
-              ) : null}
-              <div className="mt-3">
-                <button
-                  type="button"
-                  onClick={handleRetry}
-                  className="rounded-full border border-white/12 px-3 py-1.5 font-mono uppercase tracking-[0.16em] text-white transition-colors hover:border-white/25 hover:bg-white/5"
-                  style={{ fontSize: '0.68rem' }}
-                >
-                  Retry
-                </button>
-              </div>
+                Retry
+              </button>
             </>
           ) : (
+            /* Loading skeleton */
             <>
               <div className="flex items-start gap-3 sm:gap-5">
                 <div className="flex-1">
                   <div className="skeleton mb-2" style={{ width: 36, height: '0.6rem', borderRadius: 3 }} />
-                  <div className="skeleton" style={{ width: 'min(140px, 42vw)', height: '2.4rem', borderRadius: 6 }} />
+                  <div className="skeleton" style={{ width: 'min(130px, 40vw)', height: '2.2rem', borderRadius: 6 }} />
                 </div>
-                <div className="mt-4 w-px self-stretch opacity-10" style={{ background: 'white' }} />
+                <div className="mt-3 w-px self-stretch opacity-10" style={{ background: 'white' }} />
                 <div className="flex-1">
                   <div className="skeleton mb-2" style={{ width: 30, height: '0.6rem', borderRadius: 3 }} />
-                  <div className="skeleton" style={{ width: 'min(140px, 42vw)', height: '2.4rem', borderRadius: 6 }} />
+                  <div className="skeleton" style={{ width: 'min(130px, 40vw)', height: '2.2rem', borderRadius: 6 }} />
                 </div>
               </div>
-              <div className="skeleton mt-3" style={{ width: 180, height: '1rem', borderRadius: 4 }} />
+              <div className="skeleton mt-2.5" style={{ width: 180, height: '1rem', borderRadius: 4 }} />
             </>
           )}
         </div>
 
+        {/* Gold toggle — top-right, ≥44pt touch target on phone */}
         <button
           type="button"
-          onClick={() => setShowGold((value) => !value)}
+          onClick={() => setShowGold((v) => !v)}
           disabled={!hasChart}
-          className="relative flex w-full flex-shrink-0 items-center justify-end gap-1.5 self-start pb-1.5 font-mono transition-colors disabled:cursor-not-allowed disabled:opacity-25 sm:w-auto sm:justify-start"
+          aria-pressed={showGold}
+          aria-label={showGold ? 'Hide gold series' : 'Show gold series'}
+          className="relative flex min-h-[44px] min-w-[44px] flex-shrink-0 items-center justify-center gap-1.5 self-start rounded-md px-3 font-mono transition-colors disabled:cursor-not-allowed disabled:opacity-25 sm:min-h-[36px]"
           style={{
-            fontSize: '0.78rem',
+            fontSize: 'clamp(0.7rem,1.8vw,0.78rem)',
             fontWeight: showGold ? 700 : 400,
-            color: showGold ? 'white' : 'rgba(255,255,255,0.5)',
+            color: showGold ? 'rgba(214,214,214,0.95)' : 'rgba(255,255,255,0.45)',
             letterSpacing: '0.05em',
+            paddingTop: 6,
+            paddingBottom: 6,
           }}
         >
-          {showGold ? 'Hide Gold' : 'Show Gold'}
-          {showGold ? <span className="absolute bottom-0 left-0 right-0 rounded-full" style={{ height: 2, background: 'white' }} /> : null}
+          {showGold ? 'Hide Gold' : 'Gold'}
+          {showGold && (
+            <span className="absolute bottom-0 left-2 right-2 rounded-full" style={{ height: 2, background: 'rgba(214,214,214,0.8)' }} />
+          )}
         </button>
       </div>
 
-      <div className="min-h-0 flex-1" style={{ margin: '20px -4px 0' }}>
+      {/* ── CHART ── */}
+      <div
+        className="visual-chart-surface mt-3 min-h-[140px] flex-1 sm:mt-4 sm:min-h-[180px]"
+        style={{ margin: '12px -2px 0', flex: '1 1 0' }}
+      >
         {hasChart ? (
-          <ChartSection chartData={chartData} showGold={showGold} yMin={yMin} yMax={yMax} onHoverChange={setHoverData} />
-        ) : showUnavailableState ? (
-          <div className="flex h-full min-h-[220px] items-center justify-center px-2 pb-1">
+          <ChartSection
+            key={activeLabel}
+            chartData={chartData}
+            showGold={showGold}
+            onHoverChange={setHoverData}
+          />
+        ) : showUnavailable ? (
+          <div className="flex h-full min-h-[140px] items-center justify-center px-2 pb-1 sm:min-h-[180px]">
             <div className="flex w-full max-w-2xl flex-col items-center rounded-2xl border border-white/10 bg-[#0d0d0d] px-6 py-7 text-center">
-              <div
-                className="font-mono text-[0.7rem] font-bold uppercase tracking-[0.22em]"
-                style={{ color: 'var(--accent-red)' }}
-              >
+              <div className="font-mono text-[0.7rem] font-bold uppercase tracking-[0.22em]" style={{ color: 'var(--accent-red)' }}>
                 Waiting for gold market-cap snapshot
               </div>
               <div className="mt-3 font-mono leading-relaxed text-white/70" style={{ fontSize: '0.82rem' }}>
-                Binance BTC history is available locally, but the current gold market-cap reference did not arrive from the approved upstream source.
+                Binance BTC history is available, but the gold market-cap reference did not arrive from the approved upstream source.
               </div>
               <div className="mt-2 font-mono text-white/50" style={{ fontSize: '0.74rem' }}>
-                No fake fallback is shown here so the comparison stays honest.
+                No fake fallback is shown — the comparison stays honest.
               </div>
             </div>
           </div>
         ) : (
-          <div className="flex h-full items-end gap-px pb-1">
-            {Array.from({ length: 42 }, (_, index) => (
+          <div className="flex h-full min-h-[140px] items-end gap-px pb-1 sm:min-h-[180px]">
+            {Array.from({ length: 42 }, (_, i) => (
               <div
-                key={index}
+                key={i}
                 className="skeleton flex-1"
-                style={{
-                  height: `${28 + Math.sin(index * 0.42) * 18 + Math.sin(index * 0.16) * 26}%`,
-                  borderRadius: 2,
-                }}
+                style={{ height: `${28 + Math.sin(i * 0.42) * 18 + Math.sin(i * 0.16) * 26}%`, borderRadius: 2 }}
               />
             ))}
           </div>
         )}
       </div>
 
-      <div className="scrollbar-hidden-mobile flex flex-shrink-0 items-center gap-3 overflow-x-auto sm:gap-5" style={{ margin: '14px 0 16px', paddingBottom: 2 }}>
+      {/* ── RANGE TABS ── */}
+      <div
+        className="scrollbar-hidden-mobile flex flex-shrink-0 items-center gap-2 overflow-x-auto sm:gap-4"
+        style={{ margin: '10px 0 10px', paddingBottom: 3 }}
+      >
         {RANGES.map(({ label }) => {
           const isActive = activeLabel === label;
           return (
@@ -408,46 +544,51 @@ export default function S15_BTCvsGold() {
               type="button"
               onClick={() => setActiveLabel(label)}
               disabled={!hasChart}
-                className="relative flex min-h-[40px] flex-shrink-0 items-center gap-1.5 rounded-md px-2 pb-1.5 pt-1 font-mono transition-colors sm:min-h-[36px]"
-                style={{
-                  fontSize: '0.82rem',
-                  fontWeight: isActive ? 700 : 400,
-                  color: !hasChart ? 'rgba(255,255,255,0.18)' : isActive ? 'white' : 'rgba(255,255,255,0.32)',
-                  letterSpacing: '0.05em',
-                }}
+              aria-pressed={isActive}
+              aria-label={`Show ${RANGE_TEXT[label] ?? label} chart`}
+              className="relative flex min-h-[44px] flex-shrink-0 items-center gap-1 rounded-md px-2.5 pb-2 pt-2 font-mono transition-colors disabled:opacity-30 sm:min-h-[36px] sm:px-2 sm:pb-1.5 sm:pt-1"
+              style={{
+                fontSize: 'clamp(0.75rem,2.4vw,0.82rem)',
+                fontWeight: isActive ? 700 : 400,
+                color: !hasChart ? 'rgba(255,255,255,0.18)' : isActive ? 'white' : 'rgba(255,255,255,0.32)',
+                letterSpacing: '0.05em',
+              }}
             >
               {label}
-              {hasChart && isActive ? <span className="absolute bottom-0 left-0 right-0 rounded-full" style={{ height: 2, background: 'white' }} /> : null}
+              {hasChart && isActive && (
+                <span className="absolute bottom-0.5 left-1 right-1 rounded-full" style={{ height: 2, background: 'white' }} />
+              )}
             </button>
           );
         })}
       </div>
 
-      <div className="flex-shrink-0 grid grid-cols-1 gap-3 sm:grid-cols-3">
+      {/* ── STAT CARDS — always 3-col horizontal ── */}
+      <div className="grid flex-shrink-0 grid-cols-3 gap-2 sm:gap-3">
         {latestPoint ? (
           <>
-            <MetricBox label="BTC HIGH" value={Math.max(...chartData.map((point) => point.bitcoin))} color="var(--accent-bitcoin)" />
+            <MetricBox label="BTC HIGH" value={btcHigh} color={BTC_COLOR} />
             <MetricBox label="GOLD REF" value={latestPoint.gold} color="rgba(214,214,214,0.9)" />
-            <div className="rounded-xl border border-white/10 px-3 py-3 text-center">
-              <div className="font-mono font-bold uppercase tracking-widest" style={{ fontSize: '0.62rem', color: 'var(--accent-green)', marginBottom: 5 }}>
-                BTC / GOLD
+            <div className="rounded-lg border border-white/10 px-2 py-2.5 text-center sm:rounded-xl sm:px-3 sm:py-3">
+              <div className="font-mono font-bold uppercase tracking-widest" style={{ fontSize: 'clamp(0.58rem,1.6vw,0.62rem)', color: 'var(--accent-green)', marginBottom: 4 }}>
+                BTC/Gold
               </div>
-              <div className="font-mono tabular-nums font-semibold text-white" style={{ fontSize: '0.82rem' }}>
+              <div className="flex min-h-[1.1em] items-center justify-center font-mono tabular-nums font-semibold text-white" style={{ fontSize: 'clamp(0.72rem,2vw,0.82rem)' }}>
                 <AnimatedMetric value={latestPoint.ratio} variant="percent" decimals={2} inline />
               </div>
             </div>
           </>
-        ) : showUnavailableState ? (
+        ) : showUnavailable ? (
           <>
             <MetricPlaceholder label="BTC HIGH" />
-            <MetricPlaceholder label="GOLD REF" message="Waiting for source" />
-            <MetricPlaceholder label="BTC / GOLD" message="Needs live gold ref" color="rgba(255,255,255,0.38)" />
+            <MetricPlaceholder label="GOLD REF" message="Waiting" />
+            <MetricPlaceholder label="BTC/Gold" message="Needs ref" color="rgba(255,255,255,0.38)" />
           </>
         ) : (
-          [0, 1, 2].map((index) => (
-            <div key={index} className="rounded-xl px-3 py-3" style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
-              <div className="skeleton mb-2" style={{ width: 40, height: '0.65rem', borderRadius: 3 }} />
-              <div className="skeleton" style={{ width: 72, height: '0.9rem', borderRadius: 3 }} />
+          [0, 1, 2].map((i) => (
+            <div key={i} className="rounded-lg px-2 py-2.5 sm:rounded-xl sm:px-3 sm:py-3" style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
+              <div className="skeleton mb-1.5" style={{ width: '45%', height: '0.6rem', borderRadius: 3 }} />
+              <div className="skeleton" style={{ width: '70%', height: '0.85rem', borderRadius: 3 }} />
             </div>
           ))
         )}
