@@ -1,44 +1,17 @@
 <div align="center">
-  <img src="./public/modulos-referencia/foto-metadata.png" alt="Satoshi Dashboard cover" width="900"/>
-
   <h1>Satoshi Dashboard</h1>
-
+ <img src="public/modulos-referencia/foto-metadata.png" alt="Foto metadata" width="800"/>
   <p>
-    <strong>
-      An open-source Bitcoin dashboard focused on market context, network data, macro comparison, and honest source attribution.
-    </strong>
+    <strong>An open-source Bitcoin dashboard focused on market context, network data, macro comparison, and honest source attribution.</strong>
   </p>
-
-  <p>
-    Satoshi Dashboard turns scattered Bitcoin metrics into a calmer, one-module-at-a-time experience.
-    It combines live market and network modules, public editorial routes, a cache-aware API layer,
-    and explicit source transparency instead of hiding refresh limits or fallback behavior.
-  </p>
-
   <p>
     <img src="https://img.shields.io/badge/status-actively%20developed-2ea44f?style=for-the-badge" alt="Status">
     <img src="https://img.shields.io/badge/license-MIT-0b57d0?style=for-the-badge" alt="License">
-    <img src="https://img.shields.io/badge/react-19-149eca?style=for-the-badge&logo=react&logoColor=white" alt="React 19">
-    <img src="https://img.shields.io/badge/vite-7-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite 7">
-    <img src="https://img.shields.io/badge/express-4-222222?style=for-the-badge&logo=express&logoColor=white" alt="Express 4">
-    <img src="https://img.shields.io/badge/tailwindcss-4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="Tailwind CSS 4">
-    <img src="https://img.shields.io/badge/vercel-ready-black?style=for-the-badge&logo=vercel&logoColor=white" alt="Vercel Ready">
+    <img src="https://img.shields.io/badge/react-19-149eca?style=for-the-badge" alt="React 19">
+    <img src="https://img.shields.io/badge/vercel-ready-black?style=for-the-badge" alt="Vercel Ready">
   </p>
-
   <p>
-    <a href="https://skillicons.dev">
-      <img
-        src="https://skillicons.dev/icons?i=react,vite,js,nodejs,express,tailwind,vercel,npm,git,github"
-        alt="Tech stack icons"
-      />
-    </a>
-  </p>
-
-  <p>
-    <a href="https://www.satoshidashboard.com"><img src="https://img.shields.io/badge/Live%20Demo-Visit%20Site-F7931A?style=flat-square&logo=bitcoin&logoColor=white" alt="Live Web"></a>
-    <a href="https://github.com/Satoshi-Dashboard/Satoshi-Dashboard"><img src="https://img.shields.io/github/stars/Satoshi-Dashboard/Satoshi-Dashboard?style=flat-square" alt="GitHub stars"></a>
-    <a href="https://github.com/Satoshi-Dashboard/Satoshi-Dashboard/issues"><img src="https://img.shields.io/github/issues/Satoshi-Dashboard/Satoshi-Dashboard?style=flat-square" alt="GitHub issues"></a>
-    <a href="https://github.com/Satoshi-Dashboard/Satoshi-Dashboard/network/members"><img src="https://img.shields.io/github/forks/Satoshi-Dashboard/Satoshi-Dashboard?style=flat-square" alt="GitHub forks"></a>
+    Satoshi Dashboard turns scattered Bitcoin metrics into a calmer, one-module-at-a-time experience. It combines live market and network modules, public editorial routes, a cache-aware API layer, and explicit source transparency instead of hiding refresh limits or fallback behavior.
   </p>
 </div>
 
