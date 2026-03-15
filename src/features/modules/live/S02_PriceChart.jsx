@@ -1,153 +1,337 @@
-import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Area,
-  AreaChart,
-  ReferenceLine,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
+  AreaSeries,
+  createChart,
+  CrosshairMode,
+  LineSeries,
+  LineStyle,
+} from 'lightweight-charts';
 import { fetchBtcSpot, fetchBtcHistory } from '@/shared/services/priceApi.js';
 import AnimatedMetric from '@/shared/components/common/AnimatedMetric.jsx';
 
 const RANGES = [
-  { label: 'LIVE', days: 1,    interval: '15m', live: true },
-  { label: '1D',   days: 1,    interval: '5m' },
-  { label: '1W',   days: 7,    interval: '1h' },
-  { label: '1M',   days: 30,   interval: '1h' },
-  { label: '3M',   days: 90,   interval: '1d' },
-  { label: '1Y',   days: 365,  interval: '1d' },
-  { label: '5Y',   days: 1825, interval: '1d' },
+  { label: 'LIVE', days: 1, interval: '15m', live: true },
+  { label: '1D', days: 1, interval: '5m' },
+  { label: '1W', days: 7, interval: '1h' },
+  { label: '1M', days: 30, interval: '1h' },
+  { label: '3M', days: 90, interval: '1d' },
+  { label: '1Y', days: 365, interval: '1d' },
+  { label: '5Y', days: 1825, interval: '1d' },
 ];
 
 const RANGE_TEXT = {
   LIVE: 'Live',
-  '1D':  'Past Day',
-  '1W':  'Past Week',
-  '1M':  'Past Month',
-  '3M':  'Past 3 Months',
-  '1Y':  'Past Year',
-  '5Y':  'Past 5 Years',
+  '1D': 'Past Day',
+  '1W': 'Past Week',
+  '1M': 'Past Month',
+  '3M': 'Past 3 Months',
+  '1Y': 'Past Year',
+  '5Y': 'Past 5 Years',
 };
 
-/* ── Robinhood cursor: vertical line + dot on the curve ── */
-function RobinhoodCursor({ points, height, lineColor }) {
-  if (!points?.length) return null;
-  const { x, y } = points[0];
-  return (
-    <g>
-      <line
-        x1={x} y1={0} x2={x} y2={height}
-        stroke="rgba(255,255,255,0.2)" strokeWidth={1}
-      />
-      <circle cx={x} cy={y} r={4} fill={lineColor} stroke="#111111" strokeWidth={2} />
-    </g>
-  );
-}
+const CHART_FONT = 'JetBrains Mono, SFMono-Regular, Cascadia Code, Fira Code, Consolas, Liberation Mono, monospace';
+const BITCOIN_ORANGE = '#F7931A';
+const ACCENT_GREEN = '#00D897';
+const ACCENT_RED = '#FF4757';
+const PANEL_BG = '#111111';
 
-/* ── Tooltip bridge: syncs hover data to parent without re-rendering the chart ── */
-function HoverBridge({ active, payload, onHover }) {
-  useLayoutEffect(() => {
-    if (active && payload?.[0]?.payload) {
-      const p = payload[0].payload;
-      if (Number.isFinite(p.price)) {
-        onHover({ price: p.price, label: p.tooltipLabel });
-        return;
-      }
-    }
-    onHover(null);
-  });
+const dataCache = {};
+
+function getAreaPointValue(point) {
+  if (typeof point === 'number') return point;
+  if (point && typeof point === 'object' && Number.isFinite(point.value)) return point.value;
   return null;
 }
 
-/* ── Session cache ── */
-const dataCache = {};
-
-/* ── Memoized chart — isolated so hover state updates don't re-render it ── */
 const ChartSection = memo(function ChartSection({
-  chartData, showAvgLine, hasAvg, avgPrice,
-  lineColor, gradId, yMin, yMax, onHoverChange,
+  chartData,
+  showAvgLine,
+  hasAvg,
+  avgPrice,
+  lineColor,
+  onHoverChange,
 }) {
+  const containerRef = useRef(null);
+  const chartRef = useRef(null);
+  const areaSeriesRef = useRef(null);
+  const avgSeriesRef = useRef(null);
+  // Track whether a touch scrub is active so we can clear on touchend
+  const touchActiveRef = useRef(false);
+
+  const hoverLabelMap = useMemo(() => {
+    const map = new Map();
+    chartData.forEach((point) => {
+      const time = Math.floor(point.ts / 1000);
+      map.set(time, point.tooltipLabel);
+    });
+    return map;
+  }, [chartData]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return undefined;
+
+    const chart = createChart(container, {
+      autoSize: true,
+      layout: {
+        background: { color: PANEL_BG },
+        textColor: 'rgba(255,255,255,0.45)',
+        fontFamily: CHART_FONT,
+        attributionLogo: false,
+      },
+      localization: {
+        locale: 'en-US',
+      },
+      grid: {
+        vertLines: { color: 'transparent' },
+        horzLines: { color: 'transparent' },
+      },
+      crosshair: {
+        mode: CrosshairMode.Normal,
+        vertLine: {
+          color: 'rgba(255,255,255,0.24)',
+          width: 1,
+          style: LineStyle.Solid,
+          labelVisible: false,
+        },
+        horzLine: {
+          color: 'rgba(255,255,255,0.12)',
+          width: 1,
+          style: LineStyle.Dashed,
+          labelVisible: false,
+        },
+      },
+      rightPriceScale: {
+        visible: false,
+        borderVisible: false,
+        scaleMargins: { top: 0.08, bottom: 0.08 },
+      },
+      leftPriceScale: {
+        visible: false,
+        borderVisible: false,
+      },
+      timeScale: {
+        visible: false,
+        borderVisible: false,
+        timeVisible: true,
+        secondsVisible: false,
+        rightOffset: 0,
+        barSpacing: 7,
+        minBarSpacing: 1.8,
+      },
+      handleScroll: false,
+      handleScale: false,
+    });
+
+    const areaSeries = chart.addSeries(AreaSeries, {
+      lineColor,
+      topColor: `${lineColor}33`,
+      bottomColor: `${lineColor}00`,
+      lineWidth: 2,
+      lineType: 2,
+      priceLineVisible: false,
+      lastValueVisible: false,
+      crosshairMarkerVisible: true,
+      crosshairMarkerRadius: 4,
+      crosshairMarkerBorderWidth: 2,
+      crosshairMarkerBorderColor: PANEL_BG,
+      crosshairMarkerBackgroundColor: lineColor,
+    });
+
+    const avgSeries = chart.addSeries(LineSeries, {
+      color: 'rgba(255,255,255,0.58)',
+      lineWidth: 1,
+      lineStyle: LineStyle.Dashed,
+      priceLineVisible: false,
+      lastValueVisible: false,
+      crosshairMarkerVisible: false,
+    });
+
+    chartRef.current = chart;
+    areaSeriesRef.current = areaSeries;
+    avgSeriesRef.current = avgSeries;
+
+    // ── Mouse/pointer crosshair (desktop) ───────────────────────────────
+    const handleCrosshairMove = (param) => {
+      const point = param?.point;
+      const time = typeof param?.time === 'number' ? param.time : null;
+      if (!point || time === null || point.x < 0 || point.y < 0) {
+        // Only clear if no touch is holding the position
+        if (!touchActiveRef.current) onHoverChange(null);
+        return;
+      }
+      const priceValue = getAreaPointValue(param.seriesData.get(areaSeries));
+      if (!Number.isFinite(priceValue)) {
+        if (!touchActiveRef.current) onHoverChange(null);
+        return;
+      }
+      onHoverChange({
+        price: priceValue,
+        label: hoverLabelMap.get(time) || null,
+      });
+    };
+
+    chart.subscribeCrosshairMove(handleCrosshairMove);
+
+    // ── Touch scrub (mobile/tablet) ──────────────────────────────────────
+    // Strategy: intercept touchmove on the canvas wrapper, compute the
+    // x offset relative to the container, then use setCrosshairPosition
+    // to move the crosshair to that logical coordinate.
+    // We use { passive: false } so we can call preventDefault() only
+    // when the touch is clearly horizontal (scrubbing the chart).
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let isScrubbing = false;
+
+    const handleTouchStart = (e) => {
+      if (e.touches.length !== 1) return;
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+      isScrubbing = false;
+      touchActiveRef.current = false;
+    };
+
+    const handleTouchMove = (e) => {
+      if (e.touches.length !== 1) return;
+      const touch = e.touches[0];
+      const dx = Math.abs(touch.clientX - touchStartX);
+      const dy = Math.abs(touch.clientY - touchStartY);
+
+      // Decide on first significant movement: horizontal = scrub, vertical = scroll
+      if (!isScrubbing && dx < 4 && dy < 4) return;
+      if (!isScrubbing) {
+        isScrubbing = dx > dy; // horizontal wins → scrub
+      }
+      if (!isScrubbing) return; // vertical — let page scroll
+
+      // We are scrubbing — prevent page scroll for this touch sequence
+      e.preventDefault();
+      touchActiveRef.current = true;
+
+      const rect = container.getBoundingClientRect();
+      const x = touch.clientX - rect.left;
+      const y = touch.clientY - rect.top;
+
+      // lightweight-charts exposes setCrosshairPosition(price, time, series)
+      // but the simplest approach is to move via logical pixel coordinate.
+      // We get the bar nearest to x and read its price.
+      const timeScale = chart.timeScale();
+      const logical = timeScale.coordinateToLogical(x);
+      if (logical === null) return;
+
+      const bar = areaSeries.dataByIndex(Math.round(logical), -1);
+      if (!bar) return;
+
+      // Move the crosshair to the snapped bar position
+      chart.setCrosshairPosition(bar.value, bar.time, areaSeries);
+
+      onHoverChange({
+        price: bar.value,
+        label: hoverLabelMap.get(
+          typeof bar.time === 'number' ? bar.time : null,
+        ) || null,
+      });
+    };
+
+    const handleTouchEnd = () => {
+      isScrubbing = false;
+      touchActiveRef.current = false;
+      chart.clearCrosshairPosition();
+      onHoverChange(null);
+    };
+
+    container.addEventListener('touchstart', handleTouchStart, { passive: true });
+    container.addEventListener('touchmove', handleTouchMove, { passive: false });
+    container.addEventListener('touchend', handleTouchEnd, { passive: true });
+    container.addEventListener('touchcancel', handleTouchEnd, { passive: true });
+
+    return () => {
+      chart.unsubscribeCrosshairMove(handleCrosshairMove);
+      container.removeEventListener('touchstart', handleTouchStart);
+      container.removeEventListener('touchmove', handleTouchMove);
+      container.removeEventListener('touchend', handleTouchEnd);
+      container.removeEventListener('touchcancel', handleTouchEnd);
+      chart.remove();
+      chartRef.current = null;
+      areaSeriesRef.current = null;
+      avgSeriesRef.current = null;
+      touchActiveRef.current = false;
+      onHoverChange(null);
+    };
+  }, [hoverLabelMap, lineColor, onHoverChange]);
+
+  useEffect(() => {
+    const chart = chartRef.current;
+    const areaSeries = areaSeriesRef.current;
+    const avgSeries = avgSeriesRef.current;
+    if (!chart || !areaSeries || !avgSeries) return;
+
+    const areaData = chartData.map((point) => ({
+      time: Math.floor(point.ts / 1000),
+      value: point.price,
+    }));
+
+    areaSeries.applyOptions({
+      lineColor,
+      topColor: `${lineColor}33`,
+      bottomColor: `${lineColor}00`,
+      crosshairMarkerBackgroundColor: lineColor,
+    });
+    areaSeries.setData(areaData);
+
+    if (showAvgLine && hasAvg && Number.isFinite(avgPrice)) {
+      avgSeries.applyOptions({ visible: true });
+      avgSeries.setData(areaData.map((point) => ({ time: point.time, value: avgPrice })));
+    } else {
+      avgSeries.applyOptions({ visible: false });
+      avgSeries.setData([]);
+    }
+
+    chart.timeScale().fitContent();
+  }, [avgPrice, chartData, hasAvg, lineColor, showAvgLine]);
+
   return (
-    <ResponsiveContainer width="100%" height="100%">
-      <AreaChart
-        data={chartData}
-        margin={{ top: 6, right: 4, left: 4, bottom: 2 }}
-      >
-        <defs>
-          <linearGradient id="s02GradGreen" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%"   stopColor="var(--accent-green)" stopOpacity="0.22" />
-            <stop offset="100%" stopColor="var(--accent-green)" stopOpacity="0" />
-          </linearGradient>
-          <linearGradient id="s02GradRed" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%"   stopColor="var(--accent-red)" stopOpacity="0.22" />
-            <stop offset="100%" stopColor="var(--accent-red)" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-
-        <XAxis dataKey="ts" hide />
-        <YAxis domain={[yMin, yMax]} hide />
-
-        {showAvgLine && hasAvg && (
-          <ReferenceLine
-            y={avgPrice}
-            stroke="rgba(255,255,255,0.55)"
-            strokeWidth={1.2}
-            strokeDasharray="6 4"
-          />
-        )}
-
-        <Tooltip
-          content={(props) => <HoverBridge {...props} onHover={onHoverChange} />}
-          cursor={<RobinhoodCursor lineColor={lineColor} />}
-        />
-
-        <Area
-          type="monotone"
-          dataKey="price"
-          stroke={lineColor}
-          strokeWidth={2}
-          fill={`url(#${gradId})`}
-          dot={false}
-          activeDot={false}
-          isAnimationActive={true}
-          animationDuration={700}
-          animationEasing="ease-out"
-        />
-      </AreaChart>
-    </ResponsiveContainer>
+    <div
+      ref={containerRef}
+      className="h-full w-full overflow-hidden rounded-[6px] sm:rounded-[10px]"
+    />
   );
 });
 
 export default function S02_PriceChart() {
-  const [chartData, setChartData]     = useState([]);
+  const [chartData, setChartData] = useState([]);
   const [activeLabel, setActiveLabel] = useState('LIVE');
-  const [livePrice, setLivePrice]     = useState(null);
+  const [livePrice, setLivePrice] = useState(null);
   const [showAvgLine, setShowAvgLine] = useState(false);
-  const [loading, setLoading]         = useState(true);
-  const [hoverData, setHoverData]     = useState(null); // { price, label } | null
-  const abortRef      = useRef(null);
+  const [loading, setLoading] = useState(true);
+  const [hoverData, setHoverData] = useState(null);
+  const abortRef = useRef(null);
 
-  const activeRange = RANGES.find(r => r.label === activeLabel) ?? RANGES[0];
+  const activeRange = RANGES.find((range) => range.label === activeLabel) ?? RANGES[0];
 
-  /* ── Apply live price ── */
   const applyPrice = useCallback((newPrice) => {
     if (!Number.isFinite(newPrice) || newPrice <= 0) return;
     setLivePrice(newPrice);
   }, []);
 
-  /* ── Spot price — poll every 10 s ── */
   useEffect(() => {
     let mounted = true;
-    fetchBtcSpot().then(s => { if (s && mounted) applyPrice(s.usd); }).catch(() => {});
-    const id = setInterval(() => {
-      fetchBtcSpot().then(s => { if (s && mounted) applyPrice(s.usd); }).catch(() => {});
+    fetchBtcSpot().then((spot) => {
+      if (spot && mounted) applyPrice(spot.usd);
+    }).catch(() => {});
+
+    const intervalId = setInterval(() => {
+      fetchBtcSpot().then((spot) => {
+        if (spot && mounted) applyPrice(spot.usd);
+      }).catch(() => {});
     }, 10_000);
-    return () => { mounted = false; clearInterval(id); };
+
+    return () => {
+      mounted = false;
+      clearInterval(intervalId);
+    };
   }, [applyPrice]);
 
-  /* ── Historical data ── */
   useEffect(() => {
     let active = true;
     abortRef.current?.abort();
@@ -158,84 +342,100 @@ export default function S02_PriceChart() {
     if (dataCache[key]) {
       setChartData(dataCache[key]);
       setLoading(false);
-      return () => { active = false; };
+      return () => {
+        active = false;
+      };
     }
 
     setLoading(true);
     (async () => {
       try {
-        const hist = await fetchBtcHistory(activeRange.days, activeRange.interval);
+        const history = await fetchBtcHistory(activeRange.days, activeRange.interval);
         if (!active) return;
-        if (hist?.length) { dataCache[key] = hist; setChartData(hist); }
-      } catch { /* keep */ } finally {
+        if (history?.length) {
+          dataCache[key] = history;
+          setChartData(history);
+        }
+      } catch {
+        // keep previous view on fetch failure
+      } finally {
         if (active) setLoading(false);
       }
     })();
-    return () => { active = false; ctrl.abort(); };
+
+    return () => {
+      active = false;
+      ctrl.abort();
+    };
   }, [activeLabel, activeRange.days, activeRange.interval]);
 
-  /* ── Derived stats ── */
   const hasChart = chartData.length > 0;
   const hasPrice = livePrice !== null;
 
   const prices = useMemo(
-    () => hasChart ? chartData.map(d => d.price).filter(Number.isFinite) : [],
+    () => (hasChart ? chartData.map((point) => point.price).filter(Number.isFinite) : []),
     [chartData, hasChart],
   );
 
-  const high     = hasChart ? Math.max(...prices) : null;
-  const low      = hasChart ? Math.min(...prices) : null;
-  const avgPrice = prices.length ? prices.reduce((s, p) => s + p, 0) / prices.length : null;
-  const hasAvg   = Number.isFinite(avgPrice);
+  const high = hasChart ? Math.max(...prices) : null;
+  const low = hasChart ? Math.min(...prices) : null;
+  const avgPrice = prices.length ? prices.reduce((sum, price) => sum + price, 0) / prices.length : null;
+  const hasAvg = Number.isFinite(avgPrice);
 
   const startPrice = hasChart ? Number(chartData[0]?.price) : null;
-  const endPrice   = Number.isFinite(livePrice) && livePrice > 0
+  const endPrice = Number.isFinite(livePrice) && livePrice > 0
     ? livePrice
     : hasChart ? Number(chartData.at(-1)?.price) : null;
 
-  const delta    = Number.isFinite(startPrice) && Number.isFinite(endPrice) && startPrice > 0
-    ? endPrice - startPrice : null;
-  const deltaPct = delta !== null && startPrice > 0
-    ? (delta / startPrice) * 100 : null;
+  const delta = Number.isFinite(startPrice) && Number.isFinite(endPrice) && startPrice > 0
+    ? endPrice - startPrice
+    : null;
+  const deltaPct = delta !== null && startPrice > 0 ? (delta / startPrice) * 100 : null;
 
   const hasChange = Number.isFinite(delta) && Number.isFinite(deltaPct);
-  const isUp      = hasChange ? delta >= 0 : true;
-
-  const lineColor = isUp ? 'var(--accent-green)' : 'var(--accent-red)';
-  const gradId    = isUp ? 's02GradGreen' : 's02GradRed';
-
-  const yPad = hasChart ? (high - low) * 0.06 : 1;
-  const yMin = hasChart ? low  - yPad : 0;
-  const yMax = hasChart ? high + yPad : 1;
-
+  const isUp = hasChange ? delta >= 0 : true;
+  const lineColor = isUp ? ACCENT_GREEN : ACCENT_RED;
   const rangeText = RANGE_TEXT[activeLabel] ?? 'Past Period';
-
-  /* ── Display values (hover overrides live) ── */
   const displayPrice = hoverData ? hoverData.price : livePrice;
 
   return (
-    <div className="visual-integrity-lock flex h-full w-full flex-col bg-[#111111] px-3.5 pb-3.5 pt-4 sm:px-5 sm:pb-4 sm:pt-5 lg:px-[22px] lg:pb-4 lg:pt-5">
+    /*
+     * Outer shell: mobile-first padding scale
+     * phone  → px-3.5  pt-3   pb-3
+     * tablet → px-5    pt-4   pb-4
+     * desktop→ px-[22px] pt-5 pb-4
+     */
+    <div className="visual-integrity-lock flex h-full w-full flex-col bg-[#111111] px-3.5 pb-3 pt-3 sm:px-5 sm:pb-4 sm:pt-4 lg:px-[22px] lg:pb-4 lg:pt-5">
 
-      {/* ── Header ── */}
-      <div className="flex flex-shrink-0 flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-start sm:gap-4">
-        <div className="min-w-0">
+      {/* ── HEADER ROW ──────────────────────────────────────────────────────
+          Phone:  price on top, AVG button right-aligned on same row
+          Tablet+: side-by-side (price left, AVG button right)
+          Rule: content-priority — price is always first & largest
+      */}
+      <div className="flex flex-shrink-0 flex-row items-start justify-between gap-2 sm:gap-4">
+
+        {/* Price + delta */}
+        <div className="min-w-0 flex-1">
           {!hasPrice ? (
             <>
-              <div className="skeleton max-w-full" style={{ width: 'min(220px, 72vw)', height: '2.9rem', borderRadius: 6, marginBottom: 10 }} />
-              <div className="skeleton" style={{ width: 180, height: '1rem', borderRadius: 4 }} />
+              <div className="skeleton max-w-full" style={{ width: 'min(200px, 65vw)', height: 'clamp(1.8rem,6vw,2.9rem)', borderRadius: 6, marginBottom: 8 }} />
+              <div className="skeleton" style={{ width: 'min(160px, 50vw)', height: '0.9rem', borderRadius: 4 }} />
             </>
           ) : (
             <>
+              {/* Price: clamp keeps it readable from 320px up to 1440px */}
               <div
-                className="flex min-h-[3.1rem] max-w-full items-center font-mono font-bold tabular-nums leading-none"
-                style={{
-                  fontSize: 'clamp(1.55rem, 5.6vw, 2.9rem)',
-                }}
+                className="flex max-w-full items-baseline font-mono font-bold tabular-nums leading-none"
+                style={{ fontSize: 'clamp(1.45rem, 5.2vw, 2.9rem)' }}
               >
                 <AnimatedMetric value={displayPrice} variant="usd" decimals={2} inline />
               </div>
 
-              <div className="mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 font-mono tabular-nums" style={{ fontSize: '0.82rem' }}>
+              {/* Delta / hover label */}
+              <div
+                className="mt-1.5 flex flex-wrap items-center gap-x-1 gap-y-0.5 font-mono tabular-nums sm:mt-2"
+                style={{ fontSize: 'clamp(0.72rem, 2.2vw, 0.82rem)' }}
+              >
                 {hoverData ? (
                   <span className="uppercase tracking-wide" style={{ color: 'rgba(255,255,255,0.5)' }}>
                     {hoverData.label}
@@ -248,49 +448,65 @@ export default function S02_PriceChart() {
                     <span style={{ color: isUp ? 'var(--accent-green)' : 'var(--accent-red)' }}>
                       (<AnimatedMetric value={deltaPct} variant="percent" decimals={2} signed inline color={isUp ? 'var(--accent-green)' : 'var(--accent-red)'} />)
                     </span>
-                    <span style={{ color: 'rgba(255,255,255,0.38)' }}>{rangeText}</span>
+                    <span className="hidden xs:inline" style={{ color: 'rgba(255,255,255,0.38)' }}>{rangeText}</span>
                   </>
                 ) : (
-                  <span style={{ color: 'rgba(255,255,255,0.25)' }}>Loading…</span>
+                  <span style={{ color: 'rgba(255,255,255,0.25)' }}>Loading...</span>
                 )}
               </div>
             </>
           )}
         </div>
 
-        {/* Show / Hide AVG Buy */}
+        {/*
+         * AVG Buy toggle — always top-right corner on all breakpoints
+         * Rule: touch-target-size ≥44pt → min-h-[44px] min-w-[44px]
+         * Rule: primary-action — secondary action visually subordinate
+         */}
         <button
           type="button"
-          onClick={() => setShowAvgLine(v => !v)}
+          onClick={() => setShowAvgLine((v) => !v)}
           disabled={!hasAvg}
-          className="relative flex min-h-[40px] w-full flex-shrink-0 items-center justify-end gap-1.5 self-start rounded-md px-2 pb-1.5 pt-1 font-mono transition-colors disabled:cursor-not-allowed disabled:opacity-25 sm:min-h-[36px] sm:w-auto sm:justify-start"
+          aria-pressed={showAvgLine}
+          aria-label={showAvgLine ? 'Hide average buy price line' : 'Show average buy price line'}
+          className="relative flex min-h-[44px] min-w-[44px] flex-shrink-0 items-center justify-center gap-1.5 self-start rounded-md px-3 font-mono transition-colors disabled:cursor-not-allowed disabled:opacity-25 sm:min-h-[36px]"
           style={{
-            fontSize: '0.78rem',
+            fontSize: 'clamp(0.7rem, 1.8vw, 0.78rem)',
             fontWeight: showAvgLine ? 700 : 400,
-            color: showAvgLine ? 'white' : 'rgba(255,255,255,0.5)',
+            color: showAvgLine ? 'white' : 'rgba(255,255,255,0.45)',
             letterSpacing: '0.05em',
+            paddingTop: 6,
+            paddingBottom: 6,
           }}
         >
-          {showAvgLine ? 'Hide AVG Buy' : 'Show AVG Buy'}
+          <span className="hidden sm:inline">{showAvgLine ? 'Hide AVG' : 'AVG Buy'}</span>
+          <span className="sm:hidden">{showAvgLine ? 'Hide' : 'AVG'}</span>
           {showAvgLine && (
-            <span
-              className="absolute bottom-0 left-0 right-0 rounded-full"
-              style={{ height: 2, background: 'white' }}
-            />
+            <span className="absolute bottom-0 left-2 right-2 rounded-full" style={{ height: 2, background: 'white' }} />
           )}
         </button>
       </div>
 
-      {/* ── Chart ── */}
-      <div className="visual-chart-surface min-h-0 flex-1" style={{ margin: '20px -4px 0' }}>
+      {/*
+       * ── CHART AREA ──────────────────────────────────────────────────────
+       * min-h ensures the chart never collapses below 140px on phone landscape.
+       * flex-1 fills remaining space on larger screens.
+       * Rule: responsive-chart — chart must not become illegible on small screens
+       * Rule: content-priority — chart is the most important element
+       */}
+      <div
+        className="visual-chart-surface mt-3 min-h-[140px] flex-1 sm:mt-4 sm:min-h-[180px]"
+        style={{ margin: '12px -2px 0', flex: '1 1 0' }}
+      >
         {loading || !hasChart ? (
-          <div className="flex h-full items-end gap-px pb-1">
-            {Array.from({ length: 60 }, (_, i) => (
+          /* Skeleton: same wave pattern, respects reduced motion via CSS */
+          <div className="flex h-full min-h-[140px] items-end gap-px pb-1 sm:min-h-[180px]">
+            {Array.from({ length: 48 }, (_, i) => (
               <div
                 key={i}
                 className="skeleton flex-1"
                 style={{
-                  height: `${32 + Math.sin(i * 0.38) * 24 + Math.sin(i * 0.11) * 30}%`,
+                  height: `${32 + Math.sin(i * 0.4) * 26 + Math.sin(i * 0.12) * 28}%`,
                   borderRadius: 2,
                 }}
               />
@@ -304,18 +520,21 @@ export default function S02_PriceChart() {
             hasAvg={hasAvg}
             avgPrice={avgPrice}
             lineColor={lineColor}
-            gradId={gradId}
-            yMin={yMin}
-            yMax={yMax}
             onHoverChange={setHoverData}
           />
         )}
       </div>
 
-      {/* ── Range Tabs ── */}
+      {/*
+       * ── RANGE TABS ──────────────────────────────────────────────────────
+       * Rule: touch-target-size ≥44pt → min-h-[44px] on phone, 36px on sm+
+       * Rule: touch-spacing ≥8px → gap-2 (8px) between buttons
+       * overflow-x-auto + scrollbar-hidden allows swipe on phone
+       * padding-bottom: 2px prevents underline clipping
+       */}
       <div
-        className="scrollbar-hidden-mobile flex flex-shrink-0 items-center gap-3 overflow-x-auto sm:gap-5"
-        style={{ margin: '14px 0 16px', paddingBottom: 2 }}
+        className="scrollbar-hidden-mobile flex flex-shrink-0 items-center gap-2 overflow-x-auto sm:gap-4"
+        style={{ margin: '10px 0 10px', paddingBottom: 3 }}
       >
         {RANGES.map(({ label, live }) => {
           const isActive = activeLabel === label;
@@ -324,9 +543,12 @@ export default function S02_PriceChart() {
               key={label}
               type="button"
               onClick={() => setActiveLabel(label)}
-              className="relative flex min-h-[40px] flex-shrink-0 items-center gap-1.5 rounded-md px-2 pb-1.5 pt-1 font-mono transition-colors sm:min-h-[36px]"
+              aria-pressed={isActive}
+              aria-label={`Show ${RANGE_TEXT[label] ?? label} chart`}
+              /* min-h-[44px] on phone meets Apple/Material touch target (skill rule touch-target-size) */
+              className="relative flex min-h-[44px] flex-shrink-0 items-center gap-1 rounded-md px-2.5 pb-2 pt-2 font-mono transition-colors sm:min-h-[36px] sm:px-2 sm:pb-1.5 sm:pt-1"
               style={{
-                fontSize: '0.82rem',
+                fontSize: 'clamp(0.75rem, 2.4vw, 0.82rem)',
                 fontWeight: isActive ? 700 : 400,
                 color: isActive ? 'white' : 'rgba(255,255,255,0.32)',
                 letterSpacing: '0.05em',
@@ -334,7 +556,7 @@ export default function S02_PriceChart() {
             >
               {live && (
                 <span
-                  className="rounded-full flex-shrink-0"
+                  className="flex-shrink-0 rounded-full"
                   style={{
                     width: 6,
                     height: 6,
@@ -345,45 +567,48 @@ export default function S02_PriceChart() {
               )}
               {label}
               {isActive && (
-                <span
-                  className="absolute bottom-0 left-0 right-0 rounded-full"
-                  style={{ height: 2, background: 'white' }}
-                />
+                <span className="absolute bottom-0.5 left-1 right-1 rounded-full" style={{ height: 2, background: 'white' }} />
               )}
             </button>
           );
         })}
       </div>
 
-      {/* ── Stat Boxes ── */}
-      <div className="flex-shrink-0 grid grid-cols-1 gap-3 sm:grid-cols-3">
+      {/*
+       * ── STAT CARDS ──────────────────────────────────────────────────────
+       * Phone:  3 cards in a single ROW (grid-cols-3) — compact, no stacking
+       * Tablet+: same 3-col grid, slightly more padding
+       * Rule: content-priority — horizontal row saves vertical space on phone
+       * Rule: spacing-scale — 4/8dp rhythm (gap-2 = 8px, gap-3 = 12px on sm+)
+       */}
+      <div className="grid flex-shrink-0 grid-cols-3 gap-2 sm:gap-3">
         {!hasChart || !hasPrice ? (
-          [0, 1, 2].map(i => (
-            <div key={i} className="rounded-xl px-3 py-3" style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
-              <div className="skeleton mb-2" style={{ width: 40, height: '0.65rem', borderRadius: 3 }} />
-              <div className="skeleton"       style={{ width: 72, height: '0.9rem',  borderRadius: 3 }} />
+          [0, 1, 2].map((i) => (
+            <div key={i} className="rounded-lg px-2 py-2.5 sm:rounded-xl sm:px-3 sm:py-3" style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
+              <div className="skeleton mb-1.5" style={{ width: '45%', height: '0.6rem', borderRadius: 3 }} />
+              <div className="skeleton" style={{ width: '70%', height: '0.85rem', borderRadius: 3 }} />
             </div>
           ))
         ) : (
           [
-              { label: 'HIGH',    value: high,     color: 'var(--accent-green)' },
-              { label: 'AVG BUY', value: hasAvg ? avgPrice : null, color: 'var(--accent-bitcoin)' },
-              { label: 'LOW',     value: low,      color: 'var(--accent-red)' },
-            ].map(({ label, value, color }) => (
+            { label: 'HIGH', value: high, color: 'var(--accent-green)' },
+            { label: 'AVG', value: hasAvg ? avgPrice : null, color: 'var(--accent-bitcoin)' },
+            { label: 'LOW', value: low, color: 'var(--accent-red)' },
+          ].map(({ label, value, color }) => (
             <div
               key={label}
-              className="rounded-xl px-3 py-3 text-center"
+              className="rounded-lg px-2 py-2.5 text-center sm:rounded-xl sm:px-3 sm:py-3"
               style={{ border: '1px solid rgba(255,255,255,0.1)' }}
             >
               <div
                 className="font-mono font-bold uppercase tracking-widest"
-                style={{ fontSize: '0.62rem', color, marginBottom: 5 }}
+                style={{ fontSize: 'clamp(0.58rem, 1.6vw, 0.62rem)', color, marginBottom: 4 }}
               >
                 {label}
               </div>
               <div
-                className="flex min-h-[1.15em] items-center justify-center font-mono tabular-nums font-semibold text-white"
-                style={{ fontSize: '0.82rem' }}
+                className="flex min-h-[1.1em] items-center justify-center font-mono tabular-nums font-semibold text-white"
+                style={{ fontSize: 'clamp(0.72rem, 2vw, 0.82rem)' }}
               >
                 <AnimatedMetric value={value} variant="usd" decimals={0} inline />
               </div>
@@ -391,7 +616,6 @@ export default function S02_PriceChart() {
           ))
         )}
       </div>
-
     </div>
   );
 }
