@@ -10,7 +10,11 @@
       "Bash(netstat -ano)",
       "Bash(cmd.exe /c \"tasklist /FI \"\"PID eq 18740\"\"\")",
       "Bash(cmd //c \"tasklist /FI \"\"PID eq 18740\"\"\")",
-      "Bash(powershell -Command \"Get-Process -Id 18740 | Select-Object Name,Id,Path; Stop-Process -Id 18740 -Force -ErrorAction SilentlyContinue\")"
+      "Bash(powershell -Command \"Get-Process -Id 18740 | Select-Object Name,Id,Path; Stop-Process -Id 18740 -Force -ErrorAction SilentlyContinue\")",
+      "Bash(curl -s \"http://localhost:8787/api/s17/house-price/refresh\" -X POST)",
+      "Bash(curl -s \"http://localhost:8787/api/s17/refresh\" -X POST)",
+      "Bash(taskkill /F /IM node.exe)",
+      "Bash(taskkill //F //PID 23640 2>/dev/null || true)"
     ]
   }
 }

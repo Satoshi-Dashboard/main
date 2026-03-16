@@ -22,9 +22,9 @@ const S12_AddressDistribution = lazyWithPreload(() => import('@/features/modules
 const S13_WealthPyramid = lazyWithPreload(() => import('@/features/modules/live/S13_WealthPyramid'));
 const S14_GlobalAssetsTreemap = lazyWithPreload(() => import('@/features/modules/live/S14_GlobalAssetsTreemap'));
 const S15_BTCvsGold = lazyWithPreload(() => import('@/features/modules/live/S15_BTCvsGold'));
-const S16_MayerMultiple = lazyWithPreload(() => import('@/features/modules/under-construction/S16_MayerMultiple'));
-const S17_PricePerformance = lazyWithPreload(() => import('@/features/modules/under-construction/S17_PricePerformance'));
-const S18_CycleSpiral = lazyWithPreload(() => import('@/features/modules/under-construction/S18_CycleSpiral'));
+const S16_MayerMultiple = lazyWithPreload(() => import('@/features/modules/live/S16_MayerMultiple'));
+const S17_PricePerformance = lazyWithPreload(() => import('@/features/modules/live/S17_PricePerformance'));
+const S18_CycleSpiral = lazyWithPreload(() => import('@/features/modules/live/S18_CycleSpiral'));
 const S19_PowerLawModel = lazyWithPreload(() => import('@/features/modules/under-construction/S19_PowerLawModel'));
 const S20_StockToFlow = lazyWithPreload(() => import('@/features/modules/under-construction/S20_StockToFlow'));
 const S21_BigMacSatsTracker = lazyWithPreload(() => import('@/features/modules/under-construction/S21_BigMacSatsTracker'));
@@ -56,7 +56,7 @@ const MODULE_DEFS = [
   { slugBase: 'bitcoin-vs-global-assets', title: 'Global Assets', component: S14_GlobalAssetsTreemap },
   { slugBase: 'bitcoin-vs-gold-chart', title: 'BTC vs Gold', component: S15_BTCvsGold },
   { slugBase: 'bitcoin-mayer-multiple', title: 'Mayer Multiple', component: S16_MayerMultiple },
-  { slugBase: 'bitcoin-price-performance', title: 'Price Performance', component: S17_PricePerformance },
+  { slugBase: 'bitcoin-price-performance', title: 'US Median Home Price in ₿', component: S17_PricePerformance },
   { slugBase: 'bitcoin-halving-cycle-spiral', title: 'Cycle Spiral', component: S18_CycleSpiral },
   { slugBase: 'bitcoin-power-law-model', title: 'Power Law Model', component: S19_PowerLawModel },
   { slugBase: 'bitcoin-stock-to-flow-model', title: 'Stock to Flow', component: S20_StockToFlow },

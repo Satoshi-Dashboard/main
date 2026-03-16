@@ -8,7 +8,7 @@
     "start": "node --env-file-if-exists=.env server/index.js",
     "dev": "concurrently -k \"npm:dev:api\" \"npm:dev:ui\"",
     "dev:ui": "vite",
-    "dev:api": "node --env-file-if-exists=.env server/index.js",
+    "dev:api": "node --env-file=\"C:/Users/liber/Downloads/BTC FRAME/satoshi-dashboard/.env\" server/index.js",
     "build": "vite build",
     "check:security": "node scripts/check-security.js",
     "lint": "eslint .",

@@ -91,6 +91,8 @@ For OpenCode, Codex, Claude, and any automated coding agent:
 19. Before any code change (addition, modification, or deletion), verify the planned implementation remains compatible with Vercel deployment.
 20. After finishing each code change, re-verify that the project can still be deployed on Vercel without issues.
 21. Before any project analysis, audit, or improvement review, first inspect `README.md`, `package.json`, `src/features/module-registry/modules.js`, the installed skills in `.claude/skills/`, `.claude/VAULT_HOME.md`, `.claude/RAG_OPERATING_SYSTEM.md`, and any relevant policy files in `.claude/`; then report findings prioritized by impact, risk, and effort.
+22. **Rule 22 (Zero Dead Code):** Any discarded spike, experiment, or feature must have all its associated files and imports deleted in the same revert commit. No `// kept as reference` files in main branches.
+23. **Rule 23 (Mobile Animation Optimization):** All `AnimatedMetric` or counter-based animations must be disabled on mobile and tablet (viewport < 1024px) to preserve CPU/battery and ensure instant readability. Use the `disabled={isResponsive}` pattern.
 
 ## Registro Histórico de Automejoras y Lecciones Aprendidas
 
@@ -150,8 +152,6 @@ For OpenCode, Codex, Claude, and any automated coding agent:
 - **Nueva/Modificada Regla o Directriz:** `README.md` queda protegido como documento publico; leerlo está permitido, editarlo solo cuando el owner lo pida de forma específica.
 - **Justificación:** Evita que agentes contaminen la portada publica del repositorio con reglas internas o cambios documentales no autorizados.
 
----
-
 - **Fecha de la Actualización:** `2026-03-16`
 - **Archivo(s) Afectado(s):** `.claude/agent-runtime/AGENTS.md`, `.claude/skills/vercel-react-best-practices/AGENTS.md`
 - **Tipo de Evento/Contexto:** Regresión crítica por código descartado no eliminado — pantalla negra en módulo S07
@@ -160,12 +160,10 @@ For OpenCode, Codex, Claude, and any automated coding agent:
 - **Nueva/Modificada Regla o Directriz:** **REGLA 22 — ZERO DEAD CODE:** Cuando un spike, experimento, optimización o feature es descartado o revertido, el agente DEBE eliminar todos los archivos, imports y fragmentos de código asociados en el mismo commit del revert. Ningún archivo descartado puede quedar en el repo con el comentario "kept as reference but unused". El código que no se ejecuta es código que miente.
 - **Justificación:** El código muerto acumula deuda técnica, confunde a futuros agentes, puede ser importado accidentalmente y hace que los reverts sean incompletos. La política es: si se descarta, se borra.
 
-## Regla 22 — ZERO DEAD CODE (aplicación inmediata)
-
-> **Cuando un spike, refactor, optimización o feature es descartado o revertido:**
->
-> 1. Eliminar **todos** los archivos creados para ese spike (workers, helpers, mocks, configs).
-> 2. Eliminar **todos** los imports hacia esos archivos aunque sean comentados o condicionales.
-> 3. El commit del revert debe incluir la eliminación del código descartado — no en un commit posterior.
-> 4. Nunca dejar un archivo con comentarios del tipo `// kept as reference` o `// unused but here`.
-> 5. Si el código podría ser útil en el futuro, la alternativa es un branch dedicado o un gist — nunca en `main`.
+- **Fecha de la Actualización:** `2026-03-16`
+- **Archivo(s) Afectado(s):** `.claude/agent-runtime/AGENTS.md`, `src/features/modules/live/S17_PricePerformance.jsx`
+- **Tipo de Evento/Contexto:** Optimización de rendimiento y legibilidad en dispositivos móviles
+- **Descripción del Evento Original:** Las animaciones de números (contadores) en móviles y tablets pueden afectar el rendimiento (CPU/batería) y dificultar la lectura inmediata de datos que cambian rápido en pantallas pequeñas.
+- **Acción Realizada/Corrección:** Se implementó la desactivación de animaciones en el Módulo 17 para `window.innerWidth < 1024` y se creó la **Regla 23** para estandarizar este comportamiento.
+- **Nueva/Modificada Regla o Directriz:** **Rule 23 (Mobile Animation Optimization):** Deshabilitar animaciones de métricas en dispositivos móviles/tablets para mejorar la experiencia de usuario y el consumo de recursos.
+- **Justificación:** Prioriza la eficiencia y la claridad en dispositivos con recursos limitados o condiciones de visualización variables.

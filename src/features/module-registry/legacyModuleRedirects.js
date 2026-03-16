@@ -15,7 +15,7 @@ export const LEGACY_MODULE_SLUGS = [
   's14-global-assets',
   's15-btc-vs-gold',
   's16-mayer-multiple',
-  's17-price-performance',
+  // 's17-price-performance', // Missing file
   's18-cycle-spiral',
   's19-power-law-model',
   's20-stock-to-flow',

@@ -19,6 +19,7 @@ import { fmt } from '@/shared/utils/formatters.js';
 
 const LIGHTNING_WORLD_ENDPOINT        = '/api/public/lightning/world';
 const LIGHTNING_CHANNELS_GEO_ENDPOINT = '/api/public/lightning/channels-geo';
+const LIGHTNING_FALLBACK_ENDPOINT     = '/api/public/lightning/fallback';
 const REFRESH_INTERVAL_MS = 60_000;
 const CHANNELS_GEO_REFRESH_MS = 5 * 60_000; // 5 min
 const INITIAL_NETWORK_ROWS = 160;
@@ -613,7 +614,9 @@ function parseLightningCountryCounts(payload) {
 
 export default function S07_LightningNodesMap() {
   const [payload,              setPayload]              = useState(null);
+  const [fallbackPayload,     setFallbackPayload]      = useState(null);
   const [apiLoading,           setApiLoading]           = useState(true);
+  const [fallbackLoaded,       setFallbackLoaded]      = useState(false);
   const [error,                setError]                = useState(null);
   const [isBreakdownExpanded,  setIsBreakdownExpanded]  = useState(false);
   const [isMetaExpanded,       setIsMetaExpanded]       = useState(false);
@@ -668,28 +671,64 @@ export default function S07_LightningNodesMap() {
 
   useEffect(() => {
     let active = true;
-    const load = async () => {
+
+    const loadFallback = async () => {
+      try {
+        const res = await fetch(LIGHTNING_FALLBACK_ENDPOINT);
+        if (res.ok) {
+          const fallback = await res.json();
+          if (active && fallback?.data) {
+            setFallbackPayload({
+              source_provider: fallback.source_provider || 'mempool.space',
+              fetched_at: fallback.updated_at ? new Date(fallback.updated_at).getTime() : Date.now(),
+              data: fallback.data,
+            });
+          }
+        }
+      } catch {
+        // Fallback not available - ignore
+      } finally {
+        if (active) setFallbackLoaded(true);
+      }
+    };
+
+    const loadFresh = async () => {
       try {
         const res = await fetch(LIGHTNING_WORLD_ENDPOINT);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const p = await res.json();
         const json = p?.data || p;
         if (!active) return;
-        setPayload({
+
+        const newPayload = {
           source_provider: p?.source_provider || 'mempool.space',
           fetched_at: p?.updated_at ? new Date(p.updated_at).getTime() : Date.now(),
           data: json,
-        });
+        };
+
+        setPayload(newPayload);
         setError(null);
-      } catch {
+
+        try {
+          await fetch(LIGHTNING_FALLBACK_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(newPayload),
+          });
+        } catch {
+          // Background save - ignore errors
+        }
+      } catch (e) {
         if (!active) return;
         setError('Could not load the Lightning nodes API.');
       } finally {
         if (active) setApiLoading(false);
       }
     };
-    load();
-    const timer = setInterval(load, REFRESH_INTERVAL_MS);
+
+    loadFallback();
+    loadFresh();
+    const timer = setInterval(loadFresh, REFRESH_INTERVAL_MS);
     return () => { active = false; clearInterval(timer); };
   }, []);
 
@@ -736,7 +775,8 @@ export default function S07_LightningNodesMap() {
     () => formatNextUpdateDelay((payload?.fetched_at || nowTs) + REFRESH_INTERVAL_MS),
     [payload?.fetched_at, nowTs],
   );
-  const sourceProviderLabel = payload?.source_provider || 'mempool.space';
+  const effectivePayload = payload || fallbackPayload;
+  const sourceProviderLabel = effectivePayload?.source_provider || 'mempool.space';
   const showBreakdownPanel  = !isCompactViewport || isBreakdownExpanded;
   const showDensityLegend   = !isCompactViewport || isDensityExpanded;
 
@@ -766,7 +806,9 @@ export default function S07_LightningNodesMap() {
     return map;
   }, [countriesGeo]);
 
-  const countryCounts = useMemo(() => parseLightningCountryCounts(payload?.data), [payload?.data]);
+  const isUsingFallback = !payload && !!fallbackPayload;
+
+  const countryCounts = useMemo(() => parseLightningCountryCounts(effectivePayload?.data), [effectivePayload?.data]);
 
   const resolvedCountryRows = useMemo(() => {
     return countryCounts.map((row) => {
@@ -793,8 +835,8 @@ export default function S07_LightningNodesMap() {
   );
 
   const networkData = useMemo(
-    () => ({ ...parseLightningNetworkData(payload?.data), lines: channelsGeoLines }),
-    [payload?.data, channelsGeoLines],
+    () => ({ ...parseLightningNetworkData(effectivePayload?.data), lines: channelsGeoLines }),
+    [effectivePayload?.data, channelsGeoLines],
   );
 
   const statsByCode = useMemo(() => {
@@ -1016,12 +1058,12 @@ export default function S07_LightningNodesMap() {
       .sort((a, b) => b.perCapitaActive - a.perCapitaActive);
   }, [resolvedCountryRows, isAbsolute, metricType, populationMap, perCapitaByCode]);
 
-  const maxChannels        = Number(payload?.data?.maxChannels)  || 0;
-  const maxLiquidity       = Number(payload?.data?.maxLiquidity) || 0;
+  const maxChannels        = Number(effectivePayload?.data?.maxChannels)  || 0;
+  const maxLiquidity       = Number(effectivePayload?.data?.maxLiquidity) || 0;
   const avgChannelsPerNode = totals.nodes > 0 ? totals.channels / totals.nodes : 0;
   const hasCountryData     = countryCounts.length > 0;
-  const isLoading          = (!hasCountryData && apiLoading) || (!hasCountryData && geoLoading);
-  const isMapLoading       = (!payload && apiLoading) || (!countriesGeo && geoLoading);
+  const isLoading          = (!hasCountryData && apiLoading && !fallbackPayload) || (!hasCountryData && geoLoading);
+  const isMapLoading       = (!effectivePayload && apiLoading && !fallbackPayload) || (!countriesGeo && geoLoading);
 
   // ── Helpers used inside JSX ───────────────────────────────────────────────
 
@@ -1594,7 +1636,7 @@ export default function S07_LightningNodesMap() {
                 </a>
               </div>
               <div>API: {LIGHTNING_WORLD_ENDPOINT}</div>
-              <div>Latest data: {payload?.fetched_at ? `${fmt.date(payload.fetched_at)} ${fmt.time(payload.fetched_at)}` : 'N/A'}</div>
+              <div>Latest data: {effectivePayload?.fetched_at ? `${fmt.date(effectivePayload.fetched_at)} ${fmt.time(effectivePayload.fetched_at)}` : 'N/A'}{isUsingFallback && <span className="text-amber-400 ml-1">(cached)</span>}</div>
               <div>Refresh cadence: every {Math.round(REFRESH_INTERVAL_MS / 60_000)} min</div>
               <div>Max channels (node): {fmt.num(maxChannels)}</div>
               <div>Max liquidity (node): {formatBtcFromSats(maxLiquidity)}</div>

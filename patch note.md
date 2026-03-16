@@ -1,16 +1,20 @@
 # Patch Notes
 
-## [2026-03-16] — Charts Performance + Maps Cleanup
+## [2026-03-16] — Module 17 + Charts Performance + Maps Cleanup
 
 ### New
+- **Added S17 (House Analytics)**: Real-time purchasing power comparison between US Median Home Price (FRED) and Bitcoin. Includes historical data fallback since Jan 2011 and live price updates.
+- **Improved Chart Performance**: Migrated multiple modules (including the new S17) to `lightweight-charts`. This library uses a Canvas-based renderer, significantly lightening the application and improving responsiveness compared to previous SVG-based solutions.
 - Migrated S02 (Price Chart) from Recharts to `lightweight-charts` (Canvas renderer). Bundle size: 172 kB → 10.9 kB. Shared library chunk between S02 and S15 downloaded once by the browser.
 - Migrated S15 (BTC vs Gold) from Recharts to `lightweight-charts` with two simultaneous AreaSeries. BTC orange `#F7931A`, Gold silver `rgba(214,214,214,0.92)`, transparent grid, dual crosshair markers.
 - Added touch scrub to S02 and S15: sliding a finger across the chart updates the price/values in the header in real time, identical to mouse hover behavior.
 - Added responsive improvements to S02 and S15: `min-h-[44px]` touch targets on all interactive controls, `clamp()` font sizes from 375px to 1440px, stat cards always in a horizontal row, chart minimum height of 140px so it never collapses in landscape mode.
 - Added Rule 22 (Zero Dead Code) to `.claude/agent-runtime/AGENTS.md`: any discarded spike must have all associated files deleted in the same revert commit. No `// kept as reference` files in main.
+- Added Rule 23 (Mobile Animation Optimization) to `.claude/agent-runtime/AGENTS.md`: all `AnimatedMetric` counters are now disabled on mobile and tablet (viewport < 1024px) to preserve CPU/battery and ensure instant readability.
 - Added Web Worker failure postmortem and `worker-react-init-order` rule to `.claude/skills/vercel-react-best-practices/AGENTS.md`.
 
 ### Fixes
+- Fixed S17 (House Analytics): updated Bitcoin metric to show 2 decimal places, fixed layout 'descuadre' (vertical stacking) by ensuring baseline alignment, and synchronized hover dates across both metrics.
 - Fixed S07 (Lightning Nodes Map) blank screen regression caused by a Web Worker spike. Reverted to original `useMemo` chain. Module fully operational.
 
 ### Removed

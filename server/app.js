@@ -36,6 +36,12 @@ import {
   S14GlobalAssetsError,
 } from './features/global-assets/s14GlobalAssetsCache.js';
 import {
+  S17ApiError,
+  getS17HousePricePayload,
+  getS17HousePriceStatus,
+  refreshS17HousePriceCache,
+} from './features/fred/s17HousePrice.js';
+import {
   getBinanceBtcHistoryPayload,
   getBtcMapBusinessesByCountryPayload,
   getCountriesGeoPayload,
@@ -655,6 +661,52 @@ export function createApp() {
 
   app.get('/api/s13/addresses-richer/refresh', refreshApiRateLimiter, requireRefreshToken, asyncRoute(refreshS13AddressesRicher));
 
+  // ── S17 — US Median Home Price (FRED MSPUS) ──────────────────────────────
+
+  function sendS17Error(res, error) {
+    if (error instanceof S17ApiError) {
+      res.status(502).json({ error: error.message });
+      return;
+    }
+    res.status(500).json({ error: 'Internal server error' });
+  }
+
+  app.get('/api/s17/house-price', asyncRoute(async (_req, res) => {
+    // Quarter-length cache: ~90 days s-maxage, 7-day stale-while-revalidate safety net
+    setDataCacheHeaders(res, { sMaxAge: 7_776_000, swr: 604_800 });
+    try {
+      const payload = await getS17HousePricePayload();
+      res.json(payload);
+    } catch (error) {
+      sendS17Error(res, error);
+    }
+  }));
+
+  app.get('/api/s17/house-price/status', asyncRoute(async (_req, res) => {
+    setDataCacheHeaders(res, { sMaxAge: 300, swr: 900 });
+    res.json(getS17HousePriceStatus());
+  }));
+
+  app.get('/api/s17/house-price/refresh',
+    refreshApiRateLimiter,
+    requireRefreshToken,
+    asyncRoute(async (_req, res) => {
+      setNoStoreHeaders(res);
+      try {
+        const payload = await refreshS17HousePriceCache();
+        res.json({
+          source:         payload.source_provider,
+          updatedAt:      payload.updated_at,
+          nextUpdateAt:   payload.next_update_at,
+          latestQuarter:  payload.data.quarter_label,
+          latestValueUsd: payload.data.latest_value,
+        });
+      } catch (error) {
+        sendS17Error(res, error);
+      }
+    }),
+  );
+
   app.get('/api/bitnodes/cache/refresh', refreshApiRateLimiter, requireRefreshToken, asyncRoute(async (_req, res) => {
     setNoStoreHeaders(res);
     try {
@@ -703,6 +755,7 @@ export function createApp() {
     scheduleWarmup('S14 global assets', 7500, () => getS14GlobalAssetsPayload());
     scheduleWarmup('S30 U.S. debt', 8200, () => getUsNationalDebtPayload());
     scheduleWarmup('S15 BTC vs Gold', 9000, () => getS15BtcVsGoldMarketCapPayload());
+    scheduleWarmup('S17 FRED house price', 9500, () => getS17HousePricePayload());
 
     // S02/S16 history ranges share the same Binance history cache family.
     scheduleWarmup('S02 history 1D', 9800, () => getBinanceBtcHistoryPayload({ days: 1, interval: '5m' }));
@@ -716,6 +769,59 @@ export function createApp() {
     // Warm it up after core modules so long-running aggregation does not delay more common feeds.
     scheduleWarmup('S08 BTC Map businesses', 14_000, () => getBtcMapBusinessesByCountryPayload());
   }
+
+  const LIGHTNING_CACHE_FILE = 'lightning_network_cache.json';
+
+  function readLightningCache() {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const cachePath = path.join(process.cwd(), LIGHTNING_CACHE_FILE);
+      if (fs.existsSync(cachePath)) {
+        const data = fs.readFileSync(cachePath, 'utf-8');
+        return JSON.parse(data);
+      }
+    } catch (e) {
+      console.error('[lightning-cache] read error:', e.message);
+    }
+    return null;
+  }
+
+  function writeLightningCache(payload) {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const cachePath = path.join(process.cwd(), LIGHTNING_CACHE_FILE);
+      fs.writeFileSync(cachePath, JSON.stringify(payload, null, 2), 'utf-8');
+    } catch (e) {
+      console.error('[lightning-cache] write error:', e.message);
+    }
+  }
+
+  app.get('/api/public/lightning/fallback', asyncRoute(async (_req, res) => {
+    setDataCacheHeaders(res, { sMaxAge: 3600, swr: 86400 });
+    const cached = readLightningCache();
+    if (cached) {
+      res.json({ ...cached, _fallback: true });
+    } else {
+      res.status(404).json({ error: 'No fallback cache available' });
+    }
+  }));
+
+  app.post('/api/public/lightning/fallback', asyncRoute(async (req, res) => {
+    const payload = req.body;
+    if (!payload || !payload.data) {
+      res.status(400).json({ error: 'Invalid payload' });
+      return;
+    }
+    const cacheData = {
+      source_provider: payload.source_provider || 'mempool.space',
+      updated_at: payload.updated_at || payload.fetched_at || new Date().toISOString(),
+      data: payload.data,
+    };
+    writeLightningCache(cacheData);
+    res.json({ success: true, cached_at: new Date().toISOString() });
+  }));
 
   return app;
 }

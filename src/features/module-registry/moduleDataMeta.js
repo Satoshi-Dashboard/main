@@ -115,10 +115,18 @@ const MODULE_DATA_META = {
     stripTitle: 'Mayer Multiple',
   },
   'bitcoin-price-performance': {
-    ...UNDER_CONSTRUCTION_META,
+    providers: [
+      { name: 'FRED — St. Louis Fed', url: 'https://fred.stlouisfed.org/series/MSPUS' },
+      { name: 'Binance', url: 'https://api.binance.com' },
+    ],
+    refreshLabel: 'quarterly (FRED MSPUS)',
+    showTitleInStrip: true,
+    stripTitle: 'US Median Home Price in ₿',
   },
   'bitcoin-halving-cycle-spiral': {
-    ...UNDER_CONSTRUCTION_META,
+    providers: [{ name: 'Internal', url: null }],
+    refreshLabel: 'static data',
+    showSharedStrip: true,
   },
   'bitcoin-power-law-model': {
     ...UNDER_CONSTRUCTION_META,

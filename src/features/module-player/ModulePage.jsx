@@ -61,8 +61,6 @@ const MARKET_AUDIO_THEMES = {
 
 const DONATION_ADDRESS = 'BC1QC2GD3YN8DTLMZG4UW786MFN085WE69F60V4R6F';
 const NOINDEX_PREVIEW_SLUGS = new Set([
-  'bitcoin-mayer-multiple',
-  'bitcoin-price-performance',
   'bitcoin-halving-cycle-spiral',
   'bitcoin-power-law-model',
   'bitcoin-stock-to-flow-model',
@@ -78,7 +76,6 @@ const NOINDEX_PREVIEW_SLUGS = new Set([
 ]);
 
 const BLOCKING_OVERLAY_SLUGS = new Set([
-  'bitcoin-price-performance',
   'bitcoin-halving-cycle-spiral',
   'bitcoin-power-law-model',
   'bitcoin-stock-to-flow-model',
@@ -355,7 +352,7 @@ export default function ModulePage({ forcedSlug = null }) {
   const useAbsoluteSharedMetaCard = Boolean(moduleMeta?.sharedMetaAbsoluteCard);
   const showAbsoluteMetaCard = showSharedMeta && useAbsoluteSharedMetaCard && !isResponsiveViewport;
   const hideSharedMetaOnDesktop = Boolean(moduleMeta?.hideSharedMetaOnDesktop);
-  const showTopMeta = showSharedMeta && !isResponsiveViewport && !useAbsoluteSharedMetaCard && !hideSharedMetaOnDesktop;
+  const showTopMeta = showSharedMeta && !useAbsoluteSharedMetaCard && !hideSharedMetaOnDesktop;
   const showBottomMeta = showSharedMeta && isResponsiveViewport;
   const useResponsiveScroll = isResponsiveViewport && (showBottomMeta || moduleMeta?.responsiveScroll === true);
   const metaLastAt = new Date(metaLastAtMs);
@@ -625,9 +622,10 @@ export default function ModulePage({ forcedSlug = null }) {
               metaLastAt={metaLastAt}
               providers={moduleMeta.providers}
               renderProviderLinks={renderProviderLinks}
-               title={stripTitle}
-             />
-           )}
+              title={stripTitle}
+              hideMeta={isResponsiveViewport}
+            />
+          )}
           <div className={`relative min-h-0 ${useResponsiveScroll ? 'min-h-full flex-none' : 'flex-1'}`}>
             {hasBlockingOverlay ? (
               <Suspense fallback={<ModuleContentFallback title={module.title} />}>
@@ -683,6 +681,7 @@ export default function ModulePage({ forcedSlug = null }) {
               metaLastAt={metaLastAt}
               providers={moduleMeta.providers}
               renderProviderLinks={renderProviderLinks}
+              title={stripTitle}
             />
           )}
         </div>
