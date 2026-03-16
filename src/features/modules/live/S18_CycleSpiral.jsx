@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, useRef } from 'react';
+import { ModuleShell } from '@/shared/components/module/index.js';
 
 const HALVINGS_Y = [2012.907, 2016.524, 2020.356, 2024.300, 2028.295];
 
@@ -362,11 +363,7 @@ export default function S18_CycleSpiral() {
   const subtitleSize = isMobile ? '0.6rem' : isTablet ? '0.65rem' : 'clamp(0.65rem, 2vw, var(--fs-micro))';
 
   return (
-    <div
-      className="flex h-full w-full flex-col bg-[#111111] overflow-hidden"
-      role="region"
-      aria-label="Bitcoin Cycle Spiral Visualization"
-    >
+    <ModuleShell overflow="hidden">
       <style>{`
         @keyframes fadeInScale {
           from { opacity: 0; transform: scale(0.92); }
@@ -727,6 +724,6 @@ export default function S18_CycleSpiral() {
           </div>
         </div>
       </div>
-    </div>
+    </ModuleShell>
   );
 }
