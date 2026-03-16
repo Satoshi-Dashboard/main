@@ -149,3 +149,23 @@ For OpenCode, Codex, Claude, and any automated coding agent:
 - **Acción Realizada/Corrección:** Se añadió una excepción protegida para `README.md` que prohíbe a cualquier agente modificarlo o inyectar contenido interno salvo instrucción explícita del owner en la tarea actual.
 - **Nueva/Modificada Regla o Directriz:** `README.md` queda protegido como documento publico; leerlo está permitido, editarlo solo cuando el owner lo pida de forma específica.
 - **Justificación:** Evita que agentes contaminen la portada publica del repositorio con reglas internas o cambios documentales no autorizados.
+
+---
+
+- **Fecha de la Actualización:** `2026-03-16`
+- **Archivo(s) Afectado(s):** `.claude/agent-runtime/AGENTS.md`, `.claude/skills/vercel-react-best-practices/AGENTS.md`
+- **Tipo de Evento/Contexto:** Regresión crítica por código descartado no eliminado — pantalla negra en módulo S07
+- **Descripción del Evento Original:** Se implementó un Web Worker (`s07DataWorker.js`) para el módulo S07 LightningNodesMap. El spike fue descartado y revertido por causar pantalla negra (condición de carrera entre `useEffect` de creación y dispatch, y `EMPTY_WORKER_RESULT` definido dentro del componente causando re-renders infinitos). Sin embargo, el archivo `s07DataWorker.js` quedó en el repo como código muerto. Esta presencia de código descartado crea confusión sobre qué está activo, puede ser importado accidentalmente por futuros agentes y convierte el repo en código heredado sin utilidad.
+- **Acción Realizada/Corrección:** Se eliminó `src/features/modules/live/s07DataWorker.js`. Se añadió regla universal anti-código-muerto a `AGENTS.md` y a la skill `vercel-react-best-practices/AGENTS.md`.
+- **Nueva/Modificada Regla o Directriz:** **REGLA 22 — ZERO DEAD CODE:** Cuando un spike, experimento, optimización o feature es descartado o revertido, el agente DEBE eliminar todos los archivos, imports y fragmentos de código asociados en el mismo commit del revert. Ningún archivo descartado puede quedar en el repo con el comentario "kept as reference but unused". El código que no se ejecuta es código que miente.
+- **Justificación:** El código muerto acumula deuda técnica, confunde a futuros agentes, puede ser importado accidentalmente y hace que los reverts sean incompletos. La política es: si se descarta, se borra.
+
+## Regla 22 — ZERO DEAD CODE (aplicación inmediata)
+
+> **Cuando un spike, refactor, optimización o feature es descartado o revertido:**
+>
+> 1. Eliminar **todos** los archivos creados para ese spike (workers, helpers, mocks, configs).
+> 2. Eliminar **todos** los imports hacia esos archivos aunque sean comentados o condicionales.
+> 3. El commit del revert debe incluir la eliminación del código descartado — no en un commit posterior.
+> 4. Nunca dejar un archivo con comentarios del tipo `// kept as reference` o `// unused but here`.
+> 5. Si el código podría ser útil en el futuro, la alternativa es un branch dedicado o un gist — nunca en `main`.

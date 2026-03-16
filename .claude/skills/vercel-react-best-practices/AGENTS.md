@@ -3252,3 +3252,28 @@ function SearchInput({ onSearch }: { onSearch: (q: string) => void }) {
 5. [https://github.com/isaacs/node-lru-cache](https://github.com/isaacs/node-lru-cache)
 6. [https://vercel.com/blog/how-we-optimized-package-imports-in-next-js](https://vercel.com/blog/how-we-optimized-package-imports-in-next-js)
 7. [https://vercel.com/blog/how-we-made-the-vercel-dashboard-twice-as-fast](https://vercel.com/blog/how-we-made-the-vercel-dashboard-twice-as-fast)
+
+---
+
+## Project-Specific Addendum — Satoshi Dashboard (2026-03-16)
+
+### Web Worker Pattern — Known Failure in this repo
+
+**Context:** A Web Worker spike (`s07DataWorker.js`) was implemented for S07 LightningNodesMap to offload heavy `useMemo` chains. It was reverted because it caused a blank screen (black module) in both dev and prod.
+
+**Root causes identified:**
+1. `EMPTY_WORKER_RESULT` was declared inside the component body → new object reference on every render → infinite re-render loop.
+2. Race condition: the `useEffect` that dispatches `postMessage` could run before the `useEffect` that creates the worker, because React does not guarantee `useEffect` order across separate effects when they both depend on different refs.
+3. Even with `?worker` Vite import (which bundles correctly), the async initialization gap between worker creation and first message dispatch caused the component to stay in empty-state indefinitely.
+
+**Rule added to this skill:**
+
+> **worker-react-init-order** — When using a Web Worker inside a React component:
+> - Create the worker at **module level** (outside the component) or use a **singleton ref pattern** initialized synchronously before the first render.
+> - Never define the empty/default state object inside the component body — hoist it to module level as a `const`.
+> - Use a single `useEffect` that both creates the worker AND sends the first message, so there is no race between creation and dispatch.
+> - Alternatively: use `useMemo` for synchronous transforms until the dataset is proven to cause measurable jank (>16ms frame budget) — premature worker optimization is more expensive than the problem it solves.
+
+**Zero Dead Code rule (cross-ref AGENTS.md Rule 22):**
+
+When a spike is reverted, delete ALL associated files in the same commit. Do not leave worker files, helpers, or configs behind with `// kept as reference` comments.
