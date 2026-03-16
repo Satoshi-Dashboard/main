@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState, useRef } from 'react';
+import { useCallback, useEffect, useState, useRef, useMemo } from 'react';
 import { ModuleShell } from '@/shared/components/module/index.js';
+import s18WaypointData from '@/data/s18WaypointData.js';
 
 const HALVINGS_Y = [2012.907, 2016.524, 2020.356, 2024.300, 2028.295];
 
@@ -122,19 +123,20 @@ function getCyclePhase(t) {
 }
 
 // Generate dots dynamically based on current dimensions
-function generateDots(dims) {
+function generateDots(dims, waypointData = s18WaypointData) {
   const { CX, CY, R_MIN, R_MAX } = dims;
   const dots = [];
-  for (let yi = 0; yi <= 187; yi++) {
-    const year = 2010.5 + yi / 12;
-    if (year > 2026.2) break;
-    const price = interpLogPrice(year);
+
+  // Use real waypoint data (909 points 2009-2026)
+  for (const wp of waypointData) {
+    const year = getFractionalYear(wp.ts);
+    const price = wp.price;
     const { t, cycleStart, cycleEnd } = cycleInfo(year);
     const angle = t * 2 * Math.PI - Math.PI / 2;
     const r = priceToRadius(price, R_MIN, R_MAX);
     const x = CX + r * Math.cos(angle);
     const y = CY + r * Math.sin(angle);
-    dots.push({ x, y, t, price, year, r, cycleStart, cycleEnd });
+    dots.push({ x, y, t, price, year, r, cycleStart, cycleEnd, ts: wp.ts });
   }
   return dots;
 }
