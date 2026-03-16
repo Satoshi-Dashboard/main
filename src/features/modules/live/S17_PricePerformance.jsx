@@ -4,6 +4,7 @@ import {
   CrosshairMode,
   LineSeries,
   LineStyle,
+  PriceScaleMode,
 } from 'lightweight-charts';
 import { fetchBtcSpot } from '@/shared/services/priceApi.js';
 import { fetchJson } from '@/shared/lib/api.js';
@@ -66,7 +67,7 @@ const ChartSection = memo(function ChartSection({ points, onHoverChange }) {
         horzLine: { color: 'rgba(255,255,255,0.1)', width: 1, style: LineStyle.Dashed, labelVisible: false },
       },
       leftPriceScale: { visible: true, borderVisible: false, scaleMargins: { top: 0.1, bottom: 0.1 }, textColor: `${USD_COLOR}99` },
-      rightPriceScale: { visible: true, borderVisible: false, scaleMargins: { top: 0.1, bottom: 0.1 }, textColor: `${BTC_COLOR}99` },
+      rightPriceScale: { visible: true, borderVisible: false, scaleMargins: { top: 0.1, bottom: 0.1 }, textColor: `${BTC_COLOR}99`, mode: PriceScaleMode.Logarithmic },
       timeScale: { visible: true, borderVisible: false, timeVisible: false, rightOffset: 2, fixLeftEdge: true, fixRightEdge: true },
       handleScroll: false,
       handleScale: false,

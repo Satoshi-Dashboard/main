@@ -640,3 +640,11 @@ When creating any new frontend module, agents must follow the project example pa
 - **Accion Realizada/Correccion:** Se consolidaron mejoras de shell y modulos: safe-area en top/bottom bars, foco visible global, reduccion de nested scroll en movil, aumento de targets tipograficos/tactiles, metadata responsive menos invasiva, toggles con atributos ARIA y CTAs/tablas editoriales mas utilizables en pantallas pequenas.
 - **Nueva/Modificada Regla o Directriz:** Todo ajuste frontend debe validar de forma conjunta cuatro capas: 1) un solo scroll owner en movil/tablet, 2) barras fijas compatibles con safe-area, 3) controles con `focus-visible` y estado ARIA cuando expanden/colapsan contenido, y 4) superficies editoriales/SEO sin depender de tablas o links demasiado pequenos para touch.
 - **Justificacion:** Evita que la UI parezca correcta solo en desktop, mejora accesibilidad real y reduce regresiones donde shell, modulos densos y paginas editoriales se rompen por separado en responsive.
+
+- **Fecha de la Actualizacion:** `2026-03-16`
+- **Archivo(s) Afectado(s):** `.claude/FRONTEND_COLOR_UX_UI_RULES.md`
+- **Tipo de Evento/Contexto:** Mejor visualización de gráficos con grandes brechas históricas
+- **Descripcion del Evento Original:** El módulo S17 mostraba un gráfico del costo de casas en BTC, donde los valores de 2011 (cientos de miles de BTC) aplastaban los valores recientes (un solo dígito) dejándolos ilegibles en el suelo del gráfico.
+- **Accion Realizada/Correccion:** Se modificó el eje Y derecho a `PriceScaleMode.Logarithmic` para que los saltos de escala fuesen consistentes visualmente y la curva histórica pudiese leerse junto con los años recientes.
+- **Nueva/Modificada Regla o Directriz:** Para gráficos que comparen valores históricos inmensos contra valores actuales diminutos (ej. precios medidos en BTC a lo largo de 10+ años), frontend debe usar escala logarítmica para que todas las etapas sean legibles, evitando escalas lineales que invisibilizan los datos recientes.
+- **Justificacion:** Previene una representación visual inutilizable donde el 90% del gráfico parece una línea recta pegada al fondo debido a variaciones exponenciales o deflacionarias a largo plazo.
