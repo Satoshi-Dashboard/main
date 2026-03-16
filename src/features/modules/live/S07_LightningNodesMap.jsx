@@ -1,5 +1,4 @@
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import S07Worker from './s07DataWorker.js?worker';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import Info from 'lucide-react/dist/esm/icons/info';
 import { CircleMarker, GeoJSON, MapContainer, Tooltip, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -741,9 +740,8 @@ export default function S07_LightningNodesMap() {
   const showBreakdownPanel  = !isCompactViewport || isBreakdownExpanded;
   const showDensityLegend   = !isCompactViewport || isDensityExpanded;
 
-  // ── GeoJSON lookup maps (main thread — only run on geo load, not on every data refresh) ──
   const featureCodeByName = useMemo(() => {
-    const map = {};
+    const map = new Map();
     const features = countriesGeo?.features;
     if (!Array.isArray(features)) return map;
     features.forEach((feature, idx) => {
@@ -751,92 +749,136 @@ export default function S07_LightningNodesMap() {
       const name = getFeatureCountryName(feature, idx);
       if (!code) return;
       const normalized = normalizeCountryName(name);
-      if (normalized) map[normalized] = code;
+      if (normalized) map.set(normalized, code);
     });
     return map;
   }, [countriesGeo]);
 
   const featureNameByCode = useMemo(() => {
-    const map = {};
+    const map = new Map();
     const features = countriesGeo?.features;
     if (!Array.isArray(features)) return map;
     features.forEach((feature, idx) => {
       const code = getFeatureCountryCode(feature);
       const name = getFeatureCountryName(feature, idx);
-      if (code) map[code] = name;
+      if (code) map.set(code, name);
     });
     return map;
   }, [countriesGeo]);
 
-  // ── Worker-derived state — replaces the 8 heavy useMemo calls ──────────────
-  const EMPTY_WORKER_RESULT = {
-    networkPoints:        [],
-    resolvedCountryRows:  [],
-    metricRows:           [],
-    statsByCode:          {},
-    totals:               { nodes: 0, channels: 0, capacity: 0 },
-    perCapitaByCode:      {},
-    maxAbsoluteByMetric:  { nodes: 0, channels: 0, capacity: 0 },
-    maxPerCapitaByMetric: { nodes: 0, channels: 0, capacity: 0 },
-    avgDistByPubkey:      {},
-    networkMaxByMetric:   { channels: 0, capacity: 0, dist: 0 },
-  };
-  const [workerResult, setWorkerResult] = useState(EMPTY_WORKER_RESULT);
-  const workerRef = useRef(null);
+  const countryCounts = useMemo(() => parseLightningCountryCounts(payload?.data), [payload?.data]);
 
-  const handleWorkerMessage = useCallback((event) => {
-    const msg = event.data;
-    if (msg.type === 'RESULT') {
-      setWorkerResult(msg);
-    }
-    // ERROR: silently keep previous result so the map stays visible
-  }, []);
-
-  // Create worker once — Vite ?worker import ensures correct bundling in dev + prod
-  useEffect(() => {
-    const worker = new S07Worker();
-    worker.addEventListener('message', handleWorkerMessage);
-    workerRef.current = worker;
-    return () => {
-      worker.removeEventListener('message', handleWorkerMessage);
-      worker.terminate();
-      workerRef.current = null;
-    };
-  }, [handleWorkerMessage]);
-
-  // Dispatch to worker whenever inputs change
-  useEffect(() => {
-    const worker = workerRef.current;
-    if (!worker || !payload?.data) return;
-    worker.postMessage({
-      type: 'PROCESS',
-      payload: payload.data,
-      channelsGeoLines,
-      populationMap,
-      featureCodeByName,
-      featureNameByCode,
+  const resolvedCountryRows = useMemo(() => {
+    return countryCounts.map((row) => {
+      const directCode     = String(row.country_code || '').toUpperCase();
+      const countryName    = String(row.country_name || '').trim();
+      const normalizedName = normalizeCountryName(countryName);
+      const aliasedName    = COUNTRY_NAME_ALIASES[normalizedName] || normalizedName;
+      const inferredCode   = featureCodeByName.get(aliasedName) || '';
+      const resolvedCode   = /^[A-Z]{2}$/.test(directCode) ? directCode : inferredCode;
+      const resolvedNameFromCode = featureNameByCode.get(resolvedCode) || '';
+      const isoFallbackName      = ISO_COUNTRY_NAMES[resolvedCode] || '';
+      const displayName          = resolvedNameFromCode || isoFallbackName;
+      const baseName = isUnknownCountryValue(countryName)
+        ? (displayName || (/^[A-Z]{2}$/.test(resolvedCode) ? resolvedCode : UNKNOWN_COUNTRY_LABEL))
+        : (countryName || displayName || resolvedCode || UNKNOWN_COUNTRY_LABEL);
+      const label = resolvedCode && displayName ? `${baseName} (${resolvedCode})` : baseName;
+      return { ...row, country_label: label, country_code_resolved: resolvedCode || 'UNKNOWN' };
     });
-  }, [payload?.data, channelsGeoLines, populationMap, featureCodeByName, featureNameByCode]);
+  }, [countryCounts, featureCodeByName, featureNameByCode]);
 
-  // Destructure worker result into the same variable names the rest of the component expects
-  const {
-    networkPoints,
-    resolvedCountryRows,
-    metricRows,
-    statsByCode,
-    totals,
-    perCapitaByCode,
-    maxAbsoluteByMetric,
-    maxPerCapitaByMetric,
-    avgDistByPubkey,
-    networkMaxByMetric,
-  } = workerResult;
-
-  // networkData keeps the same shape { points, lines } as before
-  const networkData = useMemo(
-    () => ({ points: networkPoints, lines: channelsGeoLines }),
-    [networkPoints, channelsGeoLines],
+  const metricRows = useMemo(
+    () => resolvedCountryRows.filter((row) => /^[A-Z]{2}$/.test(row.country_code_resolved)),
+    [resolvedCountryRows],
   );
+
+  const networkData = useMemo(
+    () => ({ ...parseLightningNetworkData(payload?.data), lines: channelsGeoLines }),
+    [payload?.data, channelsGeoLines],
+  );
+
+  const statsByCode = useMemo(() => {
+    const map = {};
+    metricRows.forEach((row) => {
+      const c = row.country_code_resolved;
+      map[c] = {
+        nodes:    (map[c]?.nodes    || 0) + row.nodes,
+        channels: (map[c]?.channels || 0) + row.channels,
+        capacity: (map[c]?.capacity || 0) + row.capacity,
+      };
+    });
+    return map;
+  }, [metricRows]);
+
+  const totals = useMemo(() => metricRows.reduce(
+    (acc, row) => { acc.nodes += row.nodes; acc.channels += row.channels; acc.capacity += row.capacity; return acc; },
+    { nodes: 0, channels: 0, capacity: 0 },
+  ), [metricRows]);
+
+  const perCapitaByCode = useMemo(() => {
+    const map = {};
+    metricRows.forEach((row) => {
+      const c = row.country_code_resolved;
+      if (!/^[A-Z]{2}$/.test(c) || populationMap[c] == null) return;
+      const pop = populationMap[c];
+      if (!pop) return;
+      if (!map[c]) map[c] = { nodes: 0, channels: 0, capacity: 0 };
+      map[c].nodes    += row.nodes    / pop;
+      map[c].channels += row.channels / pop;
+      map[c].capacity += row.capacity / pop / 100_000_000;
+    });
+    return map;
+  }, [metricRows, populationMap]);
+
+  const maxAbsoluteByMetric = useMemo(() => {
+    const vals = Object.values(statsByCode);
+    if (!vals.length) return { nodes: 0, channels: 0, capacity: 0 };
+    return {
+      nodes:    Math.max(...vals.map((s) => s.nodes)),
+      channels: Math.max(...vals.map((s) => s.channels)),
+      capacity: Math.max(...vals.map((s) => s.capacity)),
+    };
+  }, [statsByCode]);
+
+  const maxPerCapitaByMetric = useMemo(() => {
+    const vals = Object.values(perCapitaByCode);
+    if (!vals.length) return { nodes: 0, channels: 0, capacity: 0 };
+    return {
+      nodes:    Math.max(...vals.map((s) => s.nodes    || 0)),
+      channels: Math.max(...vals.map((s) => s.channels || 0)),
+      capacity: Math.max(...vals.map((s) => s.capacity || 0)),
+    };
+  }, [perCapitaByCode]);
+
+  const avgDistByPubkey = useMemo(() => {
+    if (!channelsGeoLines.length || !channelsGeoLines[0]?.pub1) return {};
+    const acc = {};
+    channelsGeoLines.forEach(({ lat1, lng1, lat2, lng2, pub1, pub2 }) => {
+      const d = haversineKm(lat1, lng1, lat2, lng2);
+      if (!Number.isFinite(d) || d <= 0) return;
+      [pub1, pub2].forEach((pub) => {
+        if (!pub) return;
+        if (!acc[pub]) acc[pub] = { total: 0, count: 0 };
+        acc[pub].total += d;
+        acc[pub].count += 1;
+      });
+    });
+    const result = {};
+    Object.entries(acc).forEach(([pub, { total, count }]) => {
+      result[pub] = Math.round(total / count);
+    });
+    return result;
+  }, [channelsGeoLines]);
+
+  const networkMaxByMetric = useMemo(() => {
+    const points = networkData.points;
+    if (!points.length) return { channels: 0, capacity: 0, dist: 0 };
+    return {
+      channels: Math.max(...points.map((pt) => pt.channels || 0)),
+      capacity: Math.max(...points.map((pt) => pt.capacity || 0)),
+      dist:     Math.max(...points.map((pt) => avgDistByPubkey[pt.pubkey] || 0)),
+    };
+  }, [networkData.points, avgDistByPubkey]);
 
   const networkScale = useMemo(() => {
     const networkMetric = metricType === 'nodes' ? 'channels' : metricType;
