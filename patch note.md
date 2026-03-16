@@ -1,5 +1,28 @@
 # Patch Notes
 
+## [2026-03-16] — Charts Performance + Maps Cleanup
+
+### New
+- Migrated S02 (Price Chart) from Recharts to `lightweight-charts` (Canvas renderer). Bundle size: 172 kB → 10.9 kB. Shared library chunk between S02 and S15 downloaded once by the browser.
+- Migrated S15 (BTC vs Gold) from Recharts to `lightweight-charts` with two simultaneous AreaSeries. BTC orange `#F7931A`, Gold silver `rgba(214,214,214,0.92)`, transparent grid, dual crosshair markers.
+- Added touch scrub to S02 and S15: sliding a finger across the chart updates the price/values in the header in real time, identical to mouse hover behavior.
+- Added responsive improvements to S02 and S15: `min-h-[44px]` touch targets on all interactive controls, `clamp()` font sizes from 375px to 1440px, stat cards always in a horizontal row, chart minimum height of 140px so it never collapses in landscape mode.
+- Added Rule 22 (Zero Dead Code) to `.claude/agent-runtime/AGENTS.md`: any discarded spike must have all associated files deleted in the same revert commit. No `// kept as reference` files in main.
+- Added Web Worker failure postmortem and `worker-react-init-order` rule to `.claude/skills/vercel-react-best-practices/AGENTS.md`.
+
+### Fixes
+- Fixed S07 (Lightning Nodes Map) blank screen regression caused by a Web Worker spike. Reverted to original `useMemo` chain. Module fully operational.
+
+### Removed
+- Removed `src/features/modules/live/s07DataWorker.js` (discarded Web Worker spike, never active in production).
+- Removed all `.tmp-*.log` diagnostic files from the project root.
+
+### Pending (deferred by owner)
+- `spike/s27-backend-trends` — extend Express for real Google Trends data in S27. Deferred.
+- `spike/s24-s29-echarts` — blocked until S24 and S29 have real data.
+
+---
+
 ## [2026-03-14]
 
 ### New
