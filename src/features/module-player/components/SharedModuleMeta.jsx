@@ -23,7 +23,7 @@ export function SharedMetaAbsoluteCard({ cadenceLabel, metaLastAt, providers, re
 
 export function SharedMetaTopStrip({ cadenceLabel, metaLastAt, providers, renderProviderLinks, title, hideMeta }) {
   return (
-    <div className="flex flex-none items-center justify-between px-2 py-1.5 sm:px-3 lg:px-4">
+    <div className="flex flex-none items-center justify-between px-2 py-1.5 sm:px-3 lg:px-4 bg-[#111111]">
       {title ? (
         <div className="min-w-0" style={{ color: 'var(--accent-bitcoin)', fontFamily: 'monospace', fontSize: 'var(--fs-subtitle)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.02em' }}>
           {title}

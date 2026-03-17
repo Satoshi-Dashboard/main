@@ -1,775 +1,650 @@
-import { useCallback, useEffect, useState, useRef } from 'react';
-import s18WaypointData from '@/data/s18WaypointData.js';
+/**
+ * S18: Bitcoin Halving Cycle Spiral
+ * Replicates giocaizzi visualization with live Binance API data
+ *
+ * Architecture:
+ * - Polar coordinate spiral: year → angle, price → radius
+ * - 4 halving cycles marked on spiral
+ * - Click-activated tooltip with price + date
+ * - Zoom (0.5x-3x) and pan interaction
+ * - Responsive SVG rendering
+ */
 
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useBinanceHistoricalBTC } from '@/shared/hooks/useBinanceHistoricalBTC';
+import { ModuleShell } from '@/shared/components/module';
+
+// ============================================================================
+// CONSTANTS
+// ============================================================================
+
+// Halving cycle boundaries (decimal year format)
 const HALVINGS_Y = [2012.907, 2016.524, 2020.356, 2024.300, 2028.295];
 
-const WP = [
-  [2010.5,  0.08],
-  [2011.4,  30],
-  [2012.0,  5],
-  [2012.9,  12],
-  [2013.3,  140],
-  [2013.92, 1100],
-  [2015.0,  180],
-  [2016.0,  430],
-  [2016.52, 660],
-  [2017.0,  1000],
-  [2017.95, 19400],
-  [2018.5,  7000],
-  [2019.0,  3500],
-  [2019.5,  11000],
-  [2020.0,  7200],
-  [2020.36, 8700],
-  [2020.92, 29000],
-  [2021.35, 59000],
-  [2021.86, 67000],
-  [2022.45, 30000],
-  [2022.90, 16000],
-  [2023.0,  23000],
-  [2023.95, 42000],
-  [2024.20, 73700],
-  [2024.30, 64000],
-  [2024.96, 108000],
-  [2025.05, 97000],
-  [2025.55, 105000],
-  [2025.95, 100000],
-  [2026.17, 84000],
+// Price scaling (logarithmic)
+const LOG_MIN = Math.log10(0.05); // ~$0.05
+const LOG_MAX = Math.log10(150000); // ~$150k
+
+// Responsive dimensions (will be updated on window resize)
+function getResponsiveDimensions(width) {
+  if (width < 640) {
+    return { VW: 360, VH: 320, CX: 180, CY: 160, R_MIN: 12, R_MAX: 130 };
+  }
+  if (width < 1024) {
+    return { VW: 600, VH: 500, CX: 300, CY: 260, R_MIN: 15, R_MAX: 210 };
+  }
+  return { VW: 900, VH: 700, CX: 450, CY: 360, R_MIN: 18, R_MAX: 300 };
+}
+
+// Cycle phases for coloring
+const CYCLE_PHASES = [
+  { range: [0, 0.15], label: 'Post-Halving Accumulation', color: '#1E50FF' },
+  { range: [0.15, 0.4], label: 'Bull Run', color: '#00B4FF' },
+  { range: [0.4, 0.65], label: 'Market Peak', color: '#00DC78' },
+  { range: [0.65, 0.85], label: 'Bear Decline', color: '#DCDC00' },
+  { range: [0.85, 1.0], label: 'Pre-Halving Bottom', color: '#FF8C00' },
 ];
 
-function interpLogPrice(year) {
-  if (year <= WP[0][0]) return WP[0][1];
-  if (year >= WP[WP.length - 1][0]) return WP[WP.length - 1][1];
-  let i = 0;
-  while (i < WP.length - 1 && WP[i + 1][0] < year) i++;
-  const [y0, p0] = WP[i];
-  const [y1, p1] = WP[i + 1];
-  const t = (year - y0) / (y1 - y0);
-  const lp = Math.log10(p0) + t * (Math.log10(p1) - Math.log10(p0));
-  return Math.pow(10, lp);
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+/**
+ * Convert Unix timestamp to decimal year (e.g., 2020.5 = mid-2020)
+ */
+function getFractionalYear(ts) {
+  const date = new Date(ts);
+  const year = date.getFullYear();
+  const startOfYear = new Date(year, 0, 1).getTime();
+  const endOfYear = new Date(year + 1, 0, 1).getTime();
+  const fraction = (ts - startOfYear) / (endOfYear - startOfYear);
+  return year + fraction;
 }
 
+/**
+ * Get current halving cycle info
+ * Returns: { t: 0-1 progress within cycle, cycleStart, cycleEnd }
+ */
 function cycleInfo(year) {
-  let cycleStart = 2009.0083;
-  let cycleEnd = HALVINGS_Y[0];
-  for (let i = 0; i < HALVINGS_Y.length; i++) {
-    if (year < HALVINGS_Y[i]) {
-      cycleStart = i === 0 ? 2009.0083 : HALVINGS_Y[i - 1];
-      cycleEnd = HALVINGS_Y[i];
+  for (let i = 0; i < HALVINGS_Y.length - 1; i++) {
+    if (year >= HALVINGS_Y[i] && year < HALVINGS_Y[i + 1]) {
+      const cycleStart = HALVINGS_Y[i];
+      const cycleEnd = HALVINGS_Y[i + 1];
+      const t = (year - cycleStart) / (cycleEnd - cycleStart);
+      return { t: Math.max(0, Math.min(1, t)), cycleStart, cycleEnd, cycleIndex: i };
+    }
+  }
+  // Before first halving or after last
+  const cycleStart = HALVINGS_Y[0];
+  const cycleEnd = HALVINGS_Y[1];
+  const t = (year - cycleStart) / (cycleEnd - cycleStart);
+  return { t: Math.max(0, Math.min(1, t)), cycleStart, cycleEnd, cycleIndex: 0 };
+}
+
+/**
+ * Map cycle progress (0-1) to RGB color
+ */
+function cycleColor(t) {
+  // Clamp to 0-1
+  t = Math.max(0, Math.min(1, t));
+
+  // Color stops: blue → cyan → green → yellow → orange → red
+  const stops = [
+    { pos: 0, rgb: [30, 80, 255] },
+    { pos: 0.2, rgb: [0, 180, 255] },
+    { pos: 0.4, rgb: [0, 220, 120] },
+    { pos: 0.6, rgb: [200, 220, 0] },
+    { pos: 0.8, rgb: [255, 140, 0] },
+    { pos: 1.0, rgb: [255, 20, 20] },
+  ];
+
+  // Find surrounding stops
+  let lower = stops[0];
+  let upper = stops[stops.length - 1];
+  for (let i = 0; i < stops.length - 1; i++) {
+    if (t >= stops[i].pos && t <= stops[i + 1].pos) {
+      lower = stops[i];
+      upper = stops[i + 1];
       break;
     }
-    if (i === HALVINGS_Y.length - 1) {
-      cycleStart = HALVINGS_Y[i];
-      cycleEnd = HALVINGS_Y[i] + (HALVINGS_Y[i] - HALVINGS_Y[i - 1]);
-    }
   }
-  const t = Math.max(0, Math.min(1, (year - cycleStart) / (cycleEnd - cycleStart)));
-  return { t, cycleStart, cycleEnd };
-}
 
-// Responsive dimensions - scale based on viewport
-function getResponsiveDimensions() {
-  if (typeof window === 'undefined') return { VW: 900, VH: 720, CX: 450, CY: 370, R_MIN: 18, R_MAX: 310 };
+  // Linear interpolation
+  const range = upper.pos - lower.pos;
+  const localT = range === 0 ? 0 : (t - lower.pos) / range;
+  const r = Math.round(lower.rgb[0] + (upper.rgb[0] - lower.rgb[0]) * localT);
+  const g = Math.round(lower.rgb[1] + (upper.rgb[1] - lower.rgb[1]) * localT);
+  const b = Math.round(lower.rgb[2] + (upper.rgb[2] - lower.rgb[2]) * localT);
 
-  const width = window.innerWidth;
-  const height = window.innerHeight;
-
-  // Mobile (< 640px): smaller spiral
-  if (width < 640) {
-    return { VW: 360, VH: 320, CX: 180, CY: 165, R_MIN: 12, R_MAX: 140 };
-  }
-  // Tablet (640px - 1024px)
-  if (width < 1024) {
-    return { VW: 600, VH: 520, CX: 300, CY: 270, R_MIN: 15, R_MAX: 220 };
-  }
-  // Desktop
-  return { VW: 900, VH: 720, CX: 450, CY: 370, R_MIN: 18, R_MAX: 310 };
-}
-
-const LOG_MIN = Math.log10(0.05);
-const LOG_MAX = Math.log10(150000);
-
-function priceToRadius(price, R_MIN, R_MAX) {
-  const lp = Math.log10(Math.max(0.05, price));
-  return R_MIN + (R_MAX - R_MIN) * (lp - LOG_MIN) / (LOG_MAX - LOG_MIN);
-}
-
-function cycleColor(t) {
-  const stops = [
-    [0,    [30,  80, 255]],
-    [0.20, [0,  180, 255]],
-    [0.40, [0,  220, 120]],
-    [0.60, [200, 220,  0]],
-    [0.80, [255, 140,  0]],
-    [1.0,  [255,  20, 20]],
-  ];
-  let i = 0;
-  while (i < stops.length - 1 && stops[i + 1][0] < t) i++;
-  const [t0, c0] = stops[i];
-  const [t1, c1] = stops[Math.min(i + 1, stops.length - 1)];
-  const f = t1 === t0 ? 0 : (t - t0) / (t1 - t0);
-  const r = Math.round(c0[0] + f * (c1[0] - c0[0]));
-  const g = Math.round(c0[1] + f * (c1[1] - c0[1]));
-  const b = Math.round(c0[2] + f * (c1[2] - c0[2]));
   return `rgb(${r},${g},${b})`;
 }
 
-function getCyclePhase(t) {
-  if (t < 0.15) return { label: 'Post-Halving Accumulation', color: 'rgb(30,80,255)' };
-  if (t < 0.40) return { label: 'Bull Run', color: 'rgb(0,180,255)' };
-  if (t < 0.65) return { label: 'Market Peak', color: 'rgb(0,220,120)' };
-  if (t < 0.85) return { label: 'Bear Decline', color: 'rgb(200,220,0)' };
-  return { label: 'Pre-Halving Bottom', color: 'rgb(255,140,0)' };
+/**
+ * Convert price to spiral radius (logarithmic scale)
+ */
+function priceToRadius(price, R_MIN, R_MAX) {
+  if (price <= 0) return R_MIN;
+  const lp = Math.log10(price);
+  const range = LOG_MAX - LOG_MIN;
+  const normalized = (lp - LOG_MIN) / range;
+  return R_MIN + normalized * (R_MAX - R_MIN);
 }
 
-// Convert timestamp to fractional year
-function getFractionalYear(ts) {
-  const date = new Date(ts);
-  const year = date.getUTCFullYear();
-  const start = new Date(Date.UTC(year, 0, 1)).getTime();
-  const end = new Date(Date.UTC(year + 1, 0, 1)).getTime();
-  return year + (ts - start) / (end - start);
+/**
+ * Convert polar coordinates to Cartesian
+ * @param {number} angle - Angle in radians
+ * @param {number} radius - Radius from center
+ * @param {number} cx - Center X
+ * @param {number} cy - Center Y
+ */
+function polarToCartesian(angle, radius, cx, cy) {
+  const x = cx + radius * Math.cos(angle - Math.PI / 2);
+  const y = cy + radius * Math.sin(angle - Math.PI / 2);
+  return { x, y };
 }
 
-// Generate dots dynamically based on current dimensions and waypoint data
-function generateDots(dims) {
-  const { CX, CY, R_MIN, R_MAX } = dims;
-  const dots = [];
-
-  // Use real waypoint data (909 points 2009-2026)
-  for (const wp of s18WaypointData) {
-    const year = getFractionalYear(wp.ts);
-    const price = wp.price;
-    const { t, cycleStart, cycleEnd } = cycleInfo(year);
-    const angle = t * 2 * Math.PI - Math.PI / 2;
-    const r = priceToRadius(price, R_MIN, R_MAX);
-    const x = CX + r * Math.cos(angle);
-    const y = CY + r * Math.sin(angle);
-    dots.push({ x, y, t, price, year, r, cycleStart, cycleEnd, ts: wp.ts });
+/**
+ * Get tooltip label based on cycle phase
+ */
+function getCyclePhaseLabel(t) {
+  for (const phase of CYCLE_PHASES) {
+    if (t >= phase.range[0] && t < phase.range[1]) {
+      return phase.label;
+    }
   }
-  return dots;
+  return 'Unknown Phase';
 }
 
-function generateRings(R_MIN, R_MAX) {
-  return [
-    { price: 1,       label: '$1' },
-    { price: 100,     label: '$100' },
-    { price: 10000,   label: '$10K' },
-    { price: 100000,  label: '$100K' },
-  ];
-}
+// ============================================================================
+// TOOLTIP COMPONENT
+// ============================================================================
 
-const PRICE_FORMATTER = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'USD',
-  maximumFractionDigits: 0,
-});
-
-const DATE_FORMATTER = new Intl.DateTimeFormat('en-US', {
-  year: 'numeric',
-  month: 'short',
-  day: 'numeric',
-});
-
-function formatUsd(value) {
-  return PRICE_FORMATTER.format(value);
-}
-
-function fractionalYearToDate(year) {
-  const startYear = Math.floor(year);
-  const fraction = year - startYear;
-  const start = new Date(startYear, 0, 1);
-  const end = new Date(startYear + 1, 0, 1);
-  const date = new Date(start.getTime() + fraction * (end.getTime() - start.getTime()));
-  return date;
-}
-
-// Responsive tooltip component
 function SpiralTooltip({ active, payload, position }) {
-  if (!active || !payload?.length) return null;
-  const point = payload[0]?.payload;
-  if (!point) return null;
+  if (!active || !payload) return null;
 
-  const phase = getCyclePhase(point.t);
-  const cycleProgress = Math.round(point.t * 100);
-  const date = fractionalYearToDate(point.year);
+  const { price, date, cycleProgress, phaseLabel } = payload;
+  const { x, y } = position;
 
   return (
     <div
-      className="rounded-xl border border-white/12 bg-[rgba(9,12,18,0.96)] px-3 py-2.5 font-mono shadow-[0_12px_28px_rgba(0,0,0,0.48)] md:px-3.5 md:py-3"
+      className="fixed z-50 pointer-events-none"
       style={{
-        minWidth: 160,
-        maxWidth: 220,
-        position: 'absolute',
-        zIndex: 50,
-        left: position.x,
-        top: position.y,
-        transform: 'translate(-50%, -100%) translateY(-12px)',
+        left: `${x + 10}px`,
+        top: `${y - 80}px`,
       }}
-      role="tooltip"
     >
-      <div className="flex items-center gap-2 border-b border-white/8 pb-1.5 md:pb-2">
-        <div
-          className="h-2 w-2 rounded-full flex-shrink-0"
-          style={{ backgroundColor: phase.color }}
-        />
-        <span className="text-[9px] uppercase tracking-[0.16em] text-white/55 truncate md:text-[10px]">
-          {phase.label}
-        </span>
-      </div>
-      <div className="mt-2 space-y-1.5 text-[10px] md:text-[11px]">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-white/55">Price</span>
-          <span style={{ color: 'var(--accent-bitcoin)', fontWeight: 600 }} className="truncate">
-            {formatUsd(point.price)}
-          </span>
-        </div>
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-white/55">Date</span>
-          <span className="text-white/80 truncate">{DATE_FORMATTER.format(date)}</span>
-        </div>
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-white/55">Cycle</span>
-          <span style={{ color: phase.color }}>{cycleProgress}%</span>
-        </div>
+      <div className="bg-black/95 border border-white/20 rounded-lg p-4 backdrop-blur-sm shadow-2xl">
+        <div className="text-white/60 text-xs mb-2">{phaseLabel}</div>
+        <div className="text-white font-bold text-lg">${price.toLocaleString('en-US', { maximumFractionDigits: 2 })}</div>
+        <div className="text-white/70 text-sm mt-1">{date}</div>
+        <div className="text-white/50 text-xs mt-2">{(cycleProgress * 100).toFixed(1)}% through cycle</div>
       </div>
     </div>
   );
 }
 
-// Phase legend sidebar - collapsible on mobile
-function PhaseLegend({ isOpen, onToggle }) {
-  const phases = [
-    { phase: 'Post-Halving', color: 'rgb(30,80,255)', range: '0-15%' },
-    { phase: 'Bull Run', color: 'rgb(0,180,255)', range: '15-40%' },
-    { phase: 'Market Peak', color: 'rgb(0,220,120)', range: '40-65%' },
-    { phase: 'Bear Decline', color: 'rgb(200,220,0)', range: '65-85%' },
-    { phase: 'Pre-Halving', color: 'rgb(255,140,0)', range: '85-100%' },
-  ];
-
-  return (
-    <div className="absolute right-2 top-2 md:right-3 md:top-3 lg:block">
-      {/* Mobile toggle button */}
-      <button
-        onClick={onToggle}
-        className="lg:hidden absolute right-0 top-0 z-10 flex items-center justify-center w-8 h-8 rounded-lg border border-white/8 bg-[rgba(17,17,17,0.9)] text-white/60 hover:text-white transition-colors"
-        aria-label="Toggle phase legend"
-        aria-expanded={isOpen}
-      >
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      </button>
-
-      {/* Desktop always visible, mobile as dropdown */}
-      <div className={`
-        rounded-lg border border-white/8 bg-[rgba(17,17,17,0.9)] p-2.5 md:p-3 backdrop-blur-sm
-        ${isOpen ? 'block' : 'hidden lg:block'}
-      `}>
-        <div className="mb-2 border-b border-white/8 pb-1.5 md:mb-2 md:pb-1.5">
-          <span className="text-[9px] uppercase tracking-wider text-white/40 font-mono md:text-[10px]">
-            Cycle Phases
-          </span>
-        </div>
-        <div className="space-y-1 md:space-y-1.5">
-          {phases.map(({ phase, color, range }) => (
-            <div key={phase} className="flex items-center justify-between gap-2 md:gap-3" style={{ minHeight: 24 }}>
-              <div className="flex items-center gap-1.5 md:gap-2">
-                <div className="h-1.5 w-1.5 rounded-full flex-shrink-0 md:h-2 md:w-2" style={{ backgroundColor: color }} />
-                <span className="text-[9px] text-white/60 truncate font-mono md:text-[10px]">
-                  {phase}
-                </span>
-              </div>
-              <span className="text-[8px] text-white/30 flex-shrink-0 font-mono md:text-[9px]">
-                {range}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
 
 export default function S18_CycleSpiral() {
-  const [hoveredDot, setHoveredDot] = useState(null);
-  const [dimensions, setDimensions] = useState(getResponsiveDimensions);
+  // Data fetching from Binance
+  const { waypoints, loading, error, dataPoints, latestPrice } = useBinanceHistoricalBTC('1d', 300000);
+
+  // Responsive container
+  const containerRef = useRef(null);
+  const svgRef = useRef(null);
+  const [containerWidth, setContainerWidth] = useState(0);
+
+  // Interaction state
+  const [hoveredWaypoint, setHoveredWaypoint] = useState(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
-  const [legendOpen, setLegendOpen] = useState(false);
   const [zoomScale, setZoomScale] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const containerRef = useRef(null);
-  const svgRef = useRef(null);
+  const [initialPan, setInitialPan] = useState({ x: 0, y: 0 });
 
-  const { VW, VH, CX, CY, R_MIN, R_MAX } = dimensions;
-  const DOTS = generateDots(dimensions);
-  const RINGS = generateRings(R_MIN, R_MAX);
+  // Refs for event handling
+  const listenersActive = useRef(false);
 
-  const getInitialReducedMotion = () => {
-    if (typeof window === 'undefined') return false;
-    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  };
+  // Get responsive dimensions
+  const dims = useMemo(
+    () => getResponsiveDimensions(containerWidth),
+    [containerWidth]
+  );
 
-  const [reducedMotion, setReducedMotion] = useState(getInitialReducedMotion);
-
-  // Handle resize
+  // Handle window resize
   useEffect(() => {
     const handleResize = () => {
-      setDimensions(getResponsiveDimensions());
+      if (containerRef.current) {
+        setContainerWidth(containerRef.current.offsetWidth);
+      }
     };
 
+    handleResize(); // Initial call
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const handler = (e) => {
-      if (e.matches !== reducedMotion) {
-        setReducedMotion(e.matches);
-      }
-    };
-    mediaQuery.addEventListener('change', handler);
-    return () => mediaQuery.removeEventListener('change', handler);
-  }, [reducedMotion]);
+  // Prepare waypoint circles for rendering
+  const circles = useMemo(() => {
+    if (!waypoints || waypoints.length === 0) return [];
 
-  const handleWheel = useCallback((event) => {
-    event.preventDefault();
-    const delta = event.deltaY > 0 ? 0.9 : 1.1;
-    setZoomScale(prev => Math.max(0.5, Math.min(3, prev * delta)));
-  }, []);
+    return waypoints
+      .filter(w => w.price > 0) // Skip zero/negative prices
+      .map((w, idx) => {
+        const year = getFractionalYear(w.ts);
+        const { t, cycleIndex } = cycleInfo(year);
+        const angle = ((year - HALVINGS_Y[cycleIndex]) / (HALVINGS_Y[cycleIndex + 1] - HALVINGS_Y[cycleIndex])) * Math.PI * 2;
+        const radius = priceToRadius(w.price, dims.R_MIN, dims.R_MAX);
+        const { x, y } = polarToCartesian(angle, radius, dims.CX, dims.CY);
+        const color = cycleColor(t);
 
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
+        // Size dot based on price
+        let dotSize = 2;
+        if (w.price > 50000) dotSize = 5;
+        else if (w.price > 1000) dotSize = 3.5;
+        else if (w.price > 100) dotSize = 3;
 
-    container.addEventListener('wheel', handleWheel, { passive: false });
-    return () => container.removeEventListener('wheel', handleWheel);
-  }, [handleWheel]);
-
-  const handleMouseDown = useCallback((e) => {
-    if (zoomScale <= 1) return; // Only drag when zoomed
-    setIsDragging(true);
-    setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
-  }, [zoomScale, pan]);
-
-  const handleMouseMove = useCallback((e) => {
-    if (!isDragging || zoomScale <= 1) return;
-
-    const svg = svgRef.current;
-    if (!svg) return;
-
-    const rect = svg.getBoundingClientRect();
-    const maxPan = (zoomScale - 1) * Math.min(rect.width, rect.height) / 2;
-
-    const newX = Math.max(-maxPan, Math.min(maxPan, e.clientX - dragStart.x));
-    const newY = Math.max(-maxPan, Math.min(maxPan, e.clientY - dragStart.y));
-
-    setPan({ x: newX, y: newY });
-  }, [isDragging, zoomScale, dragStart]);
-
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
-  }, []);
-
-  useEffect(() => {
-    if (!isDragging) return;
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isDragging, handleMouseMove, handleMouseUp]);
-
-  const handleDotClick = useCallback((dot) => (event) => {
-    event.stopPropagation();
-    setHoveredDot(prev => prev?.year === dot.year ? null : dot);
-    // Position tooltip at click location
-    if (containerRef.current && event.clientX && event.clientY) {
-      const rect = containerRef.current.getBoundingClientRect();
-      setTooltipPosition({
-        x: event.clientX - rect.left,
-        y: event.clientY - rect.top,
+        return {
+          idx,
+          x,
+          y,
+          price: w.price,
+          ts: w.ts,
+          color,
+          dotSize,
+          t,
+          angle,
+          radius,
+        };
       });
-    }
-  }, []);
+  }, [waypoints, dims]);
 
-  const handleKeyDown = useCallback((dot) => (event) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      setHoveredDot(prev => prev?.year === dot.year ? null : dot);
-      if (containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect();
+  // Mouse event handlers
+  const handleDotClick = useCallback((e, circle) => {
+    e.stopPropagation();
+
+    const date = new Date(circle.ts).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+
+    if (hoveredWaypoint?.idx === circle.idx) {
+      // Toggle tooltip off if clicking same dot
+      setHoveredWaypoint(null);
+    } else {
+      // Show tooltip
+      setHoveredWaypoint({
+        idx: circle.idx,
+        price: circle.price,
+        date,
+        cycleProgress: circle.t,
+        phaseLabel: getCyclePhaseLabel(circle.t),
+      });
+
+      // Position tooltip at click location
+      const containerRect = containerRef.current?.getBoundingClientRect();
+      if (containerRect && e.clientX !== undefined && e.clientY !== undefined) {
         setTooltipPosition({
-          x: rect.width / 2,
-          y: rect.height / 2,
+          x: e.clientX - containerRect.left,
+          y: e.clientY - containerRect.top,
         });
       }
-    } else if (event.key === 'Escape') {
-      setHoveredDot(null);
     }
+  }, [hoveredWaypoint]);
+
+  // Zoom with mouse wheel - pinpoint zoom like Google Maps
+  const handleWheel = useCallback((e) => {
+    if (!containerRef.current) return;
+    e.preventDefault();
+
+    const containerRect = containerRef.current.getBoundingClientRect();
+    const mouseX = e.clientX - containerRect.left;
+    const mouseY = e.clientY - containerRect.top;
+
+    // Current center position (accounting for current pan and zoom)
+    const centerX = (dims.CX * zoomScale) + pan.x;
+    const centerY = (dims.CY * zoomScale) + pan.y;
+
+    // Vector from current center to mouse
+    const dx = mouseX - centerX;
+    const dy = mouseY - centerY;
+
+    const delta = e.deltaY > 0 ? 0.9 : 1.1;
+    const newScale = Math.max(0.5, Math.min(3, zoomScale * delta));
+    const scaleDiff = newScale / zoomScale;
+
+    // Adjust pan to keep mouse position fixed during zoom
+    const newPan = {
+      x: pan.x - dx * (scaleDiff - 1),
+      y: pan.y - dy * (scaleDiff - 1),
+    };
+
+    setZoomScale(newScale);
+    setPan(newPan);
+  }, [zoomScale, pan, dims]);
+
+  // Reset zoom/pan
+  const handleReset = useCallback(() => {
+    setZoomScale(1);
+    setPan({ x: 0, y: 0 });
   }, []);
-
-  const handleContainerClick = useCallback((dot) => () => {
-    setHoveredDot(prev => prev?.year === dot.year ? null : dot);
-  }, []);
-
-  const lastDot = DOTS[DOTS.length - 1];
-  const currentPhase = getCyclePhase(lastDot?.t || 0);
-
-  const tooltipData = hoveredDot ? { active: true, payload: [{ payload: hoveredDot }] } : { active: false, payload: [] };
-
-  // Determine if we're on mobile
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
-  const isTablet = typeof window !== 'undefined' && window.innerWidth >= 640 && window.innerWidth < 1024;
-
-  // Calculate font sizes based on screen size
-  const titleSize = isMobile ? '0.9rem' : isTablet ? '1rem' : 'clamp(1.1rem, 4vw, var(--fs-section))';
-  const subtitleSize = isMobile ? '0.6rem' : isTablet ? '0.65rem' : 'clamp(0.65rem, 2vw, var(--fs-micro))';
 
   return (
-    <div
-      className="flex h-full w-full flex-col bg-[#111111] overflow-hidden"
-      role="region"
-      aria-label="Bitcoin Cycle Spiral Visualization"
-    >
-      <style>{`
-        @keyframes fadeInScale {
-          from { opacity: 0; transform: scale(0.92); }
-          to { opacity: 1; transform: scale(1); }
-        }
-        @keyframes fadeInUp {
-          from { opacity: 0; transform: translateY(12px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes pulseGlow {
-          0%, 100% { filter: drop-shadow(0 0 4px rgba(247,147,26,0.6)); }
-          50% { filter: drop-shadow(0 0 12px rgba(247,147,26,0.9)); }
-        }
-        .spiral-container {
-          animation: fadeInScale 0.7s ease-out forwards;
-        }
-        .spiral-header {
-          animation: fadeInUp 0.5s ease-out 0.1s forwards;
-          opacity: 0;
-        }
-        .spiral-legend {
-          animation: fadeInUp 0.5s ease-out 0.3s forwards;
-          opacity: 0;
-        }
-        .cycle-dot {
-          cursor: pointer;
-          transition: transform 0.15s ease-out, filter 0.15s ease-out;
-        }
-        .cycle-dot:hover, .cycle-dot:focus {
-          transform: scale(1.6);
-          filter: brightness(1.25);
-        }
-        /* Touch-friendly: always show hover state on touch devices */
-        @media (hover: none) {
-          .cycle-dot:active {
-            transform: scale(1.6);
-            filter: brightness(1.25);
-          }
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .spiral-container, .spiral-header, .spiral-legend {
-            animation: none;
-            opacity: 1;
-          }
-          .cycle-dot {
-            transition: none;
-          }
-        }
-        /* Prevent text selection on chart */
-        .spiral-svg {
-          user-select: none;
-          -webkit-user-select: none;
-        }
-      `}</style>
-
-      {/* Header */}
-      <div className="flex-none px-3 pt-3 pb-2 sm:px-5 sm:pt-5 sm:pb-3 md:px-8 md:pt-6 md:pb-4">
-        <header className="spiral-header">
-          <div className="flex flex-col gap-1.5 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-            <div className="min-w-0">
-              <h1
-                style={{
-                  color: 'var(--accent-bitcoin)',
-                  fontFamily: 'monospace',
-                  fontSize: titleSize,
-                  fontWeight: 700,
-                }}
-                className="truncate"
-              >
-                Bitcoin Cycle Spiral
-              </h1>
-              <p
-                style={{
-                  color: 'rgba(255,255,255,0.42)',
-                  fontFamily: 'monospace',
-                  fontSize: subtitleSize,
-                  marginTop: 4,
-                }}
-                className="truncate"
-              >
-                Polar chart — each revolution = one halving cycle
-              </p>
-            </div>
-          </div>
-        </header>
-      </div>
-
-      {/* Main visualization area */}
+    <ModuleShell bg="#111111" layout="flex-col" overflow="hidden">
       <div
         ref={containerRef}
-        className="spiral-container min-h-0 flex-1 flex items-center justify-center px-1 pb-1 sm:px-2 sm:pb-2 md:px-4 md:pb-3"
+        className="flex-1 flex flex-col items-center justify-center relative overflow-hidden bg-[#111111]"
+        onWheel={handleWheel}
       >
-        <div
-          className="relative h-full w-full max-w-[350px] sm:max-w-[500px] md:max-w-[700px] lg:max-w-[800px] overflow-hidden cursor-grab active:cursor-grabbing"
-          onMouseDown={handleMouseDown}
-        >
-          <svg
-            ref={svgRef}
-            viewBox={`0 0 ${VW} ${VH}`}
+        {/* Loading State */}
+        {loading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-40">
+            <div className="text-white text-center">
+              <div className="animate-spin inline-block w-8 h-8 border-4 border-amber-500/20 border-t-amber-500 rounded-full mb-4" />
+              <div className="text-white/70">Loading Bitcoin history...</div>
+              <div className="text-white/50 text-sm mt-2">{dataPoints} data points</div>
+            </div>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && !loading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-40">
+            <div className="text-center">
+              <div className="text-red-400 mb-4">Failed to load Bitcoin data</div>
+              <button
+                onClick={() => window.location.reload()}
+                className="px-4 py-2 bg-amber-500 text-black rounded hover:bg-amber-400 transition"
+              >
+                Retry
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* SVG Visualization */}
+        {!loading && waypoints.length > 0 && (
+          <div
             style={{
-              width: '100%',
-              height: '100%',
-              maxHeight: '100%',
               transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoomScale})`,
-              transformOrigin: 'center',
-              transition: isDragging ? 'none' : 'transform 0.1s ease-out',
+              transition: 'transform 0.1s ease-out',
+              transformOrigin: 'center center',
             }}
-            preserveAspectRatio="xMidYMid meet"
-            role="img"
-            aria-labelledby="spiralTitle spiralDesc"
-            className="spiral-svg"
           >
-            <title id="spiralTitle">Bitcoin Cycle Spiral</title>
-            <desc id="spiralDesc">
-              A polar visualization showing Bitcoin price history from 2010 to 2026.
-              The spiral expands outward representing price on a logarithmic scale,
-              with each complete revolution representing one halving cycle.
-            </desc>
+            <svg
+              ref={svgRef}
+              width={dims.VW}
+              height={dims.VH}
+              viewBox={`0 0 ${dims.VW} ${dims.VH}`}
+              className="select-none"
+              style={{ cursor: zoomScale > 1 ? 'grab' : 'default' }}
+            >
+              {/* Background */}
+              <rect width={dims.VW} height={dims.VH} fill="#111111" />
 
-            <defs>
-              <linearGradient id="spiralLegend" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="rgb(30,80,255)" />
-                <stop offset="25%" stopColor="rgb(0,180,255)" />
-                <stop offset="50%" stopColor="rgb(0,220,120)" />
-                <stop offset="75%" stopColor="rgb(255,140,0)" />
-                <stop offset="100%" stopColor="rgb(255,20,20)" />
-              </linearGradient>
-              <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-                <feGaussianBlur stdDeviation="2" result="blur" />
-                <feMerge>
-                  <feMergeNode in="blur" />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
-              </filter>
-            </defs>
+              {/* Price rings */}
+              {[1, 100, 10000, 100000].map(price => {
+                const radius = priceToRadius(price, dims.R_MIN, dims.R_MAX);
+                return (
+                  <g key={`ring-${price}`}>
+                    <circle
+                      cx={dims.CX}
+                      cy={dims.CY}
+                      r={radius}
+                      fill="none"
+                      stroke="white"
+                      strokeOpacity="0.08"
+                      strokeWidth="1"
+                    />
+                    <text
+                      x={dims.CX + radius + 10}
+                      y={dims.CY + 5}
+                      fill="white"
+                      opacity="0.3"
+                      fontSize={containerWidth < 640 ? 10 : 12}
+                      fontFamily="monospace"
+                    >
+                      ${price >= 1000 ? `${price / 1000}k` : price}
+                    </text>
+                  </g>
+                );
+              })}
 
-            {/* Price rings */}
-            {RINGS.map(({ price, label }) => {
-              const rr = priceToRadius(price, R_MIN, R_MAX);
-              const isSmall = isMobile;
-              return (
-                <g key={price}>
-                  <circle
-                    cx={CX}
-                    cy={CY}
-                    r={rr}
-                    fill="none"
-                    stroke="rgba(255,255,255,0.08)"
-                    strokeWidth={isMobile ? 0.8 : 1.2}
+              {/* Halving cycle lines - vertical lines from center to edge */}
+              {HALVINGS_Y.slice(0, 4).map((year, idx) => (
+                <g key={`halving-${idx}`}>
+                  <line
+                    x1={dims.CX}
+                    y1={dims.CY}
+                    x2={dims.CX}
+                    y2={dims.CY - dims.R_MAX - (containerWidth < 640 ? 4 : 8)}
+                    stroke="rgba(255,255,255,0.06)"
+                    strokeWidth={0.5}
+                    strokeDasharray={containerWidth < 640 ? '4 3' : '6 4'}
                   />
+                  {/* Halving year label */}
                   <text
-                    x={CX + rr + (isMobile ? 3 : 6)}
-                    y={CY - 2}
-                    fill="rgba(255,255,255,0.28)"
-                    fontSize={isMobile ? 7 : 10}
+                    x={dims.CX - 10}
+                    y={dims.CY - dims.R_MAX - 15}
+                    fill="white"
+                    opacity="0.5"
+                    fontSize={containerWidth < 640 ? 11 : 13}
                     fontFamily="monospace"
+                    textAnchor="middle"
                   >
-                    {label}
+                    ₿ {Math.floor(year)}
                   </text>
                 </g>
-              );
-            })}
+              ))}
 
-            {/* Halving lines */}
-            {HALVINGS_Y.slice(0, 4).map((_, i) => (
-              <line
-                key={i}
-                x1={CX}
-                y1={CY}
-                x2={CX}
-                y2={CY - R_MAX - (isMobile ? 4 : 8)}
-                stroke="rgba(255,255,255,0.06)"
-                strokeWidth={0.5}
-                strokeDasharray={isMobile ? "4 3" : "6 4"}
-              />
-            ))}
+              {/* Legend - Cycle Phases (SVG, for tablet/desktop only) */}
+              {containerWidth >= 640 && (() => {
+                const isTablet = containerWidth < 1024;
+                const legendItemHeight = 16;
+                const legendPaddingX = isTablet ? 8 : 12;
+                const legendPaddingY = isTablet ? 6 : 8;
+                const legendBoxWidth = isTablet ? 180 : 220;
 
-            {/* Data dots - larger touch targets on mobile */}
-            {DOTS.map((d, i) => {
-              const isHovered = hoveredDot?.year === d.year;
-              const isCurrent = lastDot?.year === d.year;
-              const baseSize = isMobile
-                ? (d.price > 50000 ? 4 : d.price > 1000 ? 3 : 2)
-                : (d.price > 50000 ? 5 : d.price > 1000 ? 3.5 : 2.5);
+                // Position legend at bottom-left corner of screen
+                const legendX = legendPaddingX;
+                const bottomMargin = 12;
+                const legendY = dims.VH - (CYCLE_PHASES.length * legendItemHeight) - (legendPaddingY * 2) - bottomMargin;
+                const legendBoxHeight = (CYCLE_PHASES.length * legendItemHeight) + (legendPaddingY * 2);
 
-              return (
+                return (
+                  <g key="legend">
+                    {/* Legend background box */}
+                    <rect
+                      x={legendX - 2}
+                      y={legendY - 2}
+                      width={legendBoxWidth + 4}
+                      height={legendBoxHeight + 4}
+                      fill="none"
+                      stroke="rgba(255,255,255,0.1)"
+                      strokeWidth="0.5"
+                      rx="2"
+                    />
+                    {/* Legend items */}
+                    {CYCLE_PHASES.map((phase, idx) => {
+                      const itemY = legendY + legendPaddingY + (idx * legendItemHeight);
+                      const swatchSize = 12;
+                      const fontSize = isTablet ? 10 : 11;
+                      const label = phase.label;
+                      return (
+                        <g key={`legend-${idx}`}>
+                          {/* Color swatch */}
+                          <rect
+                            x={legendX + legendPaddingX}
+                            y={itemY + 1}
+                            width={swatchSize}
+                            height={swatchSize}
+                            fill={phase.color}
+                            opacity="0.9"
+                          />
+                          {/* Label */}
+                          <text
+                            x={legendX + legendPaddingX + swatchSize + 6}
+                            y={itemY + swatchSize - 1}
+                            fill="white"
+                            opacity="0.7"
+                            fontSize={fontSize}
+                            fontFamily="monospace"
+                          >
+                            {label}
+                          </text>
+                        </g>
+                      );
+                    })}
+                  </g>
+                );
+              })()}
+
+              {/* Data points */}
+              {circles.map(circle => (
                 <circle
-                  key={i}
-                  cx={d.x}
-                  cy={d.y}
-                  r={isHovered ? baseSize * 1.5 : baseSize}
-                  fill={cycleColor(d.t)}
-                  opacity={isHovered ? 1 : 0.8}
-                  filter={isCurrent && !reducedMotion ? 'url(#glow)' : undefined}
-                  className="cycle-dot"
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`${formatUsd(d.price)} - ${DATE_FORMATTER.format(fractionalYearToDate(d.year))}`}
-                  onClick={handleDotClick(d)}
-                  onKeyDown={handleKeyDown(d)}
+                  key={`dot-${circle.idx}`}
+                  cx={circle.x}
+                  cy={circle.y}
+                  r={circle.dotSize}
+                  fill={circle.color}
+                  opacity="0.8"
+                  className="cursor-pointer hover:opacity-100 transition-all"
+                  style={{
+                    filter: hoveredWaypoint?.idx === circle.idx ? 'drop-shadow(0 0 6px rgba(247,147,26,0.6))' : 'none',
+                    transform: hoveredWaypoint?.idx === circle.idx ? 'scale(1.8)' : 'scale(1)',
+                    transformOrigin: `${circle.x}px ${circle.y}px`,
+                  }}
+                  onClick={e => handleDotClick(e, circle)}
                 />
-              );
-            })}
+              ))}
 
-            {/* Current position indicator */}
-            {lastDot && (
-              <>
-                <circle
-                  cx={lastDot.x}
-                  cy={lastDot.y}
-                  r={isMobile ? 6 : 9}
-                  fill="none"
-                  stroke="rgba(255,255,255,0.4)"
-                  strokeWidth={1}
-                />
-                <circle
-                  cx={lastDot.x}
-                  cy={lastDot.y}
-                  r={isMobile ? 3 : 5}
-                  fill="var(--accent-bitcoin)"
-                  filter="url(#glow)"
-                />
-                <text
-                  x={lastDot.x + (isMobile ? 8 : 14)}
-                  y={lastDot.y + 3}
-                  fill="white"
-                  fontSize={isMobile ? 8 : 11}
-                  fontFamily="monospace"
-                  fontWeight="700"
-                >
-                  NOW
-                </text>
-              </>
-            )}
+              {/* Today Indicator - White marker at current date */}
+              {(() => {
+                const todayTime = Date.now();
+                const todayYear = getFractionalYear(todayTime);
+                const { t: todayProgress, cycleIndex: todayCycleIndex } = cycleInfo(todayYear);
 
-            {/* Halving year labels */}
-            {[2012, 2016, 2020, 2024].map((yr, i) => {
-              const rr = priceToRadius(interpLogPrice(HALVINGS_Y[i]), R_MIN, R_MAX);
-              return (
-                <text
-                  key={yr}
-                  x={CX}
-                  y={CY - rr - (isMobile ? 8 : 16)}
-                  textAnchor="middle"
-                  fill="var(--accent-bitcoin)"
-                  fontSize={isMobile ? 7 : 10}
-                  fontFamily="monospace"
-                  fontWeight="700"
-                >
-                  ₿ {yr}
-                </text>
-              );
-            })}
+                // Get current price from latest kline
+                const currentPrice = latestPrice || (waypoints && waypoints.length > 0 ? waypoints[waypoints.length - 1]?.price : null);
+                if (!currentPrice || currentPrice <= 0) return null;
 
-            {/* Center year */}
-            <text
-              x={CX}
-              y={CY + 4}
-              textAnchor="middle"
-              fill="rgba(255,255,255,0.2)"
-              fontSize={isMobile ? 7 : 10}
-              fontFamily="monospace"
-            >
-              2009
-            </text>
-          </svg>
+                // Calculate position on spiral
+                const todayRadius = priceToRadius(currentPrice, dims.R_MIN, dims.R_MAX);
+                const startYear = HALVINGS_Y[todayCycleIndex];
+                const endYear = HALVINGS_Y[todayCycleIndex + 1] || HALVINGS_Y[todayCycleIndex] + 4;
+                const angleProgress = (todayYear - startYear) / (endYear - startYear);
+                const angle = angleProgress * Math.PI * 2;
+                const { x: todayX, y: todayY } = polarToCartesian(angle, todayRadius, dims.CX, dims.CY);
 
-          {/* Color legend - bottom */}
-          <div
-            className="spiral-legend pointer-events-none absolute bottom-1 left-1/2 w-[90%] max-w-[240px] -translate-x-1/2 px-2 sm:max-w-[280px] md:max-w-[320px]"
-            role="img"
-            aria-label="Cycle position color legend"
+                const todayDate = new Date(todayTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+                return (
+                  <g key="today-indicator">
+                    {/* Outer pulsing ring */}
+                    <circle
+                      cx={todayX}
+                      cy={todayY}
+                      r={containerWidth < 640 ? 6 : 8}
+                      fill="none"
+                      stroke="white"
+                      strokeWidth="1"
+                      opacity="0.4"
+                      style={{
+                        animation: 'pulse 2s cubic-bezier(0.4,0,0.6,1) infinite',
+                      }}
+                    />
+                    {/* Main white indicator */}
+                    <circle
+                      cx={todayX}
+                      cy={todayY}
+                      r={containerWidth < 640 ? 4 : 5}
+                      fill="white"
+                      opacity="0.95"
+                    />
+                    {/* Today label */}
+                    <text
+                      x={todayX}
+                      y={todayY - (containerWidth < 640 ? 10 : 12)}
+                      textAnchor="middle"
+                      fill="white"
+                      opacity="0.8"
+                      fontSize={containerWidth < 640 ? 9 : 10}
+                      fontFamily="monospace"
+                      fontWeight="bold"
+                    >
+                      TODAY
+                    </text>
+                    {/* Date label */}
+                    <text
+                      x={todayX}
+                      y={todayY + (containerWidth < 640 ? 12 : 14)}
+                      textAnchor="middle"
+                      fill="white"
+                      opacity="0.6"
+                      fontSize={containerWidth < 640 ? 8 : 9}
+                      fontFamily="monospace"
+                    >
+                      {todayDate}
+                    </text>
+                  </g>
+                );
+              })()}
+
+              {/* Center label */}
+              <text
+                x={dims.CX}
+                y={dims.CY + 15}
+                fill="white"
+                opacity="0.3"
+                fontSize={containerWidth < 640 ? 12 : 16}
+                fontFamily="monospace"
+                fontWeight="bold"
+                textAnchor="middle"
+              >
+                2009
+              </text>
+            </svg>
+          </div>
+        )}
+
+        {/* Legend - HTML div for mobile */}
+        {containerWidth < 640 && (
+          <div className="absolute bottom-1 left-2 z-20 bg-black/40 backdrop-blur-sm rounded border border-white/10 p-2">
+            <div className="space-y-1">
+              {CYCLE_PHASES.map((phase) => (
+                <div key={phase.label} className="flex items-center gap-2 text-xs font-mono">
+                  <div
+                    className="w-3 h-3 rounded"
+                    style={{ backgroundColor: phase.color, opacity: 0.9 }}
+                  />
+                  <span className="text-white/70">{phase.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Controls */}
+        <div className={`absolute flex gap-2 z-30 ${containerWidth < 640 ? 'bottom-20 right-3' : 'bottom-4 right-4'}`}>
+          <button
+            onClick={handleReset}
+            className="px-3 py-2 bg-amber-500 text-black text-sm rounded font-mono hover:bg-amber-400 transition"
+            title="Reset zoom and pan"
           >
-            <div className="rounded-lg border border-white/8 bg-[rgba(17,17,17,0.85)] px-3 py-2 backdrop-blur-sm sm:px-4 sm:py-3">
-              <div
-                className="relative h-2 rounded-full sm:h-3"
-                style={{ background: 'linear-gradient(90deg, rgb(30,80,255) 0%, rgb(0,180,255) 25%, rgb(0,220,120) 50%, rgb(255,140,0) 75%, rgb(255,20,20) 100%)' }}
-              />
-              <div className="mt-1.5 flex justify-between text-[7px] uppercase tracking-wider sm:mt-2 sm:text-[8px] md:text-[9px]" style={{ fontFamily: 'monospace' }}>
-                <span className="text-white/40">Post-halving</span>
-                <span className="text-white/40">Pre-halving</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Tooltip - positioned in chart area */}
-          {hoveredDot && (
-            <SpiralTooltip {...tooltipData} position={tooltipPosition} />
-          )}
-        </div>
-      </div>
-
-      {/* Stats footer */}
-      <div
-        className="flex-none px-3 pb-2 pt-1 sm:px-5 sm:pb-4 sm:pt-1 md:px-8 md:pb-4"
-        role="contentinfo"
-        aria-label="Chart data information"
-      >
-        <div className="rounded-xl border border-white/8 bg-white/5 p-2 sm:p-3 md:p-4">
-          <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-4">
-            <div className="text-center">
-              <div className="text-[8px] uppercase tracking-wider text-white/40 font-mono truncate sm:text-[9px] md:text-[10px]" style={{ marginBottom: 2 }}>
-                Current Price
-              </div>
-              <div className="font-mono text-[10px] font-semibold tabular-nums truncate sm:text-sm" style={{ color: 'var(--accent-bitcoin)' }}>
-                {formatUsd(lastDot?.price || 0)}
-              </div>
-            </div>
-            <div className="text-center">
-              <div className="text-[8px] uppercase tracking-wider text-white/40 font-mono truncate sm:text-[9px] md:text-[10px]" style={{ marginBottom: 2 }}>
-                Cycle Progress
-              </div>
-              <div className="font-mono text-[10px] font-semibold tabular-nums truncate sm:text-sm" style={{ color: currentPhase.color }}>
-                {Math.round((lastDot?.t || 0) * 100)}%
-              </div>
-            </div>
-            <div className="text-center">
-              <div className="text-[8px] uppercase tracking-wider text-white/40 font-mono truncate sm:text-[9px] md:text-[10px]" style={{ marginBottom: 2 }}>
-                Halving Cycle
-              </div>
-              <div className="font-mono text-[10px] font-semibold tabular-nums text-white/80 truncate sm:text-sm">
-                #{(lastDot?.year || 2024) >= 2024 ? 5 : (lastDot?.year || 2020) >= 2020 ? 4 : 3}
-              </div>
-            </div>
-            <div className="text-center">
-              <div className="text-[8px] uppercase tracking-wider text-white/40 font-mono truncate sm:text-[9px] md:text-[10px]" style={{ marginBottom: 2 }}>
-                Data Points
-              </div>
-              <div className="font-mono text-[10px] font-semibold tabular-nums text-white/80 truncate sm:text-sm">
-                {DOTS.length}
-              </div>
-            </div>
+            Reset
+          </button>
+          <div className="px-3 py-2 bg-white/10 text-white/70 text-sm rounded font-mono border border-white/20">
+            {zoomScale.toFixed(1)}x
           </div>
         </div>
+
+        {/* Tooltip */}
+        {hoveredWaypoint && <SpiralTooltip active payload={hoveredWaypoint} position={tooltipPosition} />}
       </div>
-    </div>
+    </ModuleShell>
   );
 }

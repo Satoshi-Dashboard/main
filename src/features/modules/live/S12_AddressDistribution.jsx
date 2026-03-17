@@ -5,7 +5,7 @@ import { useModuleData } from '@/shared/hooks/useModuleData.js';
 import { ModuleShell, ModuleTitle, ModuleSourceFooter } from '@/shared/components/module/index.js';
 
 const MODULE_COLORS = {
-  '--bg-main': '#0B0B0B',
+  '--bg-main': '#111111',
   '--bg-table': '#161616',
   '--btc-orange': 'var(--accent-bitcoin)',
   '--tier-plankton': '#1A1A1A',

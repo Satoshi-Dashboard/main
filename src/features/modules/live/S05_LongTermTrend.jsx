@@ -291,7 +291,7 @@ export default function S05_LongTermTrend() {
   const chipW = Math.max(72, Math.min(Math.round(side * 0.44), 120));
 
   return (
-    <ModuleShell bg="#0d0d0d" overflow="hidden" className="select-none font-mono">
+    <ModuleShell bg="#111111" overflow="hidden" className="select-none font-mono">
 
       {/* ── Top bar ── */}
       <div className="flex flex-shrink-0 flex-wrap items-center justify-between gap-3 border-b border-[#1c1c1c] px-3 py-2 sm:px-4">

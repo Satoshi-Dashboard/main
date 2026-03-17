@@ -130,10 +130,11 @@ const MODULE_DATA_META = {
     stripTitle: 'US Median Home Price in ₿',
   },
   'bitcoin-halving-cycle-spiral': {
-    providers: [{ name: 'Internal', url: null }],
-    refreshLabel: 'static data',
+    providers: [{ name: 'Binance', url: 'https://api.binance.com' }],
+    refreshSeconds: 300,
     showSharedStrip: true,
-    showTitleInStrip: false,
+    showTitleInStrip: true,
+    stripTitle: 'Halving Cycle Spiral',
   },
   'bitcoin-power-law-model': {
     ...UNDER_CONSTRUCTION_META,

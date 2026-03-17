@@ -34,7 +34,11 @@
       "Bash(cp \"$MAIN/src/shared/components/module/ModuleShell.jsx\" \"$WT/src/shared/components/module/ModuleShell.jsx\")",
       "Bash(cp \"$MAIN/src/shared/components/module/ModuleTitle.jsx\" \"$WT/src/shared/components/module/ModuleTitle.jsx\")",
       "Bash(cp \"$MAIN/src/shared/components/module/ModuleSourceFooter.jsx\" \"$WT/src/shared/components/module/ModuleSourceFooter.jsx\")",
-      "Bash(cp \"$MAIN/src/features/modules/live/shared/mapColorUtils.js\" \"$WT/src/features/modules/live/shared/mapColorUtils.js\")"
+      "Bash(cp \"$MAIN/src/features/modules/live/shared/mapColorUtils.js\" \"$WT/src/features/modules/live/shared/mapColorUtils.js\")",
+      "WebFetch(domain:binance-docs.github.io)",
+      "WebFetch(domain:developers.binance.com)",
+      "WebFetch(domain:data.binance.vision)",
+      "Bash(npm run:*)"
     ]
   }
 }
