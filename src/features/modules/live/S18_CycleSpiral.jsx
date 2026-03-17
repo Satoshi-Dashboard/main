@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useState, useRef, useMemo } from 'react';
-import { ModuleShell } from '@/shared/components/module/index.js';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import s18WaypointData from '@/data/s18WaypointData.js';
 
 const HALVINGS_Y = [2012.907, 2016.524, 2020.356, 2024.300, 2028.295];
@@ -122,13 +121,22 @@ function getCyclePhase(t) {
   return { label: 'Pre-Halving Bottom', color: 'rgb(255,140,0)' };
 }
 
-// Generate dots dynamically based on current dimensions
-function generateDots(dims, waypointData = s18WaypointData) {
+// Convert timestamp to fractional year
+function getFractionalYear(ts) {
+  const date = new Date(ts);
+  const year = date.getUTCFullYear();
+  const start = new Date(Date.UTC(year, 0, 1)).getTime();
+  const end = new Date(Date.UTC(year + 1, 0, 1)).getTime();
+  return year + (ts - start) / (end - start);
+}
+
+// Generate dots dynamically based on current dimensions and waypoint data
+function generateDots(dims) {
   const { CX, CY, R_MIN, R_MAX } = dims;
   const dots = [];
 
   // Use real waypoint data (909 points 2009-2026)
-  for (const wp of waypointData) {
+  for (const wp of s18WaypointData) {
     const year = getFractionalYear(wp.ts);
     const price = wp.price;
     const { t, cycleStart, cycleEnd } = cycleInfo(year);
@@ -365,7 +373,11 @@ export default function S18_CycleSpiral() {
   const subtitleSize = isMobile ? '0.6rem' : isTablet ? '0.65rem' : 'clamp(0.65rem, 2vw, var(--fs-micro))';
 
   return (
-    <ModuleShell overflow="hidden">
+    <div
+      className="flex h-full w-full flex-col bg-[#111111] overflow-hidden"
+      role="region"
+      aria-label="Bitcoin Cycle Spiral Visualization"
+    >
       <style>{`
         @keyframes fadeInScale {
           from { opacity: 0; transform: scale(0.92); }
@@ -726,6 +738,6 @@ export default function S18_CycleSpiral() {
           </div>
         </div>
       </div>
-    </ModuleShell>
+    </div>
   );
 }
