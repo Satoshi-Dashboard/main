@@ -383,26 +383,30 @@ export default function S18_CycleSpiral() {
     };
   }, [isDragging, handleMouseMove, handleMouseUp]);
 
-  const handleDotHover = useCallback((dot) => (event) => {
-    if (event.type === 'mouseenter' || event.type === 'touchstart' || event.type === 'focus') {
-      setHoveredDot(dot);
-      // Position tooltip near mouse or at dot position
-      if (containerRef.current && event.clientX && event.clientY) {
-        const rect = containerRef.current.getBoundingClientRect();
-        setTooltipPosition({
-          x: event.clientX - rect.left,
-          y: event.clientY - rect.top,
-        });
-      }
-    } else if (event.type === 'mouseleave' || event.type === 'blur') {
-      setHoveredDot(null);
+  const handleDotClick = useCallback((dot) => (event) => {
+    event.stopPropagation();
+    setHoveredDot(prev => prev?.year === dot.year ? null : dot);
+    // Position tooltip at click location
+    if (containerRef.current && event.clientX && event.clientY) {
+      const rect = containerRef.current.getBoundingClientRect();
+      setTooltipPosition({
+        x: event.clientX - rect.left,
+        y: event.clientY - rect.top,
+      });
     }
   }, []);
 
   const handleKeyDown = useCallback((dot) => (event) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
-      setHoveredDot(dot);
+      setHoveredDot(prev => prev?.year === dot.year ? null : dot);
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        setTooltipPosition({
+          x: rect.width / 2,
+          y: rect.height / 2,
+        });
+      }
     } else if (event.key === 'Escape') {
       setHoveredDot(null);
     }
@@ -629,11 +633,7 @@ export default function S18_CycleSpiral() {
                   role="button"
                   tabIndex={0}
                   aria-label={`${formatUsd(d.price)} - ${DATE_FORMATTER.format(fractionalYearToDate(d.year))}`}
-                  onMouseEnter={handleDotHover(d)}
-                  onMouseLeave={handleDotHover(d)}
-                  onTouchStart={handleDotHover(d)}
-                  onFocus={handleDotHover(d)}
-                  onBlur={() => setHoveredDot(null)}
+                  onClick={handleDotClick(d)}
                   onKeyDown={handleKeyDown(d)}
                 />
               );
