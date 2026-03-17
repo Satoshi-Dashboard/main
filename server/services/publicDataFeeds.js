@@ -3,6 +3,8 @@ import net from 'node:net';
 import { cacheGetJson, cacheSetJson, withCacheLock } from '../core/runtimeCache.js';
 import { SocksProxyAgent } from 'socks-proxy-agent';
 import { getBtcRates } from './btcRates.js';
+import fs from 'node:fs';
+import path from 'node:path';
 
 const FETCH_TIMEOUT_MS = 12_000;
 const DAY_MS = 86_400_000;
@@ -308,6 +310,16 @@ const FEED_DEFS = {
     hardMinuteLimit: 1200,
     safeMinuteBudget: 4,
     safeDailyBudget: 5760,
+  },
+  binanceHistory_max_1d: {
+    cacheKey: 'public:binance:btc-history:max:1d',
+    lockKey: 'public:binance:btc-history:max:1d:refresh',
+    refreshMs: 24 * 60 * 60_000,
+    sourceProvider: 'binance',
+    sourceUrl: 'https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1d',
+    hardMinuteLimit: 1200,
+    safeMinuteBudget: 1,
+    safeDailyBudget: 24,
   },
   usNationalDebtSeries: {
     cacheKey: 'public:macro:us-national-debt:series',
@@ -2272,10 +2284,12 @@ function historyFeedKey(days, interval) {
   return `binanceHistory_${days}_${interval}`;
 }
 
-export async function getBinanceBtcHistoryPayload({ days = 365, interval: rawInterval = '1d' } = {}) {
-  const normalizedDays = [1, 7, 30, 90, 365, 1825, 2025].includes(Number(days)) ? Number(days) : 365;
+export async function getBinanceBtcHistoryPayload({ days: rawDays = 365, interval: rawInterval = '1d' } = {}) {
+  const isMax = String(rawDays).toLowerCase() === 'max';
+  const genesisDays = Math.ceil((Date.now() - BTC_GENESIS_TS) / DAY_MS);
+  const normalizedDays = isMax ? genesisDays : ([1, 7, 30, 90, 365, 1825, 2025].includes(Number(rawDays)) ? Number(rawDays) : 365);
   const interval = VALID_HISTORY_INTERVALS.has(rawInterval) ? rawInterval : '1d';
-  const key = historyFeedKey(normalizedDays, interval);
+  const key = isMax ? 'binanceHistory_max_1d' : historyFeedKey(normalizedDays, interval);
   const needed = candlesNeeded(interval, normalizedDays);
   const startTime = Date.now() - normalizedDays * DAY_MS;
 
@@ -2483,4 +2497,74 @@ export async function getS21BigMacSatsPayload() {
     },
     validateObject,
   );
+}
+
+export async function getS18BtcCyclesPayload() {
+  return getComposedPayload({
+    cacheKey: 'public:s18:btc-cycles:composed',
+    lockKey: 'public:s18:btc-cycles:composed:refresh',
+    fallbackTtlSeconds: 86400,
+    staleWhileRefreshing: 'Serving stale S18 cycles payload while shared refresh completes',
+    staleWhileRecovering: 'Serving stale S18 cycles payload while upstream refresh recovers',
+    buildPayload: async () => {
+      const [binancePayload] = await Promise.all([
+        getBinanceBtcHistoryPayload({ days: 'max', interval: '1d' }).catch(() => null)
+      ]);
+      const binancePoints = Array.isArray(binancePayload?.data) ? binancePayload.data : [];
+      
+      let staticData = [];
+      try {
+        const content = fs.readFileSync(path.join(process.cwd(), 'server', 'data', 'btc_historical_static.json'), 'utf8');
+        const parsed = JSON.parse(content);
+        staticData = parsed.data || [];
+      } catch (err) {
+        console.warn('[getS18BtcCyclesPayload] Could not read static BTC history', err);
+      }
+      
+      const combined = [];
+      staticData.forEach(pt => {
+        combined.push({
+          ts: pt[0],
+          price: pt[1],
+          date: new Date(pt[0]).toISOString()
+        });
+      });
+      
+      binancePoints.forEach(pt => {
+        combined.push({
+          ts: pt.ts,
+          price: pt.price,
+          date: new Date(pt.ts).toISOString()
+        });
+      });
+      
+      const unique = new Map();
+      combined.forEach(pt => {
+        const dayTs = new Date(pt.ts).setUTCHours(0, 0, 0, 0);
+        unique.set(dayTs, pt);
+      });
+      
+      const sorted = Array.from(unique.values()).sort((a, b) => a.ts - b.ts);
+      
+      if (!sorted.length) {
+        throw new PublicFeedError('S18 BTC cycles payload has no chart points');
+      }
+
+      const updatedAtCandidates = [binancePayload?.updated_at].map((value) => parseIsoDate(value)?.getTime()).filter(Number.isFinite);
+      const nextUpdateCandidates = [binancePayload?.next_update_at].map((value) => parseIsoDate(value)?.getTime()).filter(Number.isFinite);
+
+      return {
+        data: sorted,
+        updated_at: updatedAtCandidates.length ? normalizeTimestamp(new Date(Math.max(...updatedAtCandidates))) : new Date().toISOString(),
+        next_update_at: nextUpdateCandidates.length ? normalizeTimestamp(new Date(Math.min(...nextUpdateCandidates))) : null,
+        source_provider: 'cryptocompare_static + binance',
+        source_url: `local btc_historical_static.json | ${binancePayload?.source_url || ''}`,
+        is_fallback: Boolean(binancePayload?.is_fallback),
+        fallback_note: binancePayload?.fallback_note || null,
+        refresh_policy: {
+          min_interval_ms: 24 * 60 * 60_000,
+        }
+      };
+    }
+  });
 }

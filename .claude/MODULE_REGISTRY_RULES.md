@@ -12,25 +12,6 @@ agent_priority: high
 source_status: canonical-local
 ---
 
-# Regla Universal de Automejora y Actualización Continua de Documentos de Reglas
-
-**Objetivo Primordial:** Este documento y **todos los demás archivos `.md` que contienen reglas, directrices o conocimientos operativos** deben ser actualizados proactivamente por el Agente de IA. La actualización se activará cada vez que se identifique y corrija un error (en código generado, recomendaciones, datos procesados, o en la aplicación de las propias reglas), o cuando se detecte una oportunidad significativa de mejora en la eficacia o el conocimiento del Agente. El propósito central es que el Agente de IA aprenda continuamente de sus experiencias, optimizando sus directrices internas, su coherencia y su relevancia a través de todos los documentos de conocimiento.
-
-**Proceso de Actualización Automática de Documentos (`.md`):**
-1. **Detección y Corrección de Eventos:** Cuando el Agente de IA (o un observador externo) identifique un error, un fallo en la aplicación de una regla, o una clara oportunidad de optimización/mejora, y este evento sea corregido o abordado.
-2. **Análisis de Impacto:** El Agente de IA debe analizar la causa raíz del evento y determinar si su resolución requiere una mejora, adición o modificación en las reglas, directrices o conocimientos contenidos en **este documento** o en **cualquier otro archivo `.md` de reglas/conocimiento relacionado**.
-3. **Ejecución de la Actualización del Archivo (`.md`):**
-   * **Identificación del Cambio:** El Agente identificará la sección o regla que necesita ser actualizada, o si se debe añadir una nueva entrada de conocimiento.
-   * **Formato del Registro (Anexo Histórico):** **Todas las actualizaciones deben ser registradas al final del documento afectado**, en una sección específicamente titulada `## Registro Histórico de Automejoras y Lecciones Aprendidas`. Cada entrada en este registro debe incluir los siguientes campos:
-     * **Fecha de la Actualización:** `AAAA-MM-DD`
-     * **Archivo(s) Afectado(s):** El nombre(s) del archivo(s) `.md` de reglas/conocimiento que se ha(n) modificado.
-     * **Tipo de Evento/Contexto:** (Ej. Error de Lógica en módulo X, Aplicación Incorrecta de Regla Y, Oportunidad de Optimización en Z, Fallo de Seguridad).
-     * **Descripción del Evento Original:** Breve explicación del problema detectado o la oportunidad de mejora identificada.
-     * **Acción Realizada/Corrección:** Descripción de cómo se resolvió el problema o cómo se implementó la mejora.
-     * **Nueva/Modificada Regla o Directriz:** La regla, directriz o entrada de conocimiento específica que se ha añadido, ajustado o resaltado en el documento para prevenir futuros problemas similares o mejorar la operación.
-     * **Justificación:** Explicación concisa de por qué esta actualización es importante para el aprendizaje y la mejora del Agente de IA.
-   * **Prioridad Recursiva:** Si una actualización afecta directamente la forma en que esta "Regla Universal de Automejora" debe aplicarse o describirse, entonces **esta misma regla debe ser ajustada** para reflejar la mejora en el proceso de automejora del Agente.
-
 ## Addendum Skills-First de Autoridad Tecnica
 
 Las skills instaladas en `.claude/skills/` mandan primero para guidance tecnico general. Este archivo sigue siendo la capa local no negociable para identidad, orden, slugs y verificacion del registro de modulos, porque esa informacion depende del producto real y no de heuristicas genericas.
@@ -85,10 +66,10 @@ Even when changes are not directly editing `src/features/module-registry/modules
 
 - **Fecha de la Actualización:** `2026-03-09`
 - **Archivo(s) Afectado(s):** `.claude/MODULE_REGISTRY_RULES.md`
-- **Tipo de Evento/Contexto:** Configuración universal de automejora
-- **Descripción del Evento Original:** Las reglas del registro de módulos carecían de una política inicial común de automejora y de un historial obligatorio para documentar lecciones sobre indexación, slugs y orden.
-- **Acción Realizada/Corrección:** Se añadió la regla universal como primera sección y se creó el registro histórico al final del documento.
-- **Nueva/Modificada Regla o Directriz:** Cualquier corrección futura sobre identidad, secuencia o validación de módulos debe reflejarse también en este historial para preservar conocimiento compartido.
+- **Tipo de Evento/Contexto:** Configuración de automejora
+- **Descripción del Evento Original:** Las reglas del registro de módulos carecían de un historial obligatorio para documentar lecciones sobre indexación, slugs y orden.
+- **Acción Realizada/Corrección:** Se creó el registro histórico al final del documento para preservar conocimiento compartido.
+- **Nueva/Modificada Regla o Directriz:** Cualquier corrección futura sobre identidad, secuencia o validación de módulos debe reflejarse también en este historial.
 - **Justificación:** Hace persistente el aprendizaje relacionado con reindexaciones y evita que agentes futuros repitan errores de mapeo o numeración.
 
 - **Fecha de la Actualización:** `2026-03-09`
@@ -107,13 +88,6 @@ Even when changes are not directly editing `src/features/module-registry/modules
 - **Nueva/Modificada Regla o Directriz:** Las reglas del registro deben contemplar que el estado de preview SEO y el bloqueo UX pueden separarse; al tocar módulos preview, agentes deben validar ambas capas del shell y mantener la documentación alineada.
 - **Justificación:** Evita que futuros agentes vuelvan a acoplar overlay y noindex por inercia, lo que podría romper revisiones internas o publicar previews antes de tiempo.
 
-- **Fecha de la Actualizacion:** `2026-03-13`
-- **Archivo(s) Afectado(s):** `.claude/MODULE_REGISTRY_RULES.md`
-- **Tipo de Evento/Contexto:** Alineacion del registro con jerarquia skills-first
-- **Descripcion del Evento Original:** La nueva prioridad tecnica basada en skills podia interpretarse como permiso para aplicar heuristicas genericas tambien sobre identidad u orden de modulos, aunque esa parte sigue siendo especifica del repo.
-- **Accion Realizada/Correccion:** Se añadió un addendum para dejar claro que la base tecnica viene de `.claude/skills/`, pero la identidad y secuencia de modulos siguen ancladas al registry local.
-- **Nueva/Modificada Regla o Directriz:** El registro de modulos se mantiene como restriccion local no negociable incluso dentro de una jerarquia skills-first, y las skills no deben usarse para inferir orden/slugs fuera de `modules.js`.
-- **Justificacion:** Protege contra reindexaciones o suposiciones genericas que no respeten la fuente de verdad del dashboard.
 
 - **Fecha de la Actualizacion:** `2026-03-13`
 - **Archivo(s) Afectado(s):** `.claude/MODULE_REGISTRY_RULES.md`
@@ -123,10 +97,3 @@ Even when changes are not directly editing `src/features/module-registry/modules
 - **Nueva/Modificada Regla o Directriz:** El registro de modulos debe permanecer como nota canonica enlazada dentro del vault `.claude/` para que la identidad de modulos sea recuperable por backlinks, tags y navegacion jerarquica.
 - **Justificacion:** Reduce errores de identidad cuando la tarea arranca desde el grafo visual o desde una consulta RAG en lugar de una ruta directa.
 
-- **Fecha de la Actualizacion:** `2026-03-13`
-- **Archivo(s) Afectado(s):** `.claude/MODULE_REGISTRY_RULES.md`
-- **Tipo de Evento/Contexto:** Alineacion del registro con jerarquia skills-first
-- **Descripcion del Evento Original:** La nueva prioridad tecnica basada en skills podia interpretarse como permiso para aplicar heuristicas genericas tambien sobre identidad u orden de modulos, aunque esa parte sigue siendo especifica del repo.
-- **Accion Realizada/Correccion:** Se añadió un addendum para dejar claro que la base tecnica viene de `.claude/skills/`, pero la identidad y secuencia de modulos siguen ancladas al registry local.
-- **Nueva/Modificada Regla o Directriz:** El registro de modulos se mantiene como restriccion local no negociable incluso dentro de una jerarquia skills-first, y las skills no deben usarse para inferir orden/slugs fuera de `modules.js`.
-- **Justificacion:** Protege contra reindexaciones o suposiciones genericas que no respeten la fuente de verdad del dashboard.

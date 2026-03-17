@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import Copy from 'lucide-react/dist/esm/icons/copy';
 import Github from 'lucide-react/dist/esm/icons/github';
 import BitcoinDonationQr from '@/shared/components/common/BitcoinDonationQr.jsx';
+import { ModuleShell } from '@/shared/components/module/index.js';
 
 const DONATION_ADDRESS = 'BC1QC2GD3YN8DTLMZG4UW786MFN085WE69F60V4R6F';
 const THANKS_FONT_STACK = "'SF Pro Display', 'Helvetica Neue', Arial, sans-serif";
@@ -97,7 +98,7 @@ export default function S31_ThankYouSatoshi() {
     <>
       {/* ── FULL VIEWPORT WRAPPER ── */}
       {/* mobile/tablet: scrollable from top; desktop: vertically centered */}
-      <div className="flex h-full w-full items-start justify-center bg-[#111111] lg:items-center">
+      <ModuleShell layout="none" className="flex items-start justify-center lg:items-center">
 
         {/* ── CONTENT BLOCK — breathing room on all 4 sides ── */}
         <div className="w-full max-w-[1240px] px-5 py-6 pb-20 sm:px-9 sm:py-8 sm:pb-24 lg:px-14 lg:py-8 lg:pb-16 xl:px-20 xl:py-10 xl:pb-18">
@@ -273,7 +274,7 @@ export default function S31_ThankYouSatoshi() {
 
           </div>
         </div>
-      </div>
+      </ModuleShell>
     </>
   );
 }

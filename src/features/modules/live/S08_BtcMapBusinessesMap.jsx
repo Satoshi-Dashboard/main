@@ -6,9 +6,18 @@ import {
   useCompactViewport,
   useCountriesGeoJson,
 } from '@/features/modules/live/shared/worldMapHooks.js';
+import {
+  computePerCapitaScale as sharedComputePerCapitaScale,
+  getFillColorByPerCapita as sharedGetFillColorByPerCapita,
+  getFillColor as sharedGetFillColor,
+  getDensityStepByCount as sharedGetDensityStepByCount,
+  formatPerCapitaValue,
+  formatNextUpdateDelay,
+} from '@/features/modules/live/shared/mapColorUtils.js';
 import { useWorldBankPopulation } from '@/shared/hooks/useWorldBankPopulation.js';
 import { ISO_COUNTRY_NAMES, getFeatureCountryCode, getFeatureCountryName } from '@/shared/lib/geoCountryUtils.js';
 import { fmt } from '@/shared/utils/formatters.js';
+import { useModuleData } from '@/shared/hooks/useModuleData.js';
 
 const BUSINESSES_ENDPOINT = '/api/public/btcmap/businesses-by-country';
 const REFRESH_INTERVAL_MS = 10 * 60_000;
@@ -38,15 +47,14 @@ const PERCAPITA_SCALE_FALLBACK = [
   { key: 'trace',     label: 'Trace',     color: '#8EF0C8', minVal: 0.001, legend: '> 0 /M'   },
 ];
 
+const BUSINESS_COLORS = ['#0A5F41', '#0E8A5B', '#14B06F', '#2FD48C', '#8EF0C8'];
+
 function getDensityStepByCount(count) {
-  const value = Number(count) || 0;
-  return BUSINESS_DENSITY_SCALE.find((step) => value >= step.minBusinesses) || null;
+  return sharedGetDensityStepByCount(count, BUSINESS_DENSITY_SCALE);
 }
 
 function getFillColor(count) {
-  const value = Number(count) || 0;
-  if (value <= 0) return '#141414';
-  return getDensityStepByCount(value)?.color || '#141414';
+  return sharedGetFillColor(count, BUSINESS_DENSITY_SCALE);
 }
 
 function getDensityLabel(count) {
@@ -54,42 +62,11 @@ function getDensityLabel(count) {
 }
 
 function computePerCapitaScale(maxVal) {
-  if (!maxVal || maxVal <= 0) return PERCAPITA_SCALE_FALLBACK;
-  const magnitude = Math.pow(10, Math.floor(Math.log10(maxVal)));
-  const niceMax = Math.ceil(maxVal / magnitude) * magnitude;
-  const t4 = Math.max(1, Math.round(niceMax * 0.50));
-  const t3 = Math.max(1, Math.round(niceMax * 0.25));
-  const t2 = Math.max(1, Math.round(niceMax * 0.10));
-  const t1 = Math.max(1, Math.round(niceMax * 0.05));
-  return [
-    { key: 'very-high', label: 'Very high', color: '#0A5F41', minVal: t4,    legend: `> ${t4} /M` },
-    { key: 'high',      label: 'High',      color: '#0E8A5B', minVal: t3,    legend: `> ${t3} /M` },
-    { key: 'mid',       label: 'Mid',       color: '#14B06F', minVal: t2,    legend: `> ${t2} /M` },
-    { key: 'low',       label: 'Low',       color: '#2FD48C', minVal: t1,    legend: `> ${t1} /M` },
-    { key: 'trace',     label: 'Trace',     color: '#8EF0C8', minVal: 0.001, legend: '> 0 /M'    },
-  ];
+  return sharedComputePerCapitaScale(maxVal, PERCAPITA_SCALE_FALLBACK, BUSINESS_COLORS);
 }
 
 function getFillColorByPerCapita(perCapita, scale) {
-  const v = Number(perCapita) || 0;
-  if (v <= 0) return '#141414';
-  return ((scale || PERCAPITA_SCALE_FALLBACK).find((s) => v >= s.minVal) || {}).color || '#8EF0C8';
-}
-
-function formatPerCapitaValue(value) {
-  const numericValue = Number(value);
-  if (!Number.isFinite(numericValue) || numericValue <= 0) return '0.0 /M';
-  return numericValue >= 10 ? `${numericValue.toFixed(1)} /M` : `${numericValue.toFixed(2)} /M`;
-}
-
-function formatNextUpdateDelay(nextUpdateIso) {
-  const next = new Date(String(nextUpdateIso || ''));
-  if (!Number.isFinite(next.getTime())) return 'N/A';
-  const diffMs = next.getTime() - Date.now();
-  if (diffMs <= 0) return 'now';
-  const minutes = Math.ceil(diffMs / 60_000);
-  if (minutes < 60) return `${minutes} min`;
-  return `${Math.ceil(minutes / 60)} h`;
+  return sharedGetFillColorByPerCapita(perCapita, scale || PERCAPITA_SCALE_FALLBACK);
 }
 
 function resolveCountryLabel(code, name) {
@@ -119,27 +96,25 @@ export default function S08_BtcMapBusinessesMap() {
     if (isCompactViewport) setIsDensityExpanded(false);
   }, [isCompactViewport]);
 
+  const fetchBusinesses = async () => {
+    const res = await fetch(BUSINESSES_ENDPOINT);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  };
+
+  useModuleData(fetchBusinesses, {
+    refreshMs: REFRESH_INTERVAL_MS,
+    transform: (json) => {
+      setPayload(json);
+      setError(null);
+      return json;
+    },
+    keepPreviousOnError: true,
+  });
+
   useEffect(() => {
-    let active = true;
-    const load = async () => {
-      try {
-        const res = await fetch(BUSINESSES_ENDPOINT);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const json = await res.json();
-        if (!active) return;
-        setPayload(json);
-        setError(null);
-      } catch {
-        if (!active) return;
-        setError('Could not load BTC Map businesses by country endpoint.');
-      } finally {
-        if (active) setApiLoading(false);
-      }
-    };
-    load();
-    const timer = setInterval(load, REFRESH_INTERVAL_MS);
-    return () => { active = false; clearInterval(timer); };
-  }, []);
+    if (payload) setApiLoading(false);
+  }, [payload]);
 
   useEffect(() => {
     if (geoError) {

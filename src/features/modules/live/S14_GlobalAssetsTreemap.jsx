@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { fetchJson } from '@/shared/lib/api.js';
+import { useModuleData } from '@/shared/hooks/useModuleData.js';
+import { ModuleShell } from '@/shared/components/module/index.js';
 
 const REFRESH_MS = 60 * 60 * 1000;
 let lastGlobalAssetsPayload = null;
@@ -189,44 +191,23 @@ function AssetCard({ asset }) {
 
 /* ── Main component ───────────────────────────────────────────── */
 export default function S14_GlobalAssetsTreemap() {
-  const [payload, setPayload] = useState(() => lastGlobalAssetsPayload);
-  const [isLoading, setIsLoading] = useState(() => !lastGlobalAssetsPayload);
-  const [loadFailed, setLoadFailed] = useState(false);
+  const fetchAssets = useCallback(() => fetchJson('/api/s14/global-assets'), []);
 
-  useEffect(() => {
-    let active = true;
-
-    const loadAssets = async () => {
-      try {
-        const response = await fetchJson('/api/s14/global-assets');
-        if (!active) return;
-        lastGlobalAssetsPayload = response;
-        setPayload(response);
-        setLoadFailed(false);
-      } catch {
-        if (!active) return;
-        setLoadFailed(!lastGlobalAssetsPayload);
-      } finally {
-        if (active) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    loadAssets();
-    const timer = window.setInterval(loadAssets, REFRESH_MS);
-
-    return () => {
-      active = false;
-      window.clearInterval(timer);
-    };
-  }, []);
+  const { data: payload, loading: isLoading, error: fetchError } = useModuleData(fetchAssets, {
+    refreshMs: REFRESH_MS,
+    initialData: lastGlobalAssetsPayload,
+    keepPreviousOnError: true,
+    transform: (raw) => {
+      lastGlobalAssetsPayload = raw;
+      return raw;
+    },
+  });
 
   const assetData = useMemo(() => normalizeAssetData(payload), [payload]);
-  const error = loadFailed ? 'Global asset values are temporarily unavailable.' : null;
+  const error = fetchError && !payload ? 'Global asset values are temporarily unavailable.' : null;
 
   return (
-    <div className="flex h-full w-full flex-col bg-[#111111] p-2 sm:p-3 lg:p-4">
+    <ModuleShell className="p-2 sm:p-3 lg:p-4">
       {isLoading ? (
         <div className="skeleton h-full w-full rounded-md" />
       ) : assetData.length > 0 ? (
@@ -257,6 +238,6 @@ export default function S14_GlobalAssetsTreemap() {
           {error || 'No global asset values available.'}
         </div>
       )}
-    </div>
+    </ModuleShell>
   );
 }

@@ -85,9 +85,9 @@ const MODULE_SEO = {
     keywords: ['bitcoin mayer multiple', 'btc 200 day moving average', 'bitcoin cycle indicator', 'mayer multiple chart'],
   },
   'bitcoin-price-performance': {
-    title: 'Bitcoin Price Performance - YTD & Multi-Year Returns',
-    description: 'Review Bitcoin price performance across year-to-date and multi-year windows to compare BTC returns against fiat erosion.',
-    keywords: ['bitcoin price performance', 'btc returns', 'bitcoin ytd performance', 'bitcoin multi year returns'],
+    title: 'US Median Home Price in Bitcoin - Real Estate vs BTC Chart',
+    description: 'Track the U.S. median home price in Bitcoin over time using FRED MSPUS data and live BTC spot price to visualize real estate deflation in hard-money terms.',
+    keywords: ['us median home price bitcoin', 'real estate in btc', 'home price vs bitcoin', 'fred mspus bitcoin chart'],
   },
   'bitcoin-halving-cycle-spiral': {
     title: 'Bitcoin Halving Cycle Spiral - 4-Year Market Cycles',

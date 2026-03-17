@@ -12,25 +12,6 @@ agent_priority: high
 source_status: canonical-local
 ---
 
-# Regla Universal de Automejora y Actualización Continua de Documentos de Reglas
-
-**Objetivo Primordial:** Este documento y **todos los demás archivos `.md` que contienen reglas, directrices o conocimientos operativos** deben ser actualizados proactivamente por el Agente de IA. La actualización se activará cada vez que se identifique y corrija un error (en código generado, recomendaciones, datos procesados, o en la aplicación de las propias reglas), o cuando se detecte una oportunidad significativa de mejora en la eficacia o el conocimiento del Agente. El propósito central es que el Agente de IA aprenda continuamente de sus experiencias, optimizando sus directrices internas, su coherencia y su relevancia a través de todos los documentos de conocimiento.
-
-**Proceso de Actualización Automática de Documentos (`.md`):**
-1. **Detección y Corrección de Eventos:** Cuando el Agente de IA (o un observador externo) identifique un error, un fallo en la aplicación de una regla, o una clara oportunidad de optimización/mejora, y este evento sea corregido o abordado.
-2. **Análisis de Impacto:** El Agente de IA debe analizar la causa raíz del evento y determinar si su resolución requiere una mejora, adición o modificación en las reglas, directrices o conocimientos contenidos en **este documento** o en **cualquier otro archivo `.md` de reglas/conocimiento relacionado**.
-3. **Ejecución de la Actualización del Archivo (`.md`):**
-   * **Identificación del Cambio:** El Agente identificará la sección o regla que necesita ser actualizada, o si se debe añadir una nueva entrada de conocimiento.
-   * **Formato del Registro (Anexo Histórico):** **Todas las actualizaciones deben ser registradas al final del documento afectado**, en una sección específicamente titulada `## Registro Histórico de Automejoras y Lecciones Aprendidas`. Cada entrada en este registro debe incluir los siguientes campos:
-     * **Fecha de la Actualización:** `AAAA-MM-DD`
-     * **Archivo(s) Afectado(s):** El nombre(s) del archivo(s) `.md` de reglas/conocimiento que se ha(n) modificado.
-     * **Tipo de Evento/Contexto:** (Ej. Error de Lógica en módulo X, Aplicación Incorrecta de Regla Y, Oportunidad de Optimización en Z, Fallo de Seguridad).
-     * **Descripción del Evento Original:** Breve explicación del problema detectado o la oportunidad de mejora identificada.
-     * **Acción Realizada/Corrección:** Descripción de cómo se resolvió el problema o cómo se implementó la mejora.
-     * **Nueva/Modificada Regla o Directriz:** La regla, directriz o entrada de conocimiento específica que se ha añadido, ajustado o resaltado en el documento para prevenir futuros problemas similares o mejorar la operación.
-     * **Justificación:** Explicación concisa de por qué esta actualización es importante para el aprendizaje y la mejora del Agente de IA.
-   * **Prioridad Recursiva:** Si una actualización afecta directamente la forma en que esta "Regla Universal de Automejora" debe aplicarse o describirse, entonces **esta misma regla debe ser ajustada** para reflejar la mejora en el proceso de automejora del Agente.
-
 ## Addendum Skills-First de Autoridad Tecnica
 
 Las skills instaladas en `.claude/skills/` son la base tecnica primaria del repo. Este archivo no las reemplaza: las adapta al backend real del proyecto y agrega guardrails locales sobre contratos publicos, seguridad operativa, cache, compatibilidad Vercel e integridad de rutas.
@@ -182,10 +163,10 @@ When backend/API behavior changes:
 
 - **Fecha de la Actualización:** `2026-03-09`
 - **Archivo(s) Afectado(s):** `.claude/BACKEND_API_RULES.md`
-- **Tipo de Evento/Contexto:** Configuración universal de automejora
-- **Descripción del Evento Original:** Las reglas backend/API no empezaban con una política universal de aprendizaje ni incluían un anexo histórico obligatorio para registrar correcciones y mejoras.
-- **Acción Realizada/Corrección:** Se añadió la regla universal como apertura del documento y se creó el registro histórico al final para documentar lecciones futuras.
-- **Nueva/Modificada Regla o Directriz:** Todo cambio backend/API debe heredar la regla universal de automejora y registrar en este archivo cualquier ajuste relevante de reglas o conocimiento.
+- **Tipo de Evento/Contexto:** Configuración de automejora
+- **Descripción del Evento Original:** Las reglas backend/API no incluían un anexo histórico obligatorio para registrar correcciones y mejoras.
+- **Acción Realizada/Corrección:** Se creó el registro histórico al final para documentar lecciones futuras.
+- **Nueva/Modificada Regla o Directriz:** Todo cambio backend/API debe registrar en este archivo cualquier ajuste relevante de reglas o conocimiento.
 - **Justificación:** Hace auditable la evolución de la política backend y ayuda a prevenir recaídas en errores de arquitectura, compatibilidad o verificación.
 
 - **Fecha de la Actualización:** `2026-03-09`

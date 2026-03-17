@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react';
-import { fetchJson } from '@/shared/lib/api.js';
+import { useState } from 'react';
+import { fetchAddressDistribution } from '@/shared/services/addressDistributionApi.js';
 import { formatSourceUtcTimestamp } from '@/shared/utils/formatters.js';
+import { useModuleData } from '@/shared/hooks/useModuleData.js';
+import { ModuleShell, ModuleTitle, ModuleSourceFooter } from '@/shared/components/module/index.js';
 
 const MODULE_COLORS = {
   '--bg-main': '#0B0B0B',
@@ -48,6 +50,7 @@ const TIER_SPECS = [
 ];
 
 const REFRESH_MS = 1_800_000;
+const PROVIDERS = [{ name: 'BitInfoCharts', url: 'https://bitinfocharts.com' }];
 
 function round2(value) {
   return Math.round((value + Number.EPSILON) * 100) / 100;
@@ -93,51 +96,39 @@ export default function S12_AddressDistribution() {
   const [tiers, setTiers] = useState(FALLBACK_TIERS);
   const [meta, setMeta] = useState({ updatedAt: '', updatedAtLocal: '', fetchedAt: '', fetchedAtLocal: '' });
 
-  useEffect(() => {
-    let active = true;
-
-    const load = async () => {
-      try {
-        const payload = await fetchJson('/api/s12/btc-distribution', { timeout: 8000 });
-        if (!active || !Array.isArray(payload?.distribution)) return;
-        const mapped = mapDistributionToTiers(payload.distribution);
-        if (mapped.length) setTiers(mapped);
-        if (typeof payload?.updatedAt === 'string' || typeof payload?.fetchedAt === 'string') {
-          setMeta({
-            updatedAt: payload?.updatedAt || '',
-            updatedAtLocal: formatSourceUtcTimestamp(payload?.updatedAt),
-            fetchedAt: payload?.fetchedAt || '',
-            fetchedAtLocal: formatSourceUtcTimestamp(payload?.fetchedAt),
-          });
-        }
-      } catch {
-        /* keep previous values */
+  useModuleData(fetchAddressDistribution, {
+    refreshMs: REFRESH_MS,
+    transform: (payload) => {
+      if (!Array.isArray(payload?.distribution)) return null;
+      const mapped = mapDistributionToTiers(payload.distribution);
+      if (mapped.length) setTiers(mapped);
+      if (typeof payload?.updatedAt === 'string' || typeof payload?.fetchedAt === 'string') {
+        setMeta({
+          updatedAt: payload?.updatedAt || '',
+          updatedAtLocal: formatSourceUtcTimestamp(payload?.updatedAt),
+          fetchedAt: payload?.fetchedAt || '',
+          fetchedAtLocal: formatSourceUtcTimestamp(payload?.fetchedAt),
+        });
       }
-    };
+      return payload;
+    },
+  });
 
-    load();
-    const timer = setInterval(load, REFRESH_MS);
-
-    return () => {
-      active = false;
-      clearInterval(timer);
-    };
-  }, []);
+  const sourceFooter = (
+    <ModuleSourceFooter
+      providers={PROVIDERS}
+      refreshLabel="30m"
+      sourceSnapshot={meta.updatedAtLocal || undefined}
+      sourceSnapshotLabel="Source snapshot"
+      lastSync={meta.fetchedAtLocal || undefined}
+      lastSyncLabel="Last checked"
+    />
+  );
 
   return (
-    <div className="flex h-full w-full flex-col" style={{ ...MODULE_COLORS, backgroundColor: 'var(--bg-main)' }}>
+    <ModuleShell bg="var(--bg-main)" style={MODULE_COLORS}>
       <div className="flex-none px-4 pb-3 pt-4 sm:px-6 sm:pt-6 lg:px-10">
-        <h1
-          style={{
-            color: 'var(--btc-orange)',
-            fontFamily: 'monospace',
-            fontSize: 'var(--fs-subtitle)',
-            fontWeight: 700,
-            letterSpacing: '0.05em',
-          }}
-        >
-          Address Distribution
-        </h1>
+        <ModuleTitle>Address Distribution</ModuleTitle>
       </div>
 
       <div className="min-h-0 flex-1 px-3 pb-4 sm:px-6 sm:pb-6">
@@ -243,37 +234,15 @@ export default function S12_AddressDistribution() {
             </article>
           ))}
 
-          {/* Source info — inside scroll area on mobile (visible only after scrolling) */}
           <div className="flex justify-end px-1 pb-4 pt-3">
-            <div className="text-right font-mono text-[11px] tracking-wide" style={{ color: 'var(--text-secondary)' }}>
-              <div>
-                src:{' '}
-                <a href="https://bitinfocharts.com" target="_blank" rel="noreferrer" style={{ color: 'var(--btc-orange)', textDecoration: 'none' }}>
-                  BitInfoCharts
-                </a>
-              </div>
-              <div>Refresh target: 30m</div>
-              {meta.updatedAtLocal ? <div>Source snapshot: {meta.updatedAtLocal}</div> : null}
-              {meta.fetchedAtLocal ? <div>Last checked: {meta.fetchedAtLocal}</div> : null}
-            </div>
+            {sourceFooter}
           </div>
         </div>
       </div>
 
-      {/* Source info — desktop only fixed bottom strip */}
       <div className="hidden lg:flex flex-none justify-end px-3 pb-6 pt-3 sm:px-4" style={{ paddingBottom: 'max(1.5rem, calc(var(--safe-bottom) + 0.75rem))' }}>
-        <div className="text-right font-mono text-[11px] tracking-wide" style={{ color: 'var(--text-secondary)' }}>
-          <div>
-            src:{' '}
-            <a href="https://bitinfocharts.com" target="_blank" rel="noreferrer" style={{ color: 'var(--btc-orange)', textDecoration: 'none' }}>
-              BitInfoCharts
-            </a>
-          </div>
-          <div>Refresh target: 30m</div>
-          {meta.updatedAtLocal ? <div>Source snapshot: {meta.updatedAtLocal}</div> : null}
-          {meta.fetchedAtLocal ? <div>Last checked: {meta.fetchedAtLocal}</div> : null}
-        </div>
+        {sourceFooter}
       </div>
-    </div>
+    </ModuleShell>
   );
 }

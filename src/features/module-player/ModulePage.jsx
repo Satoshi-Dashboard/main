@@ -61,7 +61,6 @@ const MARKET_AUDIO_THEMES = {
 
 const DONATION_ADDRESS = 'BC1QC2GD3YN8DTLMZG4UW786MFN085WE69F60V4R6F';
 const NOINDEX_PREVIEW_SLUGS = new Set([
-  'bitcoin-halving-cycle-spiral',
   'bitcoin-power-law-model',
   'bitcoin-stock-to-flow-model',
   'bitcoin-big-mac-sats-tracker',
@@ -76,7 +75,6 @@ const NOINDEX_PREVIEW_SLUGS = new Set([
 ]);
 
 const BLOCKING_OVERLAY_SLUGS = new Set([
-  'bitcoin-halving-cycle-spiral',
   'bitcoin-power-law-model',
   'bitcoin-stock-to-flow-model',
   'bitcoin-big-mac-sats-tracker',

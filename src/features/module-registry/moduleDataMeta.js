@@ -23,6 +23,7 @@ const MODULE_DATA_META = {
       { name: 'Alternative.me', url: 'https://alternative.me/crypto/fear-and-greed-index/' },
     ],
     refreshSeconds: 30,
+    showTitleInStrip: false,
   },
   'bitcoin-price-chart-live': {
     providers: [{ name: 'Binance', url: 'https://api.binance.com' }],
@@ -43,6 +44,7 @@ const MODULE_DATA_META = {
       { name: 'Internal API', url: null },
     ],
     refreshSeconds: 30,
+    showTitleInStrip: false,
   },
   'bitcoin-mempool-trend': {
     providers: [{ name: 'mempool.space', url: 'https://mempool.space' }],
@@ -72,6 +74,7 @@ const MODULE_DATA_META = {
   'lightning-network-stats': {
     providers: [{ name: 'Binance', url: 'https://api.binance.com' }],
     refreshSeconds: 15,
+    showTitleInStrip: false,
   },
   'stablecoin-peg-tracker': {
     providers: [{ name: 'CoinGecko', url: 'https://www.coingecko.com/en/api' }],
@@ -81,16 +84,19 @@ const MODULE_DATA_META = {
   'bitcoin-fear-greed-index': {
     providers: [{ name: 'Alternative.me', url: 'https://alternative.me/crypto/fear-and-greed-index/' }],
     refreshLabel: 'daily update',
+    showTitleInStrip: false,
   },
   'bitcoin-address-distribution': {
     providers: [{ name: 'BitInfoCharts', url: 'https://bitinfocharts.com' }],
     refreshMinutes: 30,
     showSharedStrip: false,
+    showTitleInStrip: false,
   },
   'bitcoin-wealth-pyramid': {
     providers: [{ name: 'BitInfoCharts', url: 'https://bitinfocharts.com' }],
     refreshMinutes: 30,
     showSharedStrip: false,
+    showTitleInStrip: false,
   },
   'bitcoin-vs-global-assets': {
     providers: [{ name: 'Newhedge', url: 'https://newhedge.io/bitcoin/global-asset-values' }],
@@ -127,6 +133,7 @@ const MODULE_DATA_META = {
     providers: [{ name: 'Internal', url: null }],
     refreshLabel: 'static data',
     showSharedStrip: true,
+    showTitleInStrip: false,
   },
   'bitcoin-power-law-model': {
     ...UNDER_CONSTRUCTION_META,
@@ -169,6 +176,7 @@ const MODULE_DATA_META = {
     refreshMinutes: 15,
     responsiveScroll: true,
     showSharedStripOnResponsive: false,
+    showTitleInStrip: false,
   },
   'satoshi-nakamoto-bitcoin-whitepaper': {
     showSharedStrip: false,

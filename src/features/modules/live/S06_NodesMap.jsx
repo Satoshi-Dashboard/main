@@ -6,6 +6,11 @@ import {
   useCompactViewport,
   useCountriesGeoJson,
 } from '@/features/modules/live/shared/worldMapHooks.js';
+import {
+  computePerCapitaScale as sharedComputePerCapitaScale,
+  getFillColorByPerCapita as sharedGetFillColorByPerCapita,
+  formatPerCapitaValue,
+} from '@/features/modules/live/shared/mapColorUtils.js';
 import { useWorldBankPopulation } from '@/shared/hooks/useWorldBankPopulation.js';
 import {
   COUNTRY_NAME_ALIASES,
@@ -16,6 +21,7 @@ import {
   normalizeCountryName,
 } from '@/shared/lib/geoCountryUtils.js';
 import { fmt } from '@/shared/utils/formatters.js';
+import { useModuleData } from '@/shared/hooks/useModuleData.js';
 
 const CACHE_ENDPOINT = '/api/bitnodes/cache';
 const UNKNOWN_COUNTRY_LABEL = 'TOR Cyberspace';
@@ -49,33 +55,14 @@ const NODE_PERCAPITA_SCALE = [
   { key: 'trace',     label: 'Trace',     color: '#FFD9A0', minVal: 0,  legend: '<= 5 /M' },
 ];
 
+const NODE_COLORS = ['#FF6A00', '#FF8C1A', '#FFAA33', '#FFC266', '#FFD9A0'];
+
 function computePerCapitaScale(maxVal) {
-  if (!maxVal || maxVal <= 0) return NODE_PERCAPITA_SCALE;
-  const magnitude = Math.pow(10, Math.floor(Math.log10(maxVal)));
-  const niceMax = Math.ceil(maxVal / magnitude) * magnitude;
-  const t4 = Math.max(1, Math.round(niceMax * 0.50));
-  const t3 = Math.max(1, Math.round(niceMax * 0.25));
-  const t2 = Math.max(1, Math.round(niceMax * 0.10));
-  const t1 = Math.max(1, Math.round(niceMax * 0.05));
-  return [
-    { key: 'very-high', label: 'Very high', color: '#FF6A00', minVal: t4,    legend: `> ${t4} /M` },
-    { key: 'high',      label: 'High',      color: '#FF8C1A', minVal: t3,    legend: `> ${t3} /M` },
-    { key: 'mid',       label: 'Mid',       color: '#FFAA33', minVal: t2,    legend: `> ${t2} /M` },
-    { key: 'low',       label: 'Low',       color: '#FFC266', minVal: t1,    legend: `> ${t1} /M` },
-    { key: 'trace',     label: 'Trace',     color: '#FFD9A0', minVal: 0.001, legend: '> 0 /M'    },
-  ];
+  return sharedComputePerCapitaScale(maxVal, NODE_PERCAPITA_SCALE, NODE_COLORS);
 }
 
 function getFillColorByPerCapita(perCapita, scale) {
-  const v = Number(perCapita) || 0;
-  if (v <= 0) return '#141414';
-  return ((scale || NODE_PERCAPITA_SCALE).find((s) => v >= s.minVal) || {}).color || '#FFD9A0';
-}
-
-function formatPerCapitaValue(value) {
-  const numericValue = Number(value);
-  if (!Number.isFinite(numericValue) || numericValue <= 0) return '0.0 /M';
-  return numericValue >= 10 ? `${numericValue.toFixed(1)} /M` : `${numericValue.toFixed(2)} /M`;
+  return sharedGetFillColorByPerCapita(perCapita, scale || NODE_PERCAPITA_SCALE);
 }
 
 function getDensityStepByCount(count) {
@@ -169,33 +156,26 @@ export default function S06_NodesMap() {
     }
   }, [isCompactViewport]);
 
+  const fetchBitnodes = async () => {
+    const res = await fetch(CACHE_ENDPOINT);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  };
+
+  useModuleData(fetchBitnodes, {
+    refreshMs: 600_000,
+    transform: (json) => {
+      setPayload(json);
+      setError(null);
+      return json;
+    },
+    keepPreviousOnError: true,
+  });
+
+  // Set initial loading to false once payload arrives
   useEffect(() => {
-    let active = true;
-
-    const load = async () => {
-      try {
-        const res = await fetch(CACHE_ENDPOINT);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const json = await res.json();
-        if (!active) return;
-        setPayload(json);
-        setError(null);
-      } catch {
-        if (!active) return;
-        setError('Could not load local Bitnodes cache endpoint.');
-      } finally {
-        if (active) setCacheLoading(false);
-      }
-    };
-
-    load();
-    const timer = setInterval(load, 600_000);
-
-    return () => {
-      active = false;
-      clearInterval(timer);
-    };
-  }, []);
+    if (payload) setCacheLoading(false);
+  }, [payload]);
 
   useEffect(() => {
     if (geoError) {

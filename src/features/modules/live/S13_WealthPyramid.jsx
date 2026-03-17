@@ -1,27 +1,17 @@
-import { useEffect, useState } from 'react';
-import { fetchJson } from '@/shared/lib/api.js';
+import { useState } from 'react';
+import { fetchAddressesRicher } from '@/shared/services/addressDistributionApi.js';
 import { useWindowWidth } from '@/shared/hooks/useWindowWidth.js';
 import { formatSourceUtcTimestamp } from '@/shared/utils/formatters.js';
+import { WEALTH_TIERS } from '@/shared/constants/colors.js';
+import { UI_COLORS } from '@/shared/constants/colors.js';
+import { useModuleData } from '@/shared/hooks/useModuleData.js';
+import { ModuleShell, ModuleTitle, ModuleSourceFooter } from '@/shared/components/module/index.js';
 
 const REFRESH_MS = 1_800_000;
-
-const UI_COLORS = {
-  brand: 'var(--accent-bitcoin)',
-  textSecondary: 'var(--text-secondary)',
-  textTertiary: 'var(--text-tertiary)',
-  textPrimary: 'var(--text-primary)',
-};
+const PROVIDERS = [{ name: 'BitInfoCharts', url: 'https://bitinfocharts.com' }];
 
 // Tiers ordered top (richest/fewest) to bottom (most/poorest)
-const TIER_TEMPLATE = [
-  { threshold: '> $10M', key: 10000000, color: '#c25200' },
-  { threshold: '> $1M', key: 1000000, color: '#cd6618' },
-  { threshold: '> $100K', key: 100000, color: '#da7e30' },
-  { threshold: '> $10K', key: 10000, color: '#e49448' },
-  { threshold: '> $1K', key: 1000, color: '#ecaa62' },
-  { threshold: '> $100', key: 100, color: '#f3c280' },
-  { threshold: '> $1', key: 1, color: '#f9d8a4' },
-];
+const TIER_TEMPLATE = WEALTH_TIERS;
 
 function buildTiers(payload, prevTiers) {
   const map = new Map(
@@ -60,54 +50,29 @@ export default function S13_WealthPyramid() {
   const [meta, setMeta] = useState({ updatedAt: '', updatedAtLocal: '', fetchedAt: '', fetchedAtLocal: '' });
   const viewportWidth = useWindowWidth();
 
-  useEffect(() => {
-    let active = true;
-
-    const load = async () => {
-      try {
-        const payload = await fetchJson('/api/s13/addresses-richer', { timeout: 8000 });
-        if (!active) return;
-
-        setTiers((prev) => buildTiers(payload, prev));
-        if (typeof payload?.updatedAt === 'string' || typeof payload?.fetchedAt === 'string') {
-          setMeta({
-            updatedAt: payload?.updatedAt || '',
-            updatedAtLocal: formatSourceUtcTimestamp(payload?.updatedAt),
-            fetchedAt: payload?.fetchedAt || '',
-            fetchedAtLocal: formatSourceUtcTimestamp(payload?.fetchedAt),
-          });
-        }
-      } catch {
-        /* keep previous values */
+  useModuleData(fetchAddressesRicher, {
+    refreshMs: REFRESH_MS,
+    transform: (payload) => {
+      setTiers((prev) => buildTiers(payload, prev));
+      if (typeof payload?.updatedAt === 'string' || typeof payload?.fetchedAt === 'string') {
+        setMeta({
+          updatedAt: payload?.updatedAt || '',
+          updatedAtLocal: formatSourceUtcTimestamp(payload?.updatedAt),
+          fetchedAt: payload?.fetchedAt || '',
+          fetchedAtLocal: formatSourceUtcTimestamp(payload?.fetchedAt),
+        });
       }
-    };
-
-    load();
-    const timer = setInterval(load, REFRESH_MS);
-
-    return () => {
-      active = false;
-      clearInterval(timer);
-    };
-  }, []);
+      return payload;
+    },
+  });
 
   const isCompact = viewportWidth < 768;
   const maxAddresses = Math.max(...tiers.map((tier) => (Number.isFinite(tier.addresses) ? tier.addresses : 0)), 1);
 
   return (
-    <div className="flex h-full w-full flex-col bg-[#111111]">
-      {/* Title */}
-      <div className="flex-none px-4 pb-1 pt-4 sm:px-8 sm:pt-6 lg:px-10">
-        <h1
-          style={{
-            color: UI_COLORS.brand,
-            fontFamily: 'monospace',
-            fontSize: 'var(--fs-subtitle)',
-            fontWeight: 700,
-          }}
-        >
-          Bitcoin Wealth Distribution
-        </h1>
+    <ModuleShell>
+      <div className="flex-none px-4 pb-3 pt-4 sm:px-6 sm:pt-6 lg:px-10">
+        <ModuleTitle>Bitcoin Wealth Distribution</ModuleTitle>
       </div>
 
       {isCompact ? (
@@ -141,11 +106,9 @@ export default function S13_WealthPyramid() {
               const yBot = PY_TOP + (i + 1) * TIER_H;
               const yCen = (yTop + yBot) / 2;
 
-              // Pyramid edges at mid-height of this tier
               const xLC = CX - hw(yCen);
               const xRC = CX + hw(yCen);
 
-              // Trapezoid corners
               const xlTop = CX - hw(yTop);
               const xrTop = CX + hw(yTop);
               const xlBot = CX - hw(yBot);
@@ -224,20 +187,16 @@ export default function S13_WealthPyramid() {
         </div>
       )}
 
-      {/* Source info — bottom strip (matches SharedMetaBottomStrip style) */}
       <div className="flex flex-none justify-end px-3 pb-6 pt-3 sm:px-4" style={{ paddingBottom: 'max(1.5rem, calc(var(--safe-bottom) + 0.75rem))' }}>
-        <div className="text-right font-mono text-[11px] tracking-wide" style={{ color: UI_COLORS.textSecondary }}>
-          <div>
-            src:{' '}
-            <a href="https://bitinfocharts.com" target="_blank" rel="noreferrer" style={{ color: UI_COLORS.brand, textDecoration: 'none' }}>
-              BitInfoCharts
-            </a>
-          </div>
-          <div>Refresh target: 30m</div>
-          {meta.updatedAtLocal ? <div>Source snapshot: {meta.updatedAtLocal}</div> : null}
-          {meta.fetchedAtLocal ? <div>Last checked: {meta.fetchedAtLocal}</div> : null}
-        </div>
+        <ModuleSourceFooter
+          providers={PROVIDERS}
+          refreshLabel="30m"
+          sourceSnapshot={meta.updatedAtLocal || undefined}
+          sourceSnapshotLabel="Source snapshot"
+          lastSync={meta.fetchedAtLocal || undefined}
+          lastSyncLabel="Last checked"
+        />
       </div>
-    </div>
+    </ModuleShell>
   );
 }

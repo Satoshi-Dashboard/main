@@ -2,11 +2,14 @@
 // Globe uses Natural Earth 110m GeoJSON for pixel-accurate land shapes
 // Fallback to bounding-box mask if network unavailable
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchJson } from '@/shared/lib/api.js';
 import { fetchMultiCurrencyBtc } from '@/shared/services/priceApi.js';
 import AnimatedMetric from '@/shared/components/common/AnimatedMetric.jsx';
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery.js';
+import { useModuleData } from '@/shared/hooks/useModuleData.js';
+import { ModuleShell, ModuleSourceFooter } from '@/shared/components/module/index.js';
+import { UI_COLORS } from '@/shared/constants/colors.js';
 import { formatMetaTimestamp } from '@/shared/utils/formatters.js';
 
 // ─── Currency data ──────────────────────────────────────────────────────────────
@@ -48,12 +51,7 @@ const EMPTY_CURRENCIES = BASE_CURRENCY_META.map(m => ({ ...m, price: null, chang
 const BAND_CODES = ['JPY', 'INR', 'KRW', 'CNY', 'EUR', 'GBP', 'USD', 'RUB'];
 const REFRESH_MS = 30_000;
 
-const UI_COLORS = {
-  positive: 'var(--accent-green)',
-  negative: 'var(--accent-red)',
-  textSecondary: 'var(--text-secondary)',
-  textTertiary: 'var(--text-tertiary)',
-};
+// UI_COLORS imported from @/shared/constants/colors.js
 
 function parseOverlayProviders(sourceLabel) {
   const src = String(sourceLabel || '').toUpperCase();
@@ -392,66 +390,66 @@ export default function S03_MultiCurrencyBoard() {
   const dotsRef      = useRef(FALLBACK_DOTS);     // start with fallback immediately
   const bandDataRef  = useRef(EMPTY_CURRENCIES.filter(c => BAND_CODES.includes(c.code)));
   const [search, setSearch]     = useState('');
-  const [currencies, setCurrencies] = useState(EMPTY_CURRENCIES);
-  const [isPriceLoading, setIsPriceLoading] = useState(true);
-  const [lastUpdatedAt, setLastUpdatedAt] = useState(() => new Date());
-  const [sourceLabel, setSourceLabel] = useState('/API/BTC/RATES + INVESTING');
   const showDesktopOverlay = useMediaQuery('(min-width: 1024px)');
   const useStaticResponsiveMetrics = useMediaQuery('(max-width: 1023px)');
 
   // Multi-currency fetch via internal TradingEconomics scraper cache.
-  useEffect(() => {
-    let active = true;
+  const fetchCurrencies = useCallback(() => fetchMultiCurrencyBtc([]), []);
 
-    const load = async () => {
-      try {
-        const btc = await fetchMultiCurrencyBtc([]);
-        if (!active || !btc) return;
+  const transformCurrencies = useCallback((btc) => {
+    if (!btc) return { currencies: EMPTY_CURRENCIES, sourceLabel: '/API/BTC/RATES + INVESTING', lastUpdatedAt: new Date() };
 
-        const availableCodes = Object.keys(btc)
-          .filter((k) => /^[a-z]{3}$/.test(k))
-          .map((k) => k.toUpperCase());
+    const availableCodes = Object.keys(btc)
+      .filter((k) => /^[a-z]{3}$/.test(k))
+      .map((k) => k.toUpperCase());
 
-        const selectedCodes = availableCodes.length > 0
-          ? availableCodes
-          : BASE_CURRENCY_META.map((m) => m.code);
+    const selectedCodes = availableCodes.length > 0
+      ? availableCodes
+      : BASE_CURRENCY_META.map((m) => m.code);
 
-        selectedCodes.sort((a, b) => {
-          if (a === 'USD') return -1;
-          if (b === 'USD') return 1;
-          return a.localeCompare(b);
-        });
+    selectedCodes.sort((a, b) => {
+      if (a === 'USD') return -1;
+      if (b === 'USD') return 1;
+      return a.localeCompare(b);
+    });
 
-        const updated = selectedCodes.map((code) => {
-          const key = code.toLowerCase();
-          const price = Number(btc[key]);
-          const change = Number(btc[`${key}_24h_change`]);
-          return {
-            code,
-            name: getCurrencyName(code),
-            price: Number.isFinite(price) ? price : null,
-            change: Number.isFinite(change) ? change : null,
-          };
-        });
+    const updated = selectedCodes.map((code) => {
+      const key = code.toLowerCase();
+      const price = Number(btc[key]);
+      const change = Number(btc[`${key}_24h_change`]);
+      return {
+        code,
+        name: getCurrencyName(code),
+        price: Number.isFinite(price) ? price : null,
+        change: Number.isFinite(change) ? change : null,
+      };
+    });
 
-        setCurrencies(updated);
-        bandDataRef.current = updated.filter(c => BAND_CODES.includes(c.code));
-        const src = String(btc.__source || '').trim();
-        if (src) {
-          const fallbackTag = btc.__is_fallback ? ' (STALE FALLBACK)' : '';
-          setSourceLabel(`${src.toUpperCase()}${fallbackTag}`);
-        }
-        setLastUpdatedAt(new Date());
+    let srcLabel = '/API/BTC/RATES + INVESTING';
+    const src = String(btc.__source || '').trim();
+    if (src) {
+      const fallbackTag = btc.__is_fallback ? ' (STALE FALLBACK)' : '';
+      srcLabel = `${src.toUpperCase()}${fallbackTag}`;
+    }
 
-      } finally {
-        if (active) setIsPriceLoading(false);
-      }
-    };
-
-    load();
-    const t = setInterval(load, REFRESH_MS);
-    return () => { active = false; clearInterval(t); };
+    return { currencies: updated, sourceLabel: srcLabel, lastUpdatedAt: new Date() };
   }, []);
+
+  const { data: priceData, loading: isPriceLoading } = useModuleData(fetchCurrencies, {
+    refreshMs: REFRESH_MS,
+    initialData: { currencies: EMPTY_CURRENCIES, sourceLabel: '/API/BTC/RATES + INVESTING', lastUpdatedAt: new Date() },
+    keepPreviousOnError: true,
+    transform: transformCurrencies,
+  });
+
+  const currencies = priceData.currencies;
+  const sourceLabel = priceData.sourceLabel;
+  const lastUpdatedAt = priceData.lastUpdatedAt;
+
+  // Keep bandDataRef in sync with latest currencies for canvas rendering
+  useEffect(() => {
+    bandDataRef.current = currencies.filter(c => BAND_CODES.includes(c.code));
+  }, [currencies]);
 
   // Load accurate GeoJSON land dots (singleton — fetched once per session)
   useEffect(() => {
@@ -495,7 +493,7 @@ export default function S03_MultiCurrencyBoard() {
   const tickerItems = [...currencies, ...currencies];
 
   return (
-    <div className="visual-integrity-lock flex h-full w-full flex-col overflow-hidden bg-[#111111]">
+    <ModuleShell overflow="hidden">
 
       {/* ── Ticker ─────────────────────────────────────────────────────── */}
       <div className="flex-none overflow-hidden" style={{
@@ -536,21 +534,14 @@ export default function S03_MultiCurrencyBoard() {
           />
 
           {showDesktopOverlay && (
-            <div className="visual-integrity-lock absolute bottom-3 left-3 z-10 rounded border border-white/10 bg-[#080808]/90 px-3 py-2 text-left font-mono text-[12px] tracking-wide text-[#7c7c7c]">
-              <div>
-                <span>src: </span>
-                {parseOverlayProviders(sourceLabel).map((provider, index, arr) => (
-                  <span key={provider.name}>
-                    <a href={provider.url} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-bitcoin)', textDecoration: 'none' }}>
-                      {provider.name}
-                    </a>
-                    {index < arr.length - 1 ? <span> + </span> : null}
-                  </span>
-                ))}
-              </div>
-              <div>Refresh target: {Math.round(REFRESH_MS / 1000)}s</div>
-              <div>Last sync: {formatMetaTimestamp(lastUpdatedAt)}</div>
-            </div>
+            <ModuleSourceFooter
+              providers={parseOverlayProviders(sourceLabel)}
+              refreshLabel={`${Math.round(REFRESH_MS / 1000)}s`}
+              lastSync={formatMetaTimestamp(lastUpdatedAt)}
+              align="left"
+              className="absolute bottom-3 left-3 z-10 rounded border border-white/10 bg-[#080808]/90 px-3 py-2"
+              style={{ color: '#7c7c7c', fontSize: '12px' }}
+            />
           )}
         </div>
 
@@ -623,6 +614,6 @@ export default function S03_MultiCurrencyBoard() {
           </div>
         </div>
       </div>
-    </div>
+    </ModuleShell>
   );
 }

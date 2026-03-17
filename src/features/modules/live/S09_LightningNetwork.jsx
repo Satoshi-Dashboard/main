@@ -1,12 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { fetchBtcSpot } from '@/shared/services/priceApi.js';
 import AnimatedMetric from '@/shared/components/common/AnimatedMetric.jsx';
-
-const UI_COLORS = {
-  brand: 'var(--accent-bitcoin)',
-  positive: 'var(--accent-green)',
-  negative: 'var(--accent-red)',
-};
+import { UI_COLORS } from '@/shared/constants/colors.js';
+import { useModuleData } from '@/shared/hooks/useModuleData.js';
+import { ModuleShell } from '@/shared/components/module/index.js';
 
 function SkeletonSatGrid() {
   return (
@@ -67,35 +64,25 @@ function SatGrid({ sats }) {
 export default function S09_LightningNetwork() {
   const [data, setData] = useState({ price: null, change: null });
 
-  useEffect(() => {
-    let active = true;
-
-    const load = async () => {
-      try {
-        const spot = await fetchBtcSpot();
-        if (!active || !spot?.usd) return;
+  useModuleData(fetchBtcSpot, {
+    refreshMs: 15_000,
+    transform: (spot) => {
+      if (spot?.usd) {
         setData((prev) => ({
           price: spot.usd,
           change: Number.isFinite(spot.change24h) ? spot.change24h : prev.change,
         }));
-      } catch { /* keep previous values */ }
-    };
-
-    load();
-    const timer = setInterval(load, 15_000);
-
-    return () => {
-      active = false;
-      clearInterval(timer);
-    };
-  }, []);
+      }
+      return spot;
+    },
+  });
 
   const hasData = Number.isFinite(data.price) && data.price > 0;
   const sats = hasData ? Math.round(1e8 / data.price) : null;
   const isUp = Number.isFinite(data.change) ? data.change >= 0 : null;
 
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-[#111111] px-3 py-4 sm:gap-5 sm:px-6 sm:py-6">
+    <ModuleShell className="items-center justify-center gap-3 px-3 py-4 sm:gap-5 sm:px-6 sm:py-6">
       {/* Header */}
       <div className="flex flex-shrink-0 flex-wrap items-center justify-center gap-2 sm:gap-4">
         {hasData ? (
@@ -158,6 +145,6 @@ export default function S09_LightningNetwork() {
           <div className="skeleton" style={{ width: 260, height: '0.9em' }} />
         )}
       </div>
-    </div>
+    </ModuleShell>
   );
 }

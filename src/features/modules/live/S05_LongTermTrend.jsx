@@ -3,13 +3,9 @@ import { fetchJson } from '@/shared/lib/api.js';
 import { fetchMempoolOverviewBundle } from '@/shared/services/mempoolApi.js';
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery.js';
 import { useWindowWidth } from '@/shared/hooks/useWindowWidth.js';
-import { formatMetaTimestamp } from '@/shared/utils/formatters.js';
-
-const UI_COLORS = {
-  brand: 'var(--accent-bitcoin)',
-  positive: 'var(--accent-green)',
-  warning: 'var(--accent-warning)',
-};
+import { useModuleData } from '@/shared/hooks/useModuleData.js';
+import { UI_COLORS } from '@/shared/constants/colors.js';
+import { ModuleShell, ModuleSourceFooter } from '@/shared/components/module/index.js';
 
 const FEE_SCALE = [
   { max: 2, color: '#00FFCC', label: '<2' },
@@ -223,14 +219,9 @@ function FeeLegend() {
 
 /* ─── Main export ──────────────────────────────────────────── */
 export default function S05_LongTermTrend() {
-  const [blocks,        setBlocks]        = useState([]);
-  const [mempoolBlocks, setMempoolBlocks] = useState([]);
-  const [fees,          setFees]          = useState(null);
   const [selected,      setSelected]      = useState(null);
-  const [wsStatus,      setWsStatus]      = useState('connecting');
   const [side,          setSide]          = useState(BASE_SIDE);
   const viewportWidth = useWindowWidth();
-  const [lastUpdatedAt, setLastUpdatedAt] = useState(() => new Date());
   const showDesktopOverlay = useMediaQuery('(min-width: 1024px)');
   const scrollRef    = useRef(null);
 
@@ -252,45 +243,40 @@ export default function S05_LongTermTrend() {
     return () => obs.disconnect();
   }, []);
 
-  /* Polling snapshot from backend cache */
-  useEffect(() => {
-    let active = true;
+  /* Polling snapshot from backend cache via useModuleData */
+  const fetchLiveData = useCallback(async () => {
+    const [payload, bundle] = await Promise.all([
+      fetchJson('/api/public/mempool/live', { cache: 'no-store' }),
+      fetchMempoolOverviewBundle({ cache: 'no-store' }),
+    ]);
 
-    const load = async () => {
-      try {
-        const [payload, bundle] = await Promise.all([
-          fetchJson('/api/public/mempool/live', { cache: 'no-store' }),
-          fetchMempoolOverviewBundle({ cache: 'no-store' }),
-        ]);
-        if (!active) return;
+    const live = payload?.data || {};
+    const blocksData = Array.isArray(live.blocks) ? live.blocks : [];
+    const mempoolQueue = Array.isArray(live.mempool_blocks) ? live.mempool_blocks : [];
 
-        const live = payload?.data || {};
-        const blocksData = Array.isArray(live.blocks) ? live.blocks : [];
-        const mempoolQueue = Array.isArray(live.mempool_blocks) ? live.mempool_blocks : [];
-
-        setBlocks(blocksData.slice(0, 8));
-        setMempoolBlocks(mempoolQueue.slice(0, 8));
-        setFees({
-          fastest: bundle.fees.priority,
-          halfHour: bundle.fees.normal,
-          economy: bundle.fees.economy,
-        });
-        setLastUpdatedAt(payload?.updated_at || new Date());
-        setWsStatus('connected');
-      } catch {
-        if (!active) return;
-        setWsStatus((prev) => (prev === 'connected' ? 'reconnecting' : 'connecting'));
-      }
-    };
-
-    load();
-    const timer = setInterval(load, 10_000);
-
-    return () => {
-      active = false;
-      clearInterval(timer);
+    return {
+      blocks: blocksData.slice(0, 8),
+      mempoolBlocks: mempoolQueue.slice(0, 8),
+      fees: {
+        fastest: bundle.fees.priority,
+        halfHour: bundle.fees.normal,
+        economy: bundle.fees.economy,
+      },
+      lastUpdatedAt: payload?.updated_at || new Date(),
     };
   }, []);
+
+  const { data, error: fetchError } = useModuleData(fetchLiveData, {
+    refreshMs: 10_000,
+    initialData: { blocks: [], mempoolBlocks: [], fees: null, lastUpdatedAt: new Date() },
+    keepPreviousOnError: true,
+  });
+
+  const blocks = data.blocks;
+  const mempoolBlocks = data.mempoolBlocks;
+  const fees = data.fees;
+  const lastUpdatedAt = data.lastUpdatedAt;
+  const wsStatus = blocks.length > 0 ? 'connected' : fetchError ? 'reconnecting' : 'connecting';
 
   const toggle = useCallback(
     (block) => setSelected(prev => prev?.height === block.height ? null : block),
@@ -305,7 +291,7 @@ export default function S05_LongTermTrend() {
   const chipW = Math.max(72, Math.min(Math.round(side * 0.44), 120));
 
   return (
-    <div className="visual-integrity-lock flex h-full w-full flex-col bg-[#0d0d0d] overflow-hidden select-none font-mono">
+    <ModuleShell bg="#0d0d0d" overflow="hidden" className="select-none font-mono">
 
       {/* ── Top bar ── */}
       <div className="flex flex-shrink-0 flex-wrap items-center justify-between gap-3 border-b border-[#1c1c1c] px-3 py-2 sm:px-4">
@@ -417,19 +403,15 @@ export default function S05_LongTermTrend() {
 
         {showDesktopOverlay && (
           <div className="mt-2 flex justify-end">
-            <div className="text-right font-mono text-[12px] tracking-wide text-[#7c7c7c]">
-            <div>
-              <span>src: </span>
-              <a href="https://mempool.space" target="_blank" rel="noreferrer" style={{ color: 'var(--accent-bitcoin)', textDecoration: 'none' }}>
-                mempool.space
-              </a>
-            </div>
-            <div>Refresh target: 10s</div>
-            <div>Last sync: {formatMetaTimestamp(lastUpdatedAt)}</div>
-            </div>
+            <ModuleSourceFooter
+              providers={[{ name: 'mempool.space', url: 'https://mempool.space' }]}
+              refreshLabel="10s"
+              lastSync={lastUpdatedAt}
+              style={{ fontSize: '12px', color: '#7c7c7c' }}
+            />
           </div>
         )}
       </div>
-    </div>
+    </ModuleShell>
   );
 }

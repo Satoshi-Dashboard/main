@@ -1,7 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import { fetchBtcSpot } from '@/shared/services/priceApi.js';
 import { fetchMempoolOverviewBundle } from '@/shared/services/mempoolApi.js';
 import AnimatedMetric from '@/shared/components/common/AnimatedMetric.jsx';
+import { useModuleData } from '@/shared/hooks/useModuleData.js';
+import { ModuleShell } from '@/shared/components/module/index.js';
+import { UI_COLORS } from '@/shared/constants/colors.js';
 
 /* ── Circulating supply from protocol constants (no API needed) ── */
 function calculateBitcoinSupply(blockHeight) {
@@ -35,15 +38,6 @@ const defaultStats = {
   fearGreedValue: null,
   fearGreedClass: null,
   fearGreedHistory: [],
-};
-
-const UI_COLORS = {
-  brand: 'var(--accent-bitcoin)',
-  positive: 'var(--accent-green)',
-  negative: 'var(--accent-red)',
-  warning: 'var(--accent-warning)',
-  textPrimary: 'var(--text-primary)',
-  textTertiary: 'var(--text-tertiary)',
 };
 
 function buildSparklinePaths(values, width = 220, height = 44, padding = 4) {
@@ -315,75 +309,64 @@ function DifficultyTile({ pct, etaBlocks, changeNext, changePrev }) {
 }
 
 export default function S01_BitcoinOverview() {
-  const [stats, setStats] = useState(defaultStats);
-
   const sourceLabel = (src) => {
     if (src === 'binance') return 'BINANCE';
     if (src === 'coingecko_fallback') return 'COINGECKO';
     return null;
   };
 
-  useEffect(() => {
-    let active = true;
+  const fetchSpot = useCallback(() => fetchBtcSpot(), []);
+  const fetchOverview = useCallback(
+    () => fetchMempoolOverviewBundle({ timeout: 8000, cache: 'no-store' }),
+    [],
+  );
 
-    const loadSpot = async () => {
-      try {
-        const spot = await fetchBtcSpot();
-        if (!active) return;
+  const { data: spotData } = useModuleData(fetchSpot, {
+    refreshMs: 30_000,
+    initialData: null,
+    keepPreviousOnError: true,
+  });
 
-        setStats((prev) => ({
-          ...prev,
-          price: spot?.usd || prev.price,
-          priceSource: spot?.source || prev.priceSource,
-          satsPerDollar: spot?.usd ? Math.round(1e8 / spot.usd) : prev.satsPerDollar,
-        }));
-      } catch {
-        /* keep previous values */
-      }
-    };
+  const { data: overviewData } = useModuleData(fetchOverview, {
+    refreshMs: 30_000,
+    initialData: null,
+    keepPreviousOnError: true,
+  });
 
-    const loadOverview = async () => {
-      try {
-        const mempoolBundle = await fetchMempoolOverviewBundle({ timeout: 8000, cache: 'no-store' });
-        const overview = mempoolBundle.overview || {};
-        const diff = overview.difficulty || {};
-        const hashData = overview.hashrate || {};
-        const fng = overview.fear_greed || {};
+  const stats = useMemo(() => {
+    const base = { ...defaultStats };
 
-        if (!active) return;
-        const h = Number(overview.block_height);
+    /* ── Spot price data ── */
+    if (spotData) {
+      base.price = spotData.usd || base.price;
+      base.priceSource = spotData.source || base.priceSource;
+      base.satsPerDollar = spotData.usd ? Math.round(1e8 / spotData.usd) : base.satsPerDollar;
+    }
 
-        setStats((prev) => ({
-          ...prev,
-          circulatingSupply: h ? calculateBitcoinSupply(h) : prev.circulatingSupply,
-          avgTxFee:      mempoolBundle.fees.normal ?? prev.avgTxFee,
-          blockHeight:   h || prev.blockHeight,
-          difficultyT:   hashData?.currentDifficulty ? hashData.currentDifficulty / 1e12 : prev.difficultyT,
-          nextDifficultyEtaBlocks: diff?.remainingBlocks  != null ? Number(diff.remainingBlocks)  : prev.nextDifficultyEtaBlocks,
-          difficultyProgress:     diff?.progressPercent  != null ? Number(diff.progressPercent)  : prev.difficultyProgress,
-          diffChangeNext:         diff?.difficultyChange  != null ? Number(diff.difficultyChange) : prev.diffChangeNext,
-          diffChangePrev:         diff?.previousRetarget  != null ? Number(diff.previousRetarget) : prev.diffChangePrev,
-          hashRateEh: hashData?.currentHashrate ? hashData.currentHashrate / 1e18 : prev.hashRateEh,
-          fearGreedValue:   fng?.data?.[0]?.value != null ? Number(fng.data[0].value) : prev.fearGreedValue,
-          fearGreedClass:   fng?.data?.[0]?.value_classification ?? prev.fearGreedClass,
-          fearGreedHistory: fng?.data ? fng.data.map(d => ({ v: Number(d.value) })).reverse() : prev.fearGreedHistory,
-        }));
-      } catch {
-        /* keep previous values */
-      }
-    };
+    /* ── Mempool overview bundle ── */
+    if (overviewData) {
+      const overview = overviewData.overview || {};
+      const diff = overview.difficulty || {};
+      const hashData = overview.hashrate || {};
+      const fng = overview.fear_greed || {};
+      const h = Number(overview.block_height);
 
-    loadSpot();
-    loadOverview();
-    const spotTimer = setInterval(loadSpot, 30_000);
-    const overviewTimer = setInterval(loadOverview, 30_000);
+      base.circulatingSupply = h ? calculateBitcoinSupply(h) : base.circulatingSupply;
+      base.avgTxFee = overviewData.fees.normal ?? base.avgTxFee;
+      base.blockHeight = h || base.blockHeight;
+      base.difficultyT = hashData?.currentDifficulty ? hashData.currentDifficulty / 1e12 : base.difficultyT;
+      base.nextDifficultyEtaBlocks = diff?.remainingBlocks != null ? Number(diff.remainingBlocks) : base.nextDifficultyEtaBlocks;
+      base.difficultyProgress = diff?.progressPercent != null ? Number(diff.progressPercent) : base.difficultyProgress;
+      base.diffChangeNext = diff?.difficultyChange != null ? Number(diff.difficultyChange) : base.diffChangeNext;
+      base.diffChangePrev = diff?.previousRetarget != null ? Number(diff.previousRetarget) : base.diffChangePrev;
+      base.hashRateEh = hashData?.currentHashrate ? hashData.currentHashrate / 1e18 : base.hashRateEh;
+      base.fearGreedValue = fng?.data?.[0]?.value != null ? Number(fng.data[0].value) : base.fearGreedValue;
+      base.fearGreedClass = fng?.data?.[0]?.value_classification ?? base.fearGreedClass;
+      base.fearGreedHistory = fng?.data ? fng.data.map(d => ({ v: Number(d.value) })).reverse() : base.fearGreedHistory;
+    }
 
-    return () => {
-      active = false;
-      clearInterval(spotTimer);
-      clearInterval(overviewTimer);
-    };
-  }, []);
+    return base;
+  }, [spotData, overviewData]);
 
   const tiles = useMemo(
     () => [
@@ -404,7 +387,7 @@ export default function S01_BitcoinOverview() {
   );
 
   return (
-    <div className="visual-integrity-lock h-full w-full overflow-visible bg-[#111111] lg:overflow-y-auto">
+    <ModuleShell layout="none" className="lg:overflow-y-auto">
       <div className="grid h-full min-h-full w-full grid-cols-1 divide-y divide-[#2a2a2a] sm:grid-cols-2 sm:divide-x xl:grid-cols-3">
         {tiles.map((t) => (
           <Tile key={t.label} {...t} />
@@ -421,6 +404,6 @@ export default function S01_BitcoinOverview() {
           changePrev={stats.diffChangePrev}
         />
       </div>
-    </div>
+    </ModuleShell>
   );
 }

@@ -16,6 +16,8 @@ import {
   normalizeCountryName,
 } from '@/shared/lib/geoCountryUtils.js';
 import { fmt } from '@/shared/utils/formatters.js';
+import { UI_COLORS as SHARED_UI_COLORS } from '@/shared/constants/colors.js';
+import { ModuleShell } from '@/shared/components/module/index.js';
 
 const LIGHTNING_WORLD_ENDPOINT        = '/api/public/lightning/world';
 const LIGHTNING_CHANNELS_GEO_ENDPOINT = '/api/public/lightning/channels-geo';
@@ -29,9 +31,9 @@ const DEFER_ALL_LINES_MS = 900;
 const UNKNOWN_COUNTRY_LABEL = 'Unknown region';
 
 const UI_COLORS = {
+  ...SHARED_UI_COLORS,
   lightning:     '#3BA3FF',
   lightningSoft: '#6CC0FF',
-  warning:       'var(--accent-warning)',
 };
 
 // Shared color ramp — 5 levels, darkest → lightest blue
@@ -567,13 +569,6 @@ function formatNextUpdateDelay(nextUpdateMs) {
   return `${Math.ceil(minutes / 60)} h`;
 }
 
-// Bubble radius — log scale so small countries stay visible
-function getBubbleRadius(value, maxValue) {
-  if (!value || !maxValue) return 0;
-  const normalized = Math.log1p(value) / Math.log1p(maxValue);
-  return Math.max(4, Math.round(normalized * 32));
-}
-
 function haversineKm(lat1, lng1, lat2, lng2) {
   const R = 6371, toRad = Math.PI / 180;
   const dLat = (lat2 - lat1) * toRad, dLng = (lng2 - lng1) * toRad;
@@ -616,7 +611,7 @@ export default function S07_LightningNodesMap() {
   const [payload,              setPayload]              = useState(null);
   const [fallbackPayload,     setFallbackPayload]      = useState(null);
   const [apiLoading,           setApiLoading]           = useState(true);
-  const [fallbackLoaded,       setFallbackLoaded]      = useState(false);
+  const [,                     setFallbackLoaded]      = useState(false);
   const [error,                setError]                = useState(null);
   const [isBreakdownExpanded,  setIsBreakdownExpanded]  = useState(false);
   const [isMetaExpanded,       setIsMetaExpanded]       = useState(false);
@@ -631,7 +626,6 @@ export default function S07_LightningNodesMap() {
   const [canRenderAllConnectionLines, setCanRenderAllConnectionLines] = useState(false);
   const [visibleNetworkNodeCount, setVisibleNetworkNodeCount] = useState(INITIAL_NETWORK_ROWS);
   const [selectedPubkey,       setSelectedPubkey]       = useState(null);         // click-isolated node pubkey
-  const [expandedCountries,    setExpandedCountries]    = useState(new Set());    // expanded country groups in network sidebar
   const [networkSortCol,       setNetworkSortCol]       = useState('capacity');   // 'capacity'|'channels'|'alias'|'dist'
   const [networkSortDir,       setNetworkSortDir]       = useState('desc');       // 'desc'|'asc'
   const [nowTs,                setNowTs]                = useState(() => Date.now());
@@ -718,7 +712,7 @@ export default function S07_LightningNodesMap() {
         } catch {
           // Background save - ignore errors
         }
-      } catch (e) {
+      } catch {
         if (!active) return;
         setError('Could not load the Lightning nodes API.');
       } finally {
@@ -943,36 +937,9 @@ export default function S07_LightningNodesMap() {
       ? (maxAbsoluteByMetric[metricType] || 0)
       : (maxPerCapitaByMetric[metricType] || 0);
 
-  // Grouped network nodes by country (for sidebar in network mode)
-  const groupedNetworkNodes = useMemo(() => {
-    if (layerMode !== 'bubble') return null;
-    const sortKey = metricType === 'capacity' ? 'capacity' : 'channels';
-    const groups = new Map();
-    networkData.points.forEach((pt) => {
-      const cc = pt.countryCode || '?';
-      if (!groups.has(cc)) groups.set(cc, []);
-      groups.get(cc).push(pt);
-    });
-    const groupArr = [...groups.entries()].map(([cc, nodes]) => ({
-      countryCode: cc,
-      nodes: [...nodes].sort((a, b) => b[sortKey] - a[sortKey]),
-      totalChannels: nodes.reduce((s, n) => s + n.channels, 0),
-      totalCapacity: nodes.reduce((s, n) => s + n.capacity, 0),
-    }));
-    if (metricType === 'capacity') {
-      groupArr.sort((a, b) => b.totalCapacity - a.totalCapacity);
-    } else {
-      groupArr.sort((a, b) => b.totalChannels - a.totalChannels);
-    }
-    return groupArr;
-  }, [layerMode, networkData.points, metricType]);
 
-  const toggleCountry = (cc) =>
-    setExpandedCountries((prev) => {
-      const next = new Set(prev);
-      next.has(cc) ? next.delete(cc) : next.add(cc);
-      return next;
-    });
+
+
 
   // Flat sorted node list for network mode
   const sortedNetworkNodes = useMemo(() => {
@@ -1116,7 +1083,7 @@ export default function S07_LightningNodesMap() {
     :                             'Capacity Concentration';
 
   return (
-    <div className="visual-integrity-lock flex h-full w-full flex-col bg-[#111111] lg:flex-row">
+    <ModuleShell className="lg:flex-row">
 
       {/* ══ MAP SURFACE ══════════════════════════════════════════════════════ */}
       <div className="visual-map-surface relative h-[50dvh] min-h-[280px] min-w-0 flex-none sm:min-h-[320px] lg:h-auto lg:min-h-0 lg:flex-1">
@@ -1671,6 +1638,6 @@ export default function S07_LightningNodesMap() {
           </div>
         )}
       </aside>
-    </div>
+    </ModuleShell>
   );
 }

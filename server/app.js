@@ -54,6 +54,7 @@ import {
   getMempoolOfficialUsagePayload,
   getMempoolOverviewPayload,
   getS15BtcVsGoldMarketCapPayload,
+  getS18BtcCyclesPayload,
   getS21BigMacSatsPayload,
   getUsNationalDebtPayload,
   PublicFeedError,
@@ -388,6 +389,23 @@ export function createApp() {
 
   app.get('/api/s10/stablecoin/:id', asyncRoute(sendS10StablecoinDetail));
 
+  app.get('/api/s10/stablecoins/refresh', refreshApiRateLimiter, requireRefreshToken, asyncRoute(async (_req, res) => {
+    setNoStoreHeaders(res);
+    try {
+      const [list, live] = await Promise.all([
+        getS10StablecoinList(),
+        getS10StablecoinLivePrices(),
+      ]);
+      res.json({
+        status: 'refreshed',
+        coins: list?.data?.length ?? 0,
+        livePrices: live?.data?.length ?? 0,
+      });
+    } catch (error) {
+      sendS10Error(res, error);
+    }
+  }));
+
   const sendS14GlobalAssets = async (_req, res) => {
     setDataCacheHeaders(res, { sMaxAge: 3600, swr: 7200 });
     try {
@@ -535,6 +553,16 @@ export function createApp() {
     setDataCacheHeaders(res, { sMaxAge: 120, swr: 600 });
     try {
       const payload = await getS15BtcVsGoldMarketCapPayload();
+      res.json(payload);
+    } catch (error) {
+      sendPublicFeedError(res, error);
+    }
+  }));
+
+  app.get('/api/s18/btc-cycles', asyncRoute(async (_req, res) => {
+    setDataCacheHeaders(res, { sMaxAge: 3600, swr: 7200 }); // cache for 1 hr
+    try {
+      const payload = await getS18BtcCyclesPayload();
       res.json(payload);
     } catch (error) {
       sendPublicFeedError(res, error);

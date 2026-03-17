@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   Area,
   ComposedChart,
@@ -12,6 +12,8 @@ import {
 } from 'recharts';
 import AnimatedMetric from '@/shared/components/common/AnimatedMetric.jsx';
 import { fetchBtcHistory, fetchBtcSpot } from '@/shared/services/priceApi.js';
+import { useModuleData } from '@/shared/hooks/useModuleData.js';
+import { ModuleShell } from '@/shared/components/module/index.js';
 import {
   buildCurrentMayerSnapshot,
   buildRangeChange,
@@ -161,66 +163,36 @@ function WarningPanel({ title, description }) {
 }
 
 export default function S16_MayerMultiple() {
-  const [historyData, setHistoryData] = useState([]);
   const [activeLabel, setActiveLabel] = useState('1Y');
-  const [liveSpot, setLiveSpot] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState('');
   const [hoverData, setHoverData] = useState(null);
   const [showZones, setShowZones] = useState(false);
 
-  useEffect(() => {
-    let active = true;
+  const fetchHistory = useCallback(
+    () => fetchBtcHistory(BASE_HISTORY_DAYS, BASE_HISTORY_INTERVAL),
+    [],
+  );
 
-    (async () => {
-      try {
-        const history = await fetchBtcHistory(BASE_HISTORY_DAYS, BASE_HISTORY_INTERVAL);
-        if (!active) return;
+  const { data: historyData, loading, error: historyError } = useModuleData(fetchHistory, {
+    initialData: [],
+    keepPreviousOnError: false,
+    transform: (raw) => (raw?.length ? raw : []),
+  });
 
-        if (history?.length) {
-          setHistoryData(history);
-          setLoadError('');
-        } else {
-          setHistoryData([]);
-          setLoadError('Could not load daily Bitcoin history from the shared price feed.');
-        }
-      } catch {
-        if (active) {
-          setHistoryData([]);
-          setLoadError('Could not load daily Bitcoin history from the shared price feed.');
-        }
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
+  const loadError = historyError
+    ? 'Could not load daily Bitcoin history from the shared price feed.'
+    : (!loading && historyData.length === 0 ? 'Could not load daily Bitcoin history from the shared price feed.' : '');
 
-    return () => {
-      active = false;
-    };
+  const fetchSpot = useCallback(async () => {
+    const spot = await fetchBtcSpot();
+    if (Number.isFinite(spot?.usd) && spot.usd > 0) return spot.usd;
+    throw new Error('Invalid spot');
   }, []);
 
-  useEffect(() => {
-    let active = true;
-
-    const loadSpot = async () => {
-      try {
-        const spot = await fetchBtcSpot();
-        if (active && Number.isFinite(spot?.usd) && spot.usd > 0) {
-          setLiveSpot(spot.usd);
-        }
-      } catch {
-        // Keep the last good spot value.
-      }
-    };
-
-    loadSpot();
-    const timer = setInterval(loadSpot, SPOT_POLL_MS);
-
-    return () => {
-      active = false;
-      clearInterval(timer);
-    };
-  }, []);
+  const { data: liveSpot } = useModuleData(fetchSpot, {
+    refreshMs: SPOT_POLL_MS,
+    initialData: null,
+    keepPreviousOnError: true,
+  });
 
   const mayerSeries = useMemo(() => calcularMayerMultiple(historyData), [historyData]);
   const activeRange = RANGES.find((range) => range.label === activeLabel) ?? RANGES[1];
@@ -270,7 +242,7 @@ export default function S16_MayerMultiple() {
   const mayerYMax = mayerHigh !== null ? Math.max(2.8, mayerHigh + 0.18) : 2.8;
 
   return (
-    <div className="flex h-full w-full flex-col bg-[#111111] px-3.5 pb-3.5 pt-4 sm:px-5 sm:pb-4 sm:pt-5 lg:px-[22px] lg:pb-4 lg:pt-5">
+    <ModuleShell className="px-3.5 pb-3.5 pt-4 sm:px-5 sm:pb-4 sm:pt-5 lg:px-[22px] lg:pb-4 lg:pt-5">
       <div className="flex flex-shrink-0 flex-col items-start justify-between gap-3 sm:flex-row sm:gap-4">
         <div className="min-w-0">
           {loading ? (
@@ -451,7 +423,7 @@ export default function S16_MayerMultiple() {
         <StatusCard label="Neutral" range="1.00 - 2.40" active={currentState.key === 'neutral'} color="var(--accent-warning)" />
         <StatusCard label="Undervalued" range="< 1.00" active={currentState.key === 'undervalued'} color="var(--accent-green)" />
       </div>
-    </div>
+    </ModuleShell>
   );
 }
 

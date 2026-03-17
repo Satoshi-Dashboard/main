@@ -1,13 +1,14 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AreaSeries,
-  createChart,
-  CrosshairMode,
   LineSeries,
   LineStyle,
 } from 'lightweight-charts';
 import { fetchBtcSpot, fetchBtcHistory } from '@/shared/services/priceApi.js';
 import AnimatedMetric from '@/shared/components/common/AnimatedMetric.jsx';
+import { useModuleData } from '@/shared/hooks/useModuleData.js';
+import { ModuleShell } from '@/shared/components/module/index.js';
+import { createDarkChart, CHART_FONT, PANEL_BG } from '@/shared/lib/lightweightChartConfig.js';
 
 const RANGES = [
   { label: 'LIVE', days: 1, interval: '15m', live: true },
@@ -29,11 +30,9 @@ const RANGE_TEXT = {
   '5Y': 'Past 5 Years',
 };
 
-const CHART_FONT = 'JetBrains Mono, SFMono-Regular, Cascadia Code, Fira Code, Consolas, Liberation Mono, monospace';
 const BITCOIN_ORANGE = '#F7931A';
 const ACCENT_GREEN = '#00D897';
 const ACCENT_RED = '#FF4757';
-const PANEL_BG = '#111111';
 
 const dataCache = {};
 
@@ -71,35 +70,11 @@ const ChartSection = memo(function ChartSection({
     const container = containerRef.current;
     if (!container) return undefined;
 
-    const chart = createChart(container, {
-      autoSize: true,
-      layout: {
-        background: { color: PANEL_BG },
-        textColor: 'rgba(255,255,255,0.45)',
-        fontFamily: CHART_FONT,
-        attributionLogo: false,
-      },
-      localization: {
-        locale: 'en-US',
-      },
-      grid: {
-        vertLines: { color: 'transparent' },
-        horzLines: { color: 'transparent' },
-      },
+    const chart = createDarkChart(container, {
+      localization: { locale: 'en-US' },
       crosshair: {
-        mode: CrosshairMode.Normal,
-        vertLine: {
-          color: 'rgba(255,255,255,0.24)',
-          width: 1,
-          style: LineStyle.Solid,
-          labelVisible: false,
-        },
-        horzLine: {
-          color: 'rgba(255,255,255,0.12)',
-          width: 1,
-          style: LineStyle.Dashed,
-          labelVisible: false,
-        },
+        vertLine: { color: 'rgba(255,255,255,0.24)' },
+        horzLine: { color: 'rgba(255,255,255,0.12)' },
       },
       rightPriceScale: {
         visible: false,
@@ -119,8 +94,6 @@ const ChartSection = memo(function ChartSection({
         barSpacing: 7,
         minBarSpacing: 1.8,
       },
-      handleScroll: false,
-      handleScale: false,
     });
 
     const areaSeries = chart.addSeries(AreaSeries, {
@@ -210,7 +183,6 @@ const ChartSection = memo(function ChartSection({
 
       const rect = container.getBoundingClientRect();
       const x = touch.clientX - rect.left;
-      const y = touch.clientY - rect.top;
 
       // lightweight-charts exposes setCrosshairPosition(price, time, series)
       // but the simplest approach is to move via logical pixel coordinate.
@@ -314,23 +286,13 @@ export default function S02_PriceChart() {
     setLivePrice(newPrice);
   }, []);
 
-  useEffect(() => {
-    let mounted = true;
-    fetchBtcSpot().then((spot) => {
-      if (spot && mounted) applyPrice(spot.usd);
-    }).catch(() => {});
-
-    const intervalId = setInterval(() => {
-      fetchBtcSpot().then((spot) => {
-        if (spot && mounted) applyPrice(spot.usd);
-      }).catch(() => {});
-    }, 10_000);
-
-    return () => {
-      mounted = false;
-      clearInterval(intervalId);
-    };
-  }, [applyPrice]);
+  useModuleData(fetchBtcSpot, {
+    refreshMs: 10_000,
+    transform: (spot) => {
+      if (spot) applyPrice(spot.usd);
+      return spot;
+    },
+  });
 
   useEffect(() => {
     let active = true;
@@ -405,7 +367,7 @@ export default function S02_PriceChart() {
      * tablet → px-5    pt-4   pb-4
      * desktop→ px-[22px] pt-5 pb-4
      */
-    <div className="visual-integrity-lock flex h-full w-full flex-col bg-[#111111] px-3.5 pb-3 pt-3 sm:px-5 sm:pb-4 sm:pt-4 lg:px-[22px] lg:pb-4 lg:pt-5">
+    <ModuleShell className="px-3.5 pb-3 pt-3 sm:px-5 sm:pb-4 sm:pt-4 lg:px-[22px] lg:pb-4 lg:pt-5">
 
       {/* ── HEADER ROW ──────────────────────────────────────────────────────
           Phone:  price on top, AVG button right-aligned on same row
@@ -616,6 +578,6 @@ export default function S02_PriceChart() {
           ))
         )}
       </div>
-    </div>
+    </ModuleShell>
   );
 }

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { fetchJson } from '@/shared/lib/api.js';
+import { useModuleData } from '@/shared/hooks/useModuleData.js';
 import AnimatedMetric from '@/shared/components/common/AnimatedMetric.jsx';
 
 /* ─── Whitelist: 6 most recognized USD stablecoins ─────────── */
@@ -558,7 +559,6 @@ const LIVE_PEG_REFRESH_MS = 120_000;
 
 export default function S10_StablecoinPegHealth() {
   const [coins,   setCoins]   = useState([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastUpdatedAt, setLastUpdatedAt] = useState(null);
   const [nextUpdateAt, setNextUpdateAt] = useState(null);
@@ -568,9 +568,12 @@ export default function S10_StablecoinPegHealth() {
   const sparkCache = useRef({});
 
   /* ── Fetch + filter to whitelist ── */
-  const load = useCallback(async () => {
-    try {
-      const payload = await fetchJson('/api/s10/stablecoins');
+  const fetchStablecoins = useCallback(() => fetchJson('/api/s10/stablecoins'), []);
+
+  const { loading } = useModuleData(fetchStablecoins, {
+    refreshMs: LIST_REFRESH_MS,
+    keepPreviousOnError: true,
+    transform: (payload) => {
       const d = payload?.data && Array.isArray(payload.data.peggedAssets)
         ? payload.data
         : payload;
@@ -594,36 +597,24 @@ export default function S10_StablecoinPegHealth() {
       setNextUpdateAt(payload?.next_update_at || null);
       setListSource(payload?.source_provider || 'coingecko');
       setError(filtered.length ? null : 'Stablecoin data is temporarily unavailable.');
-    } catch {
-      setError('Could not load stablecoin data endpoint.');
-    }
-    finally { setLoading(false); }
-  }, []);
+      return payload;
+    },
+  });
 
-  useEffect(() => {
-    load();
-    const t = setInterval(load, LIST_REFRESH_MS);
-    return () => clearInterval(t);
-  }, [load]);
+  const fetchLivePrices = useCallback(() => fetchJson('/api/s10/stablecoins/live-prices'), []);
 
-  const loadLivePegPrices = useCallback(async () => {
-    try {
-      const payload = await fetchJson('/api/s10/stablecoins/live-prices');
+  useModuleData(fetchLivePrices, {
+    refreshMs: LIVE_PEG_REFRESH_MS,
+    keepPreviousOnError: true,
+    transform: (payload) => {
       const prices = payload?.prices_by_symbol && typeof payload.prices_by_symbol === 'object'
         ? payload.prices_by_symbol
         : {};
       setLivePricesBySymbol(prices);
       setLiveUpdatedAt(payload?.updated_at || new Date().toISOString());
-    } catch {
-      /* keep previous live prices */
-    }
-  }, []);
-
-  useEffect(() => {
-    loadLivePegPrices();
-    const t = setInterval(loadLivePegPrices, LIVE_PEG_REFRESH_MS);
-    return () => clearInterval(t);
-  }, [loadLivePegPrices]);
+      return payload;
+    },
+  });
 
   const coinsWithLivePeg = useMemo(
     () => {

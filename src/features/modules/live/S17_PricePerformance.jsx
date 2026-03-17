@@ -1,19 +1,17 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  createChart,
-  CrosshairMode,
   LineSeries,
-  LineStyle,
   PriceScaleMode,
 } from 'lightweight-charts';
 import { fetchBtcSpot } from '@/shared/services/priceApi.js';
 import { fetchJson } from '@/shared/lib/api.js';
 import AnimatedMetric from '@/shared/components/common/AnimatedMetric.jsx';
+import { useModuleData } from '@/shared/hooks/useModuleData.js';
+import { createDarkChart, CHART_FONT, PANEL_BG } from '@/shared/lib/lightweightChartConfig.js';
+import { ModuleShell } from '@/shared/components/module/index.js';
 
-const PANEL_BG    = '#111111';
 const USD_COLOR   = '#F7931A';
 const BTC_COLOR   = '#FFD700';
-const CHART_FONT  = 'JetBrains Mono, SFMono-Regular, Cascadia Code, Fira Code, Consolas, Liberation Mono, monospace';
 
 function usdFmt(n) {
   if (!Number.isFinite(n)) return '—';
@@ -49,28 +47,11 @@ const ChartSection = memo(function ChartSection({ points, onHoverChange }) {
     const container = containerRef.current;
     if (!container) return;
 
-    const chart = createChart(container, {
-      autoSize: true,
-      layout: {
-        background: { color: PANEL_BG },
-        textColor: 'rgba(255,255,255,0.38)',
-        fontFamily: CHART_FONT,
-        attributionLogo: false,
-      },
-      grid: {
-        vertLines: { visible: false },
-        horzLines: { visible: false },
-      },
-      crosshair: {
-        mode: CrosshairMode.Normal,
-        vertLine: { color: 'rgba(255,255,255,0.22)', width: 1, style: LineStyle.Solid, labelVisible: false },
-        horzLine: { color: 'rgba(255,255,255,0.1)', width: 1, style: LineStyle.Dashed, labelVisible: false },
-      },
+    const chart = createDarkChart(container, {
+      layout: { textColor: 'rgba(255,255,255,0.38)' },
       leftPriceScale: { visible: true, borderVisible: false, scaleMargins: { top: 0.1, bottom: 0.1 }, textColor: `${USD_COLOR}99` },
       rightPriceScale: { visible: true, borderVisible: false, scaleMargins: { top: 0.1, bottom: 0.1 }, textColor: `${BTC_COLOR}99`, mode: PriceScaleMode.Logarithmic },
       timeScale: { visible: true, borderVisible: false, timeVisible: false, rightOffset: 2, fixLeftEdge: true, fixRightEdge: true },
-      handleScroll: false,
-      handleScale: false,
     });
 
     const usdSeries = chart.addSeries(LineSeries, {
@@ -200,23 +181,13 @@ function SkeletonChart() {
 }
 
 export default function S17_PricePerformance() {
-  const [btcSpot, setBtcSpot] = useState(null);
-  const [btcError, setBtcError] = useState(false);
-  const [payload, setPayload] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const fetchSpot = useCallback(() => fetchBtcSpot().then(s => s?.usd ?? null), []);
+  const fetchHouse = useCallback(() => fetchJson('/api/s17/house-price'), []);
+
+  const { data: btcSpot, error: btcSpotError } = useModuleData(fetchSpot);
+  const { data: payload, loading } = useModuleData(fetchHouse);
+  const btcError = btcSpotError !== null;
   const [hoverData, setHoverData] = useState(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetchBtcSpot().then(s => { if (!cancelled) setBtcSpot(s?.usd ?? null); }).catch(() => { if (!cancelled) setBtcError(true); });
-    return () => { cancelled = true; };
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetchJson('/api/s17/house-price').then(p => { if (!cancelled) { setPayload(p); setLoading(false); }}).catch(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
-  }, []);
 
   const points = useMemo(() => payload?.data?.points ?? [], [payload]);
   const latestPoint = points.at(-1) ?? null;
@@ -236,7 +207,7 @@ export default function S17_PricePerformance() {
   const isResponsive = typeof window !== 'undefined' && window.innerWidth < 1024;
 
   return (
-    <div className="flex h-full w-full flex-col bg-[#111111]" style={{ padding: 'clamp(0.6rem,1.8vw,1rem) clamp(0.75rem,2vw,1.25rem) clamp(0.4rem,1vw,0.6rem)' }}>
+    <ModuleShell style={{ padding: 'clamp(0.6rem,1.8vw,1rem) clamp(0.75rem,2vw,1.25rem) clamp(0.4rem,1vw,0.6rem)' }}>
       <style>{`
         @keyframes s17-pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
         @media (prefers-reduced-motion:reduce){ *{animation-duration:.01ms!important;transition-duration:.01ms!important;} }
@@ -292,6 +263,6 @@ export default function S17_PricePerformance() {
           <LegendPill color={BTC_COLOR} label="Real Estate / BTC (Right)" />
         </div>
       </div>
-    </div>
+    </ModuleShell>
   );
 }

@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { fetchJson } from '@/shared/lib/api.js';
 import { useWindowWidth } from '@/shared/hooks/useWindowWidth.js';
+import { useModuleData } from '@/shared/hooks/useModuleData.js';
+import { ModuleShell } from '@/shared/components/module/index.js';
 
 const EMPTY_DATA = {
   value: null,
@@ -124,37 +126,29 @@ export default function S11_FearGreedIndex() {
   const [data, setData] = useState(EMPTY_DATA);
   const viewportWidth = useWindowWidth();
 
-  useEffect(() => {
-    let active = true;
+  const fetchFearGreed = () => fetchJson('/api/public/fear-greed?limit=31', { timeout: 8000 });
 
-    const load = async () => {
-      try {
-        const payload = await fetchJson('/api/public/fear-greed?limit=31', { timeout: 8000 });
-        const json = payload?.data || payload;
-        if (!active || !Array.isArray(json?.data)) return;
-        const e = json.data;
-        const value = Number(e[0]?.value);
-        const yesterday = Number(e[1]?.value);
-        const sevenDaysAgo = Number(e[7]?.value);
-        const thirtyDaysAgo = Number(e[30]?.value);
+  useModuleData(fetchFearGreed, {
+    refreshMs: 0,
+    transform: (payload) => {
+      const json = payload?.data || payload;
+      if (!Array.isArray(json?.data)) return null;
+      const e = json.data;
+      const value = Number(e[0]?.value);
+      const yesterday = Number(e[1]?.value);
+      const sevenDaysAgo = Number(e[7]?.value);
+      const thirtyDaysAgo = Number(e[30]?.value);
 
-        setData((prev) => ({
-          value: Number.isFinite(value) ? value : prev.value,
-          yesterday: Number.isFinite(yesterday) ? yesterday : prev.yesterday,
-          sevenDaysAgo: Number.isFinite(sevenDaysAgo) ? sevenDaysAgo : prev.sevenDaysAgo,
-          thirtyDaysAgo: Number.isFinite(thirtyDaysAgo) ? thirtyDaysAgo : prev.thirtyDaysAgo,
-          classification: e[0]?.value_classification || prev.classification,
-        }));
-      } catch { /* keep fallback */ }
-
-    };
-
-    load();
-
-    return () => {
-      active = false;
-    };
-  }, []);
+      setData((prev) => ({
+        value: Number.isFinite(value) ? value : prev.value,
+        yesterday: Number.isFinite(yesterday) ? yesterday : prev.yesterday,
+        sevenDaysAgo: Number.isFinite(sevenDaysAgo) ? sevenDaysAgo : prev.sevenDaysAgo,
+        thirtyDaysAgo: Number.isFinite(thirtyDaysAgo) ? thirtyDaysAgo : prev.thirtyDaysAgo,
+        classification: e[0]?.value_classification || prev.classification,
+      }));
+      return payload;
+    },
+  });
 
   const { value, yesterday, sevenDaysAgo, thirtyDaysAgo, classification } = data;
   const hasMain = Number.isFinite(value);
@@ -188,7 +182,7 @@ export default function S11_FearGreedIndex() {
   const labelVals = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
 
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-[#111111] px-2 py-3 sm:px-3 sm:py-4">
+    <ModuleShell className="items-center justify-center gap-3 px-2 py-3 sm:px-3 sm:py-4">
       {/* Title row */}
       <div className="flex flex-shrink-0 flex-wrap items-center justify-center gap-2 sm:gap-3">
         <span className="font-mono text-white/70" style={{ fontSize: 'var(--fs-section)' }}>
@@ -269,6 +263,6 @@ export default function S11_FearGreedIndex() {
         <Bubble label="30 Days Ago" value={thirtyDaysAgo} />
       </div>
 
-    </div>
+    </ModuleShell>
   );
 }

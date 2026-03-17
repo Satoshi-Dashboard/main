@@ -1,5 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import AnimatedMetric from '@/shared/components/common/AnimatedMetric.jsx';
+import { ModuleShell, ModuleTitle, ModuleSourceFooter } from '@/shared/components/module/index.js';
+import { UI_COLORS as SHARED_UI_COLORS } from '@/shared/constants/colors.js';
+import { useModuleData } from '@/shared/hooks/useModuleData.js';
 import {
   fetchMempoolNodeSnapshot,
   fetchMempoolOfficialUsageSnapshot,
@@ -7,9 +10,7 @@ import {
 } from '@/shared/services/mempoolApi.js';
 
 const UI_COLORS = {
-  brand: 'var(--accent-bitcoin)',
-  positive: 'var(--accent-green)',
-  negative: 'var(--accent-red)',
+  ...SHARED_UI_COLORS,
   muted: 'rgba(255,255,255,0.38)',
 };
 
@@ -188,7 +189,7 @@ function MempoolPanel({
   unavailableLabel,
   stats,
   footerTiles,
-  footerSource,
+  footerSourceComponent,
   hideSourceOnDesktop = false,
 }) {
   const hasGaugeData = usageBytes != null && maxBytes != null && maxBytes > 0;
@@ -227,9 +228,7 @@ function MempoolPanel({
       </div>
 
       <div className={`flex-shrink-0 pb-1${hideSourceOnDesktop ? ' sm:invisible' : ''}`}>
-        <span className="font-mono text-white/20" style={{ fontSize: 'var(--fs-micro)' }}>
-          {footerSource}
-        </span>
+        {footerSourceComponent}
       </div>
     </div>
   );
@@ -260,86 +259,60 @@ export default function S04_MempoolGauge() {
     feeHalfHour: null,
     feeFastest: null,
   });
-  const [loadingOfficial, setLoadingOfficial] = useState(true);
-  const [loadingNode, setLoadingNode] = useState(true);
   const [activeSource, setActiveSource] = useState('official');
 
-  useEffect(() => {
-    let active = true;
+  const fetchOfficial = useCallback(
+    () => Promise.all([
+      fetchMempoolOverviewBundle({ timeout: 8000, cache: 'no-store' }),
+      fetchMempoolOfficialUsageSnapshot({ timeout: 8000, cache: 'no-store' }),
+    ]),
+    [],
+  );
 
-    const loadOfficial = async () => {
-      try {
-        const [bundle, usage] = await Promise.all([
-          fetchMempoolOverviewBundle({ timeout: 8000, cache: 'no-store' }),
-          fetchMempoolOfficialUsageSnapshot({ timeout: 8000, cache: 'no-store' }),
-        ]);
+  const { loading: loadingOfficial } = useModuleData(fetchOfficial, {
+    refreshMs: 30_000,
+    keepPreviousOnError: true,
+    transform: ([bundle, usage]) => {
+      setOfficialOverview((prev) => ({
+        count: bundle.mempool.count ?? prev.count,
+        vsizeVmb: bundle.mempool.vsize != null ? toVmb(bundle.mempool.vsize) : prev.vsizeVmb,
+        feeLow: bundle.fees.economy ?? prev.feeLow,
+        feeMid: bundle.fees.normal ?? prev.feeMid,
+        feeHigh: bundle.fees.priority ?? prev.feeHigh,
+      }));
+      setOfficialUsage((prev) => ({
+        usageBytes: usage.usageBytes ?? prev.usageBytes,
+        maxBytes: usage.maxBytes ?? prev.maxBytes,
+        label: usage.label ?? prev.label,
+      }));
+      return [bundle, usage];
+    },
+  });
 
-        if (!active) return;
+  const fetchNode = useCallback(
+    () => fetchMempoolNodeSnapshot({ timeout: 8000, cache: 'no-store' }),
+    [],
+  );
 
-        setOfficialOverview((prev) => ({
-          count: bundle.mempool.count ?? prev.count,
-          vsizeVmb: bundle.mempool.vsize != null ? toVmb(bundle.mempool.vsize) : prev.vsizeVmb,
-          feeLow: bundle.fees.economy ?? prev.feeLow,
-          feeMid: bundle.fees.normal ?? prev.feeMid,
-          feeHigh: bundle.fees.priority ?? prev.feeHigh,
-        }));
-
-        setOfficialUsage((prev) => ({
-          usageBytes: usage.usageBytes ?? prev.usageBytes,
-          maxBytes: usage.maxBytes ?? prev.maxBytes,
-          label: usage.label ?? prev.label,
-        }));
-      } catch {
-        // Preserve the last good official view during transient upstream errors.
-      } finally {
-        if (active) setLoadingOfficial(false);
-      }
-    };
-
-    loadOfficial();
-    const timer = setInterval(loadOfficial, 30_000);
-
-    return () => {
-      active = false;
-      clearInterval(timer);
-    };
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-
-    const loadNode = async () => {
-      try {
-        const snapshot = await fetchMempoolNodeSnapshot({ timeout: 8000, cache: 'no-store' });
-        if (!active) return;
-
-        setNodeView((prev) => ({
-          usageBytes: snapshot.usageBytes ?? prev.usageBytes,
-          maxBytes: snapshot.maxBytes ?? prev.maxBytes,
-          count: snapshot.count ?? prev.count,
-          vsizeVmb: snapshot.vsizeBytes != null ? toVmb(snapshot.vsizeBytes) : prev.vsizeVmb,
-          mempoolMinFeeSatVb: snapshot.mempoolMinFeeBtcKb != null ? btcKbToSatVb(snapshot.mempoolMinFeeBtcKb) : prev.mempoolMinFeeSatVb,
-          relayMinFeeSatVb: snapshot.relayMinFeeBtcKb != null ? btcKbToSatVb(snapshot.relayMinFeeBtcKb) : prev.relayMinFeeSatVb,
-          unbroadcastCount: snapshot.unbroadcastCount ?? prev.unbroadcastCount,
-          feeEconomy: snapshot.feeEconomy ?? prev.feeEconomy,
-          feeHalfHour: snapshot.feeHalfHour ?? prev.feeHalfHour,
-          feeFastest: snapshot.feeFastest ?? prev.feeFastest,
-        }));
-      } catch {
-        // Preserve the last good node snapshot during transient upstream errors.
-      } finally {
-        if (active) setLoadingNode(false);
-      }
-    };
-
-    loadNode();
-    const timer = setInterval(loadNode, 5_000);
-
-    return () => {
-      active = false;
-      clearInterval(timer);
-    };
-  }, []);
+  const { loading: loadingNode } = useModuleData(fetchNode, {
+    refreshMs: 5_000,
+    keepPreviousOnError: true,
+    transform: (snapshot) => {
+      setNodeView((prev) => ({
+        usageBytes: snapshot.usageBytes ?? prev.usageBytes,
+        maxBytes: snapshot.maxBytes ?? prev.maxBytes,
+        count: snapshot.count ?? prev.count,
+        vsizeVmb: snapshot.vsizeBytes != null ? toVmb(snapshot.vsizeBytes) : prev.vsizeVmb,
+        mempoolMinFeeSatVb: snapshot.mempoolMinFeeBtcKb != null ? btcKbToSatVb(snapshot.mempoolMinFeeBtcKb) : prev.mempoolMinFeeSatVb,
+        relayMinFeeSatVb: snapshot.relayMinFeeBtcKb != null ? btcKbToSatVb(snapshot.relayMinFeeBtcKb) : prev.relayMinFeeSatVb,
+        unbroadcastCount: snapshot.unbroadcastCount ?? prev.unbroadcastCount,
+        feeEconomy: snapshot.feeEconomy ?? prev.feeEconomy,
+        feeHalfHour: snapshot.feeHalfHour ?? prev.feeHalfHour,
+        feeFastest: snapshot.feeFastest ?? prev.feeFastest,
+      }));
+      return snapshot;
+    },
+  });
 
   const officialMemory = useMemo(() => formatMemory(officialUsage.usageBytes), [officialUsage.usageBytes]);
   const nodeMemory = useMemo(() => formatMemory(nodeView.usageBytes), [nodeView.usageBytes]);
@@ -379,11 +352,11 @@ export default function S04_MempoolGauge() {
   const isNode = activeSource === 'node';
 
   return (
-    <div className="visual-integrity-lock flex h-full w-full flex-col items-center justify-start gap-3 bg-[#111111] px-3 py-3 sm:gap-4 sm:px-4 sm:py-4">
+    <ModuleShell className="items-center justify-start gap-3 px-3 py-3 sm:gap-4 sm:px-4 sm:py-4">
       <div className="text-center">
-        <div className="font-mono font-bold uppercase tracking-[0.2em]" style={{ fontSize: 'var(--fs-heading)', color: UI_COLORS.brand }}>
+        <ModuleTitle size="var(--fs-heading)" style={{ letterSpacing: '0.2em' }}>
           MEMPOOL STATUS
-        </div>
+        </ModuleTitle>
       </div>
 
       <div className="flex w-full max-w-[560px] flex-wrap items-stretch justify-center gap-2">
@@ -410,7 +383,15 @@ export default function S04_MempoolGauge() {
           unavailableLabel="NODE SOURCE UNAVAILABLE"
           stats={nodeStats}
           footerTiles={nodeFooterTiles}
-          footerSource="src: Bitcoin Knots node · internal API · ~5s"
+          footerSourceComponent={
+            <ModuleSourceFooter
+              providers={[{ name: 'Bitcoin Knots node' }]}
+              refreshLabel="~5s"
+              align="center"
+              className="text-white/20"
+              style={{ color: 'rgba(255,255,255,0.2)' }}
+            />
+          }
           hideSourceOnDesktop
         />
       ) : (
@@ -422,9 +403,17 @@ export default function S04_MempoolGauge() {
           unavailableLabel="OFFICIAL USAGE UNAVAILABLE"
           stats={officialStats}
           footerTiles={officialFooterTiles}
-          footerSource="src: mempool.space · ~30s"
+          footerSourceComponent={
+            <ModuleSourceFooter
+              providers={[{ name: 'mempool.space', url: 'https://mempool.space' }]}
+              refreshLabel="~30s"
+              align="center"
+              className="text-white/20"
+              style={{ color: 'rgba(255,255,255,0.2)' }}
+            />
+          }
         />
       )}
-    </div>
+    </ModuleShell>
   );
 }

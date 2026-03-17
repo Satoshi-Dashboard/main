@@ -4,11 +4,11 @@
     "type": "split",
     "children": [
       {
-        "id": "dedcd84985a639f0",
+        "id": "f70352010efec504",
         "type": "tabs",
         "children": [
           {
-            "id": "a5f8df5641250466",
+            "id": "48f85a9b46d652cf",
             "type": "leaf",
             "state": {
               "type": "graph",
@@ -70,8 +70,7 @@
               "title": "Marcadores"
             }
           }
-        ],
-        "currentTab": 1
+        ]
       }
     ],
     "direction": "horizontal",
@@ -177,8 +176,17 @@
       "bases:Crear nueva base": false
     }
   },
-  "active": "b259a0b218ca7ea6",
+  "active": "48f85a9b46d652cf",
   "lastOpenFiles": [
+    "skills/ckm-brand/templates/brand-guidelines-starter.md",
+    "skills/VERCEL_REACT_BEST_PRACTICES_INDEX.md",
+    "skills/CKM_BRAND_REFERENCES_INDEX.md",
+    "skills/CKM_DESIGN_REFERENCES_INDEX.md",
+    "skills/CKM_DESIGN_SYSTEM_REFERENCES_INDEX.md",
+    "skills/CKM_SLIDES_REFERENCES_INDEX.md",
+    "VAULT_HOME.md",
+    "areas/Frontend.md",
+    "Sin título.canvas",
     "settings.local.json",
     "launch.json",
     "skills/ckm-ui-styling/SKILL.md",
@@ -190,7 +198,6 @@
     "skills/ckm-ui-styling/scripts/tailwind_config_gen.py",
     "skills/ckm-ui-styling/scripts/shadcn_add.py",
     "skills/ckm-ui-styling/scripts/requirements.txt",
-    "skills/ckm-ui-styling/scripts",
     "skills/ckm-slides/SKILL.md",
     "skills/ckm-slides/references/slide-strategies.md",
     "skills/ckm-slides/references/create.md",
@@ -207,14 +214,6 @@
     "skills/ckm-design/references/slides-copywriting-formulas.md",
     "skills/ckm-design/references/logo-style-guide.md",
     "skills/ckm-design/references/logo-prompt-engineering.md",
-    "skills/ckm-design/references/logo-design.md",
-    "skills/ckm-design/references/logo-color-psychology.md",
-    "skills/ckm-design/references/cip-prompt-engineering.md",
-    "skills/ckm-design/references/icon-design.md",
-    "skills/ckm-design/references/design-routing.md",
-    "skills/ckm-design/references/cip-style-guide.md",
-    "skills/ckm-design/references/cip-design.md",
-    "skills/ckm-design/references/cip-deliverable-guide.md",
-    "Sin título.canvas"
+    "skills/ckm-design/references/logo-design.md"
   ]
 }

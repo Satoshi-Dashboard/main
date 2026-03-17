@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AreaSeries,
   createChart,
@@ -8,6 +8,8 @@ import {
 } from 'lightweight-charts';
 import AnimatedMetric from '@/shared/components/common/AnimatedMetric.jsx';
 import { fetchJson } from '@/shared/lib/api.js';
+import { useModuleData } from '@/shared/hooks/useModuleData.js';
+import { ModuleShell } from '@/shared/components/module/index.js';
 
 const DAY_MS = 86_400_000;
 
@@ -306,31 +308,23 @@ function MetricPlaceholder({ label, message = 'Unavailable', color = 'rgba(255,2
 
 // ── Main module ───────────────────────────────────────────────────────────────
 export default function S15_BTCvsGold() {
-  const [payload, setPayload]       = useState(() => lastBtcVsGoldPayload);
   const [activeLabel, setActiveLabel] = useState('1Y');
-  const [loading, setLoading]       = useState(() => !lastBtcVsGoldPayload);
   const [hoverData, setHoverData]   = useState(null);
   const [showGold, setShowGold]     = useState(true);
-  const [error, setError]           = useState(null);
-  const [requestKey, setRequestKey] = useState(0);
 
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        const next = await fetchJson('/api/s15/btc-vs-gold-market-cap', { timeout: 8000 });
-        if (active) { lastBtcVsGoldPayload = next; setPayload(next); setError(null); }
-      } catch {
-        if (active) {
-          setPayload((c) => c);
-          setError('Live comparison is temporarily unavailable while the gold market-cap snapshot is missing.');
-        }
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
-    return () => { active = false; };
-  }, [requestKey]);
+  const fetchBtcVsGold = useCallback(
+    () => fetchJson('/api/s15/btc-vs-gold-market-cap', { timeout: 8000 }),
+    [],
+  );
+
+  const { data: payload, loading, error, refetch } = useModuleData(fetchBtcVsGold, {
+    initialData: lastBtcVsGoldPayload,
+    keepPreviousOnError: true,
+    transform: (raw) => {
+      lastBtcVsGoldPayload = raw;
+      return raw;
+    },
+  });
 
   const points     = useMemo(() => payload?.data?.points || [], [payload]);
   const activeRange = RANGES.find((r) => r.label === activeLabel) ?? RANGES.at(-1);
@@ -365,10 +359,10 @@ export default function S15_BTCvsGold() {
 
   const btcHigh = hasChart ? Math.max(...chartData.map((p) => p.bitcoin).filter(Number.isFinite)) : null;
 
-  const handleRetry = () => { setHoverData(null); setError(null); setLoading(true); setRequestKey((k) => k + 1); };
+  const handleRetry = () => { setHoverData(null); refetch(); };
 
   return (
-    <div className="visual-integrity-lock flex h-full w-full flex-col bg-[#111111] px-3.5 pb-3 pt-3 sm:px-5 sm:pb-4 sm:pt-4 lg:px-[22px] lg:pb-4 lg:pt-5">
+    <ModuleShell className="px-3.5 pb-3 pt-3 sm:px-5 sm:pb-4 sm:pt-4 lg:px-[22px] lg:pb-4 lg:pt-5">
 
       {/* ── HEADER ── */}
       <div className="flex flex-shrink-0 flex-row items-start justify-between gap-2 sm:gap-4">
@@ -428,7 +422,7 @@ export default function S15_BTCvsGold() {
               </div>
 
               {error ? (
-                <div className="mt-1.5 font-mono" style={{ fontSize: '0.72rem', color: 'var(--accent-red)' }}>{error}</div>
+                <div className="mt-1.5 font-mono" style={{ fontSize: '0.72rem', color: 'var(--accent-red)' }}>{error?.message || String(error)}</div>
               ) : null}
             </>
           ) : showUnavailable ? (
@@ -439,7 +433,7 @@ export default function S15_BTCvsGold() {
               <div className="mt-2 max-w-2xl font-mono leading-relaxed text-white/70" style={{ fontSize: '0.8rem' }}>
                 The BTC vs Gold chart needs the current gold market-cap snapshot. It will recover automatically when the upstream source responds.
               </div>
-              {error ? <div className="mt-2 font-mono" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)' }}>{error}</div> : null}
+              {error ? <div className="mt-2 font-mono" style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)' }}>{error?.message || String(error)}</div> : null}
               <button
                 type="button"
                 onClick={handleRetry}
@@ -593,6 +587,6 @@ export default function S15_BTCvsGold() {
           ))
         )}
       </div>
-    </div>
+    </ModuleShell>
   );
 }

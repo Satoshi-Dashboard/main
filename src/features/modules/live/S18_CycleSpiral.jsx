@@ -295,6 +295,7 @@ export default function S18_CycleSpiral() {
   const [dimensions, setDimensions] = useState(getResponsiveDimensions);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [legendOpen, setLegendOpen] = useState(false);
+  const [zoomScale, setZoomScale] = useState(1);
   const containerRef = useRef(null);
 
   const { VW, VH, CX, CY, R_MIN, R_MAX } = dimensions;
@@ -328,6 +329,20 @@ export default function S18_CycleSpiral() {
     mediaQuery.addEventListener('change', handler);
     return () => mediaQuery.removeEventListener('change', handler);
   }, [reducedMotion]);
+
+  const handleWheel = useCallback((event) => {
+    event.preventDefault();
+    const delta = event.deltaY > 0 ? 0.9 : 1.1;
+    setZoomScale(prev => Math.max(0.5, Math.min(3, prev * delta)));
+  }, []);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+    return () => container.removeEventListener('wheel', handleWheel);
+  }, [handleWheel]);
 
   const handleDotHover = useCallback((dot) => (event) => {
     if (event.type === 'mouseenter' || event.type === 'touchstart' || event.type === 'focus') {
@@ -495,13 +510,16 @@ export default function S18_CycleSpiral() {
         ref={containerRef}
         className="spiral-container min-h-0 flex-1 flex items-center justify-center px-1 pb-1 sm:px-2 sm:pb-2 md:px-4 md:pb-3"
       >
-        <div className="relative h-full w-full max-w-[350px] sm:max-w-[500px] md:max-w-[700px] lg:max-w-[800px]">
+        <div className="relative h-full w-full max-w-[350px] sm:max-w-[500px] md:max-w-[700px] lg:max-w-[800px] overflow-hidden">
           <svg
             viewBox={`0 0 ${VW} ${VH}`}
             style={{
               width: '100%',
               height: '100%',
               maxHeight: '100%',
+              transform: `scale(${zoomScale})`,
+              transformOrigin: 'center',
+              transition: 'transform 0.1s ease-out',
             }}
             preserveAspectRatio="xMidYMid meet"
             role="img"
