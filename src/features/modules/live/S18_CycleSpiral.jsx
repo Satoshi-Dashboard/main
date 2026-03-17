@@ -296,7 +296,11 @@ export default function S18_CycleSpiral() {
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [legendOpen, setLegendOpen] = useState(false);
   const [zoomScale, setZoomScale] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const containerRef = useRef(null);
+  const svgRef = useRef(null);
 
   const { VW, VH, CX, CY, R_MIN, R_MAX } = dimensions;
   const DOTS = generateDots(dimensions);
@@ -344,16 +348,50 @@ export default function S18_CycleSpiral() {
     return () => container.removeEventListener('wheel', handleWheel);
   }, [handleWheel]);
 
+  const handleMouseDown = useCallback((e) => {
+    if (zoomScale <= 1) return; // Only drag when zoomed
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+  }, [zoomScale, pan]);
+
+  const handleMouseMove = useCallback((e) => {
+    if (!isDragging || zoomScale <= 1) return;
+
+    const svg = svgRef.current;
+    if (!svg) return;
+
+    const rect = svg.getBoundingClientRect();
+    const maxPan = (zoomScale - 1) * Math.min(rect.width, rect.height) / 2;
+
+    const newX = Math.max(-maxPan, Math.min(maxPan, e.clientX - dragStart.x));
+    const newY = Math.max(-maxPan, Math.min(maxPan, e.clientY - dragStart.y));
+
+    setPan({ x: newX, y: newY });
+  }, [isDragging, zoomScale, dragStart]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  useEffect(() => {
+    if (!isDragging) return;
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, handleMouseMove, handleMouseUp]);
+
   const handleDotHover = useCallback((dot) => (event) => {
     if (event.type === 'mouseenter' || event.type === 'touchstart' || event.type === 'focus') {
       setHoveredDot(dot);
-      // Update tooltip position based on container
-      if (containerRef.current) {
+      // Position tooltip near mouse or at dot position
+      if (containerRef.current && event.clientX && event.clientY) {
         const rect = containerRef.current.getBoundingClientRect();
-        // Position tooltip near the center of the spiral area
         setTooltipPosition({
-          x: rect.width / 2,
-          y: rect.height * 0.4,
+          x: event.clientX - rect.left,
+          y: event.clientY - rect.top,
         });
       }
     } else if (event.type === 'mouseleave' || event.type === 'blur') {
@@ -510,16 +548,20 @@ export default function S18_CycleSpiral() {
         ref={containerRef}
         className="spiral-container min-h-0 flex-1 flex items-center justify-center px-1 pb-1 sm:px-2 sm:pb-2 md:px-4 md:pb-3"
       >
-        <div className="relative h-full w-full max-w-[350px] sm:max-w-[500px] md:max-w-[700px] lg:max-w-[800px] overflow-hidden">
+        <div
+          className="relative h-full w-full max-w-[350px] sm:max-w-[500px] md:max-w-[700px] lg:max-w-[800px] overflow-hidden cursor-grab active:cursor-grabbing"
+          onMouseDown={handleMouseDown}
+        >
           <svg
+            ref={svgRef}
             viewBox={`0 0 ${VW} ${VH}`}
             style={{
               width: '100%',
               height: '100%',
               maxHeight: '100%',
-              transform: `scale(${zoomScale})`,
+              transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoomScale})`,
               transformOrigin: 'center',
-              transition: 'transform 0.1s ease-out',
+              transition: isDragging ? 'none' : 'transform 0.1s ease-out',
             }}
             preserveAspectRatio="xMidYMid meet"
             role="img"
