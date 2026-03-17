@@ -514,31 +514,6 @@ export default function S18_CycleSpiral() {
                 Polar chart — each revolution = one halving cycle
               </p>
             </div>
-
-            <div
-              className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-2.5 py-2 sm:self-start md:gap-3 md:px-3.5 md:py-2.5"
-              role="status"
-              aria-live="polite"
-            >
-              <div
-                className="h-2.5 w-2.5 rounded-full flex-shrink-0 sm:h-3 sm:w-3"
-                style={{
-                  backgroundColor: currentPhase.color,
-                  animation: reducedMotion ? 'none' : 'pulseGlow 2s ease-in-out infinite',
-                }}
-              />
-              <div className="flex flex-col min-w-0">
-                <span className="text-[8px] uppercase tracking-wider text-white/40 font-mono truncate sm:text-[10px]">
-                  Phase
-                </span>
-                <span
-                  className="font-mono text-[10px] font-semibold text-white truncate sm:text-xs"
-                  style={{ color: currentPhase.color }}
-                >
-                  {currentPhase.label}
-                </span>
-              </div>
-            </div>
           </div>
         </header>
       </div>
@@ -744,9 +719,6 @@ export default function S18_CycleSpiral() {
               </div>
             </div>
           </div>
-
-          {/* Phase legend sidebar - responsive */}
-          <PhaseLegend isOpen={legendOpen} onToggle={() => setLegendOpen(!legendOpen)} />
 
           {/* Tooltip - positioned in chart area */}
           {hoveredDot && (
