@@ -4,16 +4,76 @@
 @tailwind components;
 @tailwind utilities;
 
-/* CSS Variables for theming */
-:root {
-	--bg-primary: #0a0a0f;
-	--bg-card: #12121a;
+/* CSS Variables for theming (DARK MODE - Default) */
+:root,
+[data-theme='dark'] {
+	/* Backgrounds */
+	--bg-primary: #111111;
+	--bg-card: #151821;
+	--bg-card-hover: #1a1f2b;
+	--bg-elevated: #0d0d0d;
+
+	/* Accents */
 	--accent-bitcoin: #f7931a;
-	--accent-green: #00d897;
-	--accent-red: #ff4757;
-	--text-primary: #e8e6e3;
-	--text-secondary: #9ca3af;
-	--border-color: #374151;
+	--accent-green: #16c784;
+	--accent-red: #ea3943;
+	--accent-warning: #f2c94c;
+
+	/* Text */
+	--text-primary: #eceff4;
+	--text-secondary: #a7b0be;
+	--text-muted: #6b7280;
+
+	/* Utilities */
+	--border-color: #2d3748;
+}
+
+/* LIGHT MODE */
+@media (prefers-color-scheme: light) {
+	:root {
+		/* Backgrounds */
+		--bg-primary: #f7f9fc;
+		--bg-card: #ffffff;
+		--bg-card-hover: #f1f5f9;
+		--bg-elevated: #e9eef5;
+
+		/* Accents */
+		--accent-bitcoin: #f7931a;
+		--accent-green: #16a34a;
+		--accent-red: #dc2626;
+		--accent-warning: #d4a72c;
+
+		/* Text */
+		--text-primary: #111827;
+		--text-secondary: #4b5563;
+		--text-muted: #9ca3af;
+
+		/* Utilities */
+		--border-color: #e5e7eb;
+	}
+}
+
+/* Light mode via data attribute */
+[data-theme='light'] {
+	/* Backgrounds */
+	--bg-primary: #f7f9fc;
+	--bg-card: #ffffff;
+	--bg-card-hover: #f1f5f9;
+	--bg-elevated: #e9eef5;
+
+	/* Accents */
+	--accent-bitcoin: #f7931a;
+	--accent-green: #16a34a;
+	--accent-red: #dc2626;
+	--accent-warning: #d4a72c;
+
+	/* Text */
+	--text-primary: #111827;
+	--text-secondary: #4b5563;
+	--text-muted: #9ca3af;
+
+	/* Utilities */
+	--border-color: #e5e7eb;
 }
 
 /* Custom utility classes */
