@@ -1,0 +1,111 @@
+/* Global styles */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* CSS Variables for theming */
+:root {
+	--bg-primary: #0a0a0f;
+	--bg-card: #12121a;
+	--accent-bitcoin: #f7931a;
+	--accent-green: #00d897;
+	--accent-red: #ff4757;
+	--text-primary: #e8e6e3;
+	--text-secondary: #9ca3af;
+	--border-color: #374151;
+}
+
+/* Custom utility classes */
+@layer components {
+	.card {
+		@apply rounded-lg bg-[var(--bg-card)] border border-[var(--border-color)] p-6 shadow-lg;
+	}
+
+	.btn {
+		@apply px-4 py-2 rounded-lg font-semibold transition-all duration-200;
+	}
+
+	.btn-primary {
+		@apply btn bg-[var(--accent-bitcoin)] text-black hover:opacity-80;
+	}
+
+	.btn-secondary {
+		@apply btn bg-gray-700 text-white hover:bg-gray-600;
+	}
+
+	.btn-danger {
+		@apply btn bg-[var(--accent-red)] text-white hover:opacity-80;
+	}
+
+	.text-muted {
+		@apply text-[var(--text-secondary)];
+	}
+
+	.gradient-bitcoin {
+		@apply bg-gradient-to-r from-[var(--accent-bitcoin)] to-orange-600;
+	}
+
+	.gradient-green {
+		@apply bg-gradient-to-r from-[var(--accent-green)] to-emerald-600;
+	}
+
+	.gradient-red {
+		@apply bg-gradient-to-r from-[var(--accent-red)] to-red-600;
+	}
+}
+
+/* Animations */
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+		transform: translateY(10px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@keyframes slideIn {
+	from {
+		opacity: 0;
+		transform: translateX(-20px);
+	}
+	to {
+		opacity: 1;
+		transform: translateX(0);
+	}
+}
+
+.animate-fade-in {
+	animation: fadeIn 0.3s ease-in-out;
+}
+
+.animate-slide-in {
+	animation: slideIn 0.3s ease-in-out;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+	width: 8px;
+	height: 8px;
+}
+
+::-webkit-scrollbar-track {
+	background: var(--bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+	background: var(--border-color);
+	border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+	background: var(--text-secondary);
+}
+
+/* Smooth transitions */
+* {
+	transition: background-color 0.2s ease, color 0.2s ease;
+}
