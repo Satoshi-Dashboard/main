@@ -1,0 +1,68 @@
+{
+  "projectName": "Satoshi Dashboard",
+  "projectType": "sveltekit-typescript",
+  "description": "Bitcoin analytics and real-time data visualization dashboard",
+  "memoryPath": ".claude/memory",
+  "obsidianEnabled": true,
+  "obsidianVaultPath": ".claude",
+  "devServer": {
+    "type": "npm",
+    "command": "npm run dev",
+    "port": 5173,
+    "host": "localhost"
+  },
+  "buildCommand": "npm run build",
+  "testCommand": "npm run test",
+  "lintCommand": "npm run lint",
+  "formatCommand": "npm run format",
+  "editorConfig": {
+    "defaultFormatter": "prettier",
+    "formatOnSave": true,
+    "autoSave": "afterDelay",
+    "autoSaveDelay": 2000
+  },
+  "extensions": {
+    "recommended": [
+      "svelte.svelte-vscode",
+      "ms-python.python",
+      "esbenp.prettier-vscode",
+      "dbaeumer.vscode-eslint",
+      "Prisma.prisma"
+    ]
+  },
+  "codeAuthor": "Claude Code",
+  "userPreferences": {
+    "responseStyle": "concise",
+    "showDiff": true,
+    "autoCommit": false,
+    "gitPush": false
+  },
+  "pathAliases": {
+    "$lib": "src/lib",
+    "$components": "src/lib/components",
+    "$stores": "src/lib/stores",
+    "$utils": "src/lib/utils",
+    "$types": "src/lib/types",
+    "$services": "src/lib/services",
+    "$api": "src/lib/api",
+    "$hooks": "src/lib/hooks",
+    "$data": "src/lib/data",
+    "$assets": "src/lib/assets"
+  },
+  "ignorePaths": [
+    "node_modules/",
+    ".git/",
+    "dist/",
+    "build/",
+    ".svelte-kit/",
+    "codigo legacy/",
+    ".env.local",
+    ".env.*.local"
+  ],
+  "documentation": {
+    "mainGuide": "CLAUDE.md",
+    "projectStructure": "README.md",
+    "sourceStructure": "src/README.md",
+    "memoryIndex": ".claude/memory/MEMORY.md"
+  }
+}

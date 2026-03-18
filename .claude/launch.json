@@ -1,0 +1,43 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "SvelteKit Dev Server",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "C:/Program Files/nodejs/node_modules/npm/bin/npm-cli.js",
+        "run",
+        "dev",
+        "--",
+        "--host"
+      ],
+      "port": 5173,
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "NODE_ENV": "development"
+      }
+    },
+    {
+      "name": "npm run build",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "C:/Program Files/nodejs/node_modules/npm/bin/npm-cli.js",
+        "run",
+        "build"
+      ],
+      "port": 0,
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "name": "npm run test",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "C:/Program Files/nodejs/node_modules/npm/bin/npm-cli.js",
+        "run",
+        "test"
+      ],
+      "port": 0,
+      "cwd": "${workspaceFolder}"
+    }
+  ]
+}
