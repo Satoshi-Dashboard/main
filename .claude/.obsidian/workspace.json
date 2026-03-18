@@ -4,17 +4,17 @@
     "type": "split",
     "children": [
       {
-        "id": "f70352010efec504",
+        "id": "0564fa7e5bf38374",
         "type": "tabs",
         "children": [
           {
-            "id": "48f85a9b46d652cf",
+            "id": "f2435c5aab22270d",
             "type": "leaf",
             "state": {
-              "type": "graph",
+              "type": "empty",
               "state": {},
-              "icon": "lucide-git-fork",
-              "title": "Vista gráfica"
+              "icon": "lucide-file",
+              "title": "Nueva pestaña"
             }
           }
         ]
@@ -74,7 +74,8 @@
       }
     ],
     "direction": "horizontal",
-    "width": 300
+    "width": 300,
+    "collapsed": true
   },
   "right": {
     "id": "66b05ef73e8d5fb5",
@@ -176,8 +177,9 @@
       "bases:Crear nueva base": false
     }
   },
-  "active": "48f85a9b46d652cf",
+  "active": "f2435c5aab22270d",
   "lastOpenFiles": [
+    "Sin título.md",
     "skills/ckm-brand/templates/brand-guidelines-starter.md",
     "skills/VERCEL_REACT_BEST_PRACTICES_INDEX.md",
     "skills/CKM_BRAND_REFERENCES_INDEX.md",
@@ -213,7 +215,6 @@
     "skills/ckm-design/references/slides-create.md",
     "skills/ckm-design/references/slides-copywriting-formulas.md",
     "skills/ckm-design/references/logo-style-guide.md",
-    "skills/ckm-design/references/logo-prompt-engineering.md",
-    "skills/ckm-design/references/logo-design.md"
+    "skills/ckm-design/references/logo-prompt-engineering.md"
   ]
 }

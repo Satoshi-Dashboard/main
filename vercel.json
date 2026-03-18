@@ -8,6 +8,12 @@
       ]
     }
   },
+  "crons": [
+    {
+      "path": "/api/cron/warmup",
+      "schedule": "0 6 * * *"
+    }
+  ],
   "redirects": [
     {
       "source": "/bitcoin-dashboard",

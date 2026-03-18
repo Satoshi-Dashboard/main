@@ -38,7 +38,9 @@
       "WebFetch(domain:binance-docs.github.io)",
       "WebFetch(domain:developers.binance.com)",
       "WebFetch(domain:data.binance.vision)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(vercel \")",
+      "Bash(\"C:/Program Files/nodejs/node.exe\" \"C:/Program Files/nodejs/node_modules/npm/bin/npm-cli.js\" run build)"
     ]
   }
 }
