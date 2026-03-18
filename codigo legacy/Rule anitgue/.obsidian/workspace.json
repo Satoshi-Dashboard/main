@@ -1,70 +1,37 @@
 {
   "main": {
-    "id": "a5e12861204ec47a",
+    "id": "33e883a6664f7c71",
     "type": "split",
     "children": [
       {
-        "id": "a0139c4e5dd31ee5",
+        "id": "0564fa7e5bf38374",
         "type": "tabs",
         "children": [
           {
-            "id": "813e2bdb7328db92",
+            "id": "f2435c5aab22270d",
             "type": "leaf",
             "state": {
-              "type": "markdown",
-              "state": {
-                "file": "Reglas de texto.md",
-                "mode": "source",
-                "source": false
-              },
+              "type": "empty",
+              "state": {},
               "icon": "lucide-file",
-              "title": "Reglas de texto"
-            }
-          },
-          {
-            "id": "71e90557a1dda43b",
-            "type": "leaf",
-            "state": {
-              "type": "markdown",
-              "state": {
-                "file": "Reglas de color.md",
-                "mode": "source",
-                "source": false
-              },
-              "icon": "lucide-file",
-              "title": "Reglas de color"
-            }
-          },
-          {
-            "id": "90d940426e4c26e7",
-            "type": "leaf",
-            "state": {
-              "type": "markdown",
-              "state": {
-                "file": "Reglas de color.md",
-                "mode": "source",
-                "source": false
-              },
-              "icon": "lucide-file",
-              "title": "Reglas de color"
+              "title": "Nueva pestaña"
             }
           }
-        ],
-        "currentTab": 2
+        ]
       }
     ],
     "direction": "vertical"
   },
   "left": {
-    "id": "c64d94c53af9cc80",
+    "id": "44bd1a728073dd98",
     "type": "split",
     "children": [
       {
-        "id": "75b756e767901750",
+        "id": "d2eb39ca897e8a77",
         "type": "tabs",
         "children": [
           {
-            "id": "2dcff4775ee83168",
+            "id": "399cd0773933dacd",
             "type": "leaf",
             "state": {
               "type": "file-explorer",
@@ -77,12 +44,12 @@
             }
           },
           {
-            "id": "a961f81dd77def60",
+            "id": "b259a0b218ca7ea6",
             "type": "leaf",
             "state": {
               "type": "search",
               "state": {
-                "query": "",
+                "query": "tag:#claude/skills",
                 "matchingCase": false,
                 "explainSearch": false,
                 "collapseAll": false,
@@ -94,7 +61,7 @@
             }
           },
           {
-            "id": "e03f12200b48c726",
+            "id": "27dcb623eb581816",
             "type": "leaf",
             "state": {
               "type": "bookmarks",
@@ -107,23 +74,23 @@
       }
     ],
     "direction": "horizontal",
-    "width": 300
+    "width": 300,
+    "collapsed": true
   },
   "right": {
-    "id": "13cd9a638e000f64",
+    "id": "66b05ef73e8d5fb5",
     "type": "split",
     "children": [
       {
-        "id": "2aa5a0bf3de35718",
+        "id": "444884419e8aff62",
         "type": "tabs",
         "children": [
           {
-            "id": "469278a3d271554f",
+            "id": "75d7322e68bdf27c",
             "type": "leaf",
             "state": {
               "type": "backlink",
               "state": {
-                "file": "Reglas de color.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -133,25 +100,24 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Enlaces entrantes de Reglas de color"
+              "title": "Enlaces entrantes"
             }
           },
           {
-            "id": "b015c8066cd50cb3",
+            "id": "28d8a9d08925ee16",
             "type": "leaf",
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "Reglas de color.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Enlaces salientes de Reglas de color"
+              "title": "Enlaces salientes"
             }
           },
           {
-            "id": "7bfa4f205f1f7c48",
+            "id": "8b13a4f3337ba8c0",
             "type": "leaf",
             "state": {
               "type": "tag",
@@ -166,7 +132,7 @@
             }
           },
           {
-            "id": "b0d8beca92498872",
+            "id": "28b8a68427422181",
             "type": "leaf",
             "state": {
               "type": "all-properties",
@@ -180,18 +146,17 @@
             }
           },
           {
-            "id": "18150f6fcddb1416",
+            "id": "293bcf62b824e02d",
             "type": "leaf",
             "state": {
               "type": "outline",
               "state": {
-                "file": "Reglas de color.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Esquema de Reglas de color"
+              "title": "Esquema"
             }
           }
         ]
@@ -212,11 +177,44 @@
       "bases:Crear nueva base": false
     }
   },
-  "active": "90d940426e4c26e7",
+  "active": "f2435c5aab22270d",
   "lastOpenFiles": [
-    "Reglas de texto.md",
-    "Reglas tamano reponsive web.md",
-    "Reglas de color.md",
-    "Sin nombre"
+    "Sin título.md",
+    "skills/ckm-brand/templates/brand-guidelines-starter.md",
+    "skills/VERCEL_REACT_BEST_PRACTICES_INDEX.md",
+    "skills/CKM_BRAND_REFERENCES_INDEX.md",
+    "skills/CKM_DESIGN_REFERENCES_INDEX.md",
+    "skills/CKM_DESIGN_SYSTEM_REFERENCES_INDEX.md",
+    "skills/CKM_SLIDES_REFERENCES_INDEX.md",
+    "VAULT_HOME.md",
+    "areas/Frontend.md",
+    "Sin título.canvas",
+    "settings.local.json",
+    "launch.json",
+    "skills/ckm-ui-styling/SKILL.md",
+    "skills/ckm-ui-styling/scripts/tests/requirements.txt",
+    "skills/ckm-ui-styling/scripts/tests/test_tailwind_config_gen.py",
+    "skills/ckm-ui-styling/scripts/tests/test_shadcn_add.py",
+    "skills/ckm-ui-styling/scripts/tests/coverage-ui.json",
+    "skills/ckm-ui-styling/scripts/tests",
+    "skills/ckm-ui-styling/scripts/tailwind_config_gen.py",
+    "skills/ckm-ui-styling/scripts/shadcn_add.py",
+    "skills/ckm-ui-styling/scripts/requirements.txt",
+    "skills/ckm-slides/SKILL.md",
+    "skills/ckm-slides/references/slide-strategies.md",
+    "skills/ckm-slides/references/create.md",
+    "skills/ckm-slides/references/layout-patterns.md",
+    "skills/ckm-slides/references/html-template.md",
+    "skills/ckm-slides/references/copywriting-formulas.md",
+    "skills/ckm-design-system/SKILL.md",
+    "skills/ckm-design/references/social-photos-design.md",
+    "skills/ckm-design/references/slides.md",
+    "skills/ckm-design/references/slides-strategies.md",
+    "skills/ckm-design/references/slides-layout-patterns.md",
+    "skills/ckm-design/references/slides-html-template.md",
+    "skills/ckm-design/references/slides-create.md",
+    "skills/ckm-design/references/slides-copywriting-formulas.md",
+    "skills/ckm-design/references/logo-style-guide.md",
+    "skills/ckm-design/references/logo-prompt-engineering.md"
   ]
 }
