@@ -1,0 +1,219 @@
+{
+  "main": {
+    "id": "33e883a6664f7c71",
+    "type": "split",
+    "children": [
+      {
+        "id": "f70352010efec504",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "48f85a9b46d652cf",
+            "type": "leaf",
+            "state": {
+              "type": "graph",
+              "state": {},
+              "icon": "lucide-git-fork",
+              "title": "Vista gráfica"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "44bd1a728073dd98",
+    "type": "split",
+    "children": [
+      {
+        "id": "d2eb39ca897e8a77",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "399cd0773933dacd",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Explorador de archivos"
+            }
+          },
+          {
+            "id": "b259a0b218ca7ea6",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "tag:#claude/skills",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Buscar"
+            }
+          },
+          {
+            "id": "27dcb623eb581816",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Marcadores"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "66b05ef73e8d5fb5",
+    "type": "split",
+    "children": [
+      {
+        "id": "444884419e8aff62",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "75d7322e68bdf27c",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Enlaces entrantes"
+            }
+          },
+          {
+            "id": "28d8a9d08925ee16",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Enlaces salientes"
+            }
+          },
+          {
+            "id": "8b13a4f3337ba8c0",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Etiquetas"
+            }
+          },
+          {
+            "id": "28b8a68427422181",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "Todas las propiedades"
+            }
+          },
+          {
+            "id": "293bcf62b824e02d",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Esquema"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Abrir selector rápido": false,
+      "graph:Abrir vista gráfica": false,
+      "canvas:Crear nuevo lienzo": false,
+      "daily-notes:Abrir la nota de hoy": false,
+      "templates:Insertar plantilla": false,
+      "command-palette:Abrir paleta de comandos": false,
+      "bases:Crear nueva base": false
+    }
+  },
+  "active": "48f85a9b46d652cf",
+  "lastOpenFiles": [
+    "skills/ckm-brand/templates/brand-guidelines-starter.md",
+    "skills/VERCEL_REACT_BEST_PRACTICES_INDEX.md",
+    "skills/CKM_BRAND_REFERENCES_INDEX.md",
+    "skills/CKM_DESIGN_REFERENCES_INDEX.md",
+    "skills/CKM_DESIGN_SYSTEM_REFERENCES_INDEX.md",
+    "skills/CKM_SLIDES_REFERENCES_INDEX.md",
+    "VAULT_HOME.md",
+    "areas/Frontend.md",
+    "Sin título.canvas",
+    "settings.local.json",
+    "launch.json",
+    "skills/ckm-ui-styling/SKILL.md",
+    "skills/ckm-ui-styling/scripts/tests/requirements.txt",
+    "skills/ckm-ui-styling/scripts/tests/test_tailwind_config_gen.py",
+    "skills/ckm-ui-styling/scripts/tests/test_shadcn_add.py",
+    "skills/ckm-ui-styling/scripts/tests/coverage-ui.json",
+    "skills/ckm-ui-styling/scripts/tests",
+    "skills/ckm-ui-styling/scripts/tailwind_config_gen.py",
+    "skills/ckm-ui-styling/scripts/shadcn_add.py",
+    "skills/ckm-ui-styling/scripts/requirements.txt",
+    "skills/ckm-slides/SKILL.md",
+    "skills/ckm-slides/references/slide-strategies.md",
+    "skills/ckm-slides/references/create.md",
+    "skills/ckm-slides/references/layout-patterns.md",
+    "skills/ckm-slides/references/html-template.md",
+    "skills/ckm-slides/references/copywriting-formulas.md",
+    "skills/ckm-design-system/SKILL.md",
+    "skills/ckm-design/references/social-photos-design.md",
+    "skills/ckm-design/references/slides.md",
+    "skills/ckm-design/references/slides-strategies.md",
+    "skills/ckm-design/references/slides-layout-patterns.md",
+    "skills/ckm-design/references/slides-html-template.md",
+    "skills/ckm-design/references/slides-create.md",
+    "skills/ckm-design/references/slides-copywriting-formulas.md",
+    "skills/ckm-design/references/logo-style-guide.md",
+    "skills/ckm-design/references/logo-prompt-engineering.md",
+    "skills/ckm-design/references/logo-design.md"
+  ]
+}
