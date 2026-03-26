@@ -1,0 +1,388 @@
+{
+  "devCommand": "npm run build && npm run preview:vercel-local -- --port $PORT",
+  "regions": ["fra1"],
+  "functions": {
+    "api/index.js": {
+      "regions": [
+        "fra1"
+      ]
+    }
+  },
+  "redirects": [
+    {
+      "source": "/bitcoin-dashboard",
+      "destination": "/landingpage",
+      "permanent": true
+    },
+    {
+      "source": "/bitcoin-dashboard/blog/(.*)",
+      "destination": "/landingpage/blog/$1",
+      "permanent": true
+    },
+    {
+      "source": "/bitcoin-dashboard/blog",
+      "destination": "/landingpage/blog",
+      "permanent": true
+    },
+    {
+      "source": "/module/s01-bitcoin-overview",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/module/s01-bitcoin-price-market-overview",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/module/s02-price-chart",
+      "destination": "/module/s02-bitcoin-price-chart-live",
+      "permanent": true
+    },
+    {
+      "source": "/module/s03-multi-currency",
+      "destination": "/module/s03-bitcoin-price-multi-currency",
+      "permanent": true
+    },
+    {
+      "source": "/module/s04-mempool-gauge",
+      "destination": "/module/s04-bitcoin-mempool-fees",
+      "permanent": true
+    },
+    {
+      "source": "/module/s05-long-term-trend",
+      "destination": "/module/s05-bitcoin-mempool-trend",
+      "permanent": true
+    },
+    {
+      "source": "/module/s06-btc-queue",
+      "destination": "/module/s32-bitcoin-mempool-queue-v2",
+      "permanent": true
+    },
+    {
+      "source": "/module/s06-bitcoin-mempool-queue",
+      "destination": "/module/s32-bitcoin-mempool-queue-v2",
+      "permanent": true
+    },
+    {
+      "source": "/module/s06-nodes-map",
+      "destination": "/module/s07-bitcoin-nodes-world-map",
+      "permanent": true
+    },
+    {
+      "source": "/module/s06-bitcoin-nodes-world-map",
+      "destination": "/module/s07-bitcoin-nodes-world-map",
+      "permanent": true
+    },
+    {
+      "source": "/module/s07-lightning-nodes-map",
+      "destination": "/module/s08-lightning-nodes-world-map",
+      "permanent": true
+    },
+    {
+      "source": "/module/s07-lightning-nodes-world-map",
+      "destination": "/module/s08-lightning-nodes-world-map",
+      "permanent": true
+    },
+    {
+      "source": "/module/s08-btcmap-business-density",
+      "destination": "/module/s09-bitcoin-merchant-map",
+      "permanent": true
+    },
+    {
+      "source": "/module/s08-bitcoin-merchant-map",
+      "destination": "/module/s09-bitcoin-merchant-map",
+      "permanent": true
+    },
+    {
+      "source": "/module/s09-lightning-network",
+      "destination": "/module/s10-lightning-network-stats",
+      "permanent": true
+    },
+    {
+      "source": "/module/s09-lightning-network-stats",
+      "destination": "/module/s10-lightning-network-stats",
+      "permanent": true
+    },
+    {
+      "source": "/module/s10-stablecoin-peg",
+      "destination": "/module/s11-stablecoin-peg-tracker",
+      "permanent": true
+    },
+    {
+      "source": "/module/s10-stablecoin-peg-tracker",
+      "destination": "/module/s11-stablecoin-peg-tracker",
+      "permanent": true
+    },
+    {
+      "source": "/module/s11-fear-greed",
+      "destination": "/module/s12-bitcoin-fear-greed-index",
+      "permanent": true
+    },
+    {
+      "source": "/module/s11-bitcoin-fear-greed-index",
+      "destination": "/module/s12-bitcoin-fear-greed-index",
+      "permanent": true
+    },
+    {
+      "source": "/module/s12-address-distribution",
+      "destination": "/module/s13-bitcoin-address-distribution",
+      "permanent": true
+    },
+    {
+      "source": "/module/s12-bitcoin-address-distribution",
+      "destination": "/module/s13-bitcoin-address-distribution",
+      "permanent": true
+    },
+    {
+      "source": "/module/s13-wealth-pyramid",
+      "destination": "/module/s14-bitcoin-wealth-pyramid",
+      "permanent": true
+    },
+    {
+      "source": "/module/s13-bitcoin-wealth-pyramid",
+      "destination": "/module/s14-bitcoin-wealth-pyramid",
+      "permanent": true
+    },
+    {
+      "source": "/module/s14-global-assets",
+      "destination": "/module/s15-bitcoin-vs-global-assets",
+      "permanent": true
+    },
+    {
+      "source": "/module/s14-bitcoin-vs-global-assets",
+      "destination": "/module/s15-bitcoin-vs-global-assets",
+      "permanent": true
+    },
+    {
+      "source": "/module/s15-btc-vs-gold",
+      "destination": "/module/s16-bitcoin-vs-gold-chart",
+      "permanent": true
+    },
+    {
+      "source": "/module/s15-bitcoin-vs-gold-chart",
+      "destination": "/module/s16-bitcoin-vs-gold-chart",
+      "permanent": true
+    },
+    {
+      "source": "/module/s16-mayer-multiple",
+      "destination": "/module/s17-bitcoin-mayer-multiple",
+      "permanent": true
+    },
+    {
+      "source": "/module/s16-bitcoin-mayer-multiple",
+      "destination": "/module/s17-bitcoin-mayer-multiple",
+      "permanent": true
+    },
+    {
+      "source": "/module/s17-price-performance",
+      "destination": "/module/s18-bitcoin-price-performance",
+      "permanent": true
+    },
+    {
+      "source": "/module/s17-bitcoin-price-performance",
+      "destination": "/module/s18-bitcoin-price-performance",
+      "permanent": true
+    },
+    {
+      "source": "/module/s18-cycle-spiral",
+      "destination": "/module/s19-bitcoin-halving-cycle-spiral",
+      "permanent": true
+    },
+    {
+      "source": "/module/s18-bitcoin-halving-cycle-spiral",
+      "destination": "/module/s19-bitcoin-halving-cycle-spiral",
+      "permanent": true
+    },
+    {
+      "source": "/module/s19-power-law-model",
+      "destination": "/module/s20-bitcoin-power-law-model",
+      "permanent": true
+    },
+    {
+      "source": "/module/s19-bitcoin-power-law-model",
+      "destination": "/module/s20-bitcoin-power-law-model",
+      "permanent": true
+    },
+    {
+      "source": "/module/s20-stock-to-flow",
+      "destination": "/module/s21-bitcoin-stock-to-flow-model",
+      "permanent": true
+    },
+    {
+      "source": "/module/s20-bitcoin-stock-to-flow-model",
+      "destination": "/module/s21-bitcoin-stock-to-flow-model",
+      "permanent": true
+    },
+    {
+      "source": "/module/s21-node-versions",
+      "destination": "/module/s22-bitcoin-big-mac-sats-tracker",
+      "permanent": true
+    },
+    {
+      "source": "/module/s21-bitcoin-big-mac-sats-tracker",
+      "destination": "/module/s22-bitcoin-big-mac-sats-tracker",
+      "permanent": true
+    },
+    {
+      "source": "/module/s22-seasonality",
+      "destination": "/module/s23-bitcoin-seasonality-heatmap",
+      "permanent": true
+    },
+    {
+      "source": "/module/s22-bitcoin-seasonality-heatmap",
+      "destination": "/module/s23-bitcoin-seasonality-heatmap",
+      "permanent": true
+    },
+    {
+      "source": "/module/s23-big-mac-index",
+      "destination": "/module/s24-bitcoin-big-mac-index",
+      "permanent": true
+    },
+    {
+      "source": "/module/s23-bitcoin-big-mac-index",
+      "destination": "/module/s24-bitcoin-big-mac-index",
+      "permanent": true
+    },
+    {
+      "source": "/module/s24-network-activity",
+      "destination": "/module/s25-bitcoin-network-activity",
+      "permanent": true
+    },
+    {
+      "source": "/module/s24-bitcoin-network-activity",
+      "destination": "/module/s25-bitcoin-network-activity",
+      "permanent": true
+    },
+    {
+      "source": "/module/s25-log-regression",
+      "destination": "/module/s26-bitcoin-log-regression-channel",
+      "permanent": true
+    },
+    {
+      "source": "/module/s25-bitcoin-log-regression-channel",
+      "destination": "/module/s26-bitcoin-log-regression-channel",
+      "permanent": true
+    },
+    {
+      "source": "/module/s26-mvrv-score",
+      "destination": "/module/s27-bitcoin-mvrv-score",
+      "permanent": true
+    },
+    {
+      "source": "/module/s26-bitcoin-mvrv-score",
+      "destination": "/module/s27-bitcoin-mvrv-score",
+      "permanent": true
+    },
+    {
+      "source": "/module/s27-google-trends",
+      "destination": "/module/s28-bitcoin-google-trends",
+      "permanent": true
+    },
+    {
+      "source": "/module/s27-bitcoin-google-trends",
+      "destination": "/module/s28-bitcoin-google-trends",
+      "permanent": true
+    },
+    {
+      "source": "/module/s28-btc-dominance",
+      "destination": "/module/s29-bitcoin-dominance-chart",
+      "permanent": true
+    },
+    {
+      "source": "/module/s28-bitcoin-dominance-chart",
+      "destination": "/module/s29-bitcoin-dominance-chart",
+      "permanent": true
+    },
+    {
+      "source": "/module/s29-utxo-distribution",
+      "destination": "/module/s30-bitcoin-utxo-distribution",
+      "permanent": true
+    },
+    {
+      "source": "/module/s29-bitcoin-utxo-distribution",
+      "destination": "/module/s30-bitcoin-utxo-distribution",
+      "permanent": true
+    },
+    {
+      "source": "/module/s30-us-national-debt",
+      "destination": "/module/s30-us-national-debt-live-counter",
+      "permanent": true
+    },
+    {
+      "source": "/module/s31-thank-you-satoshi",
+      "destination": "/module/s31-satoshi-nakamoto-bitcoin-whitepaper",
+      "permanent": true
+    }
+  ],
+  "headers": [
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Referrer-Policy",
+          "value": "no-referrer"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=()"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=31536000; includeSubDomains"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'sha256-i/O9YHfFBglwX0wU33/gUsgUt8BO/EviH9oJDaN1cxc=' 'sha256-Z2/iFzh9VMlVkEOar1f/oSHWwQk3ve1qk/C2WdsC4Xk='; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https: ws: wss:; font-src 'self' data:; frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com; media-src 'self' https://www.youtube.com https://www.youtube-nocookie.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
+        }
+      ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index.js"
+    },
+    {
+      "source": "/@vite/(.*)",
+      "destination": "/@vite/$1"
+    },
+    {
+      "source": "/@react-refresh",
+      "destination": "/@react-refresh"
+    },
+    {
+      "source": "/@id/(.*)",
+      "destination": "/@id/$1"
+    },
+    {
+      "source": "/@fs/(.*)",
+      "destination": "/@fs/$1"
+    },
+    {
+      "source": "/module/(.*)",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/((?!.*\\.[a-zA-Z0-9]+$).*)",
+      "destination": "/index.html"
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+name: Deploy SEO — Sitemap Ping
+
+on:
+  # Runs after the CI workflow succeeds on main
+  workflow_run:
+    workflows: ['CI']
+    branches: [main]
+    types: [completed]
+
+jobs:
+  sitemap-ping:
+    # Only run when CI succeeded (not on failure or cancel)
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Submit sitemap to Search Console
+        run: node scripts/gsc-sitemap.js
+        env:
+          GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
+          GOOGLE_SITE_URL: ${{ vars.GOOGLE_SITE_URL }}

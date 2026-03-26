@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- sitemap.xml - Satoshi Dashboard - https://satoshidashboard.com -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+
+  <url>
+    <loc>https://satoshidashboard.com/</loc>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+    <lastmod>2026-03-12</lastmod>
+    <image:image>
+      <image:loc>https://satoshidashboard.com/modulos-referencia/001-main-dashboard.png</image:loc>
+      <image:title>Satoshi Dashboard - Bitcoin dashboard and live BTC analytics</image:title>
+    </image:image>
+  </url>
+
+  <url><loc>https://satoshidashboard.com/landingpage</loc><changefreq>weekly</changefreq><priority>0.78</priority><lastmod>2026-03-12</lastmod></url>
+  <url><loc>https://satoshidashboard.com/landingpage/blog</loc><changefreq>weekly</changefreq><priority>0.72</priority><lastmod>2026-03-12</lastmod></url>
+  <url><loc>https://satoshidashboard.com/landingpage/blog/live-bitcoin-price-dashboard</loc><changefreq>monthly</changefreq><priority>0.7</priority><lastmod>2026-03-12</lastmod></url>
+  <url><loc>https://satoshidashboard.com/landingpage/blog/bitcoin-nodes-map-monitor</loc><changefreq>monthly</changefreq><priority>0.7</priority><lastmod>2026-03-12</lastmod></url>
+  <url><loc>https://satoshidashboard.com/landingpage/blog/free-bitcoin-analysis-tools</loc><changefreq>monthly</changefreq><priority>0.7</priority><lastmod>2026-03-12</lastmod></url>
+  <url><loc>https://satoshidashboard.com/landingpage/blog/bitcoin-point-of-sale-dashboard</loc><changefreq>monthly</changefreq><priority>0.7</priority><lastmod>2026-03-12</lastmod></url>
+
+  <url><loc>https://satoshidashboard.com/module/s02-bitcoin-price-chart-live</loc><changefreq>always</changefreq><priority>0.9</priority><lastmod>2026-03-12</lastmod></url>
+  <url><loc>https://satoshidashboard.com/module/s03-bitcoin-price-multi-currency</loc><changefreq>always</changefreq><priority>0.85</priority><lastmod>2026-03-12</lastmod></url>
+  <url><loc>https://satoshidashboard.com/module/s04-bitcoin-mempool-fees</loc><changefreq>always</changefreq><priority>0.85</priority><lastmod>2026-03-12</lastmod></url>
+  <url><loc>https://satoshidashboard.com/module/s05-bitcoin-mempool-trend</loc><changefreq>hourly</changefreq><priority>0.8</priority><lastmod>2026-03-12</lastmod></url>
+  <url><loc>https://satoshidashboard.com/module/s06-bitcoin-nodes-world-map</loc><changefreq>hourly</changefreq><priority>0.82</priority><lastmod>2026-03-12</lastmod></url>
+  <url><loc>https://satoshidashboard.com/module/s07-lightning-nodes-world-map</loc><changefreq>hourly</changefreq><priority>0.75</priority><lastmod>2026-03-12</lastmod></url>
+  <url><loc>https://satoshidashboard.com/module/s08-bitcoin-merchant-map</loc><changefreq>daily</changefreq><priority>0.8</priority><lastmod>2026-03-12</lastmod></url>
+  <url><loc>https://satoshidashboard.com/module/s09-lightning-network-stats</loc><changefreq>hourly</changefreq><priority>0.76</priority><lastmod>2026-03-12</lastmod></url>
+  <url><loc>https://satoshidashboard.com/module/s10-stablecoin-peg-tracker</loc><changefreq>hourly</changefreq><priority>0.72</priority><lastmod>2026-03-12</lastmod></url>
+  <url><loc>https://satoshidashboard.com/module/s11-bitcoin-fear-greed-index</loc><changefreq>daily</changefreq><priority>0.8</priority><lastmod>2026-03-12</lastmod></url>
+  <url><loc>https://satoshidashboard.com/module/s12-bitcoin-address-distribution</loc><changefreq>daily</changefreq><priority>0.72</priority><lastmod>2026-03-12</lastmod></url>
+  <url><loc>https://satoshidashboard.com/module/s13-bitcoin-wealth-pyramid</loc><changefreq>daily</changefreq><priority>0.72</priority><lastmod>2026-03-12</lastmod></url>
+  <url><loc>https://satoshidashboard.com/module/s14-bitcoin-vs-global-assets</loc><changefreq>daily</changefreq><priority>0.72</priority><lastmod>2026-03-12</lastmod></url>
+  <url><loc>https://satoshidashboard.com/module/s15-bitcoin-vs-gold-chart</loc><changefreq>daily</changefreq><priority>0.72</priority><lastmod>2026-03-12</lastmod></url>
+  <url><loc>https://satoshidashboard.com/module/s30-us-national-debt-live-counter</loc><changefreq>hourly</changefreq><priority>0.78</priority><lastmod>2026-03-12</lastmod></url>
+  <url><loc>https://satoshidashboard.com/module/s31-satoshi-nakamoto-bitcoin-whitepaper</loc><changefreq>monthly</changefreq><priority>0.5</priority><lastmod>2026-03-12</lastmod></url>
+
+</urlset>
