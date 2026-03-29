@@ -1,0 +1,412 @@
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import AnimatedMetric from '@/shared/components/common/AnimatedMetric.jsx';
+import { ModuleShell, ModuleTitle } from '@/shared/components/module/index.js';
+import { UI_COLORS as SHARED_UI_COLORS } from '@/shared/constants/colors.js';
+import { useModuleData } from '@/shared/hooks/useModuleData.js';
+import { useModuleRuntimeContext } from '@/features/module-player/ModuleRuntimeContext.js';
+import {
+  fetchMempoolNodeSnapshot,
+  fetchMempoolOfficialUsageSnapshot,
+  fetchMempoolOverviewBundle,
+} from '@/shared/services/mempoolApi.js';
+
+const UI_COLORS = {
+  ...SHARED_UI_COLORS,
+  muted: 'rgba(255,255,255,0.38)',
+};
+
+function formatMemory(bytes) {
+  if (bytes == null) return { value: null, unit: null, decimals: 1 };
+  if (bytes < 1_000_000) {
+    return { value: parseFloat((bytes / 1e3).toFixed(1)), unit: 'KB', decimals: 1 };
+  }
+  return { value: parseFloat((bytes / 1e6).toFixed(1)), unit: 'MB', decimals: 1 };
+}
+
+function toVmb(bytes) {
+  if (bytes == null) return null;
+  const numericValue = Number(bytes);
+  if (!Number.isFinite(numericValue)) return null;
+  return parseFloat((numericValue / 1e6).toFixed(1));
+}
+
+function btcKbToSatVb(value) {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) return null;
+  return numericValue * 100_000;
+}
+
+function getMetricDecimals(value) {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) return 0;
+  if (Number.isInteger(numericValue)) return 0;
+  if (Math.abs(numericValue) >= 10) return 1;
+  return 2;
+}
+
+function GaugeArc({ usageBytes, maxBytes, loading, centerLabel = 'USAGE' }) {
+  const hasData = usageBytes != null && maxBytes != null && maxBytes > 0;
+  const usageMB = usageBytes != null ? usageBytes / 1e6 : 0;
+  const maxMB = maxBytes != null ? maxBytes / 1e6 : 0;
+  const pct = hasData ? Math.min((usageMB / maxMB) * 100, 100) : 0;
+
+  const r = 120;
+  const cx = 180;
+  const cy = 160;
+  const arcPath = `M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`;
+  const totalArcLength = Math.PI * r;
+  const filledLength = (pct / 100) * totalArcLength;
+
+  return (
+    <svg
+      width="360"
+      height="190"
+      viewBox="0 0 360 190"
+      className="visual-svg-surface h-auto w-full max-w-[300px] min-[430px]:max-w-[360px] sm:max-w-[420px]"
+    >
+      <path d={arcPath} fill="none" stroke="#2a2a2a" strokeWidth="18" strokeLinecap="round" />
+      {!loading && hasData ? (
+        <path
+          d={arcPath}
+          fill="none"
+          stroke={UI_COLORS.brand}
+          strokeWidth="18"
+          strokeLinecap="round"
+          strokeDasharray={`${filledLength} ${totalArcLength}`}
+          style={{ filter: 'drop-shadow(0 0 8px rgba(247,147,26,0.5))' }}
+        />
+      ) : null}
+
+      {loading ? (
+        <>
+          <rect x={cx - 60} y={cy - 58} width="120" height="40" rx="6" fill="#2a2a2a" opacity="0.7">
+            <animate attributeName="opacity" values="0.4;0.8;0.4" dur="1.4s" repeatCount="indefinite" />
+          </rect>
+          <rect x={cx - 48} y={cy - 6} width="96" height="20" rx="4" fill="#2a2a2a" opacity="0.5">
+            <animate attributeName="opacity" values="0.3;0.6;0.3" dur="1.4s" repeatCount="indefinite" />
+          </rect>
+        </>
+      ) : hasData ? (
+        <>
+          <text x={cx} y={cy - 18} textAnchor="middle" fill={UI_COLORS.brand}
+            fontSize="39" fontFamily="JetBrains Mono, monospace" fontWeight="700">
+            {pct.toFixed(1)}%
+          </text>
+          <text x={cx} y={cy + 14} textAnchor="middle" fill="rgba(255,255,255,0.35)"
+            fontSize="16" fontFamily="JetBrains Mono, monospace" letterSpacing="3">
+            {centerLabel}
+          </text>
+        </>
+      ) : (
+        <>
+          <text x={cx} y={cy - 18} textAnchor="middle" fill="#333"
+            fontSize="39" fontFamily="JetBrains Mono, monospace" fontWeight="700">
+            --%
+          </text>
+          <text x={cx} y={cy + 14} textAnchor="middle" fill="rgba(255,255,255,0.12)"
+            fontSize="16" fontFamily="JetBrains Mono, monospace" letterSpacing="3">
+            {centerLabel}
+          </text>
+        </>
+      )}
+
+    </svg>
+  );
+}
+
+function MetricTile({ label, value, unit = null, decimals = 0, loading }) {
+  const hasValue = value != null;
+
+  return (
+    <div className="flex w-full min-w-0 flex-col items-center gap-1.5 text-center">
+      {loading ? (
+        <div className="skeleton" style={{ width: 96, height: '1.8em' }} />
+      ) : hasValue ? (
+        <div className="flex min-h-[1.8em] items-center font-mono font-bold text-white tabular-nums" style={{ fontSize: 'clamp(2.3rem, 4.4vw, 3.25rem)' }}>
+          <AnimatedMetric value={value} variant="number" decimals={decimals} inline />
+          {unit ? <span className="ml-1 text-[0.4em] text-white/50">{unit}</span> : null}
+        </div>
+      ) : (
+        <div className="flex min-h-[1.8em] items-center font-mono font-bold text-[#333333]" style={{ fontSize: 'clamp(2.3rem, 4.4vw, 3.25rem)' }}>
+          --
+        </div>
+      )}
+      <div className="uppercase tracking-[0.18em]" style={{ fontSize: 'var(--fs-label)', color: UI_COLORS.brand }}>
+        {label}
+      </div>
+    </div>
+  );
+}
+
+function BottomTile({ label, value, unit = null, decimals = 0, loading, color = UI_COLORS.brand }) {
+  const hasValue = value != null;
+
+  return (
+    <div className="flex w-full min-w-0 flex-col items-center gap-1 border-[#2a2a2a] px-2 py-1 text-center sm:px-4">
+      {loading ? (
+        <div className="skeleton" style={{ width: 56, height: '2em' }} />
+      ) : hasValue ? (
+        <div className="flex min-h-[1.65em] items-center font-mono font-bold tabular-nums" style={{ fontSize: 'clamp(2.15rem, 4.1vw, 3rem)', color }}>
+          <AnimatedMetric value={value} variant="number" decimals={decimals} inline />
+        </div>
+      ) : (
+        <div className="flex min-h-[1.65em] items-center font-mono font-bold text-[#333333]" style={{ fontSize: 'clamp(2.15rem, 4.1vw, 3rem)' }}>
+          --
+        </div>
+      )}
+      <div className="uppercase tracking-[0.18em] text-white/30" style={{ fontSize: 'var(--fs-tag)' }}>{label}</div>
+      <div className="font-mono text-white/20" style={{ fontSize: 'var(--fs-micro)' }}>{unit || ''}</div>
+    </div>
+  );
+}
+
+function SourceButton({ label, description, active, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-full min-w-0 rounded-lg border px-3 py-2 text-left transition-colors sm:w-auto sm:min-w-[150px]"
+      style={{
+        borderColor: active ? UI_COLORS.brand : 'rgba(255,255,255,0.10)',
+        background: active ? 'rgba(247,147,26,0.08)' : '#121212',
+      }}
+    >
+      <div className="font-mono uppercase" style={{ fontSize: 'var(--fs-caption)', color: UI_COLORS.brand }}>
+        {label}
+      </div>
+      <div className="mt-1 font-mono text-white/45" style={{ fontSize: 'var(--fs-micro)' }}>
+        {description}
+      </div>
+    </button>
+  );
+}
+
+
+function MempoolPanel({
+  usageBytes,
+  maxBytes,
+  usageLabel,
+  loading,
+  unavailableLabel,
+  stats,
+  footerTiles,
+  footerSourceComponent,
+  hideSourceOnDesktop = false,
+}) {
+  const hasGaugeData = usageBytes != null && maxBytes != null && maxBytes > 0;
+
+  return (
+    <div className="flex min-h-0 w-full flex-1 flex-col items-center justify-start gap-3 pt-1 pb-18 sm:gap-4 sm:pb-20 sm:pt-2 lg:pb-12">
+      <div className="flex w-full flex-col items-center justify-center gap-1.5 sm:gap-2.5">
+        <GaugeArc usageBytes={usageBytes} maxBytes={maxBytes} loading={loading} centerLabel="USAGE" />
+        {loading ? null : hasGaugeData ? (
+          <div className="font-mono text-white/25" style={{ fontSize: 'var(--fs-micro)' }}>
+            {usageLabel}
+          </div>
+        ) : (
+          <div className="flex items-center gap-1.5 font-mono" style={{ fontSize: 'var(--fs-micro)', color: UI_COLORS.negative }}>
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-current opacity-80" />
+            {unavailableLabel}
+          </div>
+        )}
+      </div>
+
+      <div className="grid w-full max-w-[760px] grid-cols-1 border-y border-[#2a2a2a] px-3 py-1.5 md:grid-cols-3 md:divide-x md:divide-[#2a2a2a] md:px-6">
+        {stats.map((stat, index) => (
+          <div
+            key={stat.label}
+            className={`flex justify-center py-3 ${index > 0 ? 'border-t border-[#2a2a2a] md:border-t-0' : ''}`}
+          >
+            <MetricTile {...stat} loading={loading} />
+          </div>
+        ))}
+      </div>
+
+      <div className="grid w-full max-w-[560px] grid-cols-3 divide-x divide-[#2a2a2a]">
+        {footerTiles.map((tile) => (
+          <BottomTile key={tile.label} {...tile} loading={loading} />
+        ))}
+      </div>
+
+      <div className={`flex-shrink-0 pb-1${hideSourceOnDesktop ? ' sm:invisible' : ''}`}>
+        {footerSourceComponent}
+      </div>
+    </div>
+  );
+}
+
+export default function S04_MempoolGauge() {
+  const { setDynamicProviders } = useModuleRuntimeContext();
+  const [officialIsFallback, setOfficialIsFallback] = useState(null);
+
+  const [officialOverview, setOfficialOverview] = useState({
+    count: null,
+    vsizeVmb: null,
+    feeLow: null,
+    feeMid: null,
+    feeHigh: null,
+  });
+  const [officialUsage, setOfficialUsage] = useState({
+    usageBytes: null,
+    maxBytes: null,
+    label: null,
+  });
+  const [nodeView, setNodeView] = useState({
+    usageBytes: null,
+    maxBytes: null,
+    count: null,
+    vsizeVmb: null,
+    mempoolMinFeeSatVb: null,
+    relayMinFeeSatVb: null,
+    unbroadcastCount: null,
+    feeEconomy: null,
+    feeHalfHour: null,
+    feeFastest: null,
+  });
+  const [activeSource, setActiveSource] = useState('official');
+
+  const fetchOfficial = useCallback(
+    () => Promise.all([
+      fetchMempoolOverviewBundle({ timeout: 8000, cache: 'no-store' }),
+      fetchMempoolOfficialUsageSnapshot({ timeout: 8000, cache: 'no-store' }),
+    ]),
+    [],
+  );
+
+  const { loading: loadingOfficial } = useModuleData(fetchOfficial, {
+    refreshMs: 30_000,
+    keepPreviousOnError: true,
+    transform: ([bundle, usage]) => {
+      const isFallback = Boolean(bundle.is_fallback || usage.is_fallback);
+      setOfficialIsFallback(isFallback);
+      setOfficialOverview((prev) => ({
+        count: bundle.mempool.count ?? prev.count,
+        vsizeVmb: bundle.mempool.vsize != null ? toVmb(bundle.mempool.vsize) : prev.vsizeVmb,
+        feeLow: bundle.fees.economy ?? prev.feeLow,
+        feeMid: bundle.fees.normal ?? prev.feeMid,
+        feeHigh: bundle.fees.priority ?? prev.feeHigh,
+      }));
+      setOfficialUsage((prev) => ({
+        usageBytes: usage.usageBytes ?? prev.usageBytes,
+        maxBytes: usage.maxBytes ?? prev.maxBytes,
+        label: usage.label ?? prev.label,
+      }));
+      return [bundle, usage];
+    },
+  });
+
+  useEffect(() => {
+    if (officialIsFallback === null) return;
+    setDynamicProviders(officialIsFallback ? PROVIDERS_MEMPOOL : PROVIDERS_ZATOBOX);
+  }, [officialIsFallback, setDynamicProviders]);
+
+  const fetchNode = useCallback(
+    () => fetchMempoolNodeSnapshot({ timeout: 8000, cache: 'no-store' }),
+    [],
+  );
+
+  const { loading: loadingNode } = useModuleData(fetchNode, {
+    refreshMs: 5_000,
+    keepPreviousOnError: true,
+    transform: (snapshot) => {
+      setNodeView((prev) => ({
+        usageBytes: snapshot.usageBytes ?? prev.usageBytes,
+        maxBytes: snapshot.maxBytes ?? prev.maxBytes,
+        count: snapshot.count ?? prev.count,
+        vsizeVmb: snapshot.vsizeBytes != null ? toVmb(snapshot.vsizeBytes) : prev.vsizeVmb,
+        mempoolMinFeeSatVb: snapshot.mempoolMinFeeBtcKb != null ? btcKbToSatVb(snapshot.mempoolMinFeeBtcKb) : prev.mempoolMinFeeSatVb,
+        relayMinFeeSatVb: snapshot.relayMinFeeBtcKb != null ? btcKbToSatVb(snapshot.relayMinFeeBtcKb) : prev.relayMinFeeSatVb,
+        unbroadcastCount: snapshot.unbroadcastCount ?? prev.unbroadcastCount,
+        feeEconomy: snapshot.feeEconomy ?? prev.feeEconomy,
+        feeHalfHour: snapshot.feeHalfHour ?? prev.feeHalfHour,
+        feeFastest: snapshot.feeFastest ?? prev.feeFastest,
+      }));
+      return snapshot;
+    },
+  });
+
+  const officialMemory = useMemo(() => formatMemory(officialUsage.usageBytes), [officialUsage.usageBytes]);
+  const nodeMemory = useMemo(() => formatMemory(nodeView.usageBytes), [nodeView.usageBytes]);
+  const officialUsageLabel = officialUsage.usageBytes != null && officialUsage.maxBytes != null
+    ? (officialUsage.label
+        ? `mempool usage · ${officialUsage.label}`
+        : `mempool usage · ${officialMemory.value} ${officialMemory.unit} / ${(officialUsage.maxBytes / 1e6).toFixed(0)} MB`)
+    : 'official mempool usage unavailable';
+  const nodeUsageLabel = nodeView.usageBytes != null && nodeView.maxBytes != null
+    ? `bitcoin knots mempool · ${nodeMemory.value} ${nodeMemory.unit} / ${(nodeView.maxBytes / 1e6).toFixed(0)} MB`
+    : 'bitcoin knots node unavailable';
+
+  const officialStats = [
+    { label: 'Pending Transactions', value: officialOverview.count },
+    { label: 'Virtual Size', value: officialOverview.vsizeVmb, unit: 'vMB', decimals: 1 },
+    { label: 'Memory Usage', value: officialMemory.value, unit: officialMemory.unit, decimals: officialMemory.decimals },
+  ];
+
+  const officialFooterTiles = [
+    { label: 'Economy', value: officialOverview.feeLow, unit: 'sat/vB', decimals: getMetricDecimals(officialOverview.feeLow), color: UI_COLORS.positive },
+    { label: 'Normal', value: officialOverview.feeMid, unit: 'sat/vB', decimals: getMetricDecimals(officialOverview.feeMid), color: UI_COLORS.brand },
+    { label: 'Priority', value: officialOverview.feeHigh, unit: 'sat/vB', decimals: getMetricDecimals(officialOverview.feeHigh), color: UI_COLORS.negative },
+  ];
+
+  const nodeStats = [
+    { label: 'Pending Transactions', value: nodeView.count },
+    { label: 'Virtual Size', value: nodeView.vsizeVmb, unit: 'vMB', decimals: 1 },
+    { label: 'Memory Usage', value: nodeMemory.value, unit: nodeMemory.unit, decimals: nodeMemory.decimals },
+  ];
+
+  const nodeFooterTiles = [
+    { label: 'Economy', value: nodeView.feeEconomy, unit: 'sat/vB', decimals: getMetricDecimals(nodeView.feeEconomy), color: UI_COLORS.positive },
+    { label: 'Normal', value: nodeView.feeHalfHour, unit: 'sat/vB', decimals: getMetricDecimals(nodeView.feeHalfHour), color: UI_COLORS.brand },
+    { label: 'Priority', value: nodeView.feeFastest, unit: 'sat/vB', decimals: getMetricDecimals(nodeView.feeFastest), color: UI_COLORS.negative },
+  ];
+
+  const isNode = activeSource === 'node';
+
+  return (
+    <ModuleShell className="items-center justify-start gap-3 px-3 py-3 sm:gap-4 sm:px-4 sm:py-4">
+      <div className="text-center">
+        <ModuleTitle size="var(--fs-heading)" style={{ letterSpacing: '0.2em' }}>
+          MEMPOOL STATUS
+        </ModuleTitle>
+      </div>
+
+      <div className="flex w-full max-w-[560px] flex-wrap items-stretch justify-center gap-2">
+        <SourceButton
+          label="Network View"
+          description="mempool.space public data"
+          active={!isNode}
+          onClick={() => setActiveSource('official')}
+        />
+        <SourceButton
+          label="Knots Node"
+          description="Knots 29.3 bip110"
+          active={isNode}
+          onClick={() => setActiveSource('node')}
+        />
+      </div>
+
+      {isNode ? (
+        <MempoolPanel
+          usageBytes={nodeView.usageBytes}
+          maxBytes={nodeView.maxBytes}
+          usageLabel={nodeUsageLabel}
+          loading={loadingNode}
+          unavailableLabel="NODE SOURCE UNAVAILABLE"
+          stats={nodeStats}
+          footerTiles={nodeFooterTiles}
+          hideSourceOnDesktop
+        />
+      ) : (
+        <MempoolPanel
+          usageBytes={officialUsage.usageBytes}
+          maxBytes={officialUsage.maxBytes}
+          usageLabel={officialUsageLabel}
+          loading={loadingOfficial}
+          unavailableLabel="OFFICIAL USAGE UNAVAILABLE"
+          stats={officialStats}
+          footerTiles={officialFooterTiles}
+        />
+      )}
+    </ModuleShell>
+  );
+}

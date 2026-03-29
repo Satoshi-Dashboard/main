@@ -1,0 +1,20 @@
+{
+  "code": "S13",
+  "slugBase": "bitcoin-wealth-pyramid",
+  "title": "Wealth Pyramid",
+  "description": "SVG pyramid visualization of Bitcoin wealth distribution showing how many addresses hold more than specific USD thresholds. Responsive: bar chart on mobile, pyramid SVG on desktop.",
+  "category": "live",
+  "status": "published",
+  "component": "./index.jsx",
+  "providers": [
+    { "name": "mempool.space", "url": "https://mempool.space" }
+  ],
+  "refreshSeconds": 300,
+  "layout": "flex-col",
+  "backgroundColor": "#0a0a0a",
+  "apiEndpoints": [
+    "/api/s12/address-distribution"
+  ],
+  "seoRoute": true,
+  "tags": ["bitcoin", "wealth", "pyramid", "distribution", "holders"]
+}

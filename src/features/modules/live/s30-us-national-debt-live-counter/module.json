@@ -1,0 +1,20 @@
+{
+  "code": "S30",
+  "slugBase": "us-national-debt-live-counter",
+  "title": "U.S. National Debt",
+  "description": "Real-time U.S. national debt live counter with projected total, debt per person, debt held by the public, intragovernmental holdings, and rate-of-increase breakdowns.",
+  "category": "live",
+  "status": "published",
+  "component": "./index.jsx",
+  "providers": [
+    { "name": "US Treasury", "url": "https://fiscaldata.treasury.gov" }
+  ],
+  "refreshSeconds": 60,
+  "layout": "flex-col",
+  "backgroundColor": "#111111",
+  "apiEndpoints": [
+    "/api/s30/national-debt"
+  ],
+  "seoRoute": true,
+  "tags": ["bitcoin", "national-debt", "usa", "inflation", "fiat"]
+}

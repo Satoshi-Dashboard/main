@@ -1,0 +1,20 @@
+{
+  "code": "S18",
+  "slugBase": "bitcoin-halving-cycle-spiral",
+  "title": "Cycle Spiral",
+  "description": "Interactive polar coordinate spiral visualization of Bitcoin halving cycles. Maps BTC price to radius (log scale) and cycle progress to angle, color-coded by cycle phase. Supports zoom, pan, and click-to-inspect interactions.",
+  "category": "live",
+  "status": "published",
+  "component": "./index.jsx",
+  "providers": [
+    { "name": "Binance", "url": "https://api.binance.com" }
+  ],
+  "refreshSeconds": 3600,
+  "layout": "flex-col",
+  "backgroundColor": "#111111",
+  "apiEndpoints": [
+    "/api/s18/cycle-data"
+  ],
+  "seoRoute": true,
+  "tags": ["bitcoin", "halving", "cycle", "spiral", "visualization"]
+}

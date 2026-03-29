@@ -1,0 +1,20 @@
+{
+  "code": "S28",
+  "slugBase": "bitcoin-dominance-chart",
+  "title": "BTC Dominance",
+  "description": "Historical annual returns chart for Bitcoin with CAGR, standard deviation, Sharpe ratio, best/worst months, and key performance statistics.",
+  "category": "under-construction",
+  "status": "in-development",
+  "component": "./index.jsx",
+  "providers": [
+    { "name": "CoinGecko", "url": "https://www.coingecko.com/api" }
+  ],
+  "refreshSeconds": 300,
+  "layout": "flex-col",
+  "backgroundColor": "#111111",
+  "apiEndpoints": [
+    "/api/s28/btc-dominance"
+  ],
+  "seoRoute": false,
+  "tags": ["bitcoin", "dominance", "altcoins", "market-cap", "chart"]
+}

@@ -1,0 +1,18 @@
+{
+  "code": "S25",
+  "slugBase": "bitcoin-log-regression-channel",
+  "title": "Log Regression",
+  "description": "Interactive log-log regression chart plotting Bitcoin's 4-year moving average price against days since genesis. Features halving markers, hover crosshair with tooltip, and a power-law model fit with R²=98.89%.",
+  "category": "under-construction",
+  "status": "in-development",
+  "component": "./index.jsx",
+  "providers": [
+    { "name": "Binance", "url": "https://www.binance.com" }
+  ],
+  "refreshSeconds": 3600,
+  "layout": "flex-col",
+  "backgroundColor": "#0a0a0a",
+  "apiEndpoints": ["/api/s25/log-regression"],
+  "seoRoute": false,
+  "tags": ["bitcoin", "logarithmic", "regression", "channel", "model"]
+}

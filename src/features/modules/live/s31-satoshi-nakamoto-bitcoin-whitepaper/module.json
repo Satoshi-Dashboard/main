@@ -1,0 +1,16 @@
+{
+  "code": "S31",
+  "slugBase": "satoshi-nakamoto-bitcoin-whitepaper",
+  "title": "Thank You Satoshi",
+  "description": "A tribute to Satoshi Nakamoto featuring rotating multilingual gratitude messages, Genesis Block information, Bitcoin principles, the whitepaper abstract, and a donation card.",
+  "category": "live",
+  "status": "published",
+  "component": "./index.jsx",
+  "providers": [],
+  "refreshSeconds": 0,
+  "layout": "none",
+  "backgroundColor": "#111111",
+  "apiEndpoints": [],
+  "seoRoute": true,
+  "tags": ["bitcoin", "satoshi", "whitepaper", "history", "nakamoto"]
+}

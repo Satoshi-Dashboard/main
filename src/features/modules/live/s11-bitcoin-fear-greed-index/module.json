@@ -1,0 +1,20 @@
+{
+  "code": "S11",
+  "slugBase": "bitcoin-fear-greed-index",
+  "title": "Fear & Greed Index",
+  "description": "Real-time Bitcoin Fear & Greed Index gauge showing market sentiment from extreme fear to extreme greed, with historical comparison bubbles for yesterday, 7 days ago, and 30 days ago.",
+  "category": "live",
+  "status": "published",
+  "component": "./index.jsx",
+  "providers": [
+    { "name": "Alternative.me", "url": "https://alternative.me/crypto/fear-and-greed-index/" }
+  ],
+  "refreshSeconds": 30,
+  "layout": "flex-col",
+  "backgroundColor": "#0a0a0a",
+  "apiEndpoints": [
+    "/api/s11/fear-greed"
+  ],
+  "seoRoute": true,
+  "tags": ["bitcoin", "fear", "greed", "sentiment", "index"]
+}

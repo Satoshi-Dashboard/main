@@ -1,0 +1,21 @@
+{
+  "code": "S15",
+  "slugBase": "bitcoin-vs-gold-chart",
+  "title": "BTC vs Gold",
+  "description": "Dual-series market cap chart comparing Bitcoin and Gold over time using lightweight-charts. Supports 3M, 6M, 1Y and MAX ranges with interactive crosshair, hover data, and BTC/Gold ratio metric.",
+  "category": "live",
+  "status": "published",
+  "component": "./index.jsx",
+  "providers": [
+    { "name": "Binance", "url": "https://www.binance.com/en/binance-api" },
+    { "name": "TradingEconomics", "url": "https://tradingeconomics.com/api" }
+  ],
+  "refreshSeconds": 60,
+  "layout": "flex-col",
+  "backgroundColor": "#0a0a0a",
+  "apiEndpoints": [
+    "/api/s15/btc-vs-gold"
+  ],
+  "seoRoute": true,
+  "tags": ["bitcoin", "gold", "comparison", "chart", "store-of-value"]
+}

@@ -1,0 +1,18 @@
+{
+  "code": "S24",
+  "slugBase": "bitcoin-network-activity",
+  "title": "Network Activity",
+  "description": "Displays Bitcoin network activity metrics including market cap, total crypto market cap, and Bitcoin dominance percentage with sparklines and a 90-day dominance history area chart.",
+  "category": "under-construction",
+  "status": "in-development",
+  "component": "./index.jsx",
+  "providers": [
+    { "name": "mempool.space", "url": "https://mempool.space" }
+  ],
+  "refreshSeconds": 60,
+  "layout": "flex-col",
+  "backgroundColor": "#0a0a0a",
+  "apiEndpoints": ["/api/s24/network-activity"],
+  "seoRoute": false,
+  "tags": ["bitcoin", "network", "activity", "transactions", "on-chain"]
+}

@@ -1,0 +1,21 @@
+{
+  "code": "S02",
+  "slugBase": "bitcoin-price-chart-live",
+  "title": "Bitcoin Price Chart",
+  "description": "Interactive lightweight-charts display of BTC price over multiple time ranges (live, 1D, 1W, 1M, 3M, 1Y, 5Y)",
+  "category": "live",
+  "status": "published",
+  "component": "./index.jsx",
+  "providers": [
+    { "name": "Binance", "url": "https://api.binance.com" }
+  ],
+  "refreshSeconds": 15,
+  "layout": "flex-col",
+  "backgroundColor": "#0a0a0a",
+  "apiEndpoints": [
+    "/api/btc/spot",
+    "/api/btc/history"
+  ],
+  "seoRoute": true,
+  "tags": ["bitcoin", "price", "chart", "history", "technical-analysis"]
+}

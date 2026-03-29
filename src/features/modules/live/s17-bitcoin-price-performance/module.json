@@ -1,0 +1,21 @@
+{
+  "code": "S17",
+  "slugBase": "bitcoin-price-performance",
+  "title": "US Median Home Price in \u20bf",
+  "description": "Tracks the US median home price denominated in both USD and Bitcoin over time, revealing Bitcoin's purchasing power growth relative to real estate. Data sourced from FRED quarterly reports and live Binance BTC spot price.",
+  "category": "live",
+  "status": "published",
+  "component": "./index.jsx",
+  "providers": [
+    { "name": "Binance", "url": "https://api.binance.com" },
+    { "name": "FRED", "url": "https://fred.stlouisfed.org/api" }
+  ],
+  "refreshSeconds": 300,
+  "layout": "flex-col",
+  "backgroundColor": "#0a0a0a",
+  "apiEndpoints": [
+    "/api/s17/price-performance"
+  ],
+  "seoRoute": true,
+  "tags": ["bitcoin", "price", "performance", "home", "purchasing-power"]
+}

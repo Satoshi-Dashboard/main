@@ -1,0 +1,19 @@
+{
+  "code": "S21",
+  "slugBase": "bitcoin-big-mac-sats-tracker",
+  "title": "Big Mac Sats Tracker",
+  "description": "Tracks the cost of a Big Mac in satoshis over time, comparing purchasing power across multiple historical periods to visualize Bitcoin's appreciation against fiat inflation.",
+  "category": "under-construction",
+  "status": "in-development",
+  "component": "./index.jsx",
+  "providers": [
+    { "name": "CoinGecko", "url": "https://www.coingecko.com" },
+    { "name": "McDonald's data", "url": "https://github.com/TheEconomist/big-mac-data" }
+  ],
+  "refreshSeconds": 3600,
+  "layout": "flex-col",
+  "backgroundColor": "#0a0a0a",
+  "apiEndpoints": ["/api/s21/big-mac-sats"],
+  "seoRoute": false,
+  "tags": ["bitcoin", "bigmac", "purchasing-power", "sats", "inflation"]
+}

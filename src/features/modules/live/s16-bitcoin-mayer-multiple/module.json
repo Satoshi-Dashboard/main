@@ -1,0 +1,20 @@
+{
+  "code": "S16",
+  "slugBase": "bitcoin-mayer-multiple",
+  "title": "Mayer Multiple",
+  "description": "Bitcoin Mayer Multiple indicator comparing current BTC price to its 200-day moving average. Identifies overvalued and undervalued market conditions using historical distribution analysis.",
+  "category": "live",
+  "status": "published",
+  "component": "./index.jsx",
+  "providers": [
+    { "name": "Binance", "url": "https://api.binance.com" }
+  ],
+  "refreshSeconds": 60,
+  "layout": "flex-col",
+  "backgroundColor": "#0a0a0a",
+  "apiEndpoints": [
+    "/api/s16/mayer-multiple"
+  ],
+  "seoRoute": true,
+  "tags": ["bitcoin", "mayer", "multiple", "indicator", "valuation"]
+}

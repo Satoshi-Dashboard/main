@@ -1,0 +1,20 @@
+{
+  "code": "S14",
+  "slugBase": "bitcoin-vs-global-assets",
+  "title": "Global Assets",
+  "description": "Comparative treemap of total global asset market capitalizations including Bitcoin, Gold, Equities, Bonds, Real Estate, and Money. Shows proportional stacked bar and asset cards with ranks.",
+  "category": "live",
+  "status": "published",
+  "component": "./index.jsx",
+  "providers": [
+    { "name": "CoinGecko", "url": "https://www.coingecko.com/api" }
+  ],
+  "refreshSeconds": 300,
+  "layout": "flex-col",
+  "backgroundColor": "#0a0a0a",
+  "apiEndpoints": [
+    "/api/s14/global-assets"
+  ],
+  "seoRoute": true,
+  "tags": ["bitcoin", "global", "assets", "treemap", "comparison"]
+}

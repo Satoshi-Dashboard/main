@@ -1,0 +1,20 @@
+{
+  "code": "S08",
+  "slugBase": "bitcoin-merchant-map",
+  "title": "Bitcoin Merchant Map",
+  "description": "Global map of Bitcoin-accepting merchants and vendors. Explore real-world Bitcoin adoption with interactive visualization of payment acceptance locations worldwide.",
+  "category": "live",
+  "status": "published",
+  "component": "./index.jsx",
+  "providers": [
+    { "name": "btcmap.org", "url": "https://btcmap.org" }
+  ],
+  "refreshSeconds": 300,
+  "layout": "flex-col",
+  "backgroundColor": "#0a0a0a",
+  "apiEndpoints": [
+    "/api/s08/merchants"
+  ],
+  "seoRoute": true,
+  "tags": ["bitcoin", "merchants", "adoption", "payment-acceptance", "commerce"]
+}
