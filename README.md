@@ -293,6 +293,7 @@ Satoshi Dashboard is an open-source project and we welcome contributors from all
 - ✨ **Have an idea?** → Start a Discussion to propose features
 - 📚 **Documentation?** → Help improve our guides and examples
 - 🔍 **Code review?** → Review open PRs and provide feedback
+- 💬 **Want to chat?** → Join our [Discord community](https://discord.gg/67GKKyqwyh) for real-time discussion
 
 ## Contributing
 
