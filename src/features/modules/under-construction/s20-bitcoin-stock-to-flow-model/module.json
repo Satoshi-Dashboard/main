@@ -1,0 +1,20 @@
+{
+  "code": "S20",
+  "slugBase": "bitcoin-stock-to-flow-model",
+  "title": "Stock to Flow",
+  "description": "Bitcoin Stock-to-Flow (S2F) model visualization by PlanB. Log-log scatter chart plotting historical BTC prices against S2F ratio, with dots colored by proximity to next halving event. Model line: price \u2248 0.34 \u00d7 SF^2.94.",
+  "category": "under-construction",
+  "status": "in-development",
+  "component": "./index.jsx",
+  "providers": [
+    { "name": "Binance", "url": "https://api.binance.com" }
+  ],
+  "refreshSeconds": 3600,
+  "layout": "flex-col",
+  "backgroundColor": "#111111",
+  "apiEndpoints": [
+    "/api/s20/stock-to-flow"
+  ],
+  "seoRoute": false,
+  "tags": ["bitcoin", "stock-to-flow", "model", "scarcity", "valuation"]
+}

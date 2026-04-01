@@ -1,0 +1,20 @@
+{
+  "code": "S05",
+  "slugBase": "bitcoin-mempool-trend",
+  "title": "Bitcoin Long-Term Trend",
+  "description": "Historical mempool trends and fee patterns over extended time periods. Analyze long-term Bitcoin network activity and fee evolution with detailed trend analysis.",
+  "category": "live",
+  "status": "published",
+  "component": "./index.jsx",
+  "providers": [
+    { "name": "mempool.space", "url": "https://mempool.space" }
+  ],
+  "refreshSeconds": 30,
+  "layout": "flex-col",
+  "backgroundColor": "#0a0a0a",
+  "apiEndpoints": [
+    "/api/public/mempool/overview"
+  ],
+  "seoRoute": true,
+  "tags": ["bitcoin", "mempool", "trends", "history", "network-analysis"]
+}

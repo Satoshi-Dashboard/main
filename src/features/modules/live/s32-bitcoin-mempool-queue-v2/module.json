@@ -1,0 +1,21 @@
+{
+  "code": "S32",
+  "slugBase": "bitcoin-mempool-queue-v2",
+  "title": "BTC Queue",
+  "description": "Live Bitcoin mempool queue visualization showing pending transaction count, total fees, and queue weight using a lightweight-charts line series with 24h historical data.",
+  "category": "live",
+  "status": "published",
+  "component": "./index.jsx",
+  "providers": [
+    { "name": "mempool.space", "url": "https://mempool.space" }
+  ],
+  "refreshSeconds": 15,
+  "layout": "flex-col",
+  "backgroundColor": "#111111",
+  "apiEndpoints": [
+    "/api/public/mempool/live",
+    "/api/public/mempool/overview"
+  ],
+  "seoRoute": true,
+  "tags": ["bitcoin", "mempool", "queue", "fees", "transactions"]
+}

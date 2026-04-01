@@ -1,0 +1,18 @@
+{
+  "code": "S27",
+  "slugBase": "bitcoin-google-trends",
+  "title": "Google Trends",
+  "description": "Bitcoin Google Trends search interest (0–100) over a 24-hour window, overlaid with BTC price correlation. Includes Pearson correlation coefficient, signal zones, and an interactive hover crosshair.",
+  "category": "under-construction",
+  "status": "in-development",
+  "component": "./index.jsx",
+  "providers": [
+    { "name": "Google Trends", "url": "https://trends.google.com" }
+  ],
+  "refreshSeconds": 3600,
+  "layout": "flex-col",
+  "backgroundColor": "#0a0a0a",
+  "apiEndpoints": ["/api/s27/google-trends"],
+  "seoRoute": false,
+  "tags": ["bitcoin", "google-trends", "search", "interest", "sentiment"]
+}

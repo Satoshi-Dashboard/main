@@ -1,0 +1,18 @@
+{
+  "code": "S23",
+  "slugBase": "bitcoin-big-mac-index",
+  "title": "Big Mac Index",
+  "description": "Displays the current cost of a Big Mac in satoshis using live BTC price, with comparison cards showing historical sats cost across multiple time horizons to measure Bitcoin's purchasing power evolution.",
+  "category": "under-construction",
+  "status": "in-development",
+  "component": "./index.jsx",
+  "providers": [
+    { "name": "The Economist", "url": "https://www.economist.com/big-mac-index" }
+  ],
+  "refreshSeconds": 86400,
+  "layout": "flex-col",
+  "backgroundColor": "#0a0a0a",
+  "apiEndpoints": ["/api/s23/big-mac-index"],
+  "seoRoute": false,
+  "tags": ["bitcoin", "bigmac", "index", "purchasing-power", "global"]
+}

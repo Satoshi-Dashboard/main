@@ -1,0 +1,18 @@
+{
+  "code": "S26",
+  "slugBase": "bitcoin-mvrv-score",
+  "title": "MVRV Score",
+  "description": "MVRV Z-Score displayed as a 0–100 percentile chart with a dynamic gradient color line (blue=oversold, green=neutral, red=overbought) covering Bitcoin market cycles from 2010 to the present.",
+  "category": "under-construction",
+  "status": "in-development",
+  "component": "./index.jsx",
+  "providers": [
+    { "name": "Glassnode", "url": "https://glassnode.com" }
+  ],
+  "refreshSeconds": 3600,
+  "layout": "flex-col",
+  "backgroundColor": "#0a0a0a",
+  "apiEndpoints": ["/api/s26/mvrv"],
+  "seoRoute": false,
+  "tags": ["bitcoin", "mvrv", "on-chain", "valuation", "market-value"]
+}

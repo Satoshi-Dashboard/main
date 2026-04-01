@@ -9,6 +9,7 @@ import SkipBack from 'lucide-react/dist/esm/icons/skip-back';
 import SkipForward from 'lucide-react/dist/esm/icons/skip-forward';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
+  ensureModulesLoaded,
   FIRST_MODULE,
   getModulePath,
   LEGACY_MODULE_REDIRECTS,
@@ -160,7 +161,7 @@ function classifyMarketAudioMood(spot, samples) {
 }
 
 const getWrappedIndex = (index) => {
-  const total = MODULES.length;
+  const total = MODULES?.length || 32;
   return ((index % total) + total) % total;
 };
 
@@ -229,19 +230,28 @@ export default function ModulePage({ forcedSlug = null }) {
   const navigate = useNavigate();
   const activeSlug = forcedSlug || slug;
 
+  // ── Async module initialization guard ────────────────────────────────────
+  const [ready, setReady] = useState(Boolean(MODULES));
+  useEffect(() => {
+    if (!ready) {
+      ensureModulesLoaded().then(() => setReady(true));
+    }
+  }, [ready]);
+
   const currentIndex = useMemo(() => {
+    if (!MODULES) return 0;
     const index = MODULES.findIndex((m) => m.slug === activeSlug);
     return index >= 0 ? index : 0;
-  }, [activeSlug]);
+  }, [activeSlug, ready]);
 
-  const module = MODULES_BY_SLUG[activeSlug] || MODULES[currentIndex];
-  const Component = module.component;
-  const seo = useMemo(() => getModuleSEO(module.slugBase), [module.slugBase]);
-  const canonicalPath = module.code === FIRST_MODULE.code ? '/' : `/module/${module.slug}`;
-  const isNoindexPreview = useMemo(() => NOINDEX_PREVIEW_SLUGS.has(module.slugBase), [module.slugBase]);
-  const hasBlockingOverlay = useMemo(() => BLOCKING_OVERLAY_SLUGS.has(module.slugBase), [module.slugBase]);
+  const module = (MODULES_BY_SLUG[activeSlug] || MODULES?.[currentIndex]) ?? null;
+  const Component = module?.component ?? null;
+  const seo = useMemo(() => module ? getModuleSEO(module.slugBase) : { title: '', description: '', keywords: [] }, [module?.slugBase]);
+  const canonicalPath = module?.code === FIRST_MODULE?.code ? '/' : `/module/${module?.slug ?? ''}`;
+  const isNoindexPreview = useMemo(() => module ? NOINDEX_PREVIEW_SLUGS.has(module.slugBase) : false, [module?.slugBase]);
+  const hasBlockingOverlay = useMemo(() => module ? BLOCKING_OVERLAY_SLUGS.has(module.slugBase) : false, [module?.slugBase]);
   const moduleSchema = useMemo(
-    () => ([
+    () => module ? ([
       {
         '@context': 'https://schema.org',
         '@type': 'WebPage',
@@ -269,8 +279,8 @@ export default function ModulePage({ forcedSlug = null }) {
           },
         ],
       },
-    ]),
-    [canonicalPath, module.title, seo.description, seo.title],
+    ]) : [],
+    [canonicalPath, module?.title, seo.description, seo.title],
   );
 
   usePageSEO({
@@ -280,11 +290,12 @@ export default function ModulePage({ forcedSlug = null }) {
     keywords: seo.keywords,
     robots: isNoindexPreview ? 'noindex, follow' : undefined,
     image: DEFAULT_OG_IMAGE,
-    imageAlt: module.title,
+    imageAlt: module?.title ?? '',
     schema: isNoindexPreview ? [] : moduleSchema,
   });
 
   useEffect(() => {
+    if (!module || !FIRST_MODULE) return;
     trackModuleViewed(module, {
       path: canonicalPath,
       routeType: module.code === FIRST_MODULE.code ? 'root' : 'module',
@@ -292,12 +303,12 @@ export default function ModulePage({ forcedSlug = null }) {
     });
   }, [canonicalPath, module]);
 
-  const footerPage = useMemo(() => String(module.code || '').replace(/^S/i, ''), [module.code]);
+  const footerPage = useMemo(() => String(module?.code || '').replace(/^S/i, ''), [module?.code]);
   const footerTotal = useMemo(
-    () => MODULES.reduce((max, item) => {
+    () => (MODULES || []).reduce((max, item) => {
       const n = Number(String(item.code || '').match(/\d+/)?.[0] || 0);
       return Number.isFinite(n) ? Math.max(max, n) : max;
-    }, 0),
+    }, 32),
     [],
   );
 
@@ -358,7 +369,7 @@ export default function ModulePage({ forcedSlug = null }) {
   const showBottomMeta = showSharedMeta && isResponsiveViewport;
   const useResponsiveScroll = isResponsiveViewport && (showBottomMeta || moduleMeta?.responsiveScroll === true);
   const metaLastAt = new Date(metaLastAtMs);
-  const stripTitle = moduleMeta?.showTitleInStrip === false ? '' : (moduleMeta?.stripTitle || module.title);
+  const stripTitle = moduleMeta?.showTitleInStrip === false ? '' : (moduleMeta?.stripTitle || module?.title || '');
 
   useEffect(() => {
     if (!isResponsiveViewport) return;
@@ -385,6 +396,7 @@ export default function ModulePage({ forcedSlug = null }) {
   useEffect(() => {
     if (!slug) return;
 
+    if (!FIRST_MODULE) return;
     if (slug === FIRST_MODULE.slug) {
       navigate('/', { replace: true });
       return;
@@ -403,7 +415,8 @@ export default function ModulePage({ forcedSlug = null }) {
 
   const goToModule = useCallback(
     (index, options = {}) => {
-      const targetModule = MODULES[getWrappedIndex(index)];
+      const targetModule = MODULES?.[getWrappedIndex(index)];
+      if (!targetModule) return;
       trackModuleNavigation({
         action: options.action || 'open',
         surface: options.surface || 'module-shell',
@@ -434,8 +447,8 @@ export default function ModulePage({ forcedSlug = null }) {
   }, []);
 
   const preloadModuleDirection = useCallback((index) => {
-    const targetModule = MODULES[getWrappedIndex(index)];
-    void preloadModule(targetModule);
+    const targetModule = MODULES?.[getWrappedIndex(index)];
+    if (targetModule) void preloadModule(targetModule);
   }, []);
 
   useEffect(() => {
@@ -542,6 +555,10 @@ export default function ModulePage({ forcedSlug = null }) {
       });
     }
   }, [activeTrackSrc, isPlaying, marketAudioReady]);
+
+  if (!ready || !module || !FIRST_MODULE) {
+    return <ModuleContentFallback title="Loading…" />;
+  }
 
   return (
     <main className="player-shell relative h-dvh w-screen overflow-hidden bg-[color:var(--bg-primary)]">

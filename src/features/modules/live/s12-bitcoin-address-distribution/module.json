@@ -1,0 +1,20 @@
+{
+  "code": "S12",
+  "slugBase": "bitcoin-address-distribution",
+  "title": "Address Distribution",
+  "description": "Bitcoin address distribution across wealth tiers from Plankton (<0.1 BTC) to 100K+ holders. Displays number of addresses, total BTC held, and percentage of total supply per tier.",
+  "category": "live",
+  "status": "published",
+  "component": "./index.jsx",
+  "providers": [
+    { "name": "mempool.space", "url": "https://mempool.space" }
+  ],
+  "refreshSeconds": 300,
+  "layout": "flex-col",
+  "backgroundColor": "#0a0a0a",
+  "apiEndpoints": [
+    "/api/s12/address-distribution"
+  ],
+  "seoRoute": true,
+  "tags": ["bitcoin", "addresses", "distribution", "hodlers", "statistics"]
+}

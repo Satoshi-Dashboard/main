@@ -1,0 +1,18 @@
+{
+  "code": "S22",
+  "slugBase": "bitcoin-seasonality-heatmap",
+  "title": "Seasonality",
+  "description": "Monthly returns heatmap for Bitcoin from 2013 to the present. Green cells indicate positive months, red cells indicate negative months, with color intensity proportional to magnitude. Includes average and median rows.",
+  "category": "under-construction",
+  "status": "in-development",
+  "component": "./index.jsx",
+  "providers": [
+    { "name": "Binance", "url": "https://www.binance.com" }
+  ],
+  "refreshSeconds": 3600,
+  "layout": "flex-col",
+  "backgroundColor": "#0a0a0a",
+  "apiEndpoints": ["/api/s22/seasonality"],
+  "seoRoute": false,
+  "tags": ["bitcoin", "seasonality", "heatmap", "monthly", "returns"]
+}

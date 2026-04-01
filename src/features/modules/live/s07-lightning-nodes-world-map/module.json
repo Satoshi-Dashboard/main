@@ -1,0 +1,20 @@
+{
+  "code": "S07",
+  "slugBase": "lightning-nodes-world-map",
+  "title": "Lightning Nodes Map",
+  "description": "Interactive world map of Lightning Network node distribution and network topology. Visualize Lightning node density, channels, and network health across regions.",
+  "category": "live",
+  "status": "published",
+  "component": "./index.jsx",
+  "providers": [
+    { "name": "mempool.space", "url": "https://mempool.space" }
+  ],
+  "refreshSeconds": 60,
+  "layout": "flex-col",
+  "backgroundColor": "#0a0a0a",
+  "apiEndpoints": [
+    "/api/public/mempool/overview"
+  ],
+  "seoRoute": true,
+  "tags": ["lightning", "layer-2", "nodes", "payment-channels", "network-map"]
+}

@@ -1,0 +1,20 @@
+{
+  "code": "S09",
+  "slugBase": "lightning-network-stats",
+  "title": "Lightning Network Stats",
+  "description": "Comprehensive Lightning Network statistics and metrics. Real-time data on channel count, node metrics, capacity, and network growth indicators.",
+  "category": "live",
+  "status": "published",
+  "component": "./index.jsx",
+  "providers": [
+    { "name": "mempool.space", "url": "https://mempool.space" }
+  ],
+  "refreshSeconds": 30,
+  "layout": "flex-col",
+  "backgroundColor": "#0a0a0a",
+  "apiEndpoints": [
+    "/api/public/mempool/overview"
+  ],
+  "seoRoute": true,
+  "tags": ["lightning", "layer-2", "statistics", "network-metrics", "channels"]
+}

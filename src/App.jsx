@@ -55,7 +55,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-gray-950">
       <Routes>
-        <Route path="/" element={<LazyRoute><ModulePage forcedSlug={FIRST_MODULE.slug} /></LazyRoute>} />
+        <Route path="/" element={<LazyRoute><ModulePage forcedSlug={FIRST_MODULE?.slug} /></LazyRoute>} />
         <Route path={SEO_HUB_PATH} element={<LazyRoute><SeoLandingPage /></LazyRoute>} />
         <Route path={SEO_BLOG_PATH} element={<LazyRoute><SeoBlogIndexPage /></LazyRoute>} />
         <Route path={`${SEO_BLOG_PATH}/:slug`} element={<LazyRoute><SeoBlogPostPage /></LazyRoute>} />

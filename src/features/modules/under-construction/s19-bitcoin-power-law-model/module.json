@@ -1,0 +1,20 @@
+{
+  "code": "S19",
+  "slugBase": "bitcoin-power-law-model",
+  "title": "Power Law Model",
+  "description": "Bitcoin Power Law Corridor model by Harold Christopher Burger. Log-log chart projecting BTC fair value based on days since genesis using the formula: log10(price) = -17.02 + 5.98 * log10(daysSinceGenesis). Shows 5 price corridor bands from Extreme Bottom to Extreme Top.",
+  "category": "under-construction",
+  "status": "in-development",
+  "component": "./index.jsx",
+  "providers": [
+    { "name": "Binance", "url": "https://api.binance.com" }
+  ],
+  "refreshSeconds": 3600,
+  "layout": "flex-col",
+  "backgroundColor": "#111111",
+  "apiEndpoints": [
+    "/api/s19/power-law"
+  ],
+  "seoRoute": false,
+  "tags": ["bitcoin", "power-law", "model", "prediction", "long-term"]
+}

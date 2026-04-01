@@ -1,0 +1,20 @@
+{
+  "code": "S10",
+  "slugBase": "stablecoin-peg-tracker",
+  "title": "Stablecoin Peg Health",
+  "description": "Monitor stablecoin peg stability and deviation from target values. Real-time tracking of major stablecoins (USDT, USDC, BUSD) with historical peg health analysis.",
+  "category": "live",
+  "status": "published",
+  "component": "./index.jsx",
+  "providers": [
+    { "name": "CoinGecko", "url": "https://www.coingecko.com/api" }
+  ],
+  "refreshSeconds": 30,
+  "layout": "flex-col",
+  "backgroundColor": "#0a0a0a",
+  "apiEndpoints": [
+    "/api/s10/stablecoins"
+  ],
+  "seoRoute": true,
+  "tags": ["stablecoins", "peg-stability", "usdt", "usdc", "defi"]
+}
