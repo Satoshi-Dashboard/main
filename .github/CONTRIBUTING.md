@@ -153,8 +153,11 @@ All PRs require at least one approval. Reviewers check for:
 - **Issues** - Report bugs, propose features, discuss technical problems
 - **Discussions** - Open conversations, ideas, questions
 - **Pull Requests** - Implementation of changes
+- **Discord** - For direct communication and real-time collaboration: https://discord.gg/67GKKyqwyh
 
 Keep all communication respectful, constructive, and transparent.
+
+**Want closer involvement?** Join our Discord community for direct communication with maintainers and other contributors!
 
 ## Recognition
 

@@ -110,7 +110,8 @@ We support modern browsers with HTTPS. Older versions may have known vulnerabili
 
 ## Contact
 
-- **Security**: ikhunsa@proton.me
+- **Security Issues**: ikhunsa@proton.me (for sensitive vulnerabilities)
+- **Discord Community**: https://discord.gg/67GKKyqwyh (for general discussion and collaboration)
 
 ---
 

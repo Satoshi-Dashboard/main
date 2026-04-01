@@ -68,7 +68,11 @@ This Code of Conduct is based on the [Contributor Covenant](https://www.contribu
 
 ## Questions
 
-Have questions about this Code of Conduct? Open a Discussion or contact the maintainers.
+Have questions about this Code of Conduct?
+
+- Open a Discussion on GitHub
+- Contact maintainers via email: ikhunsa@proton.me
+- Join our Discord community for direct conversation: https://discord.gg/67GKKyqwyh
 
 ---
 
