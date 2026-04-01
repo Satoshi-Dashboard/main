@@ -12,6 +12,7 @@ const S02_PriceChart = lazyWithPreload(() => import('@/features/modules/live/S02
 const S03_MultiCurrencyBoard = lazyWithPreload(() => import('@/features/modules/live/S03_MultiCurrencyBoard'));
 const S04_MempoolGauge = lazyWithPreload(() => import('@/features/modules/live/S04_MempoolGauge'));
 const S05_LongTermTrend = lazyWithPreload(() => import('@/features/modules/live/S05_LongTermTrend'));
+const S06_BtcQueue = lazyWithPreload(() => import('@/features/modules/live/S06_BtcQueue'));
 const S06_NodesMap = lazyWithPreload(() => import('@/features/modules/live/S06_NodesMap'));
 const S07_LightningNodesMap = lazyWithPreload(() => import('@/features/modules/live/S07_LightningNodesMap'));
 const S08_BtcMapBusinessesMap = lazyWithPreload(() => import('@/features/modules/live/S08_BtcMapBusinessesMap'));
@@ -45,7 +46,7 @@ const MODULE_DEFS = [
   { slugBase: 'bitcoin-price-multi-currency', title: 'Multi-Currency', component: S03_MultiCurrencyBoard },
   { slugBase: 'bitcoin-mempool-fees', title: 'Mempool Gauge', component: S04_MempoolGauge },
   { slugBase: 'bitcoin-mempool-trend', title: 'Long-Term Trend', component: S05_LongTermTrend },
-  { slugBase: 'bitcoin-mempool-queue-v2', title: 'BTC Queue', component: S32_BtcQueue },
+  { slugBase: 'bitcoin-mempool-queue-v2', title: 'BTC Queue', component: S06_BtcQueue },
   { slugBase: 'bitcoin-nodes-world-map', title: 'Nodes Map', component: S06_NodesMap },
   { slugBase: 'lightning-nodes-world-map', title: 'Lightning Nodes Map', component: S07_LightningNodesMap },
   { slugBase: 'bitcoin-merchant-map', title: 'BTC Map Business Density', component: S08_BtcMapBusinessesMap },

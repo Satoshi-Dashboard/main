@@ -70,20 +70,15 @@ export const getChangeClass = (n) =>
 
 export function formatMetaTimestamp(value) {
   const date = value instanceof Date ? value : new Date(value);
-  if (!Number.isFinite(date.getTime())) return 'N/A';
+  if (!Number.isFinite(date.getTime())) return '—';
 
-  const dateStr = date.toLocaleDateString('en-US', {
-    month: '2-digit',
-    day: '2-digit',
-    year: 'numeric',
-  });
-  const timeStr = date.toLocaleTimeString('en-US', {
+  return date.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
-    second: '2-digit',
+    hour12: false,
   });
-
-  return `${dateStr}, ${timeStr}`;
 }
 
 export function formatSourceUtcTimestamp(value) {

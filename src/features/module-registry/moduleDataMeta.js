@@ -57,7 +57,7 @@ const MODULE_DATA_META = {
       { name: 'Johoe', url: 'https://jochen-hoenicke.de/queue/' },
     ],
     refreshRangeLabel: '24h 1m',
-    showTitleInStrip: false,
+    stripTitle: 'Bitcoin Mempool Queue',
   },
   'bitcoin-nodes-world-map': {
     providers: [

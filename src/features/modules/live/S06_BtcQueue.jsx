@@ -456,6 +456,19 @@ export default function S06_BtcQueue() {
 
   const heroValue = latestValues?.[activeMetric] ?? null;
   const meta = METRIC_META[activeMetric];
+
+  // 24h average — FEE: promedio por banda primero, luego se unifica sumando
+  const avg24h = useMemo(() => {
+    if (!normalizedPoints.length || !bands.length) return null;
+    const n = normalizedPoints.length;
+    const count = normalizedPoints.reduce((s, p) => s + (p.totals.count || 0), 0) / n;
+    const weight = normalizedPoints.reduce((s, p) => s + (p.totals.weight || 0), 0) / n;
+    const feeBandAvgs = bands.map((_, i) =>
+      normalizedPoints.reduce((s, p) => s + (p.feeBuckets[i] || 0), 0) / n
+    );
+    const fee = feeBandAvgs.reduce((s, v) => s + v, 0);
+    return { count, weight, fee };
+  }, [normalizedPoints, bands]);
   const sourceSnapshotAt = historyPayload?.source_snapshot_at || historyData?.latest?.snapshot_ts || null;
   const sourceFetchedAt = historyPayload?.source_fetched_at || historyData?.latest?.fetched_at || null;
   const sourceAgeMs = Number(historyPayload?.source_age_ms);
@@ -897,6 +910,12 @@ export default function S06_BtcQueue() {
                   <span>Source snapshot: {formatMetaTimestamp(sourceSnapshotAt)}</span>
                   <span>Last sync: {formatMetaTimestamp(sourceFetchedAt)}</span>
                 </div>
+                {avg24h && heroValue !== null && (
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-0.5">
+                    <span className="uppercase tracking-[0.16em] text-white/40">24H AVG</span>
+                    <span style={{ color: meta.color }}>{meta.formatValue(avg24h[activeMetric])}</span>
+                  </div>
+                )}
               </div>
             </>
           )}
