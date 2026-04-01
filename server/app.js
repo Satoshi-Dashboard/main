@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto';
+import compression from 'compression';
 import express from 'express';
 import rateLimit from 'express-rate-limit';
+import { cacheGetJson, cacheSetJson } from './core/runtimeCache.js';
 import { ExternalApiError, getBtcRates, updateBtcRates } from './services/btcRates.js';
 import {
   getBitnodesPayload,
@@ -49,6 +51,8 @@ import {
   getLandGeoPayload,
   getLightningChannelsGeoPayload,
   getLightningWorldPayload,
+  getJohoeBtcQueueBootstrapPayload,
+  getJohoeBtcQueuePayload,
   getMempoolLivePayload,
   getMempoolNodePayload,
   getMempoolOfficialUsagePayload,
@@ -68,6 +72,34 @@ const RATE_LIMIT_WINDOW_MS = 60_000;
 const GENERAL_API_RATE_LIMIT_MAX = Number(process.env.GENERAL_API_RATE_LIMIT_MAX || 240);
 const PUBLIC_API_RATE_LIMIT_MAX = Number(process.env.PUBLIC_API_RATE_LIMIT_MAX || 60);
 const REFRESH_API_RATE_LIMIT_MAX = Number(process.env.REFRESH_API_RATE_LIMIT_MAX || 10);
+const LIGHTNING_FALLBACK_CACHE_KEY = 'private:lightning:fallback';
+const LIGHTNING_FALLBACK_CACHE_TTL_SECONDS = 30 * 24 * 60 * 60;
+
+function getTrustProxySetting() {
+  const raw = String(process.env.TRUST_PROXY || '').trim().toLowerCase();
+
+  if (!raw) {
+    return process.env.VERCEL === '1' ? 1 : false;
+  }
+
+  if (raw === 'false' || raw === '0' || raw === 'off') {
+    return false;
+  }
+
+  if (raw === 'vercel') {
+    return 1;
+  }
+
+  if (raw === 'true' || raw === 'all' || raw === '*') {
+    throw new Error('TRUST_PROXY=true is not allowed. Use a specific hop count or subnet list.');
+  }
+
+  if (/^\d+$/.test(raw)) {
+    return Number(raw);
+  }
+
+  return raw;
+}
 
 function getRequestId(req) {
   const incomingId = String(req.headers[REQUEST_ID_HEADER] || '').trim();
@@ -119,12 +151,9 @@ function setNoStoreHeaders(res) {
 }
 
 function isLoopbackRequest(req) {
+  const remoteAddress = String(req.socket?.remoteAddress || '').toLowerCase();
   const hostname = String(req.hostname || '').toLowerCase();
-  const ip = String(req.ip || '').toLowerCase();
-  if (!LOCALHOST_IPS.has(ip)) {
-    return false;
-  }
-  return !hostname || LOCALHOST_HOSTS.has(hostname);
+  return LOCALHOST_IPS.has(remoteAddress) && (!hostname || LOCALHOST_HOSTS.has(hostname));
 }
 
 function createRateLimiter({ max, message }) {
@@ -133,7 +162,10 @@ function createRateLimiter({ max, message }) {
     max: parsePositiveInteger(max, 1),
     standardHeaders: true,
     legacyHeaders: false,
-    validate: { trustProxy: false },
+    validate: {
+      trustProxy: false,
+      xForwardedForHeader: false,
+    },
     handler: (req, res) => {
       res.status(429).json({
         error: message,
@@ -231,7 +263,8 @@ export function createApp() {
   const app = express();
 
   app.disable('x-powered-by');
-  app.set('trust proxy', true);
+  app.set('trust proxy', getTrustProxySetting());
+  app.use(compression({ threshold: 1024 }));
   app.use(express.json({ limit: '8kb' }));
   app.use((req, res, next) => {
     req.requestId = getRequestId(req);
@@ -482,6 +515,38 @@ export function createApp() {
     setDataCacheHeaders(res, { sMaxAge: 5, swr: 10 });
     try {
       const payload = await getMempoolLivePayload();
+      res.json(payload);
+    } catch (error) {
+      sendPublicFeedError(res, error);
+    }
+  }));
+
+  app.get('/api/public/mempool/btc-queue', asyncRoute(async (req, res) => {
+    setDataCacheHeaders(res, { sMaxAge: 30, swr: 90 });
+    try {
+      const requestedRange = req.query?.range;
+      if (requestedRange != null && String(requestedRange).toLowerCase() !== '24h') {
+        res.status(400).json({ error: 'Invalid range. Only 24h is supported.' });
+        return;
+      }
+
+      const payload = await getJohoeBtcQueuePayload();
+      res.json(payload);
+    } catch (error) {
+      sendPublicFeedError(res, error);
+    }
+  }));
+
+  app.get('/api/public/mempool/btc-queue/bootstrap', asyncRoute(async (req, res) => {
+    setDataCacheHeaders(res, { sMaxAge: 30, swr: 120 });
+    try {
+      const requestedRange = req.query?.range;
+      if (requestedRange != null && String(requestedRange).toLowerCase() !== '24h') {
+        res.status(400).json({ error: 'Invalid range. Only 24h is supported.' });
+        return;
+      }
+
+      const payload = await getJohoeBtcQueueBootstrapPayload();
       res.json(payload);
     } catch (error) {
       sendPublicFeedError(res, error);
@@ -768,67 +833,40 @@ export function createApp() {
     scheduleWarmup('S01 mempool overview', 1200, () => getMempoolOverviewPayload());
     scheduleWarmup('S04 mempool official usage', 1800, () => getMempoolOfficialUsagePayload());
     scheduleWarmup('S05 mempool live', 2400, () => getMempoolLivePayload());
-    scheduleWarmup('S03 multi-currency', 3000, () => getS03MultiCurrencyPayload());
-    scheduleWarmup('S10 stablecoin list', 3600, () => getS10StablecoinList());
-    scheduleWarmup('S10 stablecoin live prices', 4200, () => getS10StablecoinLivePrices());
+    scheduleWarmup('S06 BTC queue 24h', 3000, () => getJohoeBtcQueuePayload());
+    scheduleWarmup('S03 multi-currency', 3600, () => getS03MultiCurrencyPayload());
+    scheduleWarmup('S10 stablecoin list', 4200, () => getS10StablecoinList());
+    scheduleWarmup('S10 stablecoin live prices', 4800, () => getS10StablecoinLivePrices());
 
     // S06 Bitnodes: cold start hits Bitnodes API (2-3s) or HTML scraper fallback (5-10s).
-    scheduleWarmup('S06 Bitnodes nodes', 5000, () => getBitnodesPayload());
+    scheduleWarmup('S07 Bitnodes nodes', 5600, () => getBitnodesPayload());
 
     // S07 Lightning: mempool.space responds fast but GeoJSON + lock wait adds latency cold.
-    scheduleWarmup('S07 Lightning world', 6000, () => getLightningWorldPayload());
-    scheduleWarmup('geo countries', 6500, () => getCountriesGeoPayload());
+    scheduleWarmup('S08 Lightning world', 6400, () => getLightningWorldPayload());
+    scheduleWarmup('geo countries', 6900, () => getCountriesGeoPayload());
 
     // S14/S15/S30 benefit from having composed real payloads ready before the first visit.
-    scheduleWarmup('S14 global assets', 7500, () => getS14GlobalAssetsPayload());
-    scheduleWarmup('S30 U.S. debt', 8200, () => getUsNationalDebtPayload());
-    scheduleWarmup('S15 BTC vs Gold', 9000, () => getS15BtcVsGoldMarketCapPayload());
-    scheduleWarmup('S17 FRED house price', 9500, () => getS17HousePricePayload());
+    scheduleWarmup('S15 global assets', 9000, () => getS14GlobalAssetsPayload());
+    scheduleWarmup('S31 U.S. debt', 9700, () => getUsNationalDebtPayload());
+    scheduleWarmup('S16 BTC vs Gold', 10_400, () => getS15BtcVsGoldMarketCapPayload());
+    scheduleWarmup('S18 FRED house price', 11_000, () => getS17HousePricePayload());
 
     // S02/S16 history ranges share the same Binance history cache family.
-    scheduleWarmup('S02 history 1D', 9800, () => getBinanceBtcHistoryPayload({ days: 1, interval: '5m' }));
-    scheduleWarmup('S02 history 1W', 10_400, () => getBinanceBtcHistoryPayload({ days: 7, interval: '1h' }));
-    scheduleWarmup('S02 history 1M', 11_000, () => getBinanceBtcHistoryPayload({ days: 30, interval: '1h' }));
-    scheduleWarmup('S02 history 1Y', 11_600, () => getBinanceBtcHistoryPayload({ days: 365, interval: '1d' }));
-    scheduleWarmup('S02 history 5Y', 12_200, () => getBinanceBtcHistoryPayload({ days: 1825, interval: '1d' }));
-    scheduleWarmup('S16 history 2025d', 12_800, () => getBinanceBtcHistoryPayload({ days: 2025, interval: '1d' }));
+    scheduleWarmup('S02 history 1D', 11_500, () => getBinanceBtcHistoryPayload({ days: 1, interval: '5m' }));
+    scheduleWarmup('S02 history 1W', 12_100, () => getBinanceBtcHistoryPayload({ days: 7, interval: '1h' }));
+    scheduleWarmup('S02 history 1M', 12_700, () => getBinanceBtcHistoryPayload({ days: 30, interval: '1h' }));
+    scheduleWarmup('S02 history 1Y', 13_300, () => getBinanceBtcHistoryPayload({ days: 365, interval: '1d' }));
+    scheduleWarmup('S02 history 5Y', 13_900, () => getBinanceBtcHistoryPayload({ days: 1825, interval: '1d' }));
+    scheduleWarmup('S17 history 2025d', 14_500, () => getBinanceBtcHistoryPayload({ days: 2025, interval: '1d' }));
 
     // S08 BTC Map: paginating ~50k places + point-in-polygon matching takes 20-60s cold.
     // Warm it up after core modules so long-running aggregation does not delay more common feeds.
-    scheduleWarmup('S08 BTC Map businesses', 14_000, () => getBtcMapBusinessesByCountryPayload());
+    scheduleWarmup('S09 BTC Map businesses', 15_500, () => getBtcMapBusinessesByCountryPayload());
   }
 
-  const LIGHTNING_CACHE_FILE = 'lightning_network_cache.json';
-
-  function readLightningCache() {
-    try {
-      const fs = require('fs');
-      const path = require('path');
-      const cachePath = path.join(process.cwd(), LIGHTNING_CACHE_FILE);
-      if (fs.existsSync(cachePath)) {
-        const data = fs.readFileSync(cachePath, 'utf-8');
-        return JSON.parse(data);
-      }
-    } catch (e) {
-      console.error('[lightning-cache] read error:', e.message);
-    }
-    return null;
-  }
-
-  function writeLightningCache(payload) {
-    try {
-      const fs = require('fs');
-      const path = require('path');
-      const cachePath = path.join(process.cwd(), LIGHTNING_CACHE_FILE);
-      fs.writeFileSync(cachePath, JSON.stringify(payload, null, 2), 'utf-8');
-    } catch (e) {
-      console.error('[lightning-cache] write error:', e.message);
-    }
-  }
-
-  app.get('/api/public/lightning/fallback', asyncRoute(async (_req, res) => {
-    setDataCacheHeaders(res, { sMaxAge: 3600, swr: 86400 });
-    const cached = readLightningCache();
+  app.get('/api/public/lightning/fallback', refreshApiRateLimiter, requireRefreshToken, asyncRoute(async (_req, res) => {
+    setNoStoreHeaders(res);
+    const cached = await cacheGetJson(LIGHTNING_FALLBACK_CACHE_KEY);
     if (cached) {
       res.json({ ...cached, _fallback: true });
     } else {
@@ -836,7 +874,8 @@ export function createApp() {
     }
   }));
 
-  app.post('/api/public/lightning/fallback', asyncRoute(async (req, res) => {
+  app.post('/api/public/lightning/fallback', refreshApiRateLimiter, requireRefreshToken, asyncRoute(async (req, res) => {
+    setNoStoreHeaders(res);
     const payload = req.body;
     if (!payload || !payload.data) {
       res.status(400).json({ error: 'Invalid payload' });
@@ -847,7 +886,7 @@ export function createApp() {
       updated_at: payload.updated_at || payload.fetched_at || new Date().toISOString(),
       data: payload.data,
     };
-    writeLightningCache(cacheData);
+    await cacheSetJson(LIGHTNING_FALLBACK_CACHE_KEY, cacheData, { ttlSeconds: LIGHTNING_FALLBACK_CACHE_TTL_SECONDS });
     res.json({ success: true, cached_at: new Date().toISOString() });
   }));
 

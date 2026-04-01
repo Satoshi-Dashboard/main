@@ -45,6 +45,10 @@ const CYCLE_PHASES = [
   { range: [0.85, 1.0], label: 'Pre-Halving Bottom', color: '#FF8C00' },
 ];
 
+const MIN_ZOOM = 0.5;
+const MAX_ZOOM = 3;
+const DRAG_THRESHOLD_PX = 4;
+
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
@@ -155,6 +159,22 @@ function getCyclePhaseLabel(t) {
   return 'Unknown Phase';
 }
 
+function clampZoom(scale) {
+  return Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, scale));
+}
+
+function buildViewportTransform(pan, scale) {
+  return `translate(${pan.x}px, ${pan.y}px) scale(${scale})`;
+}
+
+function getZoomPanForCursor({ mouseX, mouseY, centerX, centerY, currentScale, nextScale, currentPan }) {
+  const scaleRatio = nextScale / currentScale;
+  return {
+    x: mouseX - centerX - ((mouseX - centerX - currentPan.x) * scaleRatio),
+    y: mouseY - centerY - ((mouseY - centerY - currentPan.y) * scaleRatio),
+  };
+}
+
 // ============================================================================
 // TOOLTIP COMPONENT
 // ============================================================================
@@ -193,6 +213,7 @@ export default function S18_CycleSpiral() {
 
   // Responsive container
   const containerRef = useRef(null);
+  const interactionAreaRef = useRef(null);
   const svgRef = useRef(null);
   const [containerWidth, setContainerWidth] = useState(0);
 
@@ -201,10 +222,24 @@ export default function S18_CycleSpiral() {
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [zoomScale, setZoomScale] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStateRef = useRef({
+    active: false,
+    hasDragged: false,
+    startX: 0,
+    startY: 0,
+    startPanX: 0,
+    startPanY: 0,
+  });
+  const suppressDotClickRef = useRef(false);
   // Get responsive dimensions
   const dims = useMemo(
     () => getResponsiveDimensions(containerWidth),
     [containerWidth]
+  );
+  const viewportTransform = useMemo(
+    () => buildViewportTransform(pan, zoomScale),
+    [pan, zoomScale]
   );
 
   // Handle window resize
@@ -257,6 +292,11 @@ export default function S18_CycleSpiral() {
 
   // Mouse event handlers
   const handleDotClick = useCallback((e, circle) => {
+    if (suppressDotClickRef.current) {
+      suppressDotClickRef.current = false;
+      return;
+    }
+
     e.stopPropagation();
 
     const date = new Date(circle.ts).toLocaleDateString('en-US', {
@@ -298,32 +338,93 @@ export default function S18_CycleSpiral() {
     const mouseX = e.clientX - containerRect.left;
     const mouseY = e.clientY - containerRect.top;
 
-    // Current center position (accounting for current pan and zoom)
-    const centerX = (dims.CX * zoomScale) + pan.x;
-    const centerY = (dims.CY * zoomScale) + pan.y;
-
-    // Vector from current center to mouse
-    const dx = mouseX - centerX;
-    const dy = mouseY - centerY;
-
     const delta = e.deltaY > 0 ? 0.9 : 1.1;
-    const newScale = Math.max(0.5, Math.min(3, zoomScale * delta));
-    const scaleDiff = newScale / zoomScale;
+    const newScale = clampZoom(zoomScale * delta);
+    if (newScale === zoomScale) return;
 
-    // Adjust pan to keep mouse position fixed during zoom
-    const newPan = {
-      x: pan.x - dx * (scaleDiff - 1),
-      y: pan.y - dy * (scaleDiff - 1),
-    };
+    const newPan = getZoomPanForCursor({
+      mouseX,
+      mouseY,
+      centerX: dims.CX,
+      centerY: dims.CY,
+      currentScale: zoomScale,
+      nextScale: newScale,
+      currentPan: pan,
+    });
 
     setZoomScale(newScale);
     setPan(newPan);
-  }, [zoomScale, pan, dims]);
+  }, [dims.CX, dims.CY, pan, zoomScale]);
+
+  const handlePointerDown = useCallback((e) => {
+    if (e.button !== 0) return;
+
+    dragStateRef.current = {
+      active: true,
+      hasDragged: false,
+      startX: e.clientX,
+      startY: e.clientY,
+      startPanX: pan.x,
+      startPanY: pan.y,
+    };
+  }, [pan.x, pan.y]);
+
+  const handlePointerMove = useCallback((e) => {
+    const dragState = dragStateRef.current;
+    if (!dragState.active) return;
+
+    const deltaX = e.clientX - dragState.startX;
+    const deltaY = e.clientY - dragState.startY;
+
+    if (!dragState.hasDragged) {
+      if (Math.hypot(deltaX, deltaY) < DRAG_THRESHOLD_PX) {
+        return;
+      }
+
+      dragState.hasDragged = true;
+      suppressDotClickRef.current = true;
+      setIsDragging(true);
+    }
+
+    setPan({
+      x: dragState.startPanX + deltaX,
+      y: dragState.startPanY + deltaY,
+    });
+  }, []);
+
+  const handlePointerEnd = useCallback(() => {
+    const dragState = dragStateRef.current;
+    if (!dragState.active) return;
+
+    if (dragState.hasDragged) {
+      suppressDotClickRef.current = true;
+    }
+
+    dragStateRef.current = {
+      active: false,
+      hasDragged: false,
+      startX: 0,
+      startY: 0,
+      startPanX: dragState.startPanX,
+      startPanY: dragState.startPanY,
+    };
+    setIsDragging(false);
+  }, []);
 
   // Reset zoom/pan
   const handleReset = useCallback(() => {
     setZoomScale(1);
     setPan({ x: 0, y: 0 });
+    dragStateRef.current = {
+      active: false,
+      hasDragged: false,
+      startX: 0,
+      startY: 0,
+      startPanX: 0,
+      startPanY: 0,
+    };
+    suppressDotClickRef.current = false;
+    setIsDragging(false);
   }, []);
 
   // Lazy-initialized state: Date.now() runs once at component creation, not on every render
@@ -345,12 +446,28 @@ export default function S18_CycleSpiral() {
     return { todayX, todayY, todayDate };
   }, [mountTime, latestPrice, waypoints, dims]);
 
+  const isInteractive = !loading && !error && waypoints.length > 0;
+  const interactionCursor = isInteractive ? (isDragging ? 'grabbing' : 'grab') : 'default';
+
+  useEffect(() => {
+    const interactionNode = interactionAreaRef.current;
+    if (!interactionNode || !isInteractive) return undefined;
+
+    const handleNativeWheel = (event) => {
+      handleWheel(event);
+    };
+
+    interactionNode.addEventListener('wheel', handleNativeWheel, { passive: false });
+    return () => {
+      interactionNode.removeEventListener('wheel', handleNativeWheel);
+    };
+  }, [handleWheel, isInteractive]);
+
   return (
     <ModuleShell bg="#111111" layout="flex-col" overflow="hidden">
       <div
         ref={containerRef}
         className="flex-1 flex flex-col items-center justify-center relative overflow-hidden bg-[#111111]"
-        onWheel={handleWheel}
       >
         {/* Loading State */}
         {loading && (
@@ -381,19 +498,29 @@ export default function S18_CycleSpiral() {
         {/* SVG Visualization */}
         {!loading && waypoints.length > 0 && (
           <div
+            ref={interactionAreaRef}
+            data-testid="cycle-spiral-interaction-area"
             style={{
-              transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoomScale})`,
-              transition: 'transform 0.1s ease-out',
+              transform: viewportTransform,
+              transition: isDragging ? 'none' : 'transform 0.1s ease-out',
               transformOrigin: 'center center',
+              cursor: interactionCursor,
+              touchAction: 'none',
             }}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerEnd}
+            onPointerLeave={handlePointerEnd}
+            onPointerCancel={handlePointerEnd}
           >
             <svg
               ref={svgRef}
+              data-testid="cycle-spiral-svg"
               width={dims.VW}
               height={dims.VH}
               viewBox={`0 0 ${dims.VW} ${dims.VH}`}
               className="select-none"
-              style={{ cursor: zoomScale > 1 ? 'grab' : 'default' }}
+              style={{ cursor: interactionCursor }}
             >
               {/* Background */}
               <rect width={dims.VW} height={dims.VH} fill="#111111" />

@@ -45,6 +45,7 @@ const MODULE_DEFS = [
   { slugBase: 'bitcoin-price-multi-currency', title: 'Multi-Currency', component: S03_MultiCurrencyBoard },
   { slugBase: 'bitcoin-mempool-fees', title: 'Mempool Gauge', component: S04_MempoolGauge },
   { slugBase: 'bitcoin-mempool-trend', title: 'Long-Term Trend', component: S05_LongTermTrend },
+  { slugBase: 'bitcoin-mempool-queue-v2', title: 'BTC Queue', component: S32_BtcQueue },
   { slugBase: 'bitcoin-nodes-world-map', title: 'Nodes Map', component: S06_NodesMap },
   { slugBase: 'lightning-nodes-world-map', title: 'Lightning Nodes Map', component: S07_LightningNodesMap },
   { slugBase: 'bitcoin-merchant-map', title: 'BTC Map Business Density', component: S08_BtcMapBusinessesMap },

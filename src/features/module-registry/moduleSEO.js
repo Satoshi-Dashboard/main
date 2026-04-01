@@ -29,6 +29,11 @@ const MODULE_SEO = {
     description: 'Analyze long-term Bitcoin mempool behavior with fee trend history, congestion patterns, and network pressure across longer time windows.',
     keywords: ['bitcoin mempool trend', 'bitcoin fee history', 'mempool congestion chart', 'btc fee trend'],
   },
+  'bitcoin-mempool-queue-v2': {
+    title: 'Bitcoin BTC Queue - Fee Bands, Weight & Queue History',
+    description: 'Track the Bitcoin mempool queue with stacked fee bands, historical transaction count, queue weight, and total fee pressure across the latest 24 hours.',
+    keywords: ['bitcoin btc queue', 'bitcoin mempool queue', 'johoe mempool chart', 'bitcoin fee bands'],
+  },
   'bitcoin-nodes-world-map': {
     title: 'Bitcoin Nodes Map - Full Nodes by Country',
     description: 'Explore a Bitcoin nodes map showing reachable full nodes by country to evaluate network distribution and decentralization worldwide.',
@@ -163,7 +168,7 @@ const MODULE_SEO = {
 
 const DEFAULT_SEO = {
   title: 'Bitcoin Dashboard & Live BTC Price | Satoshi Dashboard',
-  description: 'Free Bitcoin dashboard with live BTC price, mempool, nodes, on-chain metrics, Lightning stats, merchant maps, and 31 analytics modules.',
+  description: 'Free Bitcoin dashboard with live BTC price, mempool, nodes, on-chain metrics, Lightning stats, merchant maps, and 32 analytics modules.',
   keywords: ['bitcoin dashboard', 'live btc price', 'bitcoin analytics', 'free bitcoin tools'],
 };
 

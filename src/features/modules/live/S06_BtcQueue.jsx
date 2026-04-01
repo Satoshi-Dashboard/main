@@ -5,10 +5,6 @@ import { fetchJohoeHistory } from '@/shared/services/btcQueueApi.js';
 import { useModuleData } from '@/shared/hooks/useModuleData.js';
 import { ModuleShell } from '@/shared/components/module/index.js';
 
-const RANGE_OPTIONS = [
-  { key: '24h', label: '24h' },
-];
-
 const METRIC_OPTIONS = [
   { key: 'count', label: 'COUNT' },
   { key: 'fee', label: 'FEE' },
@@ -112,17 +108,9 @@ function mixHex(colorA, colorB, weight = 0.5) {
   return `rgb(${mix(a.r, b.r)}, ${mix(a.g, b.g)}, ${mix(a.b, b.b)})`;
 }
 
-function formatDate(timestamp, range) {
+function formatDate(timestamp) {
   const date = new Date(timestamp);
   if (!Number.isFinite(date.getTime())) return '';
-
-  if (range === 'all') {
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  }
 
   return date.toLocaleString('en-US', {
     month: 'short',
@@ -131,6 +119,28 @@ function formatDate(timestamp, range) {
     minute: '2-digit',
     hour12: false,
   });
+}
+
+function formatMetaTimestamp(value) {
+  const timestamp = Date.parse(String(value || ''));
+  if (!Number.isFinite(timestamp)) return '—';
+  return new Date(timestamp).toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+}
+
+function formatAgeLabel(ageMs) {
+  if (!Number.isFinite(ageMs) || ageMs < 0) return 'age unknown';
+  const minutes = Math.round(ageMs / 60_000);
+  if (minutes < 1) return '<1m old';
+  if (minutes < 60) return `${minutes}m old`;
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  return remainder ? `${hours}h ${remainder}m old` : `${hours}h old`;
 }
 
 function BandLegend({ bands }) {
@@ -186,39 +196,6 @@ function MetricSelector({ active, onChange }) {
   );
 }
 
-function RangeSelector({ active, onChange }) {
-  return (
-    <div
-      className="scrollbar-hidden-mobile mt-2 flex flex-shrink-0 items-center gap-2 overflow-x-auto sm:mt-3 sm:gap-4"
-      style={{ paddingBottom: 3 }}
-    >
-      {RANGE_OPTIONS.map((range) => {
-        const isActive = active === range.key;
-        return (
-          <button
-            key={range.key}
-            type="button"
-            onClick={() => onChange(range.key)}
-            aria-pressed={isActive}
-            className="relative flex min-h-[44px] flex-shrink-0 items-center rounded-md px-2.5 pb-2 pt-2 font-mono transition-colors sm:min-h-[36px] sm:px-2 sm:pb-1.5 sm:pt-1"
-            style={{
-              fontSize: 'clamp(0.75rem, 2.4vw, 0.82rem)',
-              fontWeight: isActive ? 700 : 400,
-              color: isActive ? 'white' : 'rgba(255,255,255,0.32)',
-              letterSpacing: '0.05em',
-            }}
-          >
-            {range.label}
-            {isActive ? (
-              <span className="absolute bottom-0.5 left-1 right-1 rounded-full" style={{ height: 2, background: 'white' }} />
-            ) : null}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
 function LoadingSkeleton() {
   return (
     <div className="flex h-full min-h-[240px] items-end gap-px pb-1 sm:min-h-[280px]">
@@ -261,7 +238,7 @@ function ErrorPanel({ onRetry }) {
 }
 
 export default function S06_BtcQueue() {
-  const [activeRange, setActiveRange] = useState('24h');
+  const activeRange = '24h';
   const [activeMetric, setActiveMetric] = useState('count');
   const [hoverIndex, setHoverIndex] = useState(null);
   const [hoverCoords, setHoverCoords] = useState(null);
@@ -286,10 +263,10 @@ export default function S06_BtcQueue() {
     lastTapAt: 0,
   });
 
-  const fetchHistory = useCallback(() => fetchJohoeHistory(activeRange), [activeRange]);
+  const fetchHistory = useCallback(() => fetchJohoeHistory(), []);
 
   const {
-    data: historyData,
+    data: historyPayload,
     loading,
     error,
     refetch,
@@ -297,6 +274,7 @@ export default function S06_BtcQueue() {
     refreshMs: 60_000,
     keepPreviousOnError: true,
   });
+  const historyData = historyPayload?.data || null;
 
   // Parse bands from API data (scraper returns bands at root level)
   const bands = useMemo(() => {
@@ -478,6 +456,13 @@ export default function S06_BtcQueue() {
 
   const heroValue = latestValues?.[activeMetric] ?? null;
   const meta = METRIC_META[activeMetric];
+  const sourceSnapshotAt = historyPayload?.source_snapshot_at || historyData?.latest?.snapshot_ts || null;
+  const sourceFetchedAt = historyPayload?.source_fetched_at || historyData?.latest?.fetched_at || null;
+  const sourceAgeMs = Number(historyPayload?.source_age_ms);
+  const sourceStale = Boolean(historyPayload?.source_stale || historyPayload?.is_fallback);
+  const sourceStatusLabel = sourceStale ? 'STALE 24H FEED' : 'LIVE 24H FEED';
+  const sourceStatusColor = sourceStale ? 'var(--accent-warning)' : 'var(--accent-bitcoin)';
+  const sourceDetail = historyPayload?.fallback_note || formatAgeLabel(sourceAgeMs);
 
   // Hover state
   const hoverPoint = hoverIndex !== null ? chartPoints[hoverIndex] || null : null;
@@ -900,6 +885,19 @@ export default function S06_BtcQueue() {
               >
                 <span style={{ color: 'var(--accent-bitcoin)' }}>{meta.heroLabel}</span>
               </div>
+
+              <div className="mt-3 flex max-w-full flex-col gap-1.5 font-mono text-white/58" style={{ fontSize: 'clamp(0.67rem, 2vw, 0.76rem)' }}>
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span className="uppercase tracking-[0.16em]" style={{ color: sourceStatusColor }}>
+                    {sourceStatusLabel}
+                  </span>
+                  <span>{sourceDetail}</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <span>Source snapshot: {formatMetaTimestamp(sourceSnapshotAt)}</span>
+                  <span>Last sync: {formatMetaTimestamp(sourceFetchedAt)}</span>
+                </div>
+              </div>
             </>
           )}
         </div>
@@ -999,9 +997,6 @@ export default function S06_BtcQueue() {
           <BandLegend bands={bands} />
         </div>
       )}
-
-      {/* Range selector */}
-      {RANGE_OPTIONS.length > 1 ? <RangeSelector active={activeRange} onChange={setActiveRange} /> : null}
     </ModuleShell>
   );
 }

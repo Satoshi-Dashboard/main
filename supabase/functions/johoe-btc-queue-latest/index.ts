@@ -10,6 +10,8 @@ type JohoeRow = {
   fetched_at?: string | null;
 };
 
+const STALE_AFTER_MS = 3 * 60_000;
+
 function requiredEnv(name: string): string {
   const value = Deno.env.get(name)?.trim();
   if (!value) {
@@ -40,6 +42,11 @@ function toPoint(row: JohoeRow) {
     weightBuckets: parseBucketArray(row.weight_buckets),
     feeBuckets: parseBucketArray(row.fee_buckets),
   };
+}
+
+function getSnapshotTsMs(row: JohoeRow): number | null {
+  const timestamp = Date.parse(String(row?.snapshot_ts || ''));
+  return Number.isFinite(timestamp) ? timestamp : null;
 }
 
 Deno.serve(async (req) => {
@@ -76,6 +83,9 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'No data available' }, { status: 404 });
     }
 
+    const snapshotTsMs = getSnapshotTsMs(row);
+    const stale = !snapshotTsMs || (Date.now() - snapshotTsMs) > STALE_AFTER_MS;
+
     return Response.json({
       ...toPoint(row),
       source: 'johoe',
@@ -87,7 +97,8 @@ Deno.serve(async (req) => {
         pollIntervalMs: 60_000,
         cachedAt: new Date().toISOString(),
         lastSuccessfulSyncAt: row.fetched_at ?? new Date().toISOString(),
-        stale: false,
+        latestSnapshotAt: row.snapshot_ts,
+        stale,
       },
     });
   } catch (error) {

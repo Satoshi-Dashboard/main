@@ -9,7 +9,6 @@ import SkipBack from 'lucide-react/dist/esm/icons/skip-back';
 import SkipForward from 'lucide-react/dist/esm/icons/skip-forward';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
-  ensureModulesLoaded,
   FIRST_MODULE,
   getModulePath,
   LEGACY_MODULE_REDIRECTS,

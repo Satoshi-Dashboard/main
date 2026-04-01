@@ -51,6 +51,14 @@ const MODULE_DATA_META = {
     refreshLabel: 'live',
     desktopOverlayInModule: true,
   },
+  'bitcoin-mempool-queue-v2': {
+    providers: [
+      { name: 'ZatoBox', url: 'https://api.zatobox.io' },
+      { name: 'Johoe', url: 'https://jochen-hoenicke.de/queue/' },
+    ],
+    refreshRangeLabel: '24h 1m',
+    showTitleInStrip: false,
+  },
   'bitcoin-nodes-world-map': {
     providers: [
       { name: 'Bitnodes', url: 'https://bitnodes.io' },

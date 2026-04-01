@@ -1,80 +1,68 @@
 import { fetchJson } from '@/shared/lib/api.js';
 
-const VALID_RANGES = new Set(['24h', '30d', 'all']);
 const DEDUP_WINDOW_MS = 2_000;
-const RANGE_TTL_MS = {
-  '24h': 60_000,
-  '30d': 15 * 60_000,
-  all: 6 * 60 * 60_000,
-};
+const BTC_QUEUE_RANGE = '24h';
+const RANGE_TTL_MS = 60_000;
 
-const inflightByRange = new Map();
-const inflightAtByRange = new Map();
-const cacheByRange = new Map();
-const bootstrapInflightByRange = new Map();
-const bootstrapInflightAtByRange = new Map();
-const bootstrapCacheByRange = new Map();
+let inflightPayload = null;
+let inflightPayloadAt = 0;
+let cachedPayload = null;
+let inflightBootstrap = null;
+let inflightBootstrapAt = 0;
+let cachedBootstrap = null;
 
-function normalizeRange(range) {
-  const normalized = String(range || '24h').toLowerCase();
-  return VALID_RANGES.has(normalized) ? normalized : '24h';
-}
-
-function getPayloadFreshUntil(payload, range) {
+function getPayloadFreshUntil(payload) {
   const nextUpdateAtMs = Date.parse(String(payload?.next_update_at || ''));
   if (Number.isFinite(nextUpdateAtMs)) {
     return nextUpdateAtMs;
   }
 
-  return Date.now() + (RANGE_TTL_MS[range] || RANGE_TTL_MS['24h']);
+  return Date.now() + RANGE_TTL_MS;
 }
 
-function getCachedPayload(range) {
-  const cached = cacheByRange.get(range);
-  if (!cached) return null;
-  if (Date.now() < cached.freshUntil) return cached.payload;
-  return cached.payload;
+function getCachedPayload() {
+  if (!cachedPayload) return null;
+  if (Date.now() < cachedPayload.freshUntil) return cachedPayload.payload;
+  return cachedPayload.payload;
 }
 
-function setCachedPayload(range, payload) {
-  cacheByRange.set(range, {
+function setCachedPayload(payload) {
+  cachedPayload = {
     payload,
-    freshUntil: getPayloadFreshUntil(payload, range),
-  });
+    freshUntil: getPayloadFreshUntil(payload),
+  };
   return payload;
 }
 
-function getCachedBootstrap(range) {
-  const cached = bootstrapCacheByRange.get(range);
-  if (!cached) return null;
-  if (Date.now() < cached.freshUntil) return cached.payload;
-  return cached.payload;
+function getCachedBootstrap() {
+  if (!cachedBootstrap) return null;
+  if (Date.now() < cachedBootstrap.freshUntil) return cachedBootstrap.payload;
+  return cachedBootstrap.payload;
 }
 
-function setCachedBootstrap(range, payload) {
-  bootstrapCacheByRange.set(range, {
+function setCachedBootstrap(payload) {
+  cachedBootstrap = {
     payload,
-    freshUntil: getPayloadFreshUntil(payload, range),
-  });
+    freshUntil: getPayloadFreshUntil(payload),
+  };
   return payload;
 }
 
-async function requestBtcQueuePayload(range, { timeout = 10_000, cache = 'no-store' } = {}) {
-  const payload = await fetchJson(`/api/public/mempool/btc-queue?range=${range}`, { timeout, cache });
-  return setCachedPayload(range, payload);
+async function requestBtcQueuePayload({ timeout = 10_000, cache = 'no-store' } = {}) {
+  const payload = await fetchJson('/api/public/mempool/btc-queue', { timeout, cache });
+  return setCachedPayload(payload);
 }
 
-async function requestBtcQueueBootstrapPayload(range, { timeout = 6_000, cache = 'default' } = {}) {
-  const payload = await fetchJson(`/api/public/mempool/btc-queue/bootstrap?range=${range}`, { timeout, cache });
-  return setCachedBootstrap(range, payload);
+async function requestBtcQueueBootstrapPayload({ timeout = 6_000, cache = 'default' } = {}) {
+  const payload = await fetchJson('/api/public/mempool/btc-queue/bootstrap', { timeout, cache });
+  return setCachedBootstrap(payload);
 }
 
-export async function fetchBtcQueuePayload(range = '24h', options = {}) {
-  const normalizedRange = normalizeRange(range);
+export async function fetchBtcQueuePayload(options = {}) {
   const now = Date.now();
-  const inflight = inflightByRange.get(normalizedRange);
-  const inflightAt = inflightAtByRange.get(normalizedRange) || 0;
-  const cached = cacheByRange.get(normalizedRange);
+  const inflight = inflightPayload;
+  const inflightAt = inflightPayloadAt;
+  const cached = cachedPayload;
 
   if (cached && now < cached.freshUntil) {
     return cached.payload;
@@ -84,29 +72,28 @@ export async function fetchBtcQueuePayload(range = '24h', options = {}) {
     return inflight;
   }
 
-  const request = requestBtcQueuePayload(normalizedRange, options)
+  const request = requestBtcQueuePayload(options)
     .catch((error) => {
-      const stale = getCachedPayload(normalizedRange);
+      const stale = getCachedPayload();
       if (stale) return stale;
       throw error;
     })
     .finally(() => {
-      inflightByRange.delete(normalizedRange);
-      inflightAtByRange.delete(normalizedRange);
+      inflightPayload = null;
+      inflightPayloadAt = 0;
     });
 
-  inflightByRange.set(normalizedRange, request);
-  inflightAtByRange.set(normalizedRange, now);
+  inflightPayload = request;
+  inflightPayloadAt = now;
 
   return request;
 }
 
-export async function fetchBtcQueueBootstrapPayload(range = '24h', options = {}) {
-  const normalizedRange = normalizeRange(range);
+export async function fetchBtcQueueBootstrapPayload(options = {}) {
   const now = Date.now();
-  const inflight = bootstrapInflightByRange.get(normalizedRange);
-  const inflightAt = bootstrapInflightAtByRange.get(normalizedRange) || 0;
-  const cached = bootstrapCacheByRange.get(normalizedRange);
+  const inflight = inflightBootstrap;
+  const inflightAt = inflightBootstrapAt;
+  const cached = cachedBootstrap;
 
   if (cached && now < cached.freshUntil) {
     return cached.payload;
@@ -116,31 +103,37 @@ export async function fetchBtcQueueBootstrapPayload(range = '24h', options = {})
     return inflight;
   }
 
-  const request = requestBtcQueueBootstrapPayload(normalizedRange, options)
+  const request = requestBtcQueueBootstrapPayload(options)
     .catch((error) => {
-      const stale = getCachedBootstrap(normalizedRange);
+      const stale = getCachedBootstrap();
       if (stale) return stale;
       throw error;
     })
     .finally(() => {
-      bootstrapInflightByRange.delete(normalizedRange);
-      bootstrapInflightAtByRange.delete(normalizedRange);
+      inflightBootstrap = null;
+      inflightBootstrapAt = 0;
     });
 
-  bootstrapInflightByRange.set(normalizedRange, request);
-  bootstrapInflightAtByRange.set(normalizedRange, now);
+  inflightBootstrap = request;
+  inflightBootstrapAt = now;
 
   return request;
 }
 
-export function prefetchBtcQueuePayload(range, options = {}) {
-  return fetchBtcQueuePayload(range, options).catch(() => null);
+export function prefetchBtcQueuePayload(options = {}) {
+  return fetchBtcQueuePayload(options).catch(() => null);
 }
 
-export function prefetchBtcQueueBootstrapPayload(range, options = {}) {
-  return fetchBtcQueueBootstrapPayload(range, options).catch(() => null);
+export function prefetchBtcQueueBootstrapPayload(options = {}) {
+  return fetchBtcQueueBootstrapPayload(options).catch(() => null);
 }
 
-export async function fetchJohoeHistory(range = '24h', options = {}) {
-  return fetchBtcQueuePayload(range, options).then((payload) => payload?.data || null);
+export async function fetchJohoeHistory(options = {}) {
+  return fetchBtcQueuePayload(options).then((payload) => {
+    if (!payload || typeof payload !== 'object') return null;
+    return {
+      ...payload,
+      range: BTC_QUEUE_RANGE,
+    };
+  });
 }

@@ -1,5 +1,3 @@
-type RangeKey = '24h' | '30d' | 'all';
-
 type JohoeRow = {
   snapshot_ts_unix: number | string;
   snapshot_ts: string;
@@ -12,22 +10,9 @@ type JohoeRow = {
   fetched_at?: string | null;
 };
 
-const TABLE_BY_RANGE: Record<RangeKey, string> = {
-  '24h': 'johoe_queue_24h_rolling',
-  '30d': 'johoe_queue_30d_rolling',
-  all: 'johoe_queue_all_daily',
-};
-
-const DATASET_META: Record<RangeKey, { label: string; resolution: string; rolling: boolean; pollIntervalMs: number }> = {
-  '24h': { label: '24h', resolution: '1m', rolling: true, pollIntervalMs: 60_000 },
-  '30d': { label: '30d', resolution: '30m', rolling: true, pollIntervalMs: 15 * 60_000 },
-  all: { label: 'all', resolution: '1d', rolling: false, pollIntervalMs: 6 * 60 * 60_000 },
-};
-
-function getRange(value: string | null): RangeKey {
-  if (value === '30d' || value === 'all') return value;
-  return '24h';
-}
+const TABLE_NAME = 'johoe_queue_24h_rolling';
+const POLL_INTERVAL_MS = 60_000;
+const STALE_AFTER_MS = 3 * 60_000;
 
 function requiredEnv(name: string): string {
   const value = Deno.env.get(name)?.trim();
@@ -96,36 +81,46 @@ async function fetchAllRows(supabaseUrl: string, serviceRoleKey: string, table: 
   return rows;
 }
 
+function getLatestSnapshotTs(rows: JohoeRow[]): number | null {
+  const latest = rows.at(-1)?.snapshot_ts;
+  const timestamp = Date.parse(String(latest || ''));
+  return Number.isFinite(timestamp) ? timestamp : null;
+}
+
 Deno.serve(async (req) => {
   if (req.method !== 'GET') {
     return Response.json({ error: 'Method not allowed' }, { status: 405 });
   }
 
   const url = new URL(req.url);
-  const range = getRange(url.searchParams.get('range'));
-  const table = TABLE_BY_RANGE[range];
-  const meta = DATASET_META[range];
+  const requestedRange = url.searchParams.get('range');
+  if (requestedRange && requestedRange !== '24h') {
+    return Response.json({ error: 'Invalid range. Only 24h is supported.' }, { status: 400 });
+  }
 
   try {
     const supabaseUrl = requiredEnv('SUPABASE_URL');
     const serviceRoleKey = requiredEnv('SUPABASE_SERVICE_ROLE_KEY');
-    const rows = await fetchAllRows(supabaseUrl, serviceRoleKey, table);
+    const rows = await fetchAllRows(supabaseUrl, serviceRoleKey, TABLE_NAME);
     const fetchedAt = rows.at(-1)?.fetched_at ?? new Date().toISOString();
+    const latestSnapshotTs = getLatestSnapshotTs(rows);
+    const stale = !latestSnapshotTs || (Date.now() - latestSnapshotTs) > STALE_AFTER_MS;
 
     return Response.json({
       source: 'johoe',
       provider: 'supabase',
       network: 'btc',
       dataset: {
-        label: meta.label,
-        resolution: meta.resolution,
-        rolling: meta.rolling,
+        label: '24h',
+        resolution: '1m',
+        rolling: true,
       },
       _meta: {
-        pollIntervalMs: meta.pollIntervalMs,
+        pollIntervalMs: POLL_INTERVAL_MS,
         cachedAt: new Date().toISOString(),
         lastSuccessfulSyncAt: fetchedAt,
-        stale: false,
+        latestSnapshotAt: rows.at(-1)?.snapshot_ts ?? null,
+        stale,
       },
       points: rows.map(toPoint),
     });

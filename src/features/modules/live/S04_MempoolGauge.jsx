@@ -18,6 +18,9 @@ const UI_COLORS = {
   muted: 'rgba(255,255,255,0.38)',
 };
 
+const PROVIDERS_MEMPOOL = [{ name: 'mempool.space', url: 'https://mempool.space' }];
+const PROVIDERS_ZATOBOX = [{ name: 'zatobox.io', url: 'https://api.zatobox.io' }];
+
 function formatMemory(bytes) {
   if (bytes == null) return { value: null, unit: null, decimals: 1 };
   if (bytes < 1_000_000) {
@@ -300,7 +303,15 @@ export default function S04_MempoolGauge() {
 
   useEffect(() => {
     if (officialIsFallback === null) return;
-    setDynamicProviders(officialIsFallback ? PROVIDERS_MEMPOOL : PROVIDERS_ZATOBOX);
+    if (typeof setDynamicProviders !== 'function') {
+      console.warn('setDynamicProviders is not available in ModuleRuntimeContext');
+      return;
+    }
+    try {
+      setDynamicProviders(officialIsFallback ? PROVIDERS_MEMPOOL : PROVIDERS_ZATOBOX);
+    } catch (error) {
+      console.error('Failed to set dynamic providers:', error);
+    }
   }, [officialIsFallback, setDynamicProviders]);
 
   const fetchNode = useCallback(

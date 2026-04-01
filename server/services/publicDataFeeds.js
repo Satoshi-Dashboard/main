@@ -20,11 +20,22 @@ const BINANCE_KLINES_BASE_URLS = [
   'https://api.binance.us/api/v3/klines',
 ];
 const SCRAPER_BASE_URL = String(process.env.SCRAPER_BASE_URL || 'https://api.zatobox.io').trim();
+const SUPABASE_PROJECT_URL = String(process.env.SUPABASE_PROJECT_URL || process.env.SUPABASE_URL || '').trim().replace(/\/$/, '');
+const SUPABASE_EDGE_FUNCTIONS_BASE_URL = SUPABASE_PROJECT_URL ? `${SUPABASE_PROJECT_URL}/functions/v1` : '';
+const SUPABASE_FUNCTIONS_JWT = String(
+  process.env.SUPABASE_FUNCTIONS_JWT
+  || process.env.SUPABASE_ANON_KEY
+  || '',
+).trim();
 const S15_GOLD_SCRAPER_PATH = '/api/scrape/companiesmarketcap-gold';
 const S04_KNOT_API_URL = String(process.env.KNOT_API_URL || 'https://knotapi.zatobox.io/api/v1/init-data').trim();
 const S04_MEMPOOL_SPACE_USAGE_SCRAPER_PATH = '/api/scrape/mempool-space-memory-usage';
 const S04_MEMPOOL_SPACE_TRANSACTION_FEES_SCRAPER_PATH = '/api/scrape/mempool-space-transaction-fees';
 const S04_MEMPOOL_SPACE_UNCONFIRMED_TRANSACTIONS_SCRAPER_PATH = '/api/scrape/mempool-space-unconfirmed-transactions';
+const JOHOE_BTC_QUEUE_HISTORY_PATH = '/api/scrape/johoe-btc-queue/history';
+const JOHOE_BTC_QUEUE_LATEST_PATH = '/api/scrape/johoe-btc-queue/latest';
+const JOHOE_BTC_QUEUE_HISTORY_FUNCTION = 'johoe-btc-queue-history';
+const JOHOE_BTC_QUEUE_LATEST_FUNCTION = 'johoe-btc-queue-latest';
 const BITCOIN_RPC_ONION = String(process.env.BITCOIN_RPC_ONION || '').trim();
 const BITCOIN_RPC_PORT = String(process.env.BITCOIN_RPC_PORT || '').trim();
 const BITCOIN_RPC_USER = String(process.env.BITCOIN_RPC_USER || '').trim();
@@ -35,6 +46,37 @@ const BTC_HALVING_INTERVAL_BLOCKS = 210_000;
 const BTC_TARGET_BLOCK_INTERVAL_MS = 10 * 60 * 1000;
 const BTC_MAX_SUPPLY = 21_000_000;
 const BTC_CURRENT_HALVING_REWARD = 3.125;
+const JOHOE_BTC_QUEUE_BUCKET_BOUNDARIES = [
+  0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1,
+  1.2, 1.4, 1.7, 2, 2.5, 3, 4, 5, 6, 7,
+  8, 10, 12, 14, 17, 20, 25, 30, 40, 50,
+  60, 70, 80, 100, 120, 140, 170, 200, 250, 300,
+  400, 500, 600, 700, 800, 1000, 1200, 1400, 1700, 2000,
+  2500, 3000, 4000, 5000, 6000, 7000, 8000, 10000,
+];
+const JOHOE_BTC_QUEUE_GROUPS = [
+  { key: 'fee_0_1', minFee: 0, maxFee: 1, bucketStart: 0, bucketEnd: 9, color: '#535154' },
+  { key: 'fee_1_2', minFee: 1, maxFee: 2, bucketStart: 9, bucketEnd: 13, color: '#2C4B86' },
+  { key: 'fee_2_3', minFee: 2, maxFee: 3, bucketStart: 13, bucketEnd: 15, color: '#2F73C7' },
+  { key: 'fee_3_5', minFee: 3, maxFee: 5, bucketStart: 15, bucketEnd: 17, color: '#3EA1FF' },
+  { key: 'fee_5_10', minFee: 5, maxFee: 10, bucketStart: 17, bucketEnd: 21, color: '#20C997' },
+  { key: 'fee_10_20', minFee: 10, maxFee: 20, bucketStart: 21, bucketEnd: 25, color: '#63D471' },
+  { key: 'fee_20_50', minFee: 20, maxFee: 50, bucketStart: 25, bucketEnd: 29, color: '#C8D84F' },
+  { key: 'fee_50_100', minFee: 50, maxFee: 100, bucketStart: 29, bucketEnd: 33, color: '#F0BD45' },
+  { key: 'fee_100_200', minFee: 100, maxFee: 200, bucketStart: 33, bucketEnd: 37, color: '#F28A2E' },
+  { key: 'fee_200_500', minFee: 200, maxFee: 500, bucketStart: 37, bucketEnd: 41, color: '#E35D37' },
+  { key: 'fee_500_1000', minFee: 500, maxFee: 1000, bucketStart: 41, bucketEnd: 45, color: '#C93A3A' },
+  { key: 'fee_1000_plus', minFee: 1000, maxFee: null, bucketStart: 45, bucketEnd: JOHOE_BTC_QUEUE_BUCKET_BOUNDARIES.length, color: '#6B1014' },
+];
+const JOHOE_BTC_QUEUE_CONFIG = {
+  range: '24h',
+  historyFeedKey: 'johoeBtcQueueHistory24h',
+  cacheKey: 'public:johoe:btc-queue:24h:composed',
+  lockKey: 'public:johoe:btc-queue:24h:composed:refresh',
+  fallbackTtlSeconds: 120,
+  bootstrapPointBudget: 180,
+};
+const JOHOE_BTC_QUEUE_MAX_SOURCE_AGE_MS = 3 * 60_000;
 
 const memCache = new Map();
 const composedCache = new Map();
@@ -180,6 +222,24 @@ const FEED_DEFS = {
     sourceUrl: S04_KNOT_API_URL,
     safeMinuteBudget: 12,
     safeDailyBudget: 17_280,
+  },
+  johoeBtcQueueLatest: {
+    cacheKey: 'public:johoe:btc-queue:latest',
+    lockKey: 'public:johoe:btc-queue:latest:refresh',
+    refreshMs: 60_000,
+    sourceProvider: 'supabase edge + supabase postgres',
+    sourceUrl: `${SUPABASE_EDGE_FUNCTIONS_BASE_URL}/${JOHOE_BTC_QUEUE_LATEST_FUNCTION}`,
+    safeMinuteBudget: 1,
+    safeDailyBudget: 1440,
+  },
+  johoeBtcQueueHistory24h: {
+    cacheKey: 'public:johoe:btc-queue:history:24h',
+    lockKey: 'public:johoe:btc-queue:history:24h:refresh',
+    refreshMs: 60_000,
+    sourceProvider: 'supabase edge + supabase postgres',
+    sourceUrl: `${SUPABASE_EDGE_FUNCTIONS_BASE_URL}/${JOHOE_BTC_QUEUE_HISTORY_FUNCTION}?range=24h`,
+    safeMinuteBudget: 1,
+    safeDailyBudget: 1440,
   },
   s15GoldMarketCapCurrent: {
     cacheKey: 'public:s15:gold-market-cap:current',
@@ -856,6 +916,296 @@ function validateUsNationalDebtSeries(value) {
 
 function validateUsPopulationEstimate(value) {
   return validateObject(value) && Number.isFinite(Number(value.population));
+}
+
+function normalizeNumericBucketArray(value) {
+  if (!Array.isArray(value) || value.length !== JOHOE_BTC_QUEUE_BUCKET_BOUNDARIES.length) {
+    return null;
+  }
+
+  const normalized = value.map((item) => Number(item));
+  return normalized.every((item) => Number.isFinite(item) && item >= 0) ? normalized : null;
+}
+
+function sumBucketSlice(buckets, start, end) {
+  if (!Array.isArray(buckets)) return null;
+  let total = 0;
+  for (let index = start; index < end; index += 1) {
+    const value = Number(buckets[index]);
+    if (!Number.isFinite(value)) return null;
+    total += value;
+  }
+  return total;
+}
+
+function toFiniteNumberOrNull(value) {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? numericValue : null;
+}
+
+function buildJohoeGroupedBands(point) {
+  return JOHOE_BTC_QUEUE_GROUPS.map((band) => ({
+    key: band.key,
+    label: band.maxFee == null ? `${band.minFee}+` : `${band.minFee}-${band.maxFee}`,
+    longLabel: band.maxFee == null ? `${band.minFee}+ sat/vB` : `${band.minFee}-${band.maxFee} sat/vB`,
+    minFee: band.minFee,
+    maxFee: band.maxFee,
+    color: band.color,
+    count: sumBucketSlice(point.countBuckets, band.bucketStart, band.bucketEnd),
+    weight: sumBucketSlice(point.weightBuckets, band.bucketStart, band.bucketEnd),
+    fee: sumBucketSlice(point.feeBuckets, band.bucketStart, band.bucketEnd),
+  }));
+}
+
+function normalizeJohoePoint(rawPoint, { preferLatestKeys = false } = {}) {
+  const timestampSeconds = Number(rawPoint?.snapshotTsUnix ?? rawPoint?.timestamp);
+  const snapshotTs = typeof rawPoint?.snapshotTs === 'string'
+    ? rawPoint.snapshotTs
+    : (typeof rawPoint?.date === 'string' ? rawPoint.date : null);
+  const fetchedAt = typeof rawPoint?.fetchedAt === 'string'
+    ? rawPoint.fetchedAt
+    : (typeof rawPoint?.fetched_at === 'string' ? rawPoint.fetched_at : null);
+  const ts = Number.isFinite(timestampSeconds)
+    ? timestampSeconds * 1000
+    : (snapshotTs ? Date.parse(snapshotTs) : null);
+  const countBuckets = normalizeNumericBucketArray(rawPoint?.countBuckets);
+  const weightBuckets = normalizeNumericBucketArray(rawPoint?.weightBuckets);
+  const feeBuckets = normalizeNumericBucketArray(rawPoint?.feeBuckets);
+
+  if (!Number.isFinite(ts) || !countBuckets || !weightBuckets || !feeBuckets) {
+    return null;
+  }
+
+  const sumCount = sumBucketSlice(countBuckets, 0, countBuckets.length);
+  const sumWeight = sumBucketSlice(weightBuckets, 0, weightBuckets.length);
+  const sumFee = sumBucketSlice(feeBuckets, 0, feeBuckets.length);
+
+  const countTotal = preferLatestKeys
+    ? (toFiniteNumberOrNull(rawPoint?.latest?.count) ?? toFiniteNumberOrNull(rawPoint?.count) ?? toFiniteNumberOrNull(rawPoint?.countTotal) ?? sumCount)
+    : (toFiniteNumberOrNull(rawPoint?.countTotal) ?? toFiniteNumberOrNull(rawPoint?.count) ?? toFiniteNumberOrNull(rawPoint?.latest?.count) ?? sumCount);
+  const weightTotal = preferLatestKeys
+    ? (toFiniteNumberOrNull(rawPoint?.latest?.weight) ?? toFiniteNumberOrNull(rawPoint?.weight) ?? toFiniteNumberOrNull(rawPoint?.weightTotal) ?? sumWeight)
+    : (toFiniteNumberOrNull(rawPoint?.weightTotal) ?? toFiniteNumberOrNull(rawPoint?.weight) ?? toFiniteNumberOrNull(rawPoint?.latest?.weight) ?? sumWeight);
+  const feeTotal = preferLatestKeys
+    ? (toFiniteNumberOrNull(rawPoint?.latest?.fee) ?? toFiniteNumberOrNull(rawPoint?.fee) ?? toFiniteNumberOrNull(rawPoint?.feeTotal) ?? sumFee)
+    : (toFiniteNumberOrNull(rawPoint?.feeTotal) ?? toFiniteNumberOrNull(rawPoint?.fee) ?? toFiniteNumberOrNull(rawPoint?.latest?.fee) ?? sumFee);
+
+  if (
+    !Number.isFinite(countTotal)
+    || !Number.isFinite(weightTotal)
+    || !Number.isFinite(feeTotal)
+  ) {
+    return null;
+  }
+
+  return {
+    ts,
+    snapshotTsUnix: Number.isFinite(timestampSeconds) ? timestampSeconds : Math.floor(ts / 1000),
+    snapshotTs: snapshotTs ?? new Date(ts).toISOString(),
+    fetchedAt,
+    date: snapshotTs ?? new Date(ts).toISOString(),
+    countTotal,
+    weightTotal,
+    feeTotal,
+    countBuckets,
+    weightBuckets,
+    feeBuckets,
+    groupedBands: buildJohoeGroupedBands({ countBuckets, weightBuckets, feeBuckets }),
+  };
+}
+
+function validateJohoeHistoryPayload(value) {
+  return Boolean(
+    value
+      && typeof value === 'object'
+      && Array.isArray(value.points)
+      && value.points.length > 0
+      && value.points.every((point) => normalizeJohoePoint(point) !== null),
+  );
+}
+
+function validateJohoeLatestPayload(value) {
+  return normalizeJohoePoint(value, { preferLatestKeys: true, preferTotalKeys: false }) !== null;
+}
+
+function normalizeJohoeHistoryResponse(raw, range) {
+  const points = Array.isArray(raw?.points) ? raw.points.map((point) => normalizeJohoePoint(point)).filter(Boolean) : [];
+  return {
+    range,
+    label: typeof raw?.dataset?.label === 'string' ? raw.dataset.label : range,
+    resolution: typeof raw?.dataset?.resolution === 'string' ? raw.dataset.resolution : null,
+    rolling: Boolean(raw?.dataset?.rolling),
+    pointCount: points.length,
+    points,
+    meta: {
+      source: typeof raw?.source === 'string' ? raw.source : 'johoe',
+      provider: typeof raw?.provider === 'string' ? raw.provider : 'api.zatobox.io',
+      network: typeof raw?.network === 'string' ? raw.network : 'btc',
+      pollIntervalMs: toFiniteNumberOrNull(raw?._meta?.pollIntervalMs),
+      cachedAt: typeof raw?._meta?.cachedAt === 'string' ? raw._meta.cachedAt : null,
+      lastSuccessfulSyncAt: typeof raw?._meta?.lastSuccessfulSyncAt === 'string' ? raw._meta.lastSuccessfulSyncAt : null,
+      stale: Boolean(raw?._meta?.stale),
+    },
+  };
+}
+
+function normalizeJohoeLatestResponse(raw) {
+  const latestPoint = normalizeJohoePoint(raw, { preferLatestKeys: true, preferTotalKeys: false });
+  if (!latestPoint) return null;
+
+  return {
+    ...latestPoint,
+    meta: {
+      source: typeof raw?.source === 'string' ? raw.source : 'johoe',
+      provider: typeof raw?.provider === 'string' ? raw.provider : 'api.zatobox.io',
+      network: typeof raw?.network === 'string' ? raw.network : 'btc',
+      sourceRange: typeof raw?.sourceRange === 'string' ? raw.sourceRange : null,
+      resolution: typeof raw?._meta?.resolution === 'string' ? raw._meta.resolution : null,
+      pollIntervalMs: toFiniteNumberOrNull(raw?._meta?.pollIntervalMs),
+      cachedAt: typeof raw?._meta?.cachedAt === 'string' ? raw._meta.cachedAt : null,
+      lastSuccessfulSyncAt: typeof raw?._meta?.lastSuccessfulSyncAt === 'string' ? raw._meta.lastSuccessfulSyncAt : null,
+      stale: Boolean(raw?._meta?.stale),
+    },
+  };
+}
+
+function getJohoePointAgeMs(point, nowMs = Date.now()) {
+  const snapshotMs = Number(point?.ts);
+  if (!Number.isFinite(snapshotMs)) return null;
+  return Math.max(0, nowMs - snapshotMs);
+}
+
+function getJohoeHistoryAgeMs(payload, nowMs = Date.now()) {
+  const latestPoint = Array.isArray(payload?.points) ? payload.points.at(-1) : null;
+  return getJohoePointAgeMs(latestPoint, nowMs);
+}
+
+function isJohoeSourceFresh(ageMs) {
+  return Number.isFinite(ageMs) && ageMs <= JOHOE_BTC_QUEUE_MAX_SOURCE_AGE_MS;
+}
+
+function assertFreshJohoeHistoryPayload(payload, providerLabel) {
+  const ageMs = getJohoeHistoryAgeMs(payload);
+  if (!isJohoeSourceFresh(ageMs)) {
+    throw new PublicFeedError(`Johoe BTC queue history (24h) from ${providerLabel} is stale`);
+  }
+  return payload;
+}
+
+function assertFreshJohoeLatestPayload(payload, providerLabel) {
+  const ageMs = getJohoePointAgeMs(payload);
+  if (!isJohoeSourceFresh(ageMs)) {
+    throw new PublicFeedError(`Johoe BTC queue latest from ${providerLabel} is stale`);
+  }
+  return payload;
+}
+
+function stripJohoeBandMeta(band) {
+  return {
+    key: band.key,
+    label: band.maxFee == null ? `${band.minFee}+` : `${band.minFee}-${band.maxFee}`,
+    longLabel: band.maxFee == null ? `${band.minFee}+ sat/vB` : `${band.minFee}-${band.maxFee} sat/vB`,
+    minFee: band.minFee,
+    maxFee: band.maxFee,
+    color: band.color,
+  };
+}
+
+function buildJohoeViewPoint(point) {
+  return {
+    ts: point.ts,
+    snapshot_ts_unix: point.snapshotTsUnix,
+    snapshot_ts: point.snapshotTs,
+    fetched_at: point.fetchedAt,
+    totals: {
+      count: point.countTotal,
+      weight: point.weightTotal,
+      fee: point.feeTotal,
+    },
+    series: {
+      count: point.groupedBands.map((band) => band.count),
+      weight: point.groupedBands.map((band) => band.weight),
+      fee: point.groupedBands.map((band) => band.fee),
+    },
+  };
+}
+
+function buildJohoeCompactPoints(points) {
+  const pointCount = points.length;
+  const timestamps = new Array(pointCount);
+  const snapshotTs = new Array(pointCount);
+  const fetchedAt = new Array(pointCount);
+  const totals = {
+    count: new Array(pointCount),
+    weight: new Array(pointCount),
+    fee: new Array(pointCount),
+  };
+  const series = {
+    count: JOHOE_BTC_QUEUE_GROUPS.map(() => new Array(pointCount)),
+    weight: JOHOE_BTC_QUEUE_GROUPS.map(() => new Array(pointCount)),
+    fee: JOHOE_BTC_QUEUE_GROUPS.map(() => new Array(pointCount)),
+  };
+
+  points.forEach((point, pointIndex) => {
+    timestamps[pointIndex] = point.ts;
+    snapshotTs[pointIndex] = point.snapshot_ts ?? null;
+    fetchedAt[pointIndex] = point.fetched_at ?? null;
+    totals.count[pointIndex] = point.totals.count;
+    totals.weight[pointIndex] = point.totals.weight;
+    totals.fee[pointIndex] = point.totals.fee;
+
+    point.series.count.forEach((value, bandIndex) => {
+      series.count[bandIndex][pointIndex] = value;
+    });
+    point.series.weight.forEach((value, bandIndex) => {
+      series.weight[bandIndex][pointIndex] = value;
+    });
+    point.series.fee.forEach((value, bandIndex) => {
+      series.fee[bandIndex][pointIndex] = value;
+    });
+  });
+
+  return {
+    point_count: pointCount,
+    ts: timestamps,
+    snapshot_ts: snapshotTs,
+    fetched_at: fetchedAt,
+    totals,
+    series,
+  };
+}
+
+function downsampleJohoeCompactPoints(pointsMatrix, maxPoints) {
+  const pointCount = Number(pointsMatrix?.point_count || pointsMatrix?.ts?.length || 0);
+  if (!Number.isFinite(maxPoints) || maxPoints <= 0 || pointCount <= maxPoints) {
+    return pointsMatrix;
+  }
+
+  const lastIndex = pointCount - 1;
+  const sampledIndexes = new Set([0, lastIndex]);
+  const step = (pointCount - 1) / Math.max(1, maxPoints - 1);
+
+  for (let sampleIndex = 1; sampleIndex < maxPoints - 1; sampleIndex += 1) {
+    sampledIndexes.add(Math.round(sampleIndex * step));
+  }
+
+  const indexes = [...sampledIndexes].sort((a, b) => a - b);
+  const pick = (values) => indexes.map((index) => values[index]);
+
+  return {
+    point_count: indexes.length,
+    ts: pick(pointsMatrix.ts || []),
+    totals: {
+      count: pick(pointsMatrix?.totals?.count || []),
+      weight: pick(pointsMatrix?.totals?.weight || []),
+      fee: pick(pointsMatrix?.totals?.fee || []),
+    },
+    series: {
+      count: (pointsMatrix?.series?.count || []).map(pick),
+      weight: (pointsMatrix?.series?.weight || []).map(pick),
+      fee: (pointsMatrix?.series?.fee || []).map(pick),
+    },
+  };
 }
 
 function toUtcDayMs(value) {
@@ -2091,6 +2441,212 @@ export async function getMempoolUnconfirmedTransactionsPayload() {
     },
     validateObject,
   );
+}
+
+function getSupabaseFunctionHeaders() {
+  if (!SUPABASE_PROJECT_URL) {
+    throw new PublicFeedError('SUPABASE_PROJECT_URL is required for internal BTC queue functions');
+  }
+
+  if (!SUPABASE_FUNCTIONS_JWT) {
+    throw new PublicFeedError('SUPABASE_FUNCTIONS_JWT or SUPABASE_ANON_KEY is required for internal BTC queue functions');
+  }
+
+  return {
+    Authorization: `Bearer ${SUPABASE_FUNCTIONS_JWT}`,
+  };
+}
+
+async function fetchSupabaseEdgeFunctionJson(functionName, { searchParams, timeoutMs } = {}) {
+  const url = new URL(`${SUPABASE_EDGE_FUNCTIONS_BASE_URL}/${functionName}`);
+  if (searchParams) {
+    url.search = new URLSearchParams(searchParams).toString();
+  }
+
+  return fetchJsonWithTimeout(url.toString(), {
+    timeoutMs,
+    headers: getSupabaseFunctionHeaders(),
+  });
+}
+
+async function getJohoeBtcQueueHistoryRawPayload() {
+  const normalizedRange = JOHOE_BTC_QUEUE_CONFIG.range;
+  const params = new URLSearchParams({ range: normalizedRange, includeBuckets: 'true' });
+
+  return getFeed(
+    JOHOE_BTC_QUEUE_CONFIG.historyFeedKey,
+    async () => {
+      try {
+        const raw = await fetchSupabaseEdgeFunctionJson(JOHOE_BTC_QUEUE_HISTORY_FUNCTION, {
+          timeoutMs: 30_000,
+        });
+        if (!validateJohoeHistoryPayload(raw)) {
+          throw new PublicFeedError(`Johoe BTC queue history (${normalizedRange}) payload is incomplete`);
+        }
+
+        return assertFreshJohoeHistoryPayload(normalizeJohoeHistoryResponse(raw, normalizedRange), 'supabase');
+      } catch {
+        const raw = await fetchJsonWithTimeout(`${SCRAPER_BASE_URL}${JOHOE_BTC_QUEUE_HISTORY_PATH}?${params.toString()}`, { timeoutMs: 30_000 });
+        if (!validateJohoeHistoryPayload(raw)) {
+          throw new PublicFeedError(`Johoe BTC queue history (${normalizedRange}) payload is incomplete`);
+        }
+
+        return assertFreshJohoeHistoryPayload(normalizeJohoeHistoryResponse(raw, normalizedRange), 'scraper fallback');
+      }
+    },
+    (value) => validateObject(value) && Array.isArray(value?.points) && value.points.length > 0,
+  );
+}
+
+async function getJohoeBtcQueueLatestRawPayload() {
+  return getFeed(
+    'johoeBtcQueueLatest',
+    async () => {
+      try {
+        const raw = await fetchSupabaseEdgeFunctionJson(JOHOE_BTC_QUEUE_LATEST_FUNCTION, {
+          timeoutMs: 15_000,
+        });
+        if (!validateJohoeLatestPayload(raw)) {
+          throw new PublicFeedError('Johoe BTC queue latest payload is incomplete');
+        }
+
+        return assertFreshJohoeLatestPayload(normalizeJohoeLatestResponse(raw), 'supabase');
+      } catch {
+        const raw = await fetchJsonWithTimeout(`${SCRAPER_BASE_URL}${JOHOE_BTC_QUEUE_LATEST_PATH}`, { timeoutMs: 15_000 });
+        if (!validateJohoeLatestPayload(raw)) {
+          throw new PublicFeedError('Johoe BTC queue latest payload is incomplete');
+        }
+
+        return assertFreshJohoeLatestPayload(normalizeJohoeLatestResponse(raw), 'scraper fallback');
+      }
+    },
+    (value) => validateObject(value) && Number.isFinite(Number(value?.ts)),
+  );
+}
+
+export async function getJohoeBtcQueuePayload() {
+  const normalizedRange = JOHOE_BTC_QUEUE_CONFIG.range;
+
+  return getComposedPayload({
+    cacheKey: JOHOE_BTC_QUEUE_CONFIG.cacheKey,
+    lockKey: JOHOE_BTC_QUEUE_CONFIG.lockKey,
+    fallbackTtlSeconds: JOHOE_BTC_QUEUE_CONFIG.fallbackTtlSeconds,
+    staleWhileRefreshing: `Serving stale BTC queue (${normalizedRange}) payload while shared refresh completes`,
+    staleWhileRecovering: `Serving stale BTC queue (${normalizedRange}) payload while upstream refresh recovers`,
+    buildPayload: async () => {
+      const historyPromise = getJohoeBtcQueueHistoryRawPayload(normalizedRange);
+      const latestPromise = getJohoeBtcQueueLatestRawPayload().catch(() => null);
+      const historyPayload = await historyPromise;
+      const latestPayload = await Promise.race([
+        latestPromise,
+        new Promise((resolve) => setTimeout(() => resolve(null), 1800)),
+      ]);
+
+      const historyPoints = Array.isArray(historyPayload?.data?.points)
+        ? historyPayload.data.points.map((point) => buildJohoeViewPoint(point))
+        : [];
+      const latestPoint = latestPayload?.data ? buildJohoeViewPoint(latestPayload.data) : null;
+      const fallbackLatest = latestPoint || historyPoints.at(-1) || null;
+
+      if (!historyPoints.length || !fallbackLatest) {
+        throw new PublicFeedError(`BTC queue (${normalizedRange}) payload has no usable chart points`);
+      }
+
+      const updatedAtCandidates = [historyPayload?.updated_at, latestPayload?.updated_at]
+        .map((value) => parseIsoDate(value)?.getTime())
+        .filter(Number.isFinite);
+      const nextUpdateCandidates = [historyPayload?.next_update_at, latestPayload?.next_update_at]
+        .map((value) => parseIsoDate(value)?.getTime())
+        .filter(Number.isFinite);
+      const fallbackParts = [historyPayload?.fallback_note, latestPayload?.fallback_note].filter(Boolean);
+      const sourceSnapshotCandidates = [fallbackLatest?.snapshot_ts, historyPoints.at(-1)?.snapshot_ts]
+        .map((value) => parseIsoDate(value)?.getTime())
+        .filter(Number.isFinite);
+      const sourceFetchedCandidates = [fallbackLatest?.fetched_at, historyPoints.at(-1)?.fetched_at]
+        .map((value) => parseIsoDate(value)?.getTime())
+        .filter(Number.isFinite);
+      const sourceSnapshotAt = sourceSnapshotCandidates.length
+        ? normalizeTimestamp(new Date(Math.max(...sourceSnapshotCandidates)))
+        : null;
+      const sourceFetchedAt = sourceFetchedCandidates.length
+        ? normalizeTimestamp(new Date(Math.max(...sourceFetchedCandidates)))
+        : null;
+      const sourceSnapshotDate = parseIsoDate(sourceSnapshotAt);
+      const sourceAgeMs = sourceSnapshotDate
+        ? Math.max(0, Date.now() - sourceSnapshotDate.getTime())
+        : null;
+      const sourceStale = !isJohoeSourceFresh(sourceAgeMs);
+
+      return {
+        data: {
+          range: normalizedRange,
+          range_label: historyPayload?.data?.label || normalizedRange,
+          resolution: historyPayload?.data?.resolution || null,
+          rolling: Boolean(historyPayload?.data?.rolling),
+          metric_options: ['count', 'weight', 'fee'],
+          raw_bucket_count: JOHOE_BTC_QUEUE_BUCKET_BOUNDARIES.length,
+          grouped_bucket_count: JOHOE_BTC_QUEUE_GROUPS.length,
+          band_order: 'low_to_high',
+          bands: JOHOE_BTC_QUEUE_GROUPS.map(stripJohoeBandMeta),
+          points: buildJohoeCompactPoints(historyPoints),
+          latest: fallbackLatest,
+          latest_matches_history_tail: Boolean(
+            latestPoint
+              && historyPoints.at(-1)?.ts
+              && latestPoint.ts === historyPoints.at(-1).ts,
+          ),
+        },
+        updated_at: updatedAtCandidates.length
+          ? normalizeTimestamp(new Date(Math.max(...updatedAtCandidates)))
+          : normalizeTimestamp(),
+        next_update_at: nextUpdateCandidates.length
+          ? normalizeTimestamp(new Date(Math.min(...nextUpdateCandidates)))
+          : null,
+        source_provider: Array.from(new Set([
+          historyPayload?.data?.meta?.provider,
+          latestPayload?.data?.meta?.provider,
+          historyPayload?.source_provider,
+          latestPayload?.source_provider,
+        ].filter(Boolean))).join(' | ') || 'supabase edge + supabase postgres',
+        source_url: Array.from(new Set([historyPayload?.source_url, latestPayload?.source_url].filter(Boolean))).join(' | ') || null,
+        is_fallback: Boolean(historyPayload?.is_fallback || latestPayload?.is_fallback),
+        fallback_note: fallbackParts.length ? fallbackParts.join(' | ') : null,
+        source_snapshot_at: sourceSnapshotAt,
+        source_fetched_at: sourceFetchedAt,
+        source_age_ms: sourceAgeMs,
+        source_stale: sourceStale,
+      };
+    },
+  });
+}
+
+export async function getJohoeBtcQueueBootstrapPayload() {
+  const normalizedRange = JOHOE_BTC_QUEUE_CONFIG.range;
+  const payload = await getJohoeBtcQueuePayload();
+  const fullData = payload?.data;
+  const previewBudget = JOHOE_BTC_QUEUE_CONFIG.bootstrapPointBudget;
+
+  if (!validateObject(fullData) || !validateObject(fullData?.points)) {
+    throw new PublicFeedError(`BTC queue bootstrap (${normalizedRange}) payload is unavailable`);
+  }
+
+  return {
+    ...payload,
+    data: {
+      range: fullData.range,
+      range_label: fullData.range_label,
+      resolution: fullData.resolution,
+      rolling: fullData.rolling,
+      metric_options: fullData.metric_options,
+      raw_bucket_count: fullData.raw_bucket_count,
+      grouped_bucket_count: fullData.grouped_bucket_count,
+      band_order: fullData.band_order,
+      bands: fullData.bands,
+      latest: fullData.latest,
+      preview_point_budget: previewBudget,
+      preview: downsampleJohoeCompactPoints(fullData.points, previewBudget),
+    },
+  };
 }
 
 export async function getFearGreedPayload({ limit = 31 } = {}) {

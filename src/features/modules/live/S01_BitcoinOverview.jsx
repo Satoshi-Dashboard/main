@@ -84,7 +84,7 @@ function MiniDonut({ pct, className = '' }) {
   const circ = 2 * Math.PI * r;
   const dash = Math.min(Math.max(((pct ?? 0) / 100) * circ, 0), circ);
   return (
-    <svg width="96" height="96" viewBox="0 0 96 96" className={`visual-svg-surface ${className}`}>
+    <svg viewBox="0 0 96 96" overflow="visible" aria-hidden="true" className={`block h-full w-full ${className}`}>
       <circle cx="48" cy="48" r={r} fill="none" stroke="#2a2a2a" strokeWidth="9" />
       <circle
         cx="48"
@@ -104,7 +104,7 @@ function MiniDonut({ pct, className = '' }) {
 /* ── Generic stat tile ── */
 function Tile({ label, value, variant = 'number', decimals, suffix, accent, source }) {
   return (
-    <div className="flex min-h-[108px] flex-col items-center justify-center bg-[#111111] px-3 py-2 select-none sm:px-4 sm:py-3">
+    <div className="flex h-full min-h-[108px] flex-col items-center justify-center bg-[#111111] px-3 py-2 select-none sm:px-4 sm:py-3">
       <div className="flex min-h-[2.4em] w-full max-w-full items-center justify-center">
         {value == null ? (
           <div className="skeleton w-3/4 max-w-[18rem]" style={{ height: '2.4em' }} />
@@ -140,7 +140,7 @@ function FearGreedTile({ value, classification, history }) {
   );
 
   return (
-    <div className="visual-chart-surface flex min-h-[108px] flex-col items-center justify-center gap-0.5 bg-[#111111] px-3 py-2 select-none sm:px-4">
+    <div className="visual-chart-surface flex h-full min-h-[108px] flex-col items-center justify-center gap-0.5 bg-[#111111] px-3 py-2 select-none sm:px-4">
       {loading ? (
         <div className="skeleton w-3/4 max-w-[14rem]" style={{ height: '2.4em' }} />
       ) : (
@@ -205,9 +205,9 @@ function DifficultyTile({ pct, etaBlocks, changeNext, changePrev }) {
   const nextUp = hasChanges ? changeNext >= 0 : null;
   const prevUp = hasChanges ? changePrev >= 0 : null;
   return (
-    <div className="visual-svg-surface flex min-h-[160px] flex-col items-center justify-center gap-2 bg-[#111111] px-3 py-3 select-none sm:min-h-[108px] sm:px-4 sm:py-3">
-      <div className="hidden w-full items-center justify-center gap-3 sm:flex">
-        <div className="flex flex-col gap-1 text-right" style={{ fontSize: 'var(--fs-caption)' }}>
+    <div className="visual-svg-surface flex h-full min-h-[108px] flex-col items-center justify-center gap-1 overflow-hidden bg-[#111111] px-3 py-3 select-none sm:px-4 sm:py-3">
+      <div className="hidden w-full min-w-0 items-center justify-center gap-3 sm:flex">
+        <div className="flex min-w-0 flex-col gap-1 text-right" style={{ fontSize: 'var(--fs-caption)' }}>
           {loading || !hasChanges ? (
             <>
               <div className="skeleton" style={{ width: '92px', height: '1.1em' }} />
@@ -232,12 +232,16 @@ function DifficultyTile({ pct, etaBlocks, changeNext, changePrev }) {
             </>
           )}
         </div>
-        <MiniDonut pct={pct} className="h-24 w-24 shrink-0 lg:h-28 lg:w-28" />
+        <div className="aspect-square w-[clamp(4rem,10vw,6rem)] shrink-0 lg:w-[clamp(5rem,8vw,7rem)]">
+          <MiniDonut pct={pct} />
+        </div>
       </div>
 
       <div className="flex w-full flex-col items-center gap-2 sm:hidden">
         <div className="relative flex items-center justify-center">
-          <MiniDonut pct={pct} className="h-[84px] w-[84px] shrink-0" />
+          <div className="aspect-square w-[clamp(4rem,20vw,5.25rem)]">
+            <MiniDonut pct={pct} />
+          </div>
           {!loading && (
             <AnimatedMetric
               value={pct}
@@ -387,8 +391,8 @@ export default function S01_BitcoinOverview() {
   );
 
   return (
-    <ModuleShell layout="none" className="lg:overflow-y-auto">
-      <div className="grid h-full min-h-full w-full grid-cols-1 divide-y divide-[#2a2a2a] sm:grid-cols-2 sm:divide-x xl:grid-cols-3">
+    <ModuleShell layout="none" className="overflow-y-auto">
+      <div className="grid h-full min-h-full w-full auto-rows-fr grid-cols-1 divide-y divide-[#2a2a2a] sm:grid-cols-2 sm:divide-x xl:grid-cols-3">
         {tiles.map((t) => (
           <Tile key={t.label} {...t} />
         ))}
