@@ -1,75 +1,75 @@
-# Código de Conducta para Contribuidores
+# Code of Conduct for Contributors
 
-## Nuestro Compromiso
+## Our Commitment
 
-En Satoshi Dashboard nos comprometemos a proporcionar un entorno abierto, acogedor e inclusivo para todos los contribuidores y usuarios, sin importar su edad, tamaño corporal, discapacidad, etnia, identidad de género, nivel de experiencia, nacionalidad, apariencia personal, raza, religión o identidad y orientación sexual.
+Satoshi Dashboard is committed to providing an open, welcoming, and inclusive environment for all contributors and users, regardless of age, body size, disability, ethnicity, gender identity, level of experience, nationality, personal appearance, race, religion, or sexual identity and orientation.
 
-## Nuestros Estándares
+## Our Standards
 
-Ejemplos de comportamiento que contribuyen a crear un ambiente positivo incluyen:
+Examples of behavior that contribute to a positive environment include:
 
-✅ **Esperado:**
-- Usar lenguaje inclusivo y acogedor
-- Ser respetuoso con opiniones y experiencias diferentes
-- Aceptar crítica constructiva con gracilidad
-- Enfocarse en lo que es mejor para la comunidad
-- Mostrar empatía hacia otros miembros de la comunidad
-- Ayudar a nuevos contribuidores
-- Dar crédito apropiado a contribuciones previas
+✅ **Expected:**
+- Using inclusive and welcoming language
+- Being respectful of different opinions and experiences
+- Accepting constructive criticism gracefully
+- Focusing on what is best for the community
+- Showing empathy toward other community members
+- Helping newcomers
+- Giving appropriate credit to previous contributions
 
-❌ **No Aceptado:**
-- Lenguaje o imágenes sexualizadas o atención sexual no solicitada
-- Trolling, comentarios insultantes/despectivos o ataques personales
-- Acoso público o privado
-- Publicar información privada de otros sin consentimiento (doxxing)
-- Cualquier otra conducta que sea inapropiada profesionalmente
-- Discriminación basada en raza, género, religión, discapacidad, etc.
+❌ **Not Acceptable:**
+- Sexualized language or unwanted sexual attention
+- Trolling, insulting/derogatory comments, or personal attacks
+- Public or private harassment
+- Publishing others' private information without consent (doxxing)
+- Other conduct that is unprofessional
+- Discrimination based on race, gender, religion, disability, etc.
 
-## Nuestras Responsabilidades
+## Our Responsibilities
 
-Los mantenedores del proyecto son responsables de:
+Project maintainers are responsible for:
 
-- Clarificar estándares de comportamiento aceptable
-- Tomar acciones correctivas apropiadas y justas en respuesta a conducta inaceptable
-- Remover, editar o rechazar contribuciones, comentarios, commits que no se alineen con este Código de Conducta
-- Mantener confidencialidad respecto a reportes de incidentes
+- Clarifying standards of acceptable behavior
+- Taking appropriate and fair corrective action in response to unacceptable behavior
+- Removing, editing, or rejecting contributions, comments, or commits that do not align with this Code of Conduct
+- Maintaining confidentiality regarding incident reports
 
-## Alcance
+## Scope
 
-Este Código de Conducta aplica en:
-- Todos los espacios del proyecto (GitHub, issues, PRs, discussions)
-- Eventos oficiales de la comunidad
-- Representación oficial del proyecto en espacios públicos
+This Code of Conduct applies to:
+- All project spaces (GitHub, issues, PRs, discussions)
+- Official community events
+- Public representation of the project
 
-## Aplicación
+## Enforcement
 
-Reportes de conducta inaceptable pueden hacerse contactando a los mantenedores en:
-- **Email**: [contacto@tudominio.com] (configura)
-- **Issues privados**: Usa la opción de seguridad en GitHub
+Reports of unacceptable behavior may be reported by contacting:
+- **Email**: security@satoshi-dashboard.dev
+- **Private Issue**: Use GitHub's private issue feature
 
-Todos los reportes serán:
-- Revisados e investigados
-- Mantenidos confidenciales
-- Respondidos dentro de 7 días
+All reports will be:
+- Reviewed and investigated
+- Kept confidential
+- Responded to within 7 days
 
-## Consecuencias
+## Consequences
 
-Las violaciones a este Código de Conducta pueden resultar en:
+Violations of this Code of Conduct may result in:
 
-1. **Advertencia** - para incidentes menores
-2. **Exclusión temporal** - de participación en el proyecto
-3. **Exclusión permanente** - para conducta grave o repetida
+1. **Warning** - for minor incidents
+2. **Temporary Exclusion** - from project participation
+3. **Permanent Exclusion** - for serious or repeated violations
 
-La escalación dependerá de la naturaleza y frecuencia de la violación.
+Escalation depends on the nature and frequency of the violation.
 
-## Atribución
+## Attribution
 
-Este Código de Conducta se basa en el [Contributor Covenant](https://www.contributor-covenant.org), versión 2.0.
+This Code of Conduct is based on the [Contributor Covenant](https://www.contributor-covenant.org), version 2.0.
 
-## Preguntas
+## Questions
 
-¿Dudas sobre este Código de Conducta? Abre una Discussion o contacta a los mantenedores.
+Have questions about this Code of Conduct? Open a Discussion or contact the maintainers.
 
 ---
 
-**Gracias por ayudar a mantener a Satoshi Dashboard como una comunidad acogedora y respetuosa.** 🤝
+Thank you for helping keep Satoshi Dashboard a welcoming and respectful community. 🤝

@@ -1,177 +1,177 @@
-# Guía de Contribución - Satoshi Dashboard
+# Contributing to Satoshi Dashboard
 
-¡Gracias por tu interés en contribuir a Satoshi Dashboard! Somos una comunidad abierta y valoramos todas las contribuciones, ya sean código, documentación, reportes de bugs o ideas.
+Thank you for your interest in contributing to Satoshi Dashboard! We value all contributions, whether they are code, documentation, bug reports, or ideas.
 
-## Cómo Empezar
+## Getting Started
 
-### Prerrequisitos
-- Node.js 18+
-- npm o yarn
+### Prerequisites
+- Node.js 20+
+- npm 10+
 - Git
-- Conocimiento básico de React y Express (para cambios técnicos)
+- Basic knowledge of React and Express (for technical changes)
 
-### Configuración del Entorno Local
+### Local Setup
 
-1. **Fork del repositorio**
+1. **Fork and clone the repository**
    ```bash
-   git clone https://github.com/tu-usuario/satoshi-dashboard.git
+   git clone https://github.com/your-username/satoshi-dashboard.git
    cd satoshi-dashboard
    ```
 
-2. **Instala dependencias**
+2. **Install dependencies**
    ```bash
    npm install
    ```
 
-3. **Configura variables de entorno**
+3. **Setup environment variables**
    ```bash
-   cp .env.example .env.local
-   # Completa con tus valores (consulta la documentación de entorno)
+   cp .env.example .env
+   # Fill in the required variables (see Environment Variables section in README)
    ```
 
-4. **Inicia el desarrollo**
+4. **Start development**
    ```bash
    npm run dev
    ```
 
-El proyecto se ejecutará en `http://localhost:5173` (UI) y `http://localhost:3000` (API).
+The UI runs on `http://localhost:5173` and the API on `http://localhost:3000`.
 
-## Tipos de Contribución
+## Types of Contributions
 
-### 🐛 Reportar Bugs
-- Verifica que no exista un issue similar
-- Usa el template de bug report
-- Incluye pasos para reproducir
-- Especifica tu entorno (OS, navegador, versión de Node)
-- Adjunta capturas o videos si es relevante
+### 🐛 Bug Reports
+- Check if a similar issue already exists
+- Use the bug report issue template
+- Include steps to reproduce
+- Specify your environment (OS, browser, Node version)
+- Attach screenshots or videos if relevant
 
-### ✨ Nuevas Características
-- Abre una **Discussion** o **Issue** para proponer la idea
-- Espera feedback de los mantenedores
-- Una vez aprobado, crea un PR con la implementación
+### ✨ Feature Requests
+- Open a Discussion or Issue to propose the feature
+- Wait for maintainer feedback
+- Once approved, implement and open a PR
 
-### 📚 Documentación
-- Mejora archivos README o guías existentes
-- Documenta nuevas características
-- Corrige errores tipográficos o de claridad
-- Traduce contenido a otros idiomas
+### 📚 Documentation
+- Improve existing README or guides
+- Document new features
+- Fix typos or clarity issues
+- Translate content to other languages
 
 ### 🔍 Code Review
-- Revisa PRs pendientes
-- Proporciona feedback constructivo
-- Ayuda a identificar problemas potenciales
+- Review open PRs
+- Provide constructive feedback
+- Help identify potential issues
 
-## Flujo de Trabajo
+## Workflow
 
-### 1. Crea una rama
+### 1. Create a branch
 ```bash
-# Para features
-git checkout -b feature/descripcion-corta
+# For features
+git checkout -b feature/short-description
 
-# Para bugs
-git checkout -b bugfix/descripcion-corta
+# For bugfixes
+git checkout -b bugfix/short-description
 ```
 
-### 2. Realiza cambios
-- Mantén cambios enfocados y atómicos
-- Sigue la guía de estilo del proyecto
-- Ejecuta linter: `npm run lint`
-- Prueba localmente: `npm run dev`
+### 2. Make changes
+- Keep changes focused and atomic
+- Follow the project's code style
+- Run linter: `npm run lint`
+- Test locally: `npm run dev`
 
-### 3. Commits claros
+### 3. Write clear commits
 ```bash
-# Usa mensajes descriptivos
-git commit -m "feat: agregar módulo de Lightning Network"
-git commit -m "fix: corregir cálculo de volatilidad"
-git commit -m "docs: actualizar guía de instalación"
+# Use descriptive messages
+git commit -m "feat: add Lightning Network module"
+git commit -m "fix: correct volatility calculation"
+git commit -m "docs: update installation guide"
 ```
 
-### 4. Push y Pull Request
+### 4. Push and create PR
 ```bash
-git push origin feature/tu-feature
+git push origin feature/your-feature
 ```
 
-- Completa el template de PR
-- Vincula issues relacionados con `closes #123`
-- Espera review de los mantenedores
+- Fill out the PR template completely
+- Link related issues with `closes #123`
+- Wait for maintainer review
 
-## Estándares de Código
+## Code Style
 
 ### Frontend (React/Tailwind)
-- Componentes funcionales con hooks
-- Props tipadas cuando sea posible
-- Nombres descriptivos para variables y funciones
-- Máximo 300 líneas por componente
-- Usa Tailwind para estilos (no CSS adicional sin justificación)
+- Use functional components with hooks
+- Type props when possible
+- Use descriptive variable and function names
+- Keep components under 300 lines
+- Use Tailwind for styling (no additional CSS without justification)
 
 ### Backend (Express/Node)
-- Endpoints consistentes con `/api/*`
-- Validación de entrada en todas las rutas
-- Manejo de errores apropiado
-- Logging claro para debugging
-- Comentarios para lógica compleja
+- Keep endpoints under `/api/*`
+- Validate all input
+- Handle errors appropriately
+- Use clear logging
+- Comment complex logic
 
-### General
+### Quality Checks
 ```bash
-# Lint y correcciones automáticas
+# Lint and auto-fix
 npm run lint -- --fix
 
-# Build de validación
+# Build validation
 npm run build
 
-# Verificación de seguridad
+# Security check
 npm run check:security
 ```
 
-## Ramas de Trabajo
+## Branches
 
-- **main** - Código estable en producción
-- **develop** - Rama de integración (si existe)
-- **feature/*** - Nuevas características
-- **bugfix/*** - Correcciones de bugs
-- **docs/*** - Cambios de documentación
+- **main** - Stable production code
+- **develop** - Integration branch (if exists)
+- **feature/*** - New features
+- **bugfix/*** - Bug fixes
+- **docs/*** - Documentation changes
 
 ## Testing
 
-No hay suite de tests requerida actualmente, pero:
-- Prueba manualmente en `npm run dev`
-- Verifica que el lint pase
-- Confirma que `npm run build` sea exitoso
-- Valida en múltiples navegadores si afecta UI
+No automated test suite is currently required, but:
+- Test manually with `npm run dev`
+- Verify linting passes
+- Confirm `npm run build` succeeds
+- Test in multiple browsers if UI-related
 
-## Revisión de Código
+## Code Review
 
-Todos los PRs requieren al menos 1 aprobación. Los revisores buscan:
-- ✅ Código limpio y mantenible
-- ✅ Cambios enfocados en el objetivo
-- ✅ Documentación actualizada si aplica
-- ✅ Sin regresiones de seguridad
-- ✅ Consistencia con el estilo del proyecto
+All PRs require at least one approval. Reviewers check for:
+- ✅ Clean, maintainable code
+- ✅ Changes focused on the goal
+- ✅ Documentation updated if needed
+- ✅ No security regressions
+- ✅ Consistency with project style
 
-## Comunicación
+## Communication
 
-- **Issues** - Reporta bugs, propone features, discute problemas técnicos
-- **Discussions** - Conversaciones abiertas, ideas, preguntas
-- **Pull Requests** - Implementación de cambios
+- **Issues** - Report bugs, propose features, discuss technical problems
+- **Discussions** - Open conversations, ideas, questions
+- **Pull Requests** - Implementation of changes
 
-Se espera comunicación respetuosa, constructiva y transparente.
+Keep all communication respectful, constructive, and transparent.
 
-## Reconocimiento
+## Recognition
 
-- Todos los contribuidores serán mencionados en el README
-- Contribuciones significativas pueden ser destacadas en releases
-- Valoramos la participación consistente en la comunidad
+- All contributors will be mentioned in the README
+- Significant contributions may be featured in releases
+- We value consistent community participation
 
-## Código de Conducta
+## Code of Conduct
 
-Este proyecto adhiere a un Código de Conducta (ver `CODE_OF_CONDUCT.md`). Al participar, aceptas mantener un ambiente inclusivo, respetuoso y profesional.
+This project adheres to a Code of Conduct (see `CODE_OF_CONDUCT.md`). By participating, you agree to maintain an inclusive, respectful, and professional environment.
 
-## Preguntas
+## Questions?
 
-- Abre una **Discussion** para dudas generales
-- Revisa la documentación en `.claude/` (guías internas)
-- Contacta a los mantenedores si necesitas aclaraciones
+- Open a Discussion for general questions
+- Check the docs in `.claude/` for internal guides
+- Contact maintainers if you need clarification
 
 ---
 
-**¡Gracias por contribuir a Satoshi Dashboard!** 🚀
+**Thank you for contributing to Satoshi Dashboard!** 🚀

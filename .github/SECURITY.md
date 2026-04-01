@@ -1,120 +1,118 @@
-# Política de Seguridad - Satoshi Dashboard
+# Security Policy
 
-## Reportar Vulnerabilidades de Seguridad
+## Reporting a Vulnerability
 
-**No abras un issue público** si descubres una vulnerabilidad de seguridad. La seguridad de nuestros usuarios es prioritaria.
+**Do not open a public issue** if you discover a security vulnerability. Your responsible disclosure helps protect our users.
 
-### Cómo Reportar
+### How to Report
 
-1. **Envia un email a**: [contacto-seguridad@tudominio.com] (configura este email)
-   - Incluye descripción detallada de la vulnerabilidad
-   - Pasos para reproducirla
-   - Posible impacto en usuarios
-   - Soluciones propuestas si las tienes
+1. **Send an email** to: `security@satoshi-dashboard.dev` (configure this email)
+   - Describe the vulnerability in detail
+   - Include steps to reproduce
+   - Explain potential impact on users
+   - Suggest a fix if you have one
 
-2. **Alternativa**: GitHub Security Advisory
-   - Navega a `Security` → `Report a vulnerability` en el repositorio
-   - Proporciona detalles similares al email
+2. **Alternative**: GitHub Security Advisory
+   - Navigate to `Security` → `Report a vulnerability` in the repository
+   - Provide similar details to the email
 
-3. **No compartas detalles públicamente** hasta que:
-   - Recibas confirmación de recepción
-   - Se publique un parche
-   - Se notifique a usuarios afectados
+3. **Keep it confidential** until:
+   - You receive acknowledgment
+   - A patch is released
+   - Users are notified
 
-### Respuesta Esperada
+### Expected Response
 
-- Confirmación de recepción en 48 horas
-- Evaluación inicial en 1 semana
-- Plan de acción en 2 semanas
-- Parche disponible dentro de 30 días (según severidad)
+- Acknowledgment within 48 hours
+- Initial assessment within 1 week
+- Action plan within 2 weeks
+- Patch available within 30 days (depending on severity)
 
-## Vulnerabilidades Conocidas
+## Known Vulnerabilities
 
-Verificamos regularmente:
+We regularly check for vulnerabilities:
 ```bash
 npm audit
 npm run check:security
 ```
 
-Las vulnerabilidades conocidas serán documentadas en el repositorio.
+Known issues are documented in the repository.
 
-## Seguridad en el Código
+## Security in Code
 
-### Principios
+### Principles
 
-1. **Transparencia de Datos**
-   - Todas las fuentes de datos externas son atribuidas
-   - Sin seguimiento oculto o recolección de datos
-   - Privacidad del usuario por defecto
+1. **Data Transparency**
+   - All external data sources are attributed
+   - No hidden tracking or data collection
+   - Privacy by default
 
-2. **Validación de Entrada**
-   - Toda entrada de usuario es validada en backend
-   - Sanitización contra XSS
-   - Rate limiting en endpoints públicos
+2. **Input Validation**
+   - All user input is validated on the backend
+   - XSS protection in place
+   - Rate limiting on public endpoints
 
-3. **Gestión de Secretos**
-   - Variables de entorno para credenciales
-   - `.env` nunca committeado
-   - Rotación periódica de tokens
+3. **Secret Management**
+   - Environment variables for credentials
+   - `.env` files never committed
+   - Regular token rotation
 
-4. **Dependencias**
-   - Auditoría regular de librerías
-   - Actualización de parches de seguridad
-   - Minimización de dependencias innecesarias
+4. **Dependencies**
+   - Regular library audits
+   - Security patches applied promptly
+   - Minimal unnecessary dependencies
 
-### Prácticas de Desarrollo
+### Before Pushing Code
 
 ```bash
-# Antes de hacer push
 npm run lint
 npm run build
 npm run check:security
 
-# Verificar no hay secretos comprometidos
+# Check for committed secrets
 git diff --cached | grep -i "password\|secret\|token\|key"
 ```
 
-## Seguridad en Deployment
+## Secure Deployment
 
-- Variables secretas en Vercel Environment Variables (no en código)
-- HTTPS obligatorio en producción
-- Content Security Policy configurado
-- Headers de seguridad HTTP aplicados
-- Rate limiting activo
+- Secrets stored in platform secret manager (not in code)
+- HTTPS required in production
+- Content Security Policy configured
+- Security headers applied
+- Rate limiting enabled
 
-## Auditoría de Seguridad
+## Security Audits
 
-Realizamos auditorías de seguridad:
-- Anualmente por terceros
-- Revisión de dependencias mensualmente
-- Testing de seguridad automatizado en CI/CD
+- Annual third-party audits
+- Monthly dependency reviews
+- Automated security testing in CI/CD
 
-## Seguridad de Datos de Usuario
+## User Data Security
 
-- No almacenamos datos personales sin consentimiento
-- No compartimos datos con terceros
-- Cumplimos con GDPR y leyes de privacidad aplicables
-- Disponemos de política de privacidad clara
+- No personal data stored without consent
+- No sharing with third parties
+- GDPR and privacy law compliance
+- Clear privacy policy
 
-## Compatibilidad de Navegadores
+## Browser Support
 
-Soportamos navegadores modernos con HTTPS. Las versiones antiguas pueden tener vulnerabilidades conocidas.
+We support modern browsers with HTTPS. Older versions may have known vulnerabilities.
 
-## Reportes de Seguridad Anteriores
+## Previous Security Reports
 
-[Se completará con historial de seguridad del proyecto]
+[To be filled with project security history]
 
-## Recursos Externos
+## External Resources
 
 - [OWASP Top 10](https://owasp.org/www-project-top-ten/)
 - [Node.js Security Best Practices](https://nodejs.org/en/docs/guides/security/)
 - [React Security](https://react.dev/learn#security)
 
-## Contacto
+## Contact
 
-- **Seguridad**: [seguridad@tudominio.com] (configura)
-- **Mantenedores**: [maintainers@tudominio.com]
+- **Security**: security@satoshi-dashboard.dev
+- **Maintainers**: maintainers@satoshi-dashboard.dev
 
 ---
 
-Agradecemos a los investigadores de seguridad que reportan responsablemente. ¡Ayudas a mantener la comunidad segura!
+Thank you for helping keep Satoshi Dashboard secure! 🔒
