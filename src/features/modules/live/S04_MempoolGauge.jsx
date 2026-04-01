@@ -297,7 +297,7 @@ export default function S04_MempoolGauge() {
 
   useEffect(() => {
     if (officialIsFallback === null) return;
-    setDynamicProviders(officialIsFallback ? PROVIDERS_MEMPOOL : PROVIDERS_ZATOBOX);
+    // setDynamicProviders(officialIsFallback ? PROVIDERS_MEMPOOL : PROVIDERS_ZATOBOX);
   }, [officialIsFallback, setDynamicProviders]);
 
   const fetchNode = useCallback(
