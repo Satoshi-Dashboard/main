@@ -44,7 +44,7 @@ This Code of Conduct applies to:
 ## Enforcement
 
 Reports of unacceptable behavior may be reported by contacting:
-- **Email**: security@satoshi-dashboard.dev
+- **Email**: ikhunsa@proton.me
 - **Private Issue**: Use GitHub's private issue feature
 
 All reports will be:

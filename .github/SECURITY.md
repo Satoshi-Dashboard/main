@@ -6,7 +6,7 @@
 
 ### How to Report
 
-1. **Send an email** to: `security@satoshi-dashboard.dev` (configure this email)
+1. **Send an email** to: `ikhunsa@proton.me`
    - Describe the vulnerability in detail
    - Include steps to reproduce
    - Explain potential impact on users
@@ -110,8 +110,7 @@ We support modern browsers with HTTPS. Older versions may have known vulnerabili
 
 ## Contact
 
-- **Security**: security@satoshi-dashboard.dev
-- **Maintainers**: maintainers@satoshi-dashboard.dev
+- **Security**: ikhunsa@proton.me
 
 ---
 
