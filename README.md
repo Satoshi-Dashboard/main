@@ -28,8 +28,9 @@
     <li><a href="#local-development">Local Development</a></li>
     <li><a href="#environment-variables">Environment Variables</a></li>
     <li><a href="#deployment">Deployment</a></li>
-    <li><a href="#maintainer-docs">Maintainer Docs</a></li>
+    <li><a href="#community">Community</a></li>
     <li><a href="#contributing">Contributing</a></li>
+    <li><a href="#maintainer-docs">Maintainer Docs</a></li>
     <li><a href="#license">License</a></li>
   </ol>
 </details>
@@ -276,6 +277,60 @@ npm run build
 npm run check:security
 ```
 
+## Community
+
+Satoshi Dashboard is an open-source project and we welcome contributors from all backgrounds. Our community is built on transparency, respect, and collaboration.
+
+### Community Standards
+
+- **[CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md)** - Community guidelines for respectful and inclusive participation
+- **[SECURITY.md](./.github/SECURITY.md)** - Security policy and responsible disclosure process
+- **[CONTRIBUTING.md](./.github/CONTRIBUTING.md)** - Complete guide for contributing code, docs, and ideas
+
+### Quick Links
+
+- 🐛 **Found a bug?** → Open an issue with the bug report template
+- ✨ **Have an idea?** → Start a Discussion to propose features
+- 📚 **Documentation?** → Help improve our guides and examples
+- 🔍 **Code review?** → Review open PRs and provide feedback
+
+## Contributing
+
+We follow a structured contribution process to maintain code quality and project integrity.
+
+### For Contributors
+
+1. **Read the guidelines** - Start with [CONTRIBUTING.md](./.github/CONTRIBUTING.md)
+2. **Fork and setup** - Clone the repo and install dependencies (`npm install`)
+3. **Create a branch** - Use descriptive names: `feature/`, `bugfix/`, `docs/`
+4. **Keep data honest** - Maintain data sourcing and refresh semantics as documented
+5. **Validate locally** - Run `npm run lint`, `npm run build`, and `npm run check:security`
+6. **Submit a PR** - Use the PR template and link related issues
+
+### Data Sourcing Principles
+
+When contributing changes that affect data flows:
+
+- All upstream providers must be clearly attributed
+- Cache semantics and fallback behavior must be explicit
+- Do not hide refresh limits or provider failures behind silent fallbacks
+- Stale payloads are acceptable only when clearly documented and user-visible
+
+### Code Standards
+
+Follow the style and patterns established in the project:
+- Frontend: React 19 with hooks, Tailwind CSS for styling
+- Backend: Express 4 with cache-aware routing and explicit error handling
+- All code must pass linting: `npm run lint`
+
+### Before Every Commit
+
+```bash
+npm run lint --fix      # Fix style issues
+npm run build           # Validate build
+npm run check:security  # Check for vulnerabilities
+```
+
 ## Maintainer Docs
 
 Internal repo policy and agent-facing docs live in `.claude/`.
@@ -286,16 +341,6 @@ Internal repo policy and agent-facing docs live in `.claude/`.
 - `.claude/DATA_SOURCE_INTEGRITY_RULES.md`
 - `.claude/MODULE_REGISTRY_RULES.md`
 - `.claude/FRONTEND_COLOR_UX_UI_RULES.md`
-
-## Contributing
-
-If you want to contribute:
-
-1. Fork the repository
-2. Create a feature branch
-3. Keep data sourcing and refresh semantics honest
-4. Validate the change locally
-5. Open a pull request with clear rationale and impact
 
 ## License
 
