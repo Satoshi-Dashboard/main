@@ -1,4 +1,6 @@
 import { randomUUID } from 'node:crypto';
+import { dirname, resolve, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import compression from 'compression';
 import express from 'express';
 import rateLimit from 'express-rate-limit';
@@ -889,6 +891,18 @@ export function createApp() {
     await cacheSetJson(LIGHTNING_FALLBACK_CACHE_KEY, cacheData, { ttlSeconds: LIGHTNING_FALLBACK_CACHE_TTL_SECONDS });
     res.json({ success: true, cached_at: new Date().toISOString() });
   }));
+
+  // Static file serving for Docker/self-hosted deployments (Umbrel, etc.)
+  if (process.env.SERVE_STATIC === 'true') {
+    const __dirname = dirname(fileURLToPath(import.meta.url));
+    const DIST_DIR = resolve(__dirname, '..', 'dist');
+    app.use(express.static(DIST_DIR, { maxAge: '1d' }));
+    // Return JSON 404 for unknown API routes instead of index.html
+    app.all('/api/*', (req, res) => res.status(404).json({ error: 'Not found' }));
+    app.get('*', (req, res) => {
+      res.sendFile(join(DIST_DIR, 'index.html'));
+    });
+  }
 
   return app;
 }
