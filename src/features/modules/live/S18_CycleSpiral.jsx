@@ -203,13 +203,32 @@ function SpiralTooltip({ active, payload, position }) {
   );
 }
 
+function CycleSpiralSkeleton() {
+  return (
+    <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/50 px-6">
+      <div className="relative aspect-square w-[min(76vw,520px)] max-h-[74vh]">
+        <div className="skeleton absolute inset-[8%] rounded-full" />
+        <div className="skeleton absolute inset-[22%] rounded-full" />
+        <div className="skeleton absolute inset-[36%] rounded-full" />
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="skeleton h-5 w-32 rounded" />
+        </div>
+        <div className="absolute bottom-2 left-1/2 flex w-56 -translate-x-1/2 flex-col items-center gap-2">
+          <div className="skeleton h-3 w-full rounded" />
+          <div className="skeleton h-3 w-36 rounded" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
 
 export default function S18_CycleSpiral() {
   // Data fetching from Binance
-  const { waypoints, loading, error, dataPoints, latestPrice } = useBinanceHistoricalBTC(300000);
+  const { waypoints, loading, error, latestPrice } = useBinanceHistoricalBTC(300000);
 
   // Responsive container
   const containerRef = useRef(null);
@@ -471,13 +490,7 @@ export default function S18_CycleSpiral() {
       >
         {/* Loading State */}
         {loading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-40">
-            <div className="text-white text-center">
-              <div className="animate-spin inline-block w-8 h-8 border-4 border-amber-500/20 border-t-amber-500 rounded-full mb-4" />
-              <div className="text-white/70">Loading Bitcoin history...</div>
-              <div className="text-white/50 text-sm mt-2">{dataPoints} data points</div>
-            </div>
-          </div>
+          <CycleSpiralSkeleton />
         )}
 
         {/* Error State */}

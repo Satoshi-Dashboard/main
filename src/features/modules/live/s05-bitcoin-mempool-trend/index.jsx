@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchJson } from '@/shared/lib/api.js';
 import { fetchMempoolOverviewBundle } from '@/shared/services/mempoolApi.js';
-import { useMediaQuery } from '@/shared/hooks/useMediaQuery.js';
 import { useWindowWidth } from '@/shared/hooks/useWindowWidth.js';
 import { useModuleData } from '@/shared/hooks/useModuleData.js';
 import { UI_COLORS } from '@/shared/constants/colors.js';
@@ -222,7 +221,6 @@ export default function S05_LongTermTrend() {
   const [selected,      setSelected]      = useState(null);
   const [side,          setSide]          = useState(BASE_SIDE);
   const viewportWidth = useWindowWidth();
-  const showDesktopOverlay = useMediaQuery('(min-width: 1024px)');
   const scrollRef    = useRef(null);
 
   /* Responsive block size via ResizeObserver */
@@ -275,7 +273,6 @@ export default function S05_LongTermTrend() {
   const blocks = data.blocks;
   const mempoolBlocks = data.mempoolBlocks;
   const fees = data.fees;
-  const lastUpdatedAt = data.lastUpdatedAt;
   const wsStatus = blocks.length > 0 ? 'connected' : fetchError ? 'reconnecting' : 'connecting';
 
   const toggle = useCallback(

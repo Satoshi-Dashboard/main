@@ -10,7 +10,6 @@ import { useMediaQuery } from '@/shared/hooks/useMediaQuery.js';
 import { useModuleData } from '@/shared/hooks/useModuleData.js';
 import { ModuleShell } from '@/shared/components/module/index.js';
 import { UI_COLORS } from '@/shared/constants/colors.js';
-import { formatMetaTimestamp } from '@/shared/utils/formatters.js';
 
 // ─── Currency data ──────────────────────────────────────────────────────────────
 const BASE_CURRENCY_META = [
@@ -52,18 +51,6 @@ const BAND_CODES = ['JPY', 'INR', 'KRW', 'CNY', 'EUR', 'GBP', 'USD', 'RUB'];
 const REFRESH_MS = 30_000;
 
 // UI_COLORS imported from @/shared/constants/colors.js
-
-function parseOverlayProviders(sourceLabel) {
-  const src = String(sourceLabel || '').toUpperCase();
-  if (src.includes('INVESTING')) {
-    return [
-      { name: 'Investing', url: 'https://www.investing.com/currencies/single-currency-crosses?currency=usd' },
-      { name: 'Binance', url: 'https://api.binance.com' },
-    ];
-  }
-
-  return [{ name: 'Satoshi Dashboard', url: 'https://github.com/Satoshi-Dashboard/main' }];
-}
 
 const currencyDisplayNames = typeof Intl !== 'undefined' && Intl.DisplayNames
   ? new Intl.DisplayNames(['en'], { type: 'currency' })
@@ -390,7 +377,6 @@ export default function S03_MultiCurrencyBoard() {
   const dotsRef      = useRef(FALLBACK_DOTS);     // start with fallback immediately
   const bandDataRef  = useRef(EMPTY_CURRENCIES.filter(c => BAND_CODES.includes(c.code)));
   const [search, setSearch]     = useState('');
-  const showDesktopOverlay = useMediaQuery('(min-width: 1024px)');
   const useStaticResponsiveMetrics = useMediaQuery('(max-width: 1023px)');
 
   // Multi-currency fetch via internal TradingEconomics scraper cache.
@@ -443,8 +429,6 @@ export default function S03_MultiCurrencyBoard() {
   });
 
   const currencies = priceData.currencies;
-  const sourceLabel = priceData.sourceLabel;
-  const lastUpdatedAt = priceData.lastUpdatedAt;
 
   // Keep bandDataRef in sync with latest currencies for canvas rendering
   useEffect(() => {

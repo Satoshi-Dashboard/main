@@ -706,7 +706,7 @@ export default function S06_BtcQueue() {
       if (event.touches.length === 1) {
         interactionRef.current.startX = event.touches[0].clientX;
         interactionRef.current.startY = event.touches[0].clientY;
-        interactionRef.current.touchMode = zoomRange ? 'pan' : 'scrub';
+        interactionRef.current.touchMode = zoomRangeRef.current ? 'pan' : 'scrub';
 
         if (now - interactionRef.current.lastTapAt < 280) {
           resetZoom();

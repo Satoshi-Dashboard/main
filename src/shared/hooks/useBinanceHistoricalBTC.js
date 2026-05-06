@@ -6,11 +6,7 @@
 
 import { useCallback, useMemo } from 'react';
 import { useModuleData } from './useModuleData';
-import {
-  fetchBTCHistoricalKlines,
-  transformKlinesToWaypoints,
-  getLatestPrice,
-} from '@/shared/services/binanceApi';
+import { fetchJson } from '@/shared/lib/api.js';
 
 /**
  * Fetch and cache historical Bitcoin data from Binance
@@ -19,37 +15,44 @@ import {
  * @returns {Object} { waypoints, klines, loading, error, latestPrice, refetch }
  */
 export function useBinanceHistoricalBTC(refreshMs = 300000) {
-  // Fetch raw klines from Binance API
-  const { data: klines, loading, error, refetch } = useModuleData(
+  // Fetch cached cycle data through the dashboard API instead of paginating
+  // Binance directly in the browser on first load.
+  const { data: points, loading, error, refetch } = useModuleData(
     useCallback(async () => {
-      const klinesData = await fetchBTCHistoricalKlines();
-      return klinesData;
+      const payload = await fetchJson('/api/s18/btc-cycles', { timeout: 10_000 });
+      return Array.isArray(payload?.data) ? payload.data : [];
     }, []),
     {
       refreshMs, // Auto-refresh every 5 minutes by default
       keepPreviousOnError: true, // Keep previous data if fetch fails
+      initialData: [],
     }
   );
 
   // Transform klines to waypoint format { ts, price }
   const waypoints = useMemo(() => {
-    if (!klines || !Array.isArray(klines)) {
+    if (!points || !Array.isArray(points)) {
       return [];
     }
-    return transformKlinesToWaypoints(klines);
-  }, [klines]);
+    return points
+      .map((point) => ({
+        ts: Number(point?.ts),
+        price: Number(point?.price),
+      }))
+      .filter((point) => Number.isFinite(point.ts) && Number.isFinite(point.price) && point.price > 0);
+  }, [points]);
 
   // Get latest price from the most recent kline
   const latestPrice = useMemo(() => {
-    if (!klines || !Array.isArray(klines) || klines.length === 0) {
+    if (!waypoints.length) {
       return null;
     }
-    return getLatestPrice(klines);
-  }, [klines]);
+    return waypoints[waypoints.length - 1].price;
+  }, [waypoints]);
 
   return {
     waypoints,      // Formatted waypoints for visualization
-    klines,         // Raw Binance klines data
+    klines: points, // Backward-compatible raw data field
     loading,        // Is data being fetched
     error,          // Error object if fetch failed
     latestPrice,    // Latest Bitcoin price in USD
