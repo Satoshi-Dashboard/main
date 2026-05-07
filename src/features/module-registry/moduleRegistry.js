@@ -85,7 +85,6 @@ const S27_GoogleTrends = lazyWithPreload(() => import('@/features/modules/under-
 const S28_BTCDominance = lazyWithPreload(() => import('@/features/modules/under-construction/S28_BTCDominance'));
 const S29_UTXODistribution = lazyWithPreload(() => import('@/features/modules/under-construction/S29_UTXODistribution'));
 const S30_USNationalDebt = lazyWithPreload(() => import('@/features/modules/live/S30_USNationalDebt'));
-const S31_ThankYouSatoshi = lazyWithPreload(() => import('@/features/modules/live/S31_ThankYouSatoshi'));
 const S32_BtcQueue = lazyWithPreload(() => import('@/features/modules/live/S06_BtcQueue'));
 
 const legacyModuleComponents = {
@@ -118,7 +117,6 @@ const legacyModuleComponents = {
   'S28': S28_BTCDominance,
   'S29': S29_UTXODistribution,
   'S30': S30_USNationalDebt,
-  'S31': S31_ThankYouSatoshi,
   'S32': S32_BtcQueue,
 };
 
@@ -142,7 +140,6 @@ const legacyModuleMetadata = {
   'S18': { slugBase: 'bitcoin-halving-cycle-spiral', title: 'Cycle Spiral' },
   'S19': { slugBase: 'bitcoin-power-law-model', title: 'Power Law Model' },
   'S20': { slugBase: 'bitcoin-stock-to-flow-model', title: 'Stock to Flow' },
-  'S21': { slugBase: 'bitcoin-big-mac-sats-tracker', title: 'Big Mac Sats Tracker' },
   'S22': { slugBase: 'bitcoin-seasonality-heatmap', title: 'Seasonality' },
   'S23': { slugBase: 'bitcoin-big-mac-index', title: 'Big Mac Index' },
   'S24': { slugBase: 'bitcoin-network-activity', title: 'Network Activity' },
@@ -152,7 +149,6 @@ const legacyModuleMetadata = {
   'S28': { slugBase: 'bitcoin-dominance-chart', title: 'BTC Dominance' },
   'S29': { slugBase: 'bitcoin-utxo-distribution', title: 'UTXO Distribution' },
   'S30': { slugBase: 'us-national-debt-live-counter', title: 'U.S. National Debt' },
-  'S31': { slugBase: 'satoshi-nakamoto-bitcoin-whitepaper', title: 'Thank You Satoshi' },
   'S32': { slugBase: 'bitcoin-mempool-queue-v2', title: 'BTC Queue' },
 };
 

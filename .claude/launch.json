@@ -4,9 +4,8 @@
     {
       "name": "satoshi-dashboard",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["--env-file=C:/Users/liber/Downloads/BTC FRAME/satoshi-dashboard/.env", "C:/Program Files/nodejs/node_modules/npm/bin/npm-cli.js", "run", "dev", "--", "--host"],
-      "port": 5173,
-      "autoPort": true
+      "runtimeArgs": ["C:/Program Files/nodejs/node_modules/npm/bin/npm-cli.js", "run", "dev"],
+      "port": 5173
     },
     {
       "name": "satoshi-dashboard-preview",

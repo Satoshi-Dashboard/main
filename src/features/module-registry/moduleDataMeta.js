@@ -53,7 +53,7 @@ const MODULE_DATA_META = {
   },
   'bitcoin-mempool-queue-v2': {
     providers: [
-      { name: 'ZatoBox', url: 'https://api.zatobox.io' },
+      { name: 'Internal Api', url: null },
       { name: 'Johoe', url: 'https://jochen-hoenicke.de/queue/' },
     ],
     refreshRangeLabel: '24h 1m',
@@ -150,14 +150,16 @@ const MODULE_DATA_META = {
   'bitcoin-stock-to-flow-model': {
     ...UNDER_CONSTRUCTION_META,
   },
-  'bitcoin-big-mac-sats-tracker': {
-    ...UNDER_CONSTRUCTION_META,
-  },
   'bitcoin-seasonality-heatmap': {
     ...UNDER_CONSTRUCTION_META,
   },
   'bitcoin-big-mac-index': {
-    ...UNDER_CONSTRUCTION_META,
+    providers: [
+      { name: 'The Economist', url: 'https://github.com/TheEconomist/big-mac-data' },
+      { name: 'Binance', url: 'https://api.binance.com' },
+    ],
+    refreshLabel: 'on load',
+    showSharedStrip: true,
   },
   'bitcoin-network-activity': {
     ...UNDER_CONSTRUCTION_META,
@@ -187,9 +189,10 @@ const MODULE_DATA_META = {
     showSharedStripOnResponsive: false,
     showTitleInStrip: false,
   },
-  'satoshi-nakamoto-bitcoin-whitepaper': {
-    showSharedStrip: false,
+  'khunsa-coinos-donation': {
+    showTitleInStrip: false,
     responsiveScroll: true,
+    desktopScroll: true,
   },
 };
 

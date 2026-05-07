@@ -62,6 +62,7 @@ import {
   getS15BtcVsGoldMarketCapPayload,
   getS18BtcCyclesPayload,
   getS21BigMacSatsPayload,
+  getS24BigMacSatsPayload,
   getUsNationalDebtPayload,
   PublicFeedError,
 } from './services/publicDataFeeds.js';
@@ -652,6 +653,16 @@ export function createApp() {
     setDataCacheHeaders(res, { sMaxAge: 604800, swr: 86400 });
     try {
       const payload = await getS21BigMacSatsPayload();
+      res.json(payload);
+    } catch (error) {
+      sendPublicFeedError(res, error);
+    }
+  }));
+
+  app.get('/api/public/s24/big-mac-sats', asyncRoute(async (_req, res) => {
+    setDataCacheHeaders(res, { sMaxAge: 3600, swr: 7200 });
+    try {
+      const payload = await getS24BigMacSatsPayload();
       res.json(payload);
     } catch (error) {
       sendPublicFeedError(res, error);

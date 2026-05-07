@@ -447,6 +447,15 @@ const FEED_DEFS = {
     safeMinuteBudget: 1,
     safeDailyBudget: 1,
   },
+  s24BigMacHistory: {
+    cacheKey: 'public:s24:big-mac-history',
+    lockKey: 'public:s24:big-mac-history:refresh',
+    refreshMs: 12 * 60 * 60_000,
+    sourceProvider: 'the-economist + binance',
+    sourceUrl: 'https://raw.githubusercontent.com/TheEconomist/big-mac-data/master/output-data/big-mac-full-index.csv',
+    safeMinuteBudget: 1,
+    safeDailyBudget: 24,
+  },
 };
 
 const HISTORY_PERIODS = [
@@ -3099,6 +3108,139 @@ export async function getS21BigMacSatsPayload() {
         big_mac_usd: Number(bigMacPayload?.data?.usd) || null,
         big_mac_as_of: String(bigMacPayload?.data?.as_of || ''),
         history_btc: historyPayload?.data || {},
+        source_spot: String(rates?.source_btc || 'Binance BTCUSDT'),
+      };
+    },
+    validateObject,
+  );
+}
+
+// BTC prices for Big Mac survey dates before Binance BTCUSDT (Aug 2017)
+const BTC_PRE_BINANCE = {
+  '2009-07-01': 0.0001,
+  '2010-01-01': 0.0007,
+  '2010-07-01': 0.06,
+  '2011-01-01': 0.30,
+  '2011-07-01': 13.0,
+  '2012-01-01': 6.0,
+  '2012-07-01': 8.0,
+  '2013-01-01': 13.0,
+  '2013-07-01': 90.0,
+  '2014-01-01': 800.0,
+  '2014-07-01': 625.0,
+  '2015-01-01': 310.0,
+  '2015-07-01': 280.0,
+  '2016-01-01': 432.0,
+  '2016-07-01': 660.0,
+  '2017-01-01': 1000.0,
+  '2017-07-01': 2500.0,
+};
+
+// Binance BTCUSDT launched 2017-08-18; use pre-table for anything before
+const BINANCE_START_MS = Date.UTC(2017, 7, 18);
+
+function parseBigMacHistory(csvText) {
+  const lines = String(csvText || '').split(/\r?\n/).filter(Boolean);
+  if (lines.length < 2) throw new PublicFeedError('Big Mac CSV is empty');
+
+  const header = parseCsvLine(lines[0]);
+  const isoIndex = header.indexOf('iso_a3');
+  const dateIndex = header.indexOf('date');
+  const priceIndex = header.indexOf('dollar_price');
+  if (isoIndex < 0 || dateIndex < 0 || priceIndex < 0) {
+    throw new PublicFeedError('Big Mac CSV columns missing');
+  }
+
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const row = parseCsvLine(lines[i]);
+    if (row[isoIndex] !== 'USA') continue;
+    const price = Number(row[priceIndex]);
+    const dateStr = String(row[dateIndex] || '').trim();
+    if (!Number.isFinite(price) || price <= 0 || !dateStr) continue;
+    const ts = Date.parse(dateStr);
+    if (!Number.isFinite(ts)) continue;
+    rows.push({ date: dateStr, bigMacUsd: price, ts });
+  }
+
+  rows.sort((a, b) => a.ts - b.ts);
+  return rows;
+}
+
+async function getBtcPriceForDate(dateStr, ts) {
+  if (ts < BINANCE_START_MS) {
+    const tableKeys = Object.keys(BTC_PRE_BINANCE).sort();
+    let best = null;
+    let bestDist = Infinity;
+    for (const key of tableKeys) {
+      const keyTs = Date.parse(key);
+      const dist = Math.abs(keyTs - ts);
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = BTC_PRE_BINANCE[key];
+      }
+    }
+    return best ?? null;
+  }
+  try {
+    return await fetchBinanceCloseAt(ts);
+  } catch {
+    return null;
+  }
+}
+
+function getComparisonTs(daysBack) {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() - daysBack);
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+}
+
+export async function getS24BigMacSatsPayload() {
+  return getFeed(
+    's24BigMacHistory',
+    async () => {
+      const COMPARISON_PERIODS = [
+        { label: '1 Year Ago',   daysBack: 365  },
+        { label: '30 Days Ago',  daysBack: 30   },
+        { label: '7 Days Ago',   daysBack: 7    },
+        { label: '10 Years Ago', daysBack: 3650 },
+        { label: '5 Years Ago',  daysBack: 1825 },
+        { label: '3 Years Ago',  daysBack: 1095 },
+      ];
+
+      const [csv, rates] = await Promise.all([
+        fetchTextWithTimeout(
+          'https://raw.githubusercontent.com/TheEconomist/big-mac-data/master/output-data/big-mac-full-index.csv',
+        ),
+        getBtcRates(),
+      ]);
+
+      const rows = parseBigMacHistory(csv);
+      if (!rows.length) throw new PublicFeedError('No Big Mac USA rows found');
+
+      const latest = rows[rows.length - 1];
+      const spotBtc = Number(rates?.btc_usd) || null;
+      const currentSats = spotBtc ? Math.round((latest.bigMacUsd / spotBtc) * 1e8) : null;
+
+      const comparisons = await Promise.all(
+        COMPARISON_PERIODS.map(async ({ label, daysBack }) => {
+          const ts = getComparisonTs(daysBack);
+          const dateStr = new Date(ts).toISOString().slice(0, 10);
+          const btcUsd = await getBtcPriceForDate(dateStr, ts);
+          const sats = btcUsd ? Math.round((latest.bigMacUsd / btcUsd) * 1e8) : null;
+          return { label, daysBack, btcUsd, sats };
+        }),
+      );
+
+      return {
+        current: {
+          date: latest.date,
+          bigMacUsd: latest.bigMacUsd,
+          btcUsd: spotBtc,
+          sats: currentSats,
+          change24hPct: Number(rates?.btc_change_24h_pct) || null,
+        },
+        comparisons,
         source_spot: String(rates?.source_btc || 'Binance BTCUSDT'),
       };
     },

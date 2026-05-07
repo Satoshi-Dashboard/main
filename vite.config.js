@@ -24,6 +24,8 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       host: true,
+      port: 5173,
+      strictPort: true,
       watch: {
         ignored: [
           '**/server/.runtime-cache/*.json',

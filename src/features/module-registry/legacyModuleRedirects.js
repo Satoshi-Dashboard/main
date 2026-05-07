@@ -4,8 +4,8 @@ export const LEGACY_MODULE_ALIASES = [
   { slug: 's03-multi-currency', slugBase: 'bitcoin-price-multi-currency' },
   { slug: 's04-mempool-gauge', slugBase: 'bitcoin-mempool-fees' },
   { slug: 's05-long-term-trend', slugBase: 'bitcoin-mempool-trend' },
-  { slug: 's06-btc-queue', slugBase: 'bitcoin-nodes-world-map' },
-  { slug: 's06-bitcoin-mempool-queue', slugBase: 'bitcoin-nodes-world-map' },
+  { slug: 's06-btc-queue', slugBase: 'bitcoin-mempool-queue-v2' },
+  { slug: 's06-bitcoin-mempool-queue', slugBase: 'bitcoin-mempool-queue-v2' },
   { slug: 's06-nodes-map', slugBase: 'bitcoin-nodes-world-map' },
   { slug: 's06-bitcoin-nodes-world-map', slugBase: 'bitcoin-nodes-world-map' },
   { slug: 's07-lightning-nodes-map', slugBase: 'lightning-nodes-world-map' },
@@ -36,8 +36,6 @@ export const LEGACY_MODULE_ALIASES = [
   { slug: 's19-bitcoin-power-law-model', slugBase: 'bitcoin-power-law-model' },
   { slug: 's20-stock-to-flow', slugBase: 'bitcoin-stock-to-flow-model' },
   { slug: 's20-bitcoin-stock-to-flow-model', slugBase: 'bitcoin-stock-to-flow-model' },
-  { slug: 's21-node-versions', slugBase: 'bitcoin-big-mac-sats-tracker' },
-  { slug: 's21-bitcoin-big-mac-sats-tracker', slugBase: 'bitcoin-big-mac-sats-tracker' },
   { slug: 's22-seasonality', slugBase: 'bitcoin-seasonality-heatmap' },
   { slug: 's22-bitcoin-seasonality-heatmap', slugBase: 'bitcoin-seasonality-heatmap' },
   { slug: 's23-big-mac-index', slugBase: 'bitcoin-big-mac-index' },
@@ -56,8 +54,9 @@ export const LEGACY_MODULE_ALIASES = [
   { slug: 's29-bitcoin-utxo-distribution', slugBase: 'bitcoin-utxo-distribution' },
   { slug: 's30-us-national-debt', slugBase: 'us-national-debt-live-counter' },
   { slug: 's30-us-national-debt-live-counter', slugBase: 'us-national-debt-live-counter' },
-  { slug: 's31-thank-you-satoshi', slugBase: 'satoshi-nakamoto-bitcoin-whitepaper' },
-  { slug: 's31-satoshi-nakamoto-bitcoin-whitepaper', slugBase: 'satoshi-nakamoto-bitcoin-whitepaper' },
+  { slug: 's33-khunsa-coinos-donation', slugBase: 'khunsa-coinos-donation' },
+  { slug: 's32-satoshi-nakamoto-bitcoin-whitepaper', slugBase: 'khunsa-coinos-donation' },
+  { slug: 's32-bitcoin-mempool-queue-v2', slugBase: 'bitcoin-mempool-queue-v2' },
 ];
 
 export function buildLegacyModuleRedirects(modules) {
