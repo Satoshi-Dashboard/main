@@ -14,6 +14,8 @@ const UI_COLORS = {
   ...SHARED_UI_COLORS,
   muted: 'rgba(255,255,255,0.38)',
 };
+const PROVIDERS_ZATOBOX = [{ name: 'zatobox.io', url: 'https://api.zatobox.io' }];
+const PROVIDERS_MEMPOOL = [{ name: 'mempool.space', url: 'https://mempool.space' }];
 
 function formatMemory(bytes) {
   if (bytes == null) return { value: null, unit: null, decimals: 1 };
@@ -297,7 +299,9 @@ export default function S04_MempoolGauge() {
 
   useEffect(() => {
     if (officialIsFallback === null) return;
-    setDynamicProviders(officialIsFallback ? PROVIDERS_MEMPOOL : PROVIDERS_ZATOBOX);
+    if (typeof setDynamicProviders === 'function') {
+      setDynamicProviders(officialIsFallback ? PROVIDERS_MEMPOOL : PROVIDERS_ZATOBOX);
+    }
   }, [officialIsFallback, setDynamicProviders]);
 
   const fetchNode = useCallback(

@@ -440,7 +440,7 @@ export function createApp() {
   }));
 
   const sendS14GlobalAssets = async (_req, res) => {
-    setDataCacheHeaders(res, { sMaxAge: 3600, swr: 7200 });
+    setDataCacheHeaders(res, { sMaxAge: 3600, swr: 21600 });
     try {
       const payload = await getS14GlobalAssetsPayload();
       res.json(payload);
@@ -452,7 +452,7 @@ export function createApp() {
   app.get('/api/s14/global-assets', asyncRoute(sendS14GlobalAssets));
 
   const sendS14GlobalAssetsStatus = async (_req, res) => {
-    setDataCacheHeaders(res, { sMaxAge: 3600, swr: 7200 });
+    setDataCacheHeaders(res, { sMaxAge: 3600, swr: 21600 });
     try {
       const payload = await getS14GlobalAssetsStatus();
       res.json(payload);
@@ -554,7 +554,7 @@ export function createApp() {
   }));
 
   app.get('/api/public/fear-greed', asyncRoute(async (req, res) => {
-    setDataCacheHeaders(res, { sMaxAge: 21600, swr: 3600 });
+    setDataCacheHeaders(res, { sMaxAge: 21600, swr: 21600 });
     try {
       const limit = Number(req.query?.limit || 31);
       const payload = await getFearGreedPayload({ limit });
@@ -625,7 +625,7 @@ export function createApp() {
   }));
 
   app.get('/api/s18/btc-cycles', asyncRoute(async (_req, res) => {
-    setDataCacheHeaders(res, { sMaxAge: 3600, swr: 7200 }); // cache for 1 hr
+    setDataCacheHeaders(res, { sMaxAge: 21600, swr: 86400 });
     try {
       const payload = await getS18BtcCyclesPayload();
       res.json(payload);
@@ -657,7 +657,7 @@ export function createApp() {
   }));
 
   app.get('/api/public/us-national-debt', asyncRoute(async (_req, res) => {
-    setDataCacheHeaders(res, { sMaxAge: 300, swr: 900 });
+    setDataCacheHeaders(res, { sMaxAge: 900, swr: 3600 });
     try {
       const payload = await getUsNationalDebtPayload();
       res.json(payload);

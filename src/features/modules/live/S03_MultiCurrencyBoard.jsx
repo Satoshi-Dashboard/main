@@ -381,6 +381,39 @@ function TickerItem({ code, change, useStaticMetrics = false }) {
   );
 }
 
+function TickerSkeleton() {
+  return (
+    <div className="flex items-center gap-4 px-3 py-1">
+      {Array.from({ length: 10 }).map((_, index) => (
+        <div key={index} className="flex items-center gap-2">
+          <div className="skeleton h-2 w-2 rounded-full" />
+          <div className="skeleton h-3 w-8 rounded" />
+          <div className="skeleton h-3 w-12 rounded" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function CurrencyListSkeleton() {
+  return (
+    <div className="space-y-0">
+      {Array.from({ length: 9 }).map((_, index) => (
+        <div key={index} className="flex min-h-[46px] items-center justify-between border-b border-[#141418] px-2.5 py-2">
+          <div className="flex items-center gap-2">
+            <div className="skeleton h-1.5 w-1.5 rounded-full" />
+            <div className="skeleton h-3 w-10 rounded" />
+          </div>
+          <div className="flex flex-col items-end gap-1.5">
+            <div className="skeleton h-3 w-24 rounded" />
+            <div className="skeleton h-2.5 w-14 rounded" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function S03_MultiCurrencyBoard() {
   const canvasRef    = useRef(null);
@@ -491,6 +524,7 @@ export default function S03_MultiCurrencyBoard() {
   );
 
   const tickerItems = [...currencies, ...currencies];
+  const showCurrencySkeleton = isPriceLoading && !currencies.some((currency) => Number.isFinite(currency.price));
 
   return (
     <ModuleShell overflow="hidden">
@@ -506,17 +540,19 @@ export default function S03_MultiCurrencyBoard() {
             100% { transform: translateX(-50%); }
           }
         `}</style>
-        <div style={{
-          display: 'inline-flex',
-          animation: 's03-ticker 75s linear infinite',
-          whiteSpace: 'nowrap',
-          opacity: isPriceLoading ? 0 : 1,
-          transition: 'opacity 0.4s ease',
-        }}>
+        {showCurrencySkeleton ? (
+          <TickerSkeleton />
+        ) : (
+          <div style={{
+            display: 'inline-flex',
+            animation: 's03-ticker 75s linear infinite',
+            whiteSpace: 'nowrap',
+          }}>
             {tickerItems.map((c, i) => (
-            <TickerItem key={i} code={c.code} change={c.change} useStaticMetrics={useStaticResponsiveMetrics} />
-          ))}
-        </div>
+              <TickerItem key={i} code={c.code} change={c.change} useStaticMetrics={useStaticResponsiveMetrics} />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ── Globe + Right panel ────────────────────────────────────────── */}
@@ -573,11 +609,11 @@ export default function S03_MultiCurrencyBoard() {
             style={{
               scrollbarWidth: 'thin', scrollbarColor: '#2a2a2a transparent',
               WebkitOverflowScrolling: 'touch',
-              opacity: isPriceLoading ? 0 : 1,
-              transition: 'opacity 0.4s ease',
             }}
           >
-            {filtered.map((c) => {
+            {showCurrencySkeleton ? (
+              <CurrencyListSkeleton />
+            ) : filtered.map((c) => {
               const hasChange = Number.isFinite(c.change);
               const up = hasChange ? c.change >= 0 : null;
               return (
