@@ -30,6 +30,7 @@
     "leaflet": "^1.9.4",
     "lightweight-charts": "^5.1.0",
     "lucide-react": "^0.576.0",
+    "maplibre-gl": "^5.24.0",
     "qrcode": "^1.5.4",
     "react": "^19.2.0",
     "react-animated-counter": "^1.8.4",

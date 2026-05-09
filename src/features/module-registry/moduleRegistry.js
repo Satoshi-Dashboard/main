@@ -86,7 +86,7 @@ const S28_BTCDominance = lazyWithPreload(() => import('@/features/modules/under-
 const S29_UTXODistribution = lazyWithPreload(() => import('@/features/modules/under-construction/S29_UTXODistribution'));
 const S30_USNationalDebt = lazyWithPreload(() => import('@/features/modules/live/S30_USNationalDebt'));
 const S31_ThankYouSatoshi = lazyWithPreload(() => import('@/features/modules/live/S31_ThankYouSatoshi'));
-const S32_BtcQueue = lazyWithPreload(() => import('@/features/modules/live/S06_BtcQueue'));
+const S32_BtcQueue = lazyWithPreload(() => import('@/features/modules/live/S32_BtcQueue'));
 
 const legacyModuleComponents = {
   'S02': S02_PriceChart,

@@ -12,7 +12,6 @@ const S02_PriceChart = lazyWithPreload(() => import('@/features/modules/live/S02
 const S03_MultiCurrencyBoard = lazyWithPreload(() => import('@/features/modules/live/S03_MultiCurrencyBoard'));
 const S04_MempoolGauge = lazyWithPreload(() => import('@/features/modules/live/S04_MempoolGauge'));
 const S05_LongTermTrend = lazyWithPreload(() => import('@/features/modules/live/S05_LongTermTrend'));
-const S06_BtcQueue = lazyWithPreload(() => import('@/features/modules/live/S06_BtcQueue'));
 const S06_NodesMap = lazyWithPreload(() => import('@/features/modules/live/S06_NodesMap'));
 const S07_LightningNodesMap = lazyWithPreload(() => import('@/features/modules/live/S07_LightningNodesMap'));
 const S08_BtcMapBusinessesMap = lazyWithPreload(() => import('@/features/modules/live/S08_BtcMapBusinessesMap'));
@@ -39,6 +38,7 @@ const S28_BTCDominance = lazyWithPreload(() => import('@/features/modules/under-
 const S29_UTXODistribution = lazyWithPreload(() => import('@/features/modules/under-construction/S29_UTXODistribution'));
 const S30_USNationalDebt = lazyWithPreload(() => import('@/features/modules/live/S30_USNationalDebt'));
 const S31_ThankYouSatoshi = lazyWithPreload(() => import('@/features/modules/live/S31_ThankYouSatoshi'));
+const S32_BtcQueue = lazyWithPreload(() => import('@/features/modules/live/S32_BtcQueue'));
 
 const MODULE_DEFS = [
   { slugBase: 'bitcoin-price-market-overview', title: 'Bitcoin Overview', component: S01_BitcoinOverview },
@@ -46,7 +46,6 @@ const MODULE_DEFS = [
   { slugBase: 'bitcoin-price-multi-currency', title: 'Multi-Currency', component: S03_MultiCurrencyBoard },
   { slugBase: 'bitcoin-mempool-fees', title: 'Mempool Gauge', component: S04_MempoolGauge },
   { slugBase: 'bitcoin-mempool-trend', title: 'Long-Term Trend', component: S05_LongTermTrend },
-  { slugBase: 'bitcoin-mempool-queue-v2', title: 'BTC Queue', component: S06_BtcQueue },
   { slugBase: 'bitcoin-nodes-world-map', title: 'Nodes Map', component: S06_NodesMap },
   { slugBase: 'lightning-nodes-world-map', title: 'Lightning Nodes Map', component: S07_LightningNodesMap },
   { slugBase: 'bitcoin-merchant-map', title: 'BTC Map Business Density', component: S08_BtcMapBusinessesMap },
@@ -73,6 +72,7 @@ const MODULE_DEFS = [
   { slugBase: 'bitcoin-utxo-distribution', title: 'UTXO Distribution', component: S29_UTXODistribution },
   { slugBase: 'us-national-debt-live-counter', title: 'U.S. National Debt', component: S30_USNationalDebt },
   { slugBase: 'satoshi-nakamoto-bitcoin-whitepaper', title: 'Thank You Satoshi', component: S31_ThankYouSatoshi },
+  { slugBase: 'bitcoin-mempool-queue-v2', title: 'BTC Queue', component: S32_BtcQueue },
 ];
 
 const toCode = (index) => `S${String(index + 1).padStart(2, '0')}`;

@@ -1,7 +1,5 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Info from 'lucide-react/dist/esm/icons/info';
-import { CircleMarker, GeoJSON, MapContainer, Tooltip, useMap } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
 import {
   useCompactViewport,
   useCountriesGeoJson,
@@ -18,6 +16,9 @@ import {
 import { fmt } from '@/shared/utils/formatters.js';
 import { UI_COLORS as SHARED_UI_COLORS } from '@/shared/constants/colors.js';
 import { ModuleShell } from '@/shared/components/module/index.js';
+import MapLibreBase from '@/shared/map/MapLibreBase.jsx';
+import { addChoroplethLayer } from '@/shared/map/choroplethUtils.js';
+import { CHOROPLETH_DARK_STYLE } from '@/shared/map/mapDarkStyle.js';
 
 const LIGHTNING_WORLD_ENDPOINT        = '/api/public/lightning/world';
 const LIGHTNING_CHANNELS_GEO_ENDPOINT = '/api/public/lightning/channels-geo';
@@ -27,7 +28,6 @@ const CHANNELS_GEO_REFRESH_MS = 5 * 60_000; // 5 min
 const INITIAL_NETWORK_ROWS = 160;
 const NETWORK_ROWS_BATCH = 180;
 const NETWORK_ROWS_BATCH_DELAY_MS = 90;
-const DEFER_ALL_LINES_MS = 900;
 const UNKNOWN_COUNTRY_LABEL = 'Unknown region';
 
 const UI_COLORS = {
@@ -57,48 +57,8 @@ const PERCAPITA_FALLBACK_SCALE = [
   { key: 'trace',     label: 'Minimal',  color: DENSITY_COLORS[4], minVal: 0.001, legend: '> 0 /M'   },
 ];
 
-// ISO-2 → [lat, lng] geographic centroids
-// Keys match row[7] countryCode from /api/v1/lightning/nodes/world
-const COUNTRY_CENTROIDS = {
-  US: [ 38.0,  -97.0], DE: [ 51.2,   10.4], GB: [ 54.0,   -2.0],
-  FR: [ 46.2,    2.2], AU: [-25.3,  133.8], CA: [ 56.1, -106.3],
-  NL: [ 52.1,    5.3], SG: [  1.4,  103.8], JP: [ 36.2,  138.2],
-  BR: [-10.0,  -55.0], IT: [ 41.9,   12.6], CH: [ 46.8,    8.2],
-  AT: [ 47.5,   14.6], BE: [ 50.5,    4.5], SE: [ 60.1,   18.6],
-  NO: [ 60.5,    8.5], DK: [ 56.3,    9.5], FI: [ 64.0,   26.0],
-  PL: [ 51.9,   19.1], CZ: [ 49.8,   15.5], ES: [ 40.5,   -3.7],
-  PT: [ 39.6,   -8.0], GR: [ 39.1,   21.8], HU: [ 47.2,   19.5],
-  RO: [ 45.9,   24.9], TR: [ 38.9,   35.2], UA: [ 49.0,   32.0],
-  RU: [ 61.5,   90.0], CN: [ 35.9,  104.2], IN: [ 20.6,   79.0],
-  KR: [ 35.9,  127.8], HK: [ 22.3,  114.2], TW: [ 23.7,  121.0],
-  ID: [ -2.5,  118.0], MY: [  4.2,  108.0], TH: [ 15.9,  100.9],
-  VN: [ 14.1,  108.3], PH: [ 12.9,  121.8], ZA: [-28.5,   24.7],
-  NG: [ 10.0,    8.0], KE: [  0.0,   37.9], EG: [ 26.8,   30.8],
-  MX: [ 23.6, -102.6], AR: [-34.0,  -64.0], CO: [  4.6,  -74.3],
-  CL: [-35.7,  -71.5], VE: [  6.4,  -66.6], PE: [ -9.2,  -75.0],
-  IL: [ 31.5,   34.8], AE: [ 23.4,   53.8], SA: [ 24.0,   45.0],
-  IR: [ 32.0,   53.7], PK: [ 30.4,   69.3], BD: [ 23.7,   90.4],
-  LK: [  7.9,   80.8], KZ: [ 48.0,   68.0], UZ: [ 41.4,   64.6],
-  AZ: [ 40.3,   47.6], GE: [ 42.3,   43.4], AM: [ 40.1,   45.0],
-  RS: [ 44.0,   21.0], SK: [ 48.7,   19.7], HR: [ 45.1,   15.2],
-  SI: [ 46.1,   14.8], BG: [ 42.7,   25.5], LT: [ 56.0,   24.0],
-  LV: [ 56.9,   24.6], EE: [ 58.6,   25.0], IS: [ 65.0,  -18.0],
-  LU: [ 49.8,    6.1], MT: [ 35.9,   14.4], CY: [ 35.1,   33.4],
-  NZ: [-41.5,  172.8], ZW: [-19.0,   29.2], GH: [  8.0,   -1.0],
-  TZ: [ -6.4,   34.9], ET: [  9.1,   40.5], MA: [ 31.8,   -7.1],
-  DZ: [ 28.0,    2.6], TN: [ 34.0,    9.0], UG: [  1.4,   32.3],
-  TT: [ 10.7,  -61.2], JM: [ 18.1,  -77.3], PR: [ 18.2,  -66.6],
-  PA: [  8.5,  -80.8], GT: [ 15.8,  -90.2], CR: [  9.7,  -84.2],
-  EC: [ -1.8,  -78.2], BO: [-17.1,  -64.7], PY: [-23.4,  -58.4],
-  UY: [-32.5,  -55.8], DO: [ 18.7,  -70.2], CU: [ 22.0,  -79.5],
-  NI: [ 12.9,  -85.2], HN: [ 14.8,  -86.2], SV: [ 13.8,  -88.9],
-  RW: [ -1.9,   29.9], CI: [  7.5,   -5.6], CM: [  3.9,   11.5],
-  MM: [ 21.9,   95.9], NP: [ 28.4,   84.1], AF: [ 33.9,   67.7],
-};
-
-// ─── Individual node network data (for canvas view) ───────────────────────────
-// Confirmed API format from /api/v1/lightning/nodes/world:
-//   [0] lng  [1] lat  [2] pubkey  [3] alias  [4] capacity(sats)  [5] channels  [6] country  [7] countryCode
+// ─── Individual node network data ────────────────────────────────────────────
+// API format: [lng, lat, pubkey, alias, capacity(sats), channels, country, countryCode]
 function parseLightningNetworkData(payloadData) {
   const rawNodes = payloadData?.nodes;
   if (!Array.isArray(rawNodes)) return { points: [], lines: [] };
@@ -106,13 +66,11 @@ function parseLightningNetworkData(payloadData) {
   const points = [];
   rawNodes.forEach((row) => {
     if (!Array.isArray(row)) return;
-    // Confirmed API format: [lng, lat, pubkey, alias, capacity, channels, country, countryCode]
     const lng = Number(row[0]);
     const lat = Number(row[1]);
-    // Validate coordinates — filters out Tor nodes (no geolocation) and bad data
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
     if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return;
-    if (lat === 0 && lng === 0) return; // Null Island = unresolved location
+    if (lat === 0 && lng === 0) return;
     const capacity = Number(row[4]) || 0;
     const channels = Number(row[5]) || 0;
     const countryCode = String(row[7] || '').toUpperCase() || '?';
@@ -120,13 +78,9 @@ function parseLightningNetworkData(payloadData) {
       ? row[6].trim()
       : String(row[6]?.en || row[6]?.['pt-BR'] || Object.values(row[6] || {})[0] || '').trim();
     const countryName = countryNameRaw || ISO_COUNTRY_NAMES[countryCode] || UNKNOWN_COUNTRY_LABEL;
-    // Skip nodes that show "0.00 BTC" (capacity < 500k sats) or have no channels
     if (!channels || capacity < 500_000) return;
     points.push({
-      lat,
-      lng,
-      capacity,
-      channels,
+      lat, lng, capacity, channels,
       alias:       String(row[3] || '').trim() || '—',
       countryCode,
       countryName,
@@ -134,296 +88,12 @@ function parseLightningNetworkData(payloadData) {
     });
   });
 
-  // API may include pre-computed channel line segments [lat1, lng1, lat2, lng2]
-  const lines = [];
-  const rawLines = payloadData?.lines;
-  if (Array.isArray(rawLines)) {
-    rawLines.forEach((l) => {
-      if (Array.isArray(l) && l.length >= 4) {
-        const lat1 = Number(l[0]), lng1 = Number(l[1]);
-        const lat2 = Number(l[2]), lng2 = Number(l[3]);
-        if (Number.isFinite(lat1) && Number.isFinite(lng1) && Number.isFinite(lat2) && Number.isFinite(lng2)) {
-          lines.push([lat1, lng1, lat2, lng2]);
-        }
-      }
-    });
-  }
-
-  return { points, lines };
+  return { points, lines: [] };
 }
 
 function getNetworkNodeMetricColor(node, metricType, scale, avgDistByPubkey) {
   const metricValue = getNetworkMetricValue(node, metricType, avgDistByPubkey);
   return getColorByScale(metricValue, scale);
-}
-
-function getNetworkNodeRadiusMetric(node, metricType, avgDistByPubkey) {
-  return getNetworkMetricValue(node, metricType, avgDistByPubkey);
-}
-
-// Canvas-based Lightning Network renderer — handles thousands of nodes efficiently
-function LightningNetworkCanvas({
-  networkData,
-  maxMetricValue,
-  selectedPubkey,
-  onNodeClick,
-  showAllConnectionLines,
-  metricType,
-  nodeColorScale,
-  avgDistByPubkey,
-}) {
-  const map = useMap();
-  const cleanupRef = useRef(null);
-
-  useEffect(() => {
-    if (!map || !networkData || networkData.points.length === 0) return;
-
-    const container = map.getContainer();
-
-    // ── Canvas layer ──
-    const canvas = document.createElement('canvas');
-    canvas.style.cssText =
-      'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:450;';
-    container.appendChild(canvas);
-
-    // ── Hover tooltip ──
-    const tooltip = document.createElement('div');
-    tooltip.style.cssText =
-      'position:absolute;pointer-events:none;z-index:600;display:none;' +
-      'background:rgba(8,8,14,0.93);border:1px solid rgba(255,255,255,0.14);' +
-      'border-radius:5px;padding:7px 11px;font-family:monospace;font-size:12px;' +
-      'color:rgba(255,255,255,0.88);white-space:nowrap;line-height:1.6;' +
-      'box-shadow:0 4px 16px rgba(0,0,0,0.5);';
-    container.appendChild(tooltip);
-
-    const { points, lines } = networkData;
-    const maxMetric = maxMetricValue || 1;
-    let rafId = null;
-
-    // Internal hover state — transient, not propagated to parent
-    let hoveredPubkey = null;
-
-    const draw = () => {
-      if (rafId) cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(() => {
-        rafId = null;
-        const size = map.getSize();
-        canvas.width  = size.x;
-        canvas.height = size.y;
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, size.x, size.y);
-
-        const z = map.getZoom();
-        // Active pubkey: pinned selection takes priority over hover
-        const activePubkey = selectedPubkey || hoveredPubkey;
-
-        // ── Connection lines — zoom-adaptive opacity & width ──
-        const visibleLines = activePubkey
-          ? lines.filter((l) => l.pub1 === activePubkey || l.pub2 === activePubkey)
-          : (showAllConnectionLines ? lines : []);
-
-        // Only isolate (dim others) when the active node actually has geo-visible channels.
-        // If all its peers are Tor-only, don't dim — show full network to avoid confusion.
-        const hasGeoChannels = activePubkey ? visibleLines.length > 0 : false;
-        const connectedPubkeys = hasGeoChannels
-          ? new Set(visibleLines.flatMap((l) => [l.pub1, l.pub2]))
-          : null;
-
-        if (visibleLines.length > 0) {
-          const isPinned  = !!selectedPubkey;
-          const lineAlpha = activePubkey ? (isPinned ? 0.65 : 0.45) : Math.min(0.55, 0.06 + z * 0.055);
-          const lineWidth = activePubkey ? (isPinned ? 1.2 : 0.9) : Math.min(1.8, 0.3 + z * 0.18);
-          ctx.globalAlpha = lineAlpha;
-          ctx.strokeStyle = '#FFFFFF';
-          ctx.lineWidth   = lineWidth;
-          visibleLines.forEach((line) => {
-            const lat1 = line.lat1 ?? line[0];
-            const lng1 = line.lng1 ?? line[1];
-            const lat2 = line.lat2 ?? line[2];
-            const lng2 = line.lng2 ?? line[3];
-            try {
-              const p1 = map.latLngToContainerPoint([lat1, lng1]);
-              const p2 = map.latLngToContainerPoint([lat2, lng2]);
-              ctx.beginPath();
-              ctx.moveTo(p1.x, p1.y);
-              ctx.lineTo(p2.x, p2.y);
-              ctx.stroke();
-            } catch { /* skip OOB */ }
-          });
-        }
-
-        // ── Node dots — zoom-adaptive radius + isolation dimming ──
-        const zScale = Math.max(1, 1 + (z - 2) * 0.25);
-        points.forEach((pt) => {
-          try {
-            const p      = map.latLngToContainerPoint([pt.lat, pt.lng]);
-            const metricValue = getNetworkNodeRadiusMetric(pt, metricType, avgDistByPubkey);
-            const norm   = metricValue / maxMetric;
-            const baseRadius = Math.max(3, (2.4 + norm * 10.6) * zScale);
-            const color  = getNetworkNodeMetricColor(pt, metricType, nodeColorScale, avgDistByPubkey);
-
-            const isActive    = pt.pubkey === activePubkey;
-            const isConnected = connectedPubkeys ? connectedPubkeys.has(pt.pubkey) : true;
-            const alpha = !connectedPubkeys
-              ? (norm > 0.08 ? 0.90 : 0.55)
-              : isActive    ? 1.0
-              : isConnected ? 0.80
-              : 0.07;
-            const drawRadius = isActive ? baseRadius * 1.9 : baseRadius;
-
-            ctx.shadowBlur  = (isActive || norm > 0.08) ? drawRadius * 3.5 : 0;
-            ctx.shadowColor = isActive ? '#FFFFFF' : color;
-            ctx.globalAlpha = alpha;
-            ctx.fillStyle   = color;
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, drawRadius, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Ring — white for pinned selection, subtle for hover
-            if (isActive) {
-              ctx.globalAlpha = selectedPubkey ? 0.9 : 0.55;
-              ctx.strokeStyle = selectedPubkey ? '#FFFFFF' : '#AADDFF';
-              ctx.lineWidth   = selectedPubkey ? 1.5 : 1.0;
-              ctx.shadowBlur  = 0;
-              ctx.beginPath();
-              ctx.arc(p.x, p.y, drawRadius + 3, 0, Math.PI * 2);
-              ctx.stroke();
-            }
-          } catch { /* skip OOB */ }
-        });
-
-        ctx.shadowBlur  = 0;
-        ctx.globalAlpha = 1;
-      });
-    };
-
-    // Shared hit-test helper
-    const hitTest = (cp, threshold = 14) => {
-      let closest = null;
-      let minDist  = threshold;
-      points.forEach((pt) => {
-        try {
-          const p = map.latLngToContainerPoint([pt.lat, pt.lng]);
-          const d = Math.hypot(p.x - cp.x, p.y - cp.y);
-          if (d < minDist) { minDist = d; closest = pt; }
-        } catch { /* skip */ }
-      });
-      return closest;
-    };
-
-    // ── Hover: show tooltip + temporary connection highlight ──
-    const onMapMouseMove = (e) => {
-      const cp      = map.latLngToContainerPoint(e.latlng);
-      const closest = hitTest(cp, 14);
-
-      // Tooltip always updates
-      if (closest) {
-        const btc = (closest.capacity / 1e8).toFixed(2);
-        // Count how many of this node's channels have geo-visible lines
-        const geoLines = lines.filter((l) => l.pub1 === closest.pubkey || l.pub2 === closest.pubkey);
-        const torHidden = closest.channels - geoLines.length;
-        const torNote = torHidden > 0
-          ? `<br/><span style="color:rgba(255,180,60,0.75);font-size:11px">` +
-            `${torHidden === closest.channels ? '⚠ all' : torHidden} channels via Tor (no geo)</span>`
-          : '';
-        tooltip.innerHTML =
-          `<span style="color:#fff;font-weight:bold">${closest.alias}</span>` +
-          `&nbsp;<span style="color:rgba(255,255,255,0.4)">(${closest.countryCode})</span><br/>` +
-          `<span style="color:#3BA3FF">${closest.channels} channels</span>` +
-          `&nbsp;·&nbsp;<span style="color:#FF80AA">${btc} BTC</span>` +
-          torNote;
-        const tx = cp.x + 16, ty = Math.max(4, cp.y - 36);
-        tooltip.style.left    = `${tx}px`;
-        tooltip.style.top     = `${ty}px`;
-        tooltip.style.display = 'block';
-      } else {
-        tooltip.style.display = 'none';
-      }
-
-      // Hover isolation — only when nothing is pinned
-      if (!selectedPubkey) {
-        const newHovered = closest?.pubkey ?? null;
-        if (newHovered !== hoveredPubkey) {
-          hoveredPubkey = newHovered;
-          draw();
-        }
-      }
-    };
-
-    const onMapMouseOut = () => {
-      tooltip.style.display = 'none';
-      if (!selectedPubkey && hoveredPubkey !== null) {
-        hoveredPubkey = null;
-        draw();
-      }
-    };
-
-    // ── Click: pin/unpin a node's connections permanently ──
-    const onMapClick = (e) => {
-      const cp      = map.latLngToContainerPoint(e.latlng);
-      const closest = hitTest(cp, 18);
-      if (onNodeClick) {
-        onNodeClick((prev) => (closest ? (prev === closest.pubkey ? null : closest.pubkey) : null));
-      }
-    };
-
-    // ── Debounced resize (80ms) ──
-    let resizeTimer = null;
-    const debouncedDraw = () => {
-      if (resizeTimer) clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(draw, 80);
-    };
-
-    draw();
-    map.on('moveend zoomend', draw);
-    map.on('resize',    debouncedDraw);
-    map.on('mousemove', onMapMouseMove);
-    map.on('mouseout',  onMapMouseOut);
-    map.on('click',     onMapClick);
-
-    cleanupRef.current = () => {
-      if (rafId) cancelAnimationFrame(rafId);
-      if (resizeTimer) clearTimeout(resizeTimer);
-      map.off('moveend zoomend', draw);
-      map.off('resize',    debouncedDraw);
-      map.off('mousemove', onMapMouseMove);
-      map.off('mouseout',  onMapMouseOut);
-      map.off('click',     onMapClick);
-      canvas.remove();
-      tooltip.remove();
-    };
-    return cleanupRef.current;
-  }, [map, networkData, maxMetricValue, selectedPubkey, onNodeClick, showAllConnectionLines, metricType, nodeColorScale, avgDistByPubkey]);
-
-  return null;
-}
-
-function LeafletLayoutSync({ watchKey }) {
-  const map = useMap();
-
-  useEffect(() => {
-    if (!map) return undefined;
-
-    const triggerInvalidate = () => {
-      requestAnimationFrame(() => {
-        map.invalidateSize(false);
-      });
-    };
-
-    triggerInvalidate();
-
-    const container = map.getContainer();
-    if (!container || typeof ResizeObserver === 'undefined') return undefined;
-
-    const observer = new ResizeObserver(() => {
-      triggerInvalidate();
-    });
-
-    observer.observe(container);
-    return () => observer.disconnect();
-  }, [map, watchKey]);
-
-  return null;
 }
 
 const BTC_FORMATTER = new Intl.NumberFormat('en-US', {
@@ -483,7 +153,7 @@ function formatCompactTableValue(value, metricType) {
   return fmt.num(Math.round(n));
 }
 
-// ─── Scale helpers ─────────────────────────────────────────────────────────────
+// ─── Scale helpers ────────────────────────────────────────────────────────────
 
 function computeAbsoluteScale(maxVal, metricType) {
   if (!maxVal || maxVal <= 0) return NODE_DENSITY_SCALE;
@@ -530,7 +200,6 @@ function getColorByScale(value, scale) {
   return (scale.find((s) => v >= s.minVal) || {}).color || scale[scale.length - 1].color || '#141414';
 }
 
-// Legacy helpers kept for fixed-scale nodes path
 function getDensityStepByCount(count) {
   const v = Number(count) || 0;
   return NODE_DENSITY_SCALE.find((s) => v >= s.minVal) || null;
@@ -607,6 +276,10 @@ function parseLightningCountryCounts(payload) {
   return [...map.values()].sort((a, b) => b.nodes - a.nodes);
 }
 
+// MapLibre layer IDs
+const CHOROPLETH_LAYERS = ['s07-fill', 's07-fill-border'];
+const NETWORK_LAYERS    = ['s07-channel-lines', 's07-clusters', 's07-cluster-count', 's07-unclustered'];
+
 export default function S07_LightningNodesMap() {
   const [payload,              setPayload]              = useState(null);
   const [fallbackPayload,     setFallbackPayload]      = useState(null);
@@ -621,14 +294,28 @@ export default function S07_LightningNodesMap() {
   const [isAbsolute,           setIsAbsolute]           = useState(true);         // true=absolute, false=per-capita
   // Feature B — layer mode
   const [layerMode,            setLayerMode]            = useState('choropleth'); // 'choropleth'|'bubble'
-  const [channelsGeoLines,     setChannelsGeoLines]     = useState([]);           // parsed line segments for canvas
+  const [channelsGeoLines,     setChannelsGeoLines]     = useState([]);
   const [showAllConnectionLines, setShowAllConnectionLines] = useState(true);
   const [canRenderAllConnectionLines, setCanRenderAllConnectionLines] = useState(false);
   const [visibleNetworkNodeCount, setVisibleNetworkNodeCount] = useState(INITIAL_NETWORK_ROWS);
-  const [selectedPubkey,       setSelectedPubkey]       = useState(null);         // click-isolated node pubkey
-  const [networkSortCol,       setNetworkSortCol]       = useState('capacity');   // 'capacity'|'channels'|'alias'|'dist'
-  const [networkSortDir,       setNetworkSortDir]       = useState('desc');       // 'desc'|'asc'
+  const [selectedPubkey,       setSelectedPubkey]       = useState(null);
+  const [networkSortCol,       setNetworkSortCol]       = useState('capacity');
+  const [networkSortDir,       setNetworkSortDir]       = useState('desc');
   const [nowTs,                setNowTs]                = useState(() => Date.now());
+
+  // MapLibre refs
+  const mapRef     = useRef(null);
+  const layerRef   = useRef(null);  // choropleth { updateColors, destroy }
+  const tooltipRef = useRef(null);
+  const [mapReady, setMapReady] = useState(false);
+
+  // Closure refs — keep event handlers current without re-registering them
+  const isAbsoluteRef      = useRef(isAbsolute);
+  const metricTypeRef      = useRef(metricType);
+  const statsByCodeRef     = useRef({});
+  const perCapitaByCodeRef = useRef({});
+  const activeScaleRef     = useRef(NODE_DENSITY_SCALE);
+  const featureNameByCodeRef = useRef(new Map());
 
   const isCompactViewport = useCompactViewport();
   const { data: countriesGeo, loading: geoLoading, error: geoError } = useCountriesGeoJson();
@@ -654,12 +341,8 @@ export default function S07_LightningNodesMap() {
       setCanRenderAllConnectionLines(false);
       return undefined;
     }
-
     setCanRenderAllConnectionLines(false);
-    const timer = setTimeout(() => {
-      setCanRenderAllConnectionLines(true);
-    }, DEFER_ALL_LINES_MS);
-
+    const timer = setTimeout(() => setCanRenderAllConnectionLines(true), 900);
     return () => clearTimeout(timer);
   }, [layerMode, channelsGeoLines.length, metricType]);
 
@@ -679,9 +362,7 @@ export default function S07_LightningNodesMap() {
             });
           }
         }
-      } catch {
-        // Fallback not available - ignore
-      } finally {
+      } catch { /* ignore */ } finally {
         if (active) setFallbackLoaded(true);
       }
     };
@@ -693,25 +374,20 @@ export default function S07_LightningNodesMap() {
         const p = await res.json();
         const json = p?.data || p;
         if (!active) return;
-
         const newPayload = {
           source_provider: p?.source_provider || 'mempool.space',
           fetched_at: p?.updated_at ? new Date(p.updated_at).getTime() : Date.now(),
           data: json,
         };
-
         setPayload(newPayload);
         setError(null);
-
         try {
           await fetch(LIGHTNING_FALLBACK_ENDPOINT, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(newPayload),
           });
-        } catch {
-          // Background save - ignore errors
-        }
+        } catch { /* ignore */ }
       } catch {
         if (!active) return;
         setError('Could not load the Lightning nodes API.');
@@ -735,7 +411,7 @@ export default function S07_LightningNodesMap() {
     return () => clearInterval(timer);
   }, []);
 
-  // Fetch channel connection lines (only when Network mode is active)
+  // Fetch channel geo lines (network mode only)
   useEffect(() => {
     if (layerMode !== 'bubble') return;
     let active = true;
@@ -744,10 +420,8 @@ export default function S07_LightningNodesMap() {
         const res  = await fetch(LIGHTNING_CHANNELS_GEO_ENDPOINT);
         if (!res.ok) return;
         const body = await res.json();
-        // Server wraps in { data: [...] } or returns array directly
         const raw  = Array.isArray(body) ? body : (body?.data ?? []);
         if (!active) return;
-        // Response format: [pubkey1, alias1, lng1, lat1, pubkey2, alias2, lng2, lat2]
         const lines = [];
         raw.forEach((r) => {
           if (!Array.isArray(r) || r.length < 8) return;
@@ -800,6 +474,9 @@ export default function S07_LightningNodesMap() {
     return map;
   }, [countriesGeo]);
 
+  // Keep closure ref in sync
+  useEffect(() => { featureNameByCodeRef.current = featureNameByCode; }, [featureNameByCode]);
+
   const isUsingFallback = !payload && !!fallbackPayload;
 
   const countryCounts = useMemo(() => parseLightningCountryCounts(effectivePayload?.data), [effectivePayload?.data]);
@@ -829,8 +506,8 @@ export default function S07_LightningNodesMap() {
   );
 
   const networkData = useMemo(
-    () => ({ ...parseLightningNetworkData(effectivePayload?.data), lines: channelsGeoLines }),
-    [effectivePayload?.data, channelsGeoLines],
+    () => parseLightningNetworkData(effectivePayload?.data),
+    [effectivePayload?.data],
   );
 
   const statsByCode = useMemo(() => {
@@ -921,7 +598,6 @@ export default function S07_LightningNodesMap() {
     return computeAbsoluteScale(networkMaxByMetric[networkMetric] || 0, networkMetric);
   }, [metricType, networkMaxByMetric]);
 
-  // Active scale for current metricType + isAbsolute combo
   const activeScale = useMemo(() => {
     if (layerMode === 'bubble') return networkScale;
     if (isAbsolute) {
@@ -936,10 +612,6 @@ export default function S07_LightningNodesMap() {
     : isAbsolute
       ? (maxAbsoluteByMetric[metricType] || 0)
       : (maxPerCapitaByMetric[metricType] || 0);
-
-
-
-
 
   // Flat sorted node list for network mode
   const sortedNetworkNodes = useMemo(() => {
@@ -979,11 +651,7 @@ export default function S07_LightningNodesMap() {
     };
 
     pump();
-
-    return () => {
-      cancelled = true;
-      if (timer) clearTimeout(timer);
-    };
+    return () => { cancelled = true; if (timer) clearTimeout(timer); };
   }, [layerMode, sortedNetworkNodes, metricType, networkSortCol, networkSortDir]);
 
   const visibleNetworkNodes = useMemo(
@@ -1006,7 +674,6 @@ export default function S07_LightningNodesMap() {
     }
   };
 
-  // Breakdown list sorted by active metric
   const displayRows = useMemo(() => {
     if (isAbsolute) {
       return [...resolvedCountryRows].sort((a, b) => {
@@ -1032,42 +699,339 @@ export default function S07_LightningNodesMap() {
   const isLoading          = (!hasCountryData && apiLoading && !fallbackPayload) || (!hasCountryData && geoLoading);
   const isMapLoading       = (!effectivePayload && apiLoading && !fallbackPayload) || (!countriesGeo && geoLoading);
 
-  // ── Helpers used inside JSX ───────────────────────────────────────────────
+  // ── Sync closure refs ──────────────────────────────────────────────────────
+  useEffect(() => { isAbsoluteRef.current = isAbsolute; }, [isAbsolute]);
+  useEffect(() => { metricTypeRef.current = metricType; }, [metricType]);
+  useEffect(() => { statsByCodeRef.current = statsByCode; }, [statsByCode]);
+  useEffect(() => { perCapitaByCodeRef.current = perCapitaByCode; }, [perCapitaByCode]);
+  useEffect(() => { activeScaleRef.current = activeScale; }, [activeScale]);
 
-  function getFeatureFillColor(code) {
-    if (isAbsolute) {
-      const val = getMetricRawValue(statsByCode[code], metricType);
-      return metricType === 'nodes' ? getFillColorNodes(val) : getColorByScale(val, activeScale);
-    }
-    const pc = perCapitaByCode[code];
-    if (!pc) return '#141414';
-    const val = metricType === 'nodes' ? pc.nodes : metricType === 'channels' ? pc.channels : pc.capacity;
-    return getColorByScale(val, activeScale);
-  }
+  // ── Build colorMap for choropleth fill ────────────────────────────────────
+  const colorMap = useMemo(() => {
+    if (!countriesGeo?.features) return {};
+    const result = {};
+    countriesGeo.features.forEach((feature) => {
+      const code = getFeatureCountryCode(feature);
+      if (!code) return;
+      let color;
+      if (isAbsolute) {
+        const val = getMetricRawValue(statsByCode[code], metricType);
+        color = metricType === 'nodes' ? getFillColorNodes(val) : getColorByScale(val, activeScale);
+      } else {
+        const pc = perCapitaByCode[code];
+        if (!pc) { color = '#141414'; }
+        else {
+          const val = metricType === 'nodes' ? pc.nodes : metricType === 'channels' ? pc.channels : pc.capacity;
+          color = getColorByScale(val, activeScale);
+        }
+      }
+      if (color && color !== '#141414') result[code] = color;
+    });
+    return result;
+  }, [countriesGeo, statsByCode, perCapitaByCode, activeScale, isAbsolute, metricType]);
 
-  function buildTooltipText(code, name) {
-    const stats = statsByCode[code] || { nodes: 0, channels: 0, capacity: 0 };
+  // ── Tooltip HTML builder (uses refs for freshness) ────────────────────────
+  const getTooltipHtml = useCallback((code) => {
+    const isAbs  = isAbsoluteRef.current;
+    const metric = metricTypeRef.current;
+    const scl    = activeScaleRef.current;
+    const stats  = statsByCodeRef.current[code] || { nodes: 0, channels: 0, capacity: 0 };
+    const pc     = perCapitaByCodeRef.current[code];
+    const name   = featureNameByCodeRef.current.get(code) || ISO_COUNTRY_NAMES[code] || code || '';
     const display = code && code !== '-99' ? code : UNKNOWN_COUNTRY_LABEL;
-    if (!isAbsolute) {
-      const pc = perCapitaByCode[code];
-      const pcVal = pc ? (metricType === 'nodes' ? pc.nodes : metricType === 'channels' ? pc.channels : pc.capacity) : null;
-      if (pcVal == null || pcVal <= 0) return `${name} (${display}): no per-capita data`;
-      const step = activeScale.find((s) => pcVal >= s.minVal);
-      return `${name} (${display}): ${formatPerCapitaValue(pcVal, metricType)} — ${METRIC_LABELS[metricType]} per capita — ${step?.label ?? 'Minimal'}`;
-    }
-    if (metricType === 'nodes') {
-      return `${name} (${display}): ${fmt.num(stats.nodes)} nodes — ${fmt.num(stats.channels)} ch — ${formatBtcFromSats(stats.capacity)} — ${getDensityLabel(stats.nodes)}`;
-    }
-    if (metricType === 'channels') {
-      const step = activeScale.find((s) => stats.channels >= s.minVal);
-      return `${name} (${display}): ${fmt.num(stats.channels)} channels — ${fmt.num(stats.nodes)} nodes — ${step?.label ?? 'Minimal'}`;
-    }
-    const step = activeScale.find((s) => stats.capacity >= s.minVal);
-    return `${name} (${display}): ${formatBtcFromSats(stats.capacity)} — ${fmt.num(stats.nodes)} nodes — ${step?.label ?? 'Minimal'}`;
-  }
 
-  // GeoJSON key: forces re-render when metric/mode changes
-  const geoJsonKey = `s07-${metricType}-${isAbsolute ? 'abs' : 'pc'}-${layerMode}-${maxMetricValue}-${countryCounts.length}`;
+    if (!stats.nodes && !stats.channels && !stats.capacity && !pc) return '';
+
+    if (!isAbs) {
+      const pcVal = pc ? (metric === 'nodes' ? pc.nodes : metric === 'channels' ? pc.channels : pc.capacity) : null;
+      if (pcVal == null || pcVal <= 0) return `<b>${name}</b> (${display}): no per-capita data`;
+      const step = scl.find((s) => pcVal >= s.minVal);
+      return `<b>${name}</b> (${display})<br/>${formatPerCapitaValue(pcVal, metric)} — ${step?.label ?? 'Minimal'}`;
+    }
+    if (metric === 'nodes') {
+      return `<b>${name}</b> (${display})<br/>${fmt.num(stats.nodes)} nodes · ${fmt.num(stats.channels)} ch · ${formatBtcFromSats(stats.capacity)}<br/>${getDensityLabel(stats.nodes)}`;
+    }
+    if (metric === 'channels') {
+      const step = scl.find((s) => stats.channels >= s.minVal);
+      return `<b>${name}</b> (${display})<br/>${fmt.num(stats.channels)} channels · ${fmt.num(stats.nodes)} nodes<br/>${step?.label ?? 'Minimal'}`;
+    }
+    const step = scl.find((s) => stats.capacity >= s.minVal);
+    return `<b>${name}</b> (${display})<br/>${formatBtcFromSats(stats.capacity)} · ${fmt.num(stats.nodes)} nodes<br/>${step?.label ?? 'Minimal'}`;
+  }, []);
+
+  // ── MapLibre onMapReady — set up network sources + layers (hidden) ────────
+  const handleMapReady = useCallback((map) => {
+    mapRef.current = map;
+
+    // Fit to world bounds immediately so initial view always shows full globe
+    map.fitBounds([[-170, -65], [170, 75]], { padding: 10, duration: 0 });
+
+    // ── Channel lines source + layer ──
+    map.addSource('s07-channels', {
+      type: 'geojson',
+      data: { type: 'FeatureCollection', features: [] },
+    });
+    map.addLayer({
+      id: 's07-channel-lines',
+      type: 'line',
+      source: 's07-channels',
+      layout: { visibility: 'none' },
+      paint: {
+        'line-color': '#1d4ed8',
+        'line-width': 0.8,
+        'line-opacity': 0.25,
+        'line-dasharray': [2, 2],
+      },
+    });
+
+    // ── Node cluster source + layers ──
+    map.addSource('s07-nodes', {
+      type: 'geojson',
+      data: { type: 'FeatureCollection', features: [] },
+      cluster: true,
+      clusterRadius: 50,
+      clusterMaxZoom: 8,
+    });
+
+    // Cluster circles
+    map.addLayer({
+      id: 's07-clusters',
+      type: 'circle',
+      source: 's07-nodes',
+      filter: ['has', 'point_count'],
+      layout: { visibility: 'none' },
+      paint: {
+        'circle-color': [
+          'step', ['get', 'point_count'],
+          '#bfdbfe', 10,
+          '#60a5fa', 50,
+          '#1e40af',
+        ],
+        'circle-radius': [
+          'step', ['get', 'point_count'],
+          16, 10,
+          22, 50,
+          28,
+        ],
+        'circle-opacity': 0.85,
+        'circle-stroke-color': 'rgba(255,255,255,0.18)',
+        'circle-stroke-width': 1,
+      },
+    });
+
+    // Cluster count labels
+    map.addLayer({
+      id: 's07-cluster-count',
+      type: 'symbol',
+      source: 's07-nodes',
+      filter: ['has', 'point_count'],
+      layout: {
+        visibility: 'none',
+        'text-field': '{point_count_abbreviated}',
+        'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+        'text-size': 12,
+      },
+      paint: { 'text-color': '#ffffff' },
+    });
+
+    // Unclustered individual node points
+    map.addLayer({
+      id: 's07-unclustered',
+      type: 'circle',
+      source: 's07-nodes',
+      filter: ['!', ['has', 'point_count']],
+      layout: { visibility: 'none' },
+      paint: {
+        'circle-color': '#3b82f6',
+        'circle-radius': 4,
+        'circle-opacity': 0.9,
+        'circle-stroke-color': 'rgba(255,255,255,0.3)',
+        'circle-stroke-width': 0.5,
+      },
+    });
+
+    // Shared popup instance for cluster + node clicks
+    const nodePopup = new maplibregl.Popup({
+      closeButton: true,
+      closeOnClick: true,
+      className: 's07-popup',
+      maxWidth: '280px',
+    });
+
+    // Click cluster → show popup with count + zoom to expand
+    map.on('click', 's07-clusters', (e) => {
+      const features = map.queryRenderedFeatures(e.point, { layers: ['s07-clusters'] });
+      if (!features.length) return;
+      const clusterId = features[0].properties.cluster_id;
+      const pointCount = features[0].properties.point_count;
+      const coords = features[0].geometry.coordinates.slice();
+
+      nodePopup
+        .setLngLat(coords)
+        .setHTML(
+          `<div style="font-family:monospace;font-size:11px;padding:4px 2px">` +
+          `<div style="color:#fff;font-weight:bold;font-size:13px">${pointCount} nodes</div>` +
+          `<div style="color:rgba(255,255,255,0.5);margin-top:4px">Click to expand cluster</div>` +
+          `</div>`
+        )
+        .addTo(map);
+
+      map.getSource('s07-nodes')
+        .getClusterExpansionZoom(clusterId)
+        .then((zoom) => { map.easeTo({ center: coords, zoom }); })
+        .catch(() => {});
+    });
+
+    map.on('mouseenter', 's07-clusters', () => { map.getCanvas().style.cursor = 'pointer'; });
+    map.on('mouseleave', 's07-clusters', () => { map.getCanvas().style.cursor = ''; });
+
+    // Unclustered hover → tooltip (floating, follows cursor)
+    map.on('mousemove', 's07-unclustered', (e) => {
+      map.getCanvas().style.cursor = 'pointer';
+      const props = e.features?.[0]?.properties;
+      if (!props || !tooltipRef.current) return;
+      const btc = (Number(props.capacity) / 1e8).toFixed(2);
+      tooltipRef.current.innerHTML =
+        `<span style="color:#fff;font-weight:bold">${props.alias || '—'}</span>` +
+        ` <span style="color:rgba(255,255,255,0.4)">(${props.countryCode || '?'})</span><br/>` +
+        `<span style="color:#3BA3FF">${props.channels} ch</span>` +
+        ` · <span style="color:#FF80AA">${btc} BTC</span>`;
+      tooltipRef.current.style.display = 'block';
+      tooltipRef.current.style.left = `${e.originalEvent.offsetX + 14}px`;
+      tooltipRef.current.style.top  = `${e.originalEvent.offsetY - 10}px`;
+    });
+    map.on('mouseleave', 's07-unclustered', () => {
+      map.getCanvas().style.cursor = '';
+      if (tooltipRef.current) tooltipRef.current.style.display = 'none';
+    });
+
+    // Click unclustered → popup with node details + select row in panel
+    map.on('click', 's07-unclustered', (e) => {
+      const feature = e.features?.[0];
+      if (!feature) return;
+      const props = feature.properties;
+      const btc = (Number(props.capacity) / 1e8).toFixed(4);
+      const pubkeyShort = props.pubkey ? `${props.pubkey.substring(0, 16)}…` : '—';
+
+      nodePopup
+        .setLngLat(feature.geometry.coordinates.slice())
+        .setHTML(
+          `<div style="font-family:monospace;font-size:11px;padding:4px 2px;min-width:160px">` +
+          `<div style="color:#fff;font-weight:bold;font-size:12px;margin-bottom:6px">${props.alias || 'Unknown'}</div>` +
+          `<div style="color:rgba(255,255,255,0.6)">${props.countryCode || '?'}</div>` +
+          `<div style="margin-top:4px"><span style="color:#3BA3FF">${props.channels ?? '—'}</span> channels</div>` +
+          `<div><span style="color:#FF80AA">${btc} BTC</span> capacity</div>` +
+          `<div style="color:rgba(255,255,255,0.3);margin-top:6px;font-size:10px">${pubkeyShort}</div>` +
+          `</div>`
+        )
+        .addTo(map);
+
+      if (props?.pubkey) setSelectedPubkey((prev) => (prev === props.pubkey ? null : props.pubkey));
+    });
+
+    // Store popup ref so layer toggle can close it
+    map.__s07NodePopup = nodePopup;
+
+    setMapReady(true);
+  }, []); // stable — no reactive deps needed
+
+  // ── Init choropleth layer when geo data + map are ready ───────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!mapReady || !map || !countriesGeo) return;
+
+    layerRef.current?.destroy();
+
+    const controls = addChoroplethLayer(map, {
+      geojson:       countriesGeo,
+      colorMap,
+      sourceId:      's07-countries',
+      layerId:       's07-fill',
+      tooltipEl:     tooltipRef.current,
+      getTooltipHtml,
+    });
+    layerRef.current = controls;
+
+    // Match current layerMode visibility
+    const vis = layerMode === 'choropleth' ? 'visible' : 'none';
+    if (map.getLayer('s07-fill'))        map.setLayoutProperty('s07-fill',        'visibility', vis);
+    if (map.getLayer('s07-fill-border')) map.setLayoutProperty('s07-fill-border', 'visibility', vis);
+
+    return () => { controls.destroy(); layerRef.current = null; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapReady, countriesGeo]);
+
+  // ── Update choropleth colors when metric/mode changes ─────────────────────
+  useEffect(() => {
+    if (!mapReady) return;
+    layerRef.current?.updateColors(colorMap);
+  }, [colorMap, mapReady]);
+
+  // ── Toggle choropleth ↔ network layers visibility ─────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!mapReady || !map) return;
+
+    if (tooltipRef.current) tooltipRef.current.style.display = 'none';
+    map.__s07NodePopup?.remove();
+
+    const isChoropleth = layerMode === 'choropleth';
+    CHOROPLETH_LAYERS.forEach((id) => {
+      if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', isChoropleth ? 'visible' : 'none');
+    });
+    NETWORK_LAYERS.forEach((id) => {
+      if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', isChoropleth ? 'none' : 'visible');
+    });
+  }, [mapReady, layerMode]);
+
+  // ── Update node cluster source data ──────────────────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!mapReady || !map) return;
+    const src = map.getSource('s07-nodes');
+    if (!src) return;
+    src.setData({
+      type: 'FeatureCollection',
+      features: networkData.points.map((pt) => ({
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [pt.lng, pt.lat] },
+        properties: {
+          alias:       pt.alias,
+          capacity:    pt.capacity,
+          channels:    pt.channels,
+          pubkey:      pt.pubkey,
+          countryName: pt.countryName,
+          countryCode: pt.countryCode,
+        },
+      })),
+    });
+  }, [mapReady, networkData.points]);
+
+  // ── Update channel lines source data ─────────────────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!mapReady || !map) return;
+    const src = map.getSource('s07-channels');
+    if (!src) return;
+    src.setData({
+      type: 'FeatureCollection',
+      features: channelsGeoLines.map((line) => ({
+        type: 'Feature',
+        geometry: { type: 'LineString', coordinates: [[line.lng1, line.lat1], [line.lng2, line.lat2]] },
+        properties: { pub1: line.pub1, pub2: line.pub2 },
+      })),
+    });
+  }, [mapReady, channelsGeoLines]);
+
+  // ── Toggle channel lines visibility ──────────────────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!mapReady || !map || layerMode !== 'bubble') return;
+    if (map.getLayer('s07-channel-lines')) {
+      const show = showAllConnectionLines && canRenderAllConnectionLines;
+      map.setLayoutProperty('s07-channel-lines', 'visibility', show ? 'visible' : 'none');
+    }
+  }, [mapReady, layerMode, showAllConnectionLines, canRenderAllConnectionLines]);
 
   // Legend title
   const legendTitle = layerMode === 'bubble'
@@ -1091,68 +1055,47 @@ export default function S07_LightningNodesMap() {
           <div className="h-full w-full p-6">
             <div className="skeleton h-full w-full rounded-md" />
           </div>
-        ) : !countryCounts.length ? (
-          <div className="flex h-full w-full items-center justify-center p-6">
-            <div className="max-w-[520px] rounded border border-white/10 bg-[#151515] px-4 py-4 font-mono text-[12px] text-white/70">
-              <div>No country data available from the Lightning API.</div>
-              <div className="mt-2 text-white/45">
-                Next update: {nextUpdateDelay === 'N/A' ? 'N/A' : nextUpdateDelay === 'now' ? 'now' : `in ${nextUpdateDelay}`}
-              </div>
-            </div>
-          </div>
         ) : (
-          <MapContainer
-            center={[20, 10]}
-            zoom={2}
-            minZoom={1}
-            keyboard={false}
-            style={{ height: '100%', width: '100%', background: '#101010' }}
-            zoomControl={false}
-            attributionControl={false}
-            worldCopyJump
-          >
-            <LeafletLayoutSync watchKey={`${layerMode}-${isCompactViewport}-${metricType}-${selectedPubkey ? 'selected' : 'idle'}`} />
-
-            {/* ── World outline base layer (network mode: dark fill + borders) ── */}
-            {layerMode === 'bubble' && countriesGeo && (
-              <GeoJSON
-                key="s07-base-outline"
-                data={countriesGeo}
-                style={() => ({ color: '#2a2a2a', weight: 0.6, fillColor: '#161620', fillOpacity: 0.85 })}
-              />
+          <div className="relative h-full w-full">
+            {/* Floating tooltip — shared by choropleth hover + network hover */}
+            <div
+              ref={tooltipRef}
+              style={{
+                position: 'absolute',
+                pointerEvents: 'none',
+                zIndex: 600,
+                display: 'none',
+                background: 'rgba(8,8,14,0.93)',
+                border: '1px solid rgba(255,255,255,0.14)',
+                borderRadius: '5px',
+                padding: '7px 11px',
+                fontFamily: 'monospace',
+                fontSize: '12px',
+                color: 'rgba(255,255,255,0.88)',
+                whiteSpace: 'nowrap',
+                lineHeight: '1.6',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+              }}
+            />
+            <MapLibreBase
+              style={CHOROPLETH_DARK_STYLE}
+              center={[10, 20]}
+              zoom={2}
+              minZoom={1}
+              maxZoom={8}
+              onMapReady={handleMapReady}
+            />
+            {!countryCounts.length && (
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                <div className="max-w-[520px] rounded border border-white/10 bg-[#0d0d0d]/85 px-4 py-4 font-mono text-[12px] text-white/70 backdrop-blur-sm">
+                  <div>No Lightning Network country data available yet.</div>
+                  <div className="mt-2 text-white/45">
+                    Next update: {nextUpdateDelay === 'N/A' ? 'N/A' : nextUpdateDelay === 'now' ? 'now' : `in ${nextUpdateDelay}`}
+                  </div>
+                </div>
+              </div>
             )}
-
-            {/* ── Choropleth layer ── */}
-            {layerMode === 'choropleth' && countriesGeo && (
-              <GeoJSON
-                key={geoJsonKey}
-                data={countriesGeo}
-                style={(feature) => {
-                  const code = getFeatureCountryCode(feature);
-                  return { color: '#2d2d2d', weight: 0.7, fillColor: getFeatureFillColor(code), fillOpacity: 0.9 };
-                }}
-                onEachFeature={(feature, layer) => {
-                  const code = getFeatureCountryCode(feature);
-                  const name = getFeatureCountryName(feature, 0);
-                  layer.bindTooltip(buildTooltipText(code, name), { sticky: true, opacity: 0.95 });
-                }}
-              />
-            )}
-
-            {/* ── Network layer (canvas — individual nodes with real lat/lng) ── */}
-            {layerMode === 'bubble' && (
-              <LightningNetworkCanvas
-                networkData={networkData}
-                maxMetricValue={maxMetricValue}
-                selectedPubkey={selectedPubkey}
-                onNodeClick={setSelectedPubkey}
-                showAllConnectionLines={showAllConnectionLines && canRenderAllConnectionLines}
-                metricType={metricType}
-                nodeColorScale={activeScale}
-                avgDistByPubkey={avgDistByPubkey}
-              />
-            )}
-          </MapContainer>
+          </div>
         )}
 
         {/* ── Bottom badge ── */}
@@ -1177,10 +1120,9 @@ export default function S07_LightningNodesMap() {
           )}
         </div>
 
-        {/* ── Map overlays: legend + bubble toggle ── */}
+        {/* ── Map overlays: legend + network toggle ── */}
         {!isMapLoading && countryCounts.length > 0 && (
           <>
-            {/* Compact: density expand button */}
             {isCompactViewport && (
               <button
                 type="button"
@@ -1194,7 +1136,6 @@ export default function S07_LightningNodesMap() {
               </button>
             )}
 
-            {/* Grouped container: density legend + bubble toggle */}
             <div
               className={`visual-integrity-lock absolute z-[1000] flex flex-col gap-1.5 ${
                 isCompactViewport ? 'left-3 top-14' : 'left-3 top-3 sm:left-4 sm:top-4'
@@ -1225,6 +1166,7 @@ export default function S07_LightningNodesMap() {
                 </div>
               )}
 
+              {/* Show all lines toggle (network mode) */}
               {layerMode === 'bubble' && (
                 <button
                   type="button"
@@ -1245,7 +1187,7 @@ export default function S07_LightningNodesMap() {
                 </button>
               )}
 
-              {/* Bubble/Choropleth toggle */}
+              {/* Choropleth / Network toggle */}
               <button
                 type="button"
                 onClick={() => setLayerMode((m) => m === 'choropleth' ? 'bubble' : 'choropleth')}
@@ -1298,19 +1240,19 @@ export default function S07_LightningNodesMap() {
               {showBreakdownPanel && (
                 <div id="s07-breakdown-panel" className={`${isCompactViewport ? 'mt-2' : ''} grid grid-cols-2 gap-1.5 font-mono text-[12px]`}>
                   <div className="rounded border border-white/10 bg-white/[0.02] px-2 py-1">
-                      <div className="text-white/50">Nodes</div>
+                    <div className="text-white/50">Nodes</div>
                     <div className="text-white/85">{fmt.num(totals.nodes)}</div>
                   </div>
                   <div className="rounded border border-white/10 bg-white/[0.02] px-2 py-1">
-                      <div className="text-white/50">Channels</div>
+                    <div className="text-white/50">Channels</div>
                     <div className="text-white/85">{fmt.num(totals.channels)}</div>
                   </div>
                   <div className="rounded border border-white/10 bg-white/[0.02] px-2 py-1">
-                      <div className="text-white/50">Capacity</div>
+                    <div className="text-white/50">Capacity</div>
                     <div className="text-white/85">{formatBtcFromSats(totals.capacity)}</div>
                   </div>
                   <div className="rounded border border-white/10 bg-white/[0.02] px-2 py-1">
-                      <div className="text-white/50">Avg ch/node</div>
+                    <div className="text-white/50">Avg ch/node</div>
                     <div className="text-white/85">{avgChannelsPerNode.toFixed(1)}</div>
                   </div>
                 </div>
@@ -1319,11 +1261,10 @@ export default function S07_LightningNodesMap() {
           </>
         )}
 
-        {/* ── Feature A: Metric selector — adapts to layerMode ── */}
+        {/* ── Metric selector — adapts to layerMode ── */}
         <div className="border-b border-white/10 px-3 py-2">
           <div className="mb-1.5 text-[11px] uppercase tracking-[0.08em] text-white/45">Table Metric</div>
           <div className="flex items-center gap-1">
-            {/* Dropdown */}
             <div className="relative min-w-0 flex-1">
               <select
                 value={metricType}
@@ -1355,7 +1296,7 @@ export default function S07_LightningNodesMap() {
               </select>
               <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-white/40">▼</span>
             </div>
-            {/* Abs / /M — choropleth only */}
+            {/* Abs / Per capita — choropleth only */}
             {layerMode !== 'bubble' && (
               <>
                 <button
@@ -1385,7 +1326,7 @@ export default function S07_LightningNodesMap() {
           </div>
         </div>
 
-        {/* Breakdown list — nodes in Network mode, countries in Choropleth mode */}
+        {/* ── Breakdown list — nodes in Network mode, countries in Choropleth ── */}
         <div className="scrollbar-hidden-mobile min-h-0 flex-1 overflow-y-auto px-3 py-2">
           {isLoading ? (
             <div className="space-y-2">
@@ -1394,7 +1335,7 @@ export default function S07_LightningNodesMap() {
               ))}
             </div>
           ) : layerMode === 'bubble' ? (
-            /* ── Network mode: tabla plana con cabeceras ordenables ── */
+            /* ── Network mode: sortable flat node table ── */
             <div className="w-full font-mono">
               {remainingNetworkNodes > 0 && (
                 <div className="mb-2 rounded border border-white/8 bg-white/[0.02] px-2.5 py-2 text-[11px] text-white/55">

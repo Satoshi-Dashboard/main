@@ -46,6 +46,7 @@ import {
 import {
   getBinanceBtcHistoryPayload,
   getBtcMapBusinessesByCountryPayload,
+  getBtcMapBusinessesPayload,
   getCountriesGeoPayload,
   getFearGreedPayload,
   getLandGeoPayload,
@@ -608,6 +609,16 @@ export function createApp() {
     setDataCacheHeaders(res, { sMaxAge: 3600, swr: 21600 });
     try {
       const payload = await getBtcMapBusinessesByCountryPayload();
+      res.json(payload);
+    } catch (error) {
+      sendPublicFeedError(res, error);
+    }
+  }));
+
+  app.get('/api/public/btcmap/businesses', asyncRoute(async (_req, res) => {
+    setDataCacheHeaders(res, { sMaxAge: 3600, swr: 21600 });
+    try {
+      const payload = await getBtcMapBusinessesPayload();
       res.json(payload);
     } catch (error) {
       sendPublicFeedError(res, error);

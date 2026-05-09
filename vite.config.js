@@ -29,6 +29,7 @@ export default defineConfig(({ mode }) => {
 
             if (normalizedId.includes('/recharts/')) return 'vendor-recharts';
             if (normalizedId.includes('/lightweight-charts/')) return 'vendor-lightweight-charts';
+            if (normalizedId.includes('/maplibre-gl/')) return 'vendor-maplibre';
             if (normalizedId.includes('/leaflet/') || normalizedId.includes('/react-leaflet/')) return 'vendor-leaflet';
 
             return undefined;
@@ -36,11 +37,17 @@ export default defineConfig(({ mode }) => {
         },
       },
     },
+    optimizeDeps: {
+      // Restrict dep crawl to main entry only — prevents scanning git worktrees
+      // under .claude/worktrees/ which have old files with removed dependencies.
+      entries: ['index.html'],
+    },
     server: {
       host: true,
       watch: {
         ignored: [
           '**/server/.runtime-cache/*.json',
+          '**/.claude/worktrees/**',
         ],
       },
       proxy: {

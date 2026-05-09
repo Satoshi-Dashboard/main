@@ -14,6 +14,8 @@ const ACS_POPULATION_MIN_YEAR = 2020;
 const BTCMAP_PLACE_COUNTRY_CACHE_KEY = 'public:btcmap:place-country-map';
 const BTCMAP_PLACE_COUNTRY_CACHE_TTL_SECONDS = 90 * 24 * 60 * 60;
 const BTCMAP_MAX_FALLBACK_AREA_LOOKUPS = 120;
+const BTCMAP_INDIVIDUAL_CACHE_KEY = 'public:btcmap:businesses-individual';
+const BTCMAP_INDIVIDUAL_CACHE_TTL_SECONDS = 8 * 60 * 60; // 8 h — same refresh cadence as by-country feed
 const BTCMAP_AREA_LOOKUP_CONCURRENCY = 6;
 const BINANCE_KLINES_BASE_URLS = [
   'https://api.binance.com/api/v3/klines',
@@ -2747,11 +2749,32 @@ export async function getBtcMapBusinessesByCountryPayload() {
         getCountriesGeoHighResPayload(),
       ]);
 
+      // Side-cache trimmed individual places (lat/lon/name) for the /businesses endpoint.
+      // Fire-and-forget — do not block the main aggregation if this fails.
+      const trimmed = places.map(p => ({ id: p.id, name: p.name, lat: p.lat, lon: p.lon }));
+      cacheSetJson(
+        BTCMAP_INDIVIDUAL_CACHE_KEY,
+        { data: trimmed, cached_at: new Date().toISOString() },
+        { ttlSeconds: BTCMAP_INDIVIDUAL_CACHE_TTL_SECONDS },
+      ).catch(() => {});
+
       const countriesGeo = countriesGeoPayload?.data || countriesGeoPayload;
       return aggregateBtcMapBusinessesByCountry(places, countriesGeo);
     },
     validateCountryBusinessPayload,
   );
+}
+
+/**
+ * Individual businesses with lat/lon — built as a side-effect of getBtcMapBusinessesByCountryPayload.
+ * Returns { data: [{id, name, lat, lon},...], cached_at } or { data: [], message } if not yet cached.
+ */
+export async function getBtcMapBusinessesPayload() {
+  const cached = await cacheGetJson(BTCMAP_INDIVIDUAL_CACHE_KEY);
+  if (Array.isArray(cached?.data) && cached.data.length > 0) {
+    return cached;
+  }
+  return { data: [], message: 'Individual place data not yet cached. The /btcmap/businesses-by-country endpoint will populate it on next refresh.' };
 }
 
 async function getS15GoldMarketCapSnapshotPayload() {

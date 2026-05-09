@@ -1,7 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import maplibregl from 'maplibre-gl';
 import Info from 'lucide-react/dist/esm/icons/info';
-import { GeoJSON, MapContainer } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
 import {
   useCompactViewport,
   useCountriesGeoJson,
@@ -18,6 +17,9 @@ import { useWorldBankPopulation } from '@/shared/hooks/useWorldBankPopulation.js
 import { ISO_COUNTRY_NAMES, getFeatureCountryCode, getFeatureCountryName } from '@/shared/lib/geoCountryUtils.js';
 import { fmt } from '@/shared/utils/formatters.js';
 import { useModuleData } from '@/shared/hooks/useModuleData.js';
+import MapLibreBase from '@/shared/map/MapLibreBase.jsx';
+import { addChoroplethLayer } from '@/shared/map/choroplethUtils.js';
+import { CHOROPLETH_DARK_STYLE } from '@/shared/map/mapDarkStyle.js';
 
 const BUSINESSES_ENDPOINT = '/api/public/btcmap/businesses-by-country';
 const REFRESH_INTERVAL_MS = 10 * 60_000;
@@ -38,7 +40,6 @@ const BUSINESS_DENSITY_SCALE = [
   { key: 'trace',     label: 'Trace',     color: '#8EF0C8', minBusinesses: 1,   legend: '<= 10' },
 ];
 
-// Fallback per-capita scale — replaced dynamically by computePerCapitaScale
 const PERCAPITA_SCALE_FALLBACK = [
   { key: 'very-high', label: 'Very high', color: '#0A5F41', minVal: 50,    legend: '> 50 /M'  },
   { key: 'high',      label: 'High',      color: '#0E8A5B', minVal: 20,    legend: '> 20 /M'  },
@@ -52,23 +53,18 @@ const BUSINESS_COLORS = ['#0A5F41', '#0E8A5B', '#14B06F', '#2FD48C', '#8EF0C8'];
 function getDensityStepByCount(count) {
   return sharedGetDensityStepByCount(count, BUSINESS_DENSITY_SCALE);
 }
-
 function getFillColor(count) {
   return sharedGetFillColor(count, BUSINESS_DENSITY_SCALE);
 }
-
 function getDensityLabel(count) {
   return getDensityStepByCount(count)?.label || 'No data';
 }
-
 function computePerCapitaScale(maxVal) {
   return sharedComputePerCapitaScale(maxVal, PERCAPITA_SCALE_FALLBACK, BUSINESS_COLORS);
 }
-
 function getFillColorByPerCapita(perCapita, scale) {
   return sharedGetFillColorByPerCapita(perCapita, scale || PERCAPITA_SCALE_FALLBACK);
 }
-
 function resolveCountryLabel(code, name) {
   if (!code || !/^[A-Z]{2}$/.test(code)) return name || 'Unknown';
   const resolvedName = name && name.length > 2 ? name : (ISO_COUNTRY_NAMES[code] || code);
@@ -82,14 +78,23 @@ export default function S08_BtcMapBusinessesMap() {
   const [isMetaExpanded, setIsMetaExpanded] = useState(false);
   const [isDensityExpanded, setIsDensityExpanded] = useState(false);
   const [viewMode, setViewMode] = useState('country'); // 'country' | 'perCapita'
+  const [showMarkers, setShowMarkers]     = useState(false);
+  const [markersFetching, setMarkersFetching] = useState(false);
   const isCompactViewport = useCompactViewport();
-  const {
-    data: countriesGeo,
-    loading: geoLoading,
-    error: geoError,
-  } = useCountriesGeoJson();
 
+  const { data: countriesGeo, loading: geoLoading, error: geoError } = useCountriesGeoJson();
   const { populationMap, popDataYear, popSource, popLastFetched } = useWorldBankPopulation();
+
+  // MapLibre refs + ready state
+  const mapRef        = useRef(null);
+  const layerRef      = useRef(null);
+  const tooltipRef    = useRef(null);
+  const markerPopupRef = useRef(null);
+  const [mapReady, setMapReady] = useState(false);
+  const viewModeRef  = useRef(viewMode);
+  const perCapitaRef = useRef({});
+  const scaleRef     = useRef(PERCAPITA_SCALE_FALLBACK);
+  const countsRef    = useRef({});
 
   const fetchBusinesses = async () => {
     const res = await fetch(BUSINESSES_ENDPOINT);
@@ -99,15 +104,11 @@ export default function S08_BtcMapBusinessesMap() {
 
   useModuleData(fetchBusinesses, {
     refreshMs: REFRESH_INTERVAL_MS,
-    transform: (json) => {
-      setPayload(json);
-      setError(null);
-      return json;
-    },
+    transform: (json) => { setPayload(json); setError(null); return json; },
     keepPreviousOnError: true,
   });
 
-  const apiLoading = !payload;
+  const apiLoading  = !payload;
   const combinedError = error || geoError;
 
   const countryCounts = useMemo(() => {
@@ -123,9 +124,9 @@ export default function S08_BtcMapBusinessesMap() {
       .sort((a, b) => b.businesses - a.businesses);
   }, [payload]);
 
-  const summary = payload?.data?.summary || {};
-  const countsByCode = useMemo(() => Object.fromEntries(countryCounts.map((row) => [row.country_code, row])), [countryCounts]);
-  const maxCount = useMemo(() => (countryCounts.length ? Math.max(...countryCounts.map((row) => row.businesses)) : 0), [countryCounts]);
+  const summary      = payload?.data?.summary || {};
+  const countsByCode = useMemo(() => Object.fromEntries(countryCounts.map((r) => [r.country_code, r])), [countryCounts]);
+  const maxCount     = useMemo(() => (countryCounts.length ? Math.max(...countryCounts.map((r) => r.businesses)) : 0), [countryCounts]);
 
   const perCapitaByCode = useMemo(() => {
     const map = {};
@@ -137,88 +138,263 @@ export default function S08_BtcMapBusinessesMap() {
     return map;
   }, [countryCounts, populationMap]);
 
-  const maxPerCapita = useMemo(() => {
-    const vals = Object.values(perCapitaByCode);
-    return vals.length ? Math.max(...vals) : 0;
-  }, [perCapitaByCode]);
-
+  const maxPerCapita       = useMemo(() => { const v = Object.values(perCapitaByCode); return v.length ? Math.max(...v) : 0; }, [perCapitaByCode]);
   const activePerCapitaScale = useMemo(() => computePerCapitaScale(maxPerCapita), [maxPerCapita]);
+
+  // Keep refs in sync for use inside tooltip closure
+  useEffect(() => { viewModeRef.current  = viewMode; },            [viewMode]);
+  useEffect(() => { perCapitaRef.current = perCapitaByCode; },     [perCapitaByCode]);
+  useEffect(() => { scaleRef.current     = activePerCapitaScale; }, [activePerCapitaScale]);
+  useEffect(() => { countsRef.current    = countsByCode; },         [countsByCode]);
+
+  // Build ISO→color map for current viewMode
+  const colorMap = useMemo(() => {
+    const map = {};
+    if (viewMode === 'perCapita') {
+      Object.entries(perCapitaByCode).forEach(([code, pc]) => {
+        map[code] = getFillColorByPerCapita(pc, activePerCapitaScale);
+      });
+    } else {
+      countryCounts.forEach((row) => { map[row.country_code] = getFillColor(row.businesses); });
+    }
+    return map;
+  }, [viewMode, countryCounts, perCapitaByCode, activePerCapitaScale]);
+
+  // Tooltip HTML — reads from refs so closure is always fresh
+  const getTooltipHtml = (code) => {
+    const row = countsRef.current[code];
+    if (!row) return '';
+    const name = ISO_COUNTRY_NAMES[code] || code;
+    if (viewModeRef.current === 'perCapita') {
+      const pc = perCapitaRef.current[code];
+      if (pc == null || pc <= 0) return `<span class="font-mono text-[12px] text-white/80">${name} (${code}): no data</span>`;
+      const step = scaleRef.current.find((s) => pc >= s.minVal);
+      return `<span class="font-mono text-[12px] text-white/80">${name} (${code}): ${formatPerCapitaValue(pc)} — ${step?.label ?? 'Trace'}</span>`;
+    }
+    return `<span class="font-mono text-[12px] text-white/80">${name} (${code}): ${fmt.num(row.businesses)} businesses — ${fmt.num(row.verified_businesses)} verified — ${getDensityLabel(row.businesses)}</span>`;
+  };
+
+  // Init choropleth layer when map + geo + data are all ready
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !countriesGeo || countryCounts.length === 0) return;
+
+    layerRef.current?.destroy();
+
+    layerRef.current = addChoroplethLayer(map, {
+      geojson:        countriesGeo,
+      colorMap,
+      sourceId:       's08-countries',
+      layerId:        's08-fill',
+      tooltipEl:      tooltipRef.current,
+      getTooltipHtml,
+    });
+  // mapReady in deps ensures this re-runs after map initializes even if geo/data loaded first
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapReady, countriesGeo, countryCounts.length]);
+
+  // Update colors on viewMode / data change (no full layer rebuild needed)
+  useEffect(() => {
+    layerRef.current?.updateColors(colorMap);
+  }, [colorMap]);
+
+  // Toggle individual business markers (clustered circle layer)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!mapReady || !map) return;
+
+    const SOURCE = 's08-businesses';
+    const CLUSTER_LAYER = 's08-biz-clusters';
+    const COUNT_LAYER   = 's08-biz-cluster-count';
+    const POINT_LAYER   = 's08-biz-points';
+
+    function removeLayers() {
+      [CLUSTER_LAYER, COUNT_LAYER, POINT_LAYER].forEach(id => {
+        if (map.getLayer(id)) map.removeLayer(id);
+      });
+      if (map.getSource(SOURCE)) map.removeSource(SOURCE);
+      markerPopupRef.current?.remove();
+    }
+
+    if (!showMarkers) {
+      removeLayers();
+      return;
+    }
+
+    // Already added
+    if (map.getSource(SOURCE)) return;
+
+    setMarkersFetching(true);
+    fetch('/api/public/btcmap/businesses')
+      .then(r => r.json())
+      .then(json => {
+        const places = Array.isArray(json?.data) ? json.data : [];
+        if (!places.length) { setMarkersFetching(false); return; }
+
+        const geojson = {
+          type: 'FeatureCollection',
+          features: places
+            .filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lon))
+            .map(p => ({
+              type: 'Feature',
+              geometry: { type: 'Point', coordinates: [p.lon, p.lat] },
+              properties: { id: p.id, name: p.name || '' },
+            })),
+        };
+
+        if (!map.getSource(SOURCE)) {
+          map.addSource(SOURCE, { type: 'geojson', data: geojson, cluster: true, clusterMaxZoom: 12, clusterRadius: 40 });
+        }
+
+        map.addLayer({
+          id: CLUSTER_LAYER,
+          type: 'circle',
+          source: SOURCE,
+          filter: ['has', 'point_count'],
+          paint: {
+            'circle-color': ['step', ['get', 'point_count'], '#14B06F', 20, '#0E8A5B', 100, '#0A5F41'],
+            'circle-radius': ['step', ['get', 'point_count'], 14, 20, 20, 100, 26],
+            'circle-opacity': 0.82,
+            'circle-stroke-width': 1,
+            'circle-stroke-color': 'rgba(255,255,255,0.25)',
+          },
+        });
+
+        map.addLayer({
+          id: COUNT_LAYER,
+          type: 'symbol',
+          source: SOURCE,
+          filter: ['has', 'point_count'],
+          layout: {
+            'text-field': '{point_count_abbreviated}',
+            'text-font': ['Noto Sans Bold'],
+            'text-size': 11,
+          },
+          paint: { 'text-color': '#fff' },
+        });
+
+        map.addLayer({
+          id: POINT_LAYER,
+          type: 'circle',
+          source: SOURCE,
+          filter: ['!', ['has', 'point_count']],
+          paint: {
+            'circle-color': '#2FD48C',
+            'circle-radius': 5,
+            'circle-opacity': 0.85,
+            'circle-stroke-width': 1,
+            'circle-stroke-color': 'rgba(255,255,255,0.35)',
+          },
+        });
+
+        const popup = new maplibregl.Popup({ closeButton: true, closeOnClick: true, maxWidth: '240px', className: 's08-biz-popup' });
+        markerPopupRef.current = popup;
+
+        map.on('click', CLUSTER_LAYER, (e) => {
+          const feat = map.queryRenderedFeatures(e.point, { layers: [CLUSTER_LAYER] })[0];
+          if (!feat) return;
+          const coords = feat.geometry.coordinates.slice();
+          const count = feat.properties.point_count;
+          popup.setLngLat(coords)
+            .setHTML(`<div style="font-family:monospace;font-size:12px;color:#fff;padding:4px 2px"><strong>${count}</strong> businesses nearby<br/><span style="color:rgba(255,255,255,0.5);font-size:10px">Click to expand</span></div>`)
+            .addTo(map);
+          map.getSource(SOURCE).getClusterExpansionZoom(feat.properties.cluster_id)
+            .then(zoom => map.easeTo({ center: coords, zoom }))
+            .catch(() => {});
+        });
+
+        map.on('click', POINT_LAYER, (e) => {
+          const feat = e.features?.[0];
+          if (!feat) return;
+          const coords = feat.geometry.coordinates.slice();
+          const { name } = feat.properties;
+          popup.setLngLat(coords)
+            .setHTML(`<div style="font-family:monospace;font-size:12px;color:#fff;padding:4px 2px"><strong>${name || 'Unnamed'}</strong></div>`)
+            .addTo(map);
+        });
+
+        map.on('mouseenter', CLUSTER_LAYER, () => { map.getCanvas().style.cursor = 'pointer'; });
+        map.on('mouseleave', CLUSTER_LAYER, () => { map.getCanvas().style.cursor = ''; });
+        map.on('mouseenter', POINT_LAYER,   () => { map.getCanvas().style.cursor = 'pointer'; });
+        map.on('mouseleave', POINT_LAYER,   () => { map.getCanvas().style.cursor = ''; });
+      })
+      .catch(() => {})
+      .finally(() => setMarkersFetching(false));
+
+    return removeLayers;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showMarkers, mapReady]);
 
   const displayRows = useMemo(() => {
     if (viewMode === 'country') return countryCounts;
     return countryCounts
-      .filter((row) => /^[A-Z]{2}$/.test(row.country_code) && populationMap[row.country_code] != null)
-      .map((row) => ({ ...row, perCapita: row.businesses / populationMap[row.country_code] }))
+      .filter((r) => /^[A-Z]{2}$/.test(r.country_code) && populationMap[r.country_code] != null)
+      .map((r) => ({ ...r, perCapita: r.businesses / populationMap[r.country_code] }))
       .sort((a, b) => b.perCapita - a.perCapita);
   }, [countryCounts, viewMode, populationMap]);
 
-  const nextUpdateDelay = useMemo(() => formatNextUpdateDelay(payload?.next_update_at), [payload?.next_update_at]);
-  const isFallback = Boolean(payload?.is_fallback);
+  const nextUpdateDelay    = useMemo(() => formatNextUpdateDelay(payload?.next_update_at), [payload?.next_update_at]);
+  const isFallback         = Boolean(payload?.is_fallback);
   const showBreakdownPanel = !isCompactViewport || isBreakdownExpanded;
-  const showDensityLegend = !isCompactViewport || isDensityExpanded;
-  const hasCountryData = countryCounts.length > 0;
-  const isLoading = (!hasCountryData && apiLoading) || (!hasCountryData && geoLoading);
-  const isMapLoading = (!payload && apiLoading) || (!countriesGeo && geoLoading);
+  const showDensityLegend  = !isCompactViewport || isDensityExpanded;
+  const hasCountryData     = countryCounts.length > 0;
+  const isLoading          = (!hasCountryData && apiLoading) || (!hasCountryData && geoLoading);
+  const isMapLoading       = (!payload && apiLoading) || (!countriesGeo && geoLoading);
 
   return (
     <div className="visual-integrity-lock flex h-full w-full flex-col bg-[#111111] lg:flex-row">
       <div className="visual-map-surface relative min-h-[260px] min-w-0 flex-1 sm:min-h-[320px] lg:min-h-0">
+
+        {/* Floating HTML tooltip */}
+        <div
+          ref={tooltipRef}
+          style={{ display: 'none', position: 'absolute', pointerEvents: 'none', zIndex: 1002 }}
+          className="rounded border border-white/15 bg-[#080808]/95 px-3 py-1.5 shadow-lg backdrop-blur-sm"
+        />
+
         {isMapLoading ? (
           <div className="h-full w-full p-6">
             <div className="skeleton h-full w-full rounded-md" />
           </div>
-        ) : !countryCounts.length ? (
-          <div className="flex h-full w-full items-center justify-center p-6">
-            <div className="max-w-[520px] rounded border border-white/10 bg-[#151515] px-4 py-4 font-mono text-[12px] text-white/70">
-              <div>No BTC Map country business data is available yet.</div>
-              <div className="mt-2 text-white/45">
-                Next update: {nextUpdateDelay === 'N/A' ? 'N/A' : (nextUpdateDelay === 'now' ? 'now' : `in ${nextUpdateDelay}`)}
-              </div>
-            </div>
-          </div>
         ) : (
-          <MapContainer
-            center={[20, 10]}
-            zoom={2}
-            minZoom={2}
-            maxZoom={6}
-            keyboard={false}
-            style={{ height: '100%', width: '100%', background: '#101010' }}
-            zoomControl={false}
-            attributionControl={false}
-            worldCopyJump
-          >
-            {countriesGeo && (
-              <GeoJSON
-                key={`btcmap-${maxCount}-${countryCounts.length}-${viewMode}`}
-                data={countriesGeo}
-                style={(feature) => {
-                  const code = getFeatureCountryCode(feature);
-                  const fillColor = viewMode === 'perCapita'
-                    ? getFillColorByPerCapita(perCapitaByCode[code], activePerCapitaScale)
-                    : getFillColor(countsByCode[code]?.businesses || 0);
-                  return { color: '#24352d', weight: 0.7, fillColor, fillOpacity: 0.92 };
-                }}
-                onEachFeature={(feature, layer) => {
-                  const code = getFeatureCountryCode(feature);
-                  const name = getFeatureCountryName(feature, 0);
-                  const row = countsByCode[code] || { businesses: 0, verified_businesses: 0 };
-                  const displayCode = code || 'N/A';
-                  const tooltipText = viewMode === 'perCapita'
-                    ? (() => {
-                        const pc = perCapitaByCode[code];
-                        if (pc == null || pc <= 0) return `${name} (${displayCode}): no data`;
-                        const step = activePerCapitaScale.find((s) => pc >= s.minVal);
-                        return `${name} (${displayCode}): ${formatPerCapitaValue(pc)} — ${step?.label ?? 'Trace'}`;
-                      })()
-                    : `${name} (${displayCode}): ${fmt.num(row.businesses)} businesses — ${fmt.num(row.verified_businesses)} verified — ${getDensityLabel(row.businesses)}`;
-                  layer.bindTooltip(tooltipText, { sticky: true, opacity: 0.95 });
-                }}
-              />
+          <>
+            <MapLibreBase
+              style={CHOROPLETH_DARK_STYLE}
+              center={[10, 20]}
+              zoom={2}
+              minZoom={1}
+              maxZoom={6}
+              onMapReady={(map) => { mapRef.current = map; setMapReady(true); }}
+            />
+            {!countryCounts.length && (
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                <div className="max-w-[520px] rounded border border-white/10 bg-[#0d0d0d]/85 px-4 py-4 font-mono text-[12px] text-white/70 backdrop-blur-sm">
+                  <div>No BTC Map country business data is available yet.</div>
+                  <div className="mt-2 text-white/45">
+                    Next update: {nextUpdateDelay === 'N/A' ? 'N/A' : (nextUpdateDelay === 'now' ? 'now' : `in ${nextUpdateDelay}`)}
+                  </div>
+                </div>
+              </div>
             )}
-          </MapContainer>
+          </>
         )}
 
+        {/* View Markers toggle */}
+        {!isMapLoading && (
+          <button
+            type="button"
+            onClick={() => setShowMarkers(prev => !prev)}
+            disabled={markersFetching}
+            className="visual-integrity-lock absolute right-3 top-3 z-[1001] rounded border px-3 py-2 font-mono text-[12px] backdrop-blur-sm transition"
+            style={showMarkers
+              ? { borderColor: UI_COLORS.green, color: UI_COLORS.green, background: 'rgba(20,176,111,0.12)' }
+              : { borderColor: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.7)', background: 'rgba(8,8,8,0.80)' }}
+          >
+            {markersFetching ? '…' : showMarkers ? '◉ Markers' : '○ Markers'}
+          </button>
+        )}
+
+        {/* Businesses counter */}
         <div className="visual-integrity-lock absolute bottom-2 left-1/2 z-[1000] -translate-x-1/2 rounded-md border border-white/10 bg-[#080808]/92 px-3 py-1.5 font-mono text-[11px] backdrop-blur-sm sm:bottom-5 sm:px-5 sm:py-2 sm:text-[12px]">
           {isLoading ? (
             <div className="skeleton" style={{ width: 210, height: '0.95em' }} />
@@ -230,6 +406,7 @@ export default function S08_BtcMapBusinessesMap() {
           )}
         </div>
 
+        {/* Density legend */}
         {!isMapLoading && countryCounts.length > 0 && (
           <>
             {isCompactViewport && (
@@ -243,7 +420,6 @@ export default function S08_BtcMapBusinessesMap() {
                 {isDensityExpanded ? '◧' : '◨'} Density
               </button>
             )}
-
             {showDensityLegend && (() => {
               const activeScale = viewMode === 'perCapita' ? activePerCapitaScale : BUSINESS_DENSITY_SCALE;
               const legendTitle = viewMode === 'perCapita' ? 'Per-capita business density' : 'Business concentration';
@@ -269,6 +445,7 @@ export default function S08_BtcMapBusinessesMap() {
         )}
       </div>
 
+      {/* ── Side panel ── */}
       <aside className="visual-integrity-lock relative flex h-[42%] min-h-0 w-full flex-none flex-col border-t border-white/10 bg-[#111111] lg:h-auto lg:w-[300px] lg:border-l lg:border-t-0">
         <div className="flex items-center justify-between border-b border-white/10 px-4 py-3 font-mono text-[12px] tracking-wide text-white/60">
           Bitcoin-Friendly Businesses
@@ -297,7 +474,6 @@ export default function S08_BtcMapBusinessesMap() {
               <span style={{ color: UI_COLORS.greenSoft }}>{isBreakdownExpanded ? 'Hide' : 'Show'}</span>
             </button>
           )}
-
           {showBreakdownPanel && (
             <div id="s08-breakdown-panel" className={`${isCompactViewport ? 'mt-2' : ''} grid grid-cols-2 gap-1.5 font-mono text-[12px]`}>
               <div className="rounded border border-white/10 bg-white/[0.02] px-2 py-1">
@@ -324,35 +500,26 @@ export default function S08_BtcMapBusinessesMap() {
 
         <div className="border-b border-white/10 px-3 py-2">
           <div className="flex gap-1">
-            <button
-              type="button"
-              onClick={() => setViewMode('country')}
-               className="flex-1 rounded border px-3 py-2 font-mono text-[12px] transition"
-              style={viewMode === 'country'
-                ? { borderColor: UI_COLORS.green, color: UI_COLORS.green, backgroundColor: 'rgba(20,176,111,0.1)' }
-                : { borderColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', backgroundColor: 'transparent' }}
-            >
-              Business count
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('perCapita')}
-               className="flex-1 rounded border px-3 py-2 font-mono text-[12px] transition"
-              style={viewMode === 'perCapita'
-                ? { borderColor: UI_COLORS.green, color: UI_COLORS.green, backgroundColor: 'rgba(20,176,111,0.1)' }
-                : { borderColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', backgroundColor: 'transparent' }}
-            >
-              Per capita
-            </button>
+            {[['country', 'Business count'], ['perCapita', 'Per capita']].map(([mode, label]) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setViewMode(mode)}
+                className="flex-1 rounded border px-3 py-2 font-mono text-[12px] transition"
+                style={viewMode === mode
+                  ? { borderColor: UI_COLORS.green, color: UI_COLORS.green, backgroundColor: 'rgba(20,176,111,0.1)' }
+                  : { borderColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', backgroundColor: 'transparent' }}
+              >
+                {label}
+              </button>
+            ))}
           </div>
         </div>
 
         <div className="scrollbar-hidden-mobile min-h-0 flex-1 overflow-y-auto px-3 py-2">
           {isLoading ? (
             <div className="space-y-2">
-              {Array.from({ length: 10 }).map((_, i) => (
-                <div key={i} className="skeleton h-6 w-full rounded" />
-              ))}
+              {Array.from({ length: 10 }).map((_, i) => <div key={i} className="skeleton h-6 w-full rounded" />)}
             </div>
           ) : (
             <div className="space-y-1">
@@ -363,24 +530,15 @@ export default function S08_BtcMapBusinessesMap() {
                 const valueLabel = viewMode === 'perCapita' && item.perCapita != null
                   ? formatPerCapitaValue(item.perCapita)
                   : fmt.num(item.businesses);
-                const label = resolveCountryLabel(item.country_code, item.country_name);
                 return (
-                  <div
-                    key={`${item.country_code}-${index}`}
-                    className="flex items-center justify-between rounded border border-white/5 bg-white/[0.02] px-2 py-1.5"
-                  >
+                  <div key={`${item.country_code}-${index}`} className="flex items-center justify-between rounded border border-white/5 bg-white/[0.02] px-2 py-1.5">
                     <span className="flex min-w-0 items-center gap-1.5">
-                      <span
-                        className="inline-block h-2 w-2 flex-none rounded-sm"
-                        style={{ background: dotColor, boxShadow: `0 0 4px ${dotColor}` }}
-                      />
+                      <span className="inline-block h-2 w-2 flex-none rounded-sm" style={{ background: dotColor, boxShadow: `0 0 4px ${dotColor}` }} />
                       <span className="truncate font-mono text-[12px] sm:text-[13px]" style={{ color: 'rgba(255,255,255,0.8)' }}>
-                        {label}
+                        {resolveCountryLabel(item.country_code, item.country_name)}
                       </span>
                     </span>
-                    <span className="flex-none font-mono text-[12px] sm:text-[13px]" style={{ color: dotColor }}>
-                      {valueLabel}
-                    </span>
+                    <span className="flex-none font-mono text-[12px] sm:text-[13px]" style={{ color: dotColor }}>{valueLabel}</span>
                   </div>
                 );
               })}
@@ -391,27 +549,19 @@ export default function S08_BtcMapBusinessesMap() {
         <div className="relative border-t border-white/10 px-3 py-2 font-mono text-[11px]">
           <div className="hidden flex-wrap items-center gap-2 text-white/65 lg:flex">
             <span className="rounded border border-white/10 bg-white/[0.03] px-1.5 py-0.5">
-              src:{' '}
-              <a href="https://btcmap.org" target="_blank" rel="noreferrer" style={{ color: 'var(--accent-bitcoin)', textDecoration: 'none' }}>
-                BTC Map
-              </a>
+              src: <a href="https://btcmap.org" target="_blank" rel="noreferrer" style={{ color: 'var(--accent-bitcoin)', textDecoration: 'none' }}>BTC Map</a>
             </span>
             <span className="rounded border border-white/10 bg-white/[0.03] px-1.5 py-0.5 text-white/75">
               refresh: {nextUpdateDelay === 'N/A' ? 'N/A' : (nextUpdateDelay === 'now' ? 'now' : `in ${nextUpdateDelay}`)}
             </span>
             {isFallback && (
-              <span className="rounded border border-[rgba(255,215,0,0.35)] bg-[rgba(255,215,0,0.08)] px-1.5 py-0.5" style={{ color: UI_COLORS.warning }}>
-                fallback
-              </span>
+              <span className="rounded border border-[rgba(255,215,0,0.35)] bg-[rgba(255,215,0,0.08)] px-1.5 py-0.5" style={{ color: UI_COLORS.warning }}>fallback</span>
             )}
             {viewMode === 'perCapita' && (
               <span className="rounded border border-white/10 bg-white/[0.03] px-1.5 py-0.5 text-white/55">
-                pop:{' '}
-                {popSource === 'worldbank' || popSource === 'cache' ? (
-                  <a href="https://data.worldbank.org/indicator/SP.POP.TOTL" target="_blank" rel="noreferrer" style={{ color: 'var(--accent-bitcoin)', textDecoration: 'none' }}>
-                    World Bank
-                  </a>
-                ) : <span>estimates</span>}
+                pop: {popSource === 'worldbank' || popSource === 'cache'
+                  ? <a href="https://data.worldbank.org/indicator/SP.POP.TOTL" target="_blank" rel="noreferrer" style={{ color: 'var(--accent-bitcoin)', textDecoration: 'none' }}>World Bank</a>
+                  : <span>estimates</span>}
                 {popDataYear && ` · ${popDataYear}`}
               </span>
             )}
@@ -428,12 +578,7 @@ export default function S08_BtcMapBusinessesMap() {
 
           {isMetaExpanded && (
             <div id="s08-meta-panel" className="scrollbar-hidden-mobile absolute inset-x-3 bottom-[calc(100%+0.5rem)] z-20 max-h-[min(42vh,20rem)] overflow-y-auto rounded border border-white/10 bg-[#111111]/96 px-2 py-1.5 text-white/55 shadow-[0_14px_36px_rgba(0,0,0,0.42)] backdrop-blur-sm lg:static lg:inset-auto lg:bottom-auto lg:mt-2 lg:max-h-none lg:overflow-visible lg:bg-white/[0.02] lg:shadow-none lg:backdrop-blur-0">
-              <div>
-                Source:{' '}
-                <a href="https://api.btcmap.org/v4/places" target="_blank" rel="noreferrer" style={{ color: UI_COLORS.greenSoft, textDecoration: 'none' }}>
-                  api.btcmap.org/v4/places
-                </a>
-              </div>
+              <div>Source: <a href="https://api.btcmap.org/v4/places" target="_blank" rel="noreferrer" style={{ color: UI_COLORS.greenSoft, textDecoration: 'none' }}>api.btcmap.org/v4/places</a></div>
               <div>API: {BUSINESSES_ENDPOINT}</div>
               <div>Last snapshot: {payload?.updated_at ? `${fmt.date(payload.updated_at)} ${fmt.time(payload.updated_at)}` : 'N/A'}</div>
               <div>Latest place update: {summary.latest_place_update_at ? `${fmt.date(summary.latest_place_update_at)} ${fmt.time(summary.latest_place_update_at)}` : 'N/A'}</div>
@@ -443,32 +588,17 @@ export default function S08_BtcMapBusinessesMap() {
               )}
               <div className="mt-2 border-t border-white/10 pt-2">
                 <div className="mb-0.5" style={{ color: 'rgba(255,255,255,0.5)' }}>Population data</div>
-                <div>
-                  Source:{' '}
-                  <a href="https://data.worldbank.org/indicator/SP.POP.TOTL" target="_blank" rel="noreferrer" style={{ color: 'var(--accent-bitcoin)', textDecoration: 'none' }}>
-                    World Bank
-                  </a>
-                  {popDataYear && ` · ${popDataYear}`}
-                </div>
+                <div>Source: <a href="https://data.worldbank.org/indicator/SP.POP.TOTL" target="_blank" rel="noreferrer" style={{ color: 'var(--accent-bitcoin)', textDecoration: 'none' }}>World Bank</a>{popDataYear && ` · ${popDataYear}`}</div>
                 <div>Cadence: annual (published mid-year)</div>
-                <div>
-                  Cache TTL: 24 h · status:{' '}
-                  <span style={{ color: popSource === 'worldbank' ? '#00D897' : popSource === 'cache' ? 'var(--accent-bitcoin)' : 'rgba(255,255,255,0.4)' }}>
-                    {popSource === 'worldbank' ? 'fresh fetch' : popSource === 'cache' ? 'from cache' : 'built-in estimates'}
-                  </span>
-                </div>
-                {popLastFetched && (
-                  <div style={{ color: 'rgba(255,255,255,0.4)' }}>Last fetched: {new Date(popLastFetched).toLocaleString()}</div>
-                )}
+                <div>Cache TTL: 24 h · status: <span style={{ color: popSource === 'worldbank' ? '#00D897' : popSource === 'cache' ? 'var(--accent-bitcoin)' : 'rgba(255,255,255,0.4)' }}>{popSource === 'worldbank' ? 'fresh fetch' : popSource === 'cache' ? 'from cache' : 'built-in estimates'}</span></div>
+                {popLastFetched && <div style={{ color: 'rgba(255,255,255,0.4)' }}>Last fetched: {new Date(popLastFetched).toLocaleString()}</div>}
               </div>
             </div>
           )}
         </div>
 
         {combinedError && (
-          <div className="border-t border-white/10 px-4 py-2 font-mono text-[11px]" style={{ color: UI_COLORS.warning }}>
-            {combinedError}
-          </div>
+          <div className="border-t border-white/10 px-4 py-2 font-mono text-[11px]" style={{ color: UI_COLORS.warning }}>{combinedError}</div>
         )}
       </aside>
     </div>
