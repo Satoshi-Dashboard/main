@@ -12,22 +12,22 @@ const S02_PriceChart = lazyWithPreload(() => import('@/features/modules/live/S02
 const S03_MultiCurrencyBoard = lazyWithPreload(() => import('@/features/modules/live/S03_MultiCurrencyBoard'));
 const S04_MempoolGauge = lazyWithPreload(() => import('@/features/modules/live/S04_MempoolGauge'));
 const S05_LongTermTrend = lazyWithPreload(() => import('@/features/modules/live/S05_LongTermTrend'));
-const S06_NodesMap = lazyWithPreload(() => import('@/features/modules/live/S07_NodesMap'));
-const S07_LightningNodesMap = lazyWithPreload(() => import('@/features/modules/live/S08_LightningNodesMap'));
-const S08_BtcMapBusinessesMap = lazyWithPreload(() => import('@/features/modules/live/S09_BtcMapBusinessesMap'));
-const S09_LightningNetwork = lazyWithPreload(() => import('@/features/modules/live/S10_LightningNetwork'));
-const S10_StablecoinPegHealth = lazyWithPreload(() => import('@/features/modules/live/S11_StablecoinPegHealth'));
-const S11_FearGreedIndex = lazyWithPreload(() => import('@/features/modules/live/S12_FearGreedIndex'));
-const S12_AddressDistribution = lazyWithPreload(() => import('@/features/modules/live/S13_AddressDistribution'));
-const S13_WealthPyramid = lazyWithPreload(() => import('@/features/modules/live/S14_WealthPyramid'));
-const S14_GlobalAssetsTreemap = lazyWithPreload(() => import('@/features/modules/live/S15_GlobalAssetsTreemap'));
-const S15_BTCvsGold = lazyWithPreload(() => import('@/features/modules/live/S16_BTCvsGold'));
-const S16_MayerMultiple = lazyWithPreload(() => import('@/features/modules/live/S17_MayerMultiple'));
-const S17_PricePerformance = lazyWithPreload(() => import('@/features/modules/live/S18_PricePerformance'));
-const S18_CycleSpiral = lazyWithPreload(() => import('@/features/modules/live/S19_CycleSpiral'));
-const S19_PowerLawModel = lazyWithPreload(() => import('@/features/modules/under-construction/S20_PowerLawModel'));
-const S20_StockToFlow = lazyWithPreload(() => import('@/features/modules/under-construction/S21_StockToFlow'));
-const S21_BigMacSatsTracker = lazyWithPreload(() => import('@/features/modules/under-construction/S22_BigMacSatsTracker'));
+const S06_BtcQueue = lazyWithPreload(() => import('@/features/modules/live/S32_BtcQueue'));
+const S07_NodesMap = lazyWithPreload(() => import('@/features/modules/live/S07_NodesMap'));
+const S08_LightningNodesMap = lazyWithPreload(() => import('@/features/modules/live/S08_LightningNodesMap'));
+const S09_BtcMapBusinessesMap = lazyWithPreload(() => import('@/features/modules/live/S09_BtcMapBusinessesMap'));
+const S10_LightningNetwork = lazyWithPreload(() => import('@/features/modules/live/S10_LightningNetwork'));
+const S11_StablecoinPegHealth = lazyWithPreload(() => import('@/features/modules/live/S11_StablecoinPegHealth'));
+const S12_FearGreedIndex = lazyWithPreload(() => import('@/features/modules/live/S12_FearGreedIndex'));
+const S13_AddressDistribution = lazyWithPreload(() => import('@/features/modules/live/S13_AddressDistribution'));
+const S14_WealthPyramid = lazyWithPreload(() => import('@/features/modules/live/S14_WealthPyramid'));
+const S15_GlobalAssetsTreemap = lazyWithPreload(() => import('@/features/modules/live/S15_GlobalAssetsTreemap'));
+const S16_BTCvsGold = lazyWithPreload(() => import('@/features/modules/live/S16_BTCvsGold'));
+const S17_MayerMultiple = lazyWithPreload(() => import('@/features/modules/live/S17_MayerMultiple'));
+const S18_PricePerformance = lazyWithPreload(() => import('@/features/modules/live/S18_PricePerformance'));
+const S19_CycleSpiral = lazyWithPreload(() => import('@/features/modules/live/S19_CycleSpiral'));
+const S20_PowerLawModel = lazyWithPreload(() => import('@/features/modules/under-construction/S20_PowerLawModel'));
+const S21_StockToFlow = lazyWithPreload(() => import('@/features/modules/under-construction/S21_StockToFlow'));
 const S22_SeasonalityHeatmap = lazyWithPreload(() => import('@/features/modules/under-construction/S23_SeasonalityHeatmap'));
 const S23_BigMacIndex = lazyWithPreload(() => import('@/features/modules/under-construction/S24_BigMacIndex'));
 const S24_NetworkActivity = lazyWithPreload(() => import('@/features/modules/under-construction/S25_NetworkActivity'));
@@ -37,7 +37,6 @@ const S27_GoogleTrends = lazyWithPreload(() => import('@/features/modules/under-
 const S28_BTCDominance = lazyWithPreload(() => import('@/features/modules/under-construction/S29_BTCDominance'));
 const S29_UTXODistribution = lazyWithPreload(() => import('@/features/modules/under-construction/S30_UTXODistribution'));
 const S30_USNationalDebt = lazyWithPreload(() => import('@/features/modules/live/S31_USNationalDebt'));
-const S31_BtcQueue = lazyWithPreload(() => import('@/features/modules/live/S32_BtcQueue'));
 
 const MODULE_DEFS = [
   { slugBase: 'bitcoin-price-market-overview', title: 'Bitcoin Overview', component: S01_BitcoinOverview },
@@ -45,22 +44,22 @@ const MODULE_DEFS = [
   { slugBase: 'bitcoin-price-multi-currency', title: 'Multi-Currency', component: S03_MultiCurrencyBoard },
   { slugBase: 'bitcoin-mempool-fees', title: 'Mempool Gauge', component: S04_MempoolGauge },
   { slugBase: 'bitcoin-mempool-trend', title: 'Long-Term Trend', component: S05_LongTermTrend },
-  { slugBase: 'bitcoin-nodes-world-map', title: 'Nodes Map', component: S06_NodesMap },
-  { slugBase: 'lightning-nodes-world-map', title: 'Lightning Nodes Map', component: S07_LightningNodesMap },
-  { slugBase: 'bitcoin-merchant-map', title: 'BTC Map Business Density', component: S08_BtcMapBusinessesMap },
-  { slugBase: 'lightning-network-stats', title: 'Lightning Network', component: S09_LightningNetwork },
-  { slugBase: 'stablecoin-peg-tracker', title: 'Stablecoin Peg Health', component: S10_StablecoinPegHealth },
-  { slugBase: 'bitcoin-fear-greed-index', title: 'Fear & Greed', component: S11_FearGreedIndex },
-  { slugBase: 'bitcoin-address-distribution', title: 'Address Distribution', component: S12_AddressDistribution },
-  { slugBase: 'bitcoin-wealth-pyramid', title: 'Wealth Pyramid', component: S13_WealthPyramid },
-  { slugBase: 'bitcoin-vs-global-assets', title: 'Global Assets', component: S14_GlobalAssetsTreemap },
-  { slugBase: 'bitcoin-vs-gold-chart', title: 'BTC vs Gold', component: S15_BTCvsGold },
-  { slugBase: 'bitcoin-mayer-multiple', title: 'Mayer Multiple', component: S16_MayerMultiple },
-  { slugBase: 'bitcoin-price-performance', title: 'US Median Home Price in ₿', component: S17_PricePerformance },
-  { slugBase: 'bitcoin-halving-cycle-spiral', title: 'Cycle Spiral', component: S18_CycleSpiral },
-  { slugBase: 'bitcoin-power-law-model', title: 'Power Law Model', component: S19_PowerLawModel },
-  { slugBase: 'bitcoin-stock-to-flow-model', title: 'Stock to Flow', component: S20_StockToFlow },
-  { slugBase: 'bitcoin-big-mac-sats-tracker', title: 'Big Mac Sats Tracker', component: S21_BigMacSatsTracker },
+  { slugBase: 'bitcoin-mempool-queue-v2', title: 'BTC Queue', component: S06_BtcQueue },
+  { slugBase: 'bitcoin-nodes-world-map', title: 'Nodes Map', component: S07_NodesMap },
+  { slugBase: 'lightning-nodes-world-map', title: 'Lightning Nodes Map', component: S08_LightningNodesMap },
+  { slugBase: 'bitcoin-merchant-map', title: 'BTC Map Business Density', component: S09_BtcMapBusinessesMap },
+  { slugBase: 'lightning-network-stats', title: 'Lightning Network', component: S10_LightningNetwork },
+  { slugBase: 'stablecoin-peg-tracker', title: 'Stablecoin Peg Health', component: S11_StablecoinPegHealth },
+  { slugBase: 'bitcoin-fear-greed-index', title: 'Fear & Greed', component: S12_FearGreedIndex },
+  { slugBase: 'bitcoin-address-distribution', title: 'Address Distribution', component: S13_AddressDistribution },
+  { slugBase: 'bitcoin-wealth-pyramid', title: 'Wealth Pyramid', component: S14_WealthPyramid },
+  { slugBase: 'bitcoin-vs-global-assets', title: 'Global Assets', component: S15_GlobalAssetsTreemap },
+  { slugBase: 'bitcoin-vs-gold-chart', title: 'BTC vs Gold', component: S16_BTCvsGold },
+  { slugBase: 'bitcoin-mayer-multiple', title: 'Mayer Multiple', component: S17_MayerMultiple },
+  { slugBase: 'bitcoin-price-performance', title: 'US Median Home Price in ₿', component: S18_PricePerformance },
+  { slugBase: 'bitcoin-halving-cycle-spiral', title: 'Cycle Spiral', component: S19_CycleSpiral },
+  { slugBase: 'bitcoin-power-law-model', title: 'Power Law Model', component: S20_PowerLawModel },
+  { slugBase: 'bitcoin-stock-to-flow-model', title: 'Stock to Flow', component: S21_StockToFlow },
   { slugBase: 'bitcoin-seasonality-heatmap', title: 'Seasonality', component: S22_SeasonalityHeatmap },
   { slugBase: 'bitcoin-big-mac-index', title: 'Big Mac Index', component: S23_BigMacIndex },
   { slugBase: 'bitcoin-network-activity', title: 'Network Activity', component: S24_NetworkActivity },
@@ -70,7 +69,6 @@ const MODULE_DEFS = [
   { slugBase: 'bitcoin-dominance-chart', title: 'BTC Dominance', component: S28_BTCDominance },
   { slugBase: 'bitcoin-utxo-distribution', title: 'UTXO Distribution', component: S29_UTXODistribution },
   { slugBase: 'us-national-debt-live-counter', title: 'U.S. National Debt', component: S30_USNationalDebt },
-  { slugBase: 'bitcoin-mempool-queue-v2', title: 'BTC Queue', component: S31_BtcQueue },
 ];
 
 const toCode = (index) => `S${String(index + 1).padStart(2, '0')}`;
