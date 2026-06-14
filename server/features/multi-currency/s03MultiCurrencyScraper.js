@@ -1,5 +1,6 @@
 import { cacheGetJson, cacheSetJson, withCacheLock } from '../../core/runtimeCache.js';
 import { getBtcRates } from '../../services/btcRates.js';
+import { ExternalApiError } from '../../shared/errors/SatoshiBaseError.js';
 
 const SOURCE_URL = 'https://www.investing.com/currencies/single-currency-crosses?currency=usd';
 const SCRAPER_BASE_URL = String(process.env.SCRAPER_BASE_URL || 'https://api.zatobox.io').trim();
@@ -12,12 +13,7 @@ const SHARED_LOCK_KEY = 's03:multi-currency:investing:refresh';
 
 let memoryCache = null;
 
-class S03ScrapeError extends Error {
-  constructor(message) {
-    super(message);
-    this.name = 'S03ScrapeError';
-  }
-}
+class S03ScrapeError extends ExternalApiError {}
 
 function normalizeTimestamp(date = new Date()) {
   return date.toISOString().replace(/\.\d{3}Z$/, 'Z');
@@ -52,6 +48,7 @@ function stripHtml(value) {
   return String(value || '')
     .replace(/<[^>]+>/g, ' ')
     .replace(/&nbsp;|&#160;/gi, ' ')
+    .replace(/[<>]/g, '')
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -364,9 +361,8 @@ function buildPayload(usdPairs, btcAnchor) {
   };
 }
 
-function getSharedTtlSeconds(now = Date.now()) {
-  const ttlMs = Math.max(20_000, REFRESH_INTERVAL_MS + 15_000);
-  return Math.max(20, Math.floor((now + ttlMs - now) / 1000));
+function getSharedTtlSeconds() {
+  return Math.max(20, Math.ceil((REFRESH_INTERVAL_MS + 15_000) / 1000));
 }
 
 function stalePayload(payload, reason) {
@@ -389,6 +385,9 @@ export async function refreshS03MultiCurrencyPayload() {
   ]);
 
   const usdPairs = parseUsdPairsFromHtml(html);
+  if (Object.keys(usdPairs).length === 0) {
+    throw new S03ScrapeError('Investing returned no USD cross FX pairs (markup change?)');
+  }
   const payload = buildPayload(usdPairs, btcAnchor);
 
   memoryCache = payload;

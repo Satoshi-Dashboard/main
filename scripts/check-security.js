@@ -12,7 +12,7 @@ async function main() {
   process.env.GENERAL_API_RATE_LIMIT_MAX = '100';
   process.env.PUBLIC_API_RATE_LIMIT_MAX = '3';
   process.env.REFRESH_API_RATE_LIMIT_MAX = '2';
-  process.env.REFRESH_API_TOKEN = 'test-refresh-token';
+  process.env.REFRESH_API_TOKEN = `test-token-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
   const app = await loadFreshApp(`limits-${Date.now()}`);
 

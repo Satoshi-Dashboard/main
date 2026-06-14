@@ -21,17 +21,6 @@ const MODULE_COLORS = {
   '--border-muted': '#2A2A2A',
 };
 
-const FALLBACK_TIERS = [
-  { name: 'PLANKTON', emoji: '🦠', range: '< 0.1 BTC', bg: 'var(--tier-plankton)', addresses: 50680627, totalBtc: 315444.78, pct: 1.59, cum: 100.00 },
-  { name: 'SHRIMP', emoji: '🦐', range: '0.1 – 1', bg: 'var(--tier-shrimp)', addresses: 3479084, totalBtc: 1072660.00, pct: 5.40, cum: 98.41 },
-  { name: 'CRAB', emoji: '🦀', range: '1 – 10', bg: 'var(--tier-crab)', addresses: 836399, totalBtc: 2073749.00, pct: 10.43, cum: 93.02 },
-  { name: 'FISH', emoji: '🐟', range: '10 – 100', bg: 'var(--tier-fish)', addresses: 133242, totalBtc: 4296739.00, pct: 21.62, cum: 82.58 },
-  { name: 'SHARK', emoji: '🦈', range: '100 – 1,000', bg: 'var(--tier-shark)', addresses: 16294, totalBtc: 4720464.00, pct: 23.75, cum: 60.96 },
-  { name: 'WHALE', emoji: '🐋', range: '1,000 – 10,000', bg: 'var(--tier-whale)', addresses: 2006, totalBtc: 4514961.00, pct: 22.72, cum: 37.21 },
-  { name: 'HUMPBACK', emoji: '🐋', range: '10,000 – 100,000', bg: 'var(--tier-humpback)', addresses: 90, totalBtc: 2226328.00, pct: 11.20, cum: 14.49 },
-  { name: '100K+', emoji: '💰', range: '100,000+', bg: 'var(--tier-100k)', addresses: 4, totalBtc: 653463.00, pct: 3.29, cum: 3.29 },
-];
-
 const TIER_SPECS = [
   {
     name: 'PLANKTON',
@@ -48,6 +37,17 @@ const TIER_SPECS = [
   { name: 'HUMPBACK', emoji: '🐋', range: '10,000 – 100,000', bg: 'var(--tier-humpback)', sourceRanges: ['10000 - 100000'] },
   { name: '100K+', emoji: '💰', range: '100,000+', bg: 'var(--tier-100k)', sourceRanges: ['100000 - 1000000'] },
 ];
+
+const PLACEHOLDER_TIERS = TIER_SPECS.map((tier) => ({
+  name: tier.name,
+  emoji: tier.emoji,
+  range: tier.range,
+  bg: tier.bg,
+  addresses: null,
+  totalBtc: null,
+  pct: null,
+  cum: null,
+}));
 
 const REFRESH_MS = 1_800_000;
 const PROVIDERS = [{ name: 'BitInfoCharts', url: 'https://bitinfocharts.com' }];
@@ -92,11 +92,29 @@ function mapDistributionToTiers(distribution) {
   });
 }
 
+function SkeletonText({ width = 96, height = '1em', className = '' }) {
+  return <div className={`skeleton inline-block max-w-full rounded ${className}`} style={{ width, height }} />;
+}
+
+function formatBtc(value) {
+  return Number.isFinite(value)
+    ? value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : null;
+}
+
+function UnavailablePanel() {
+  return (
+    <div className="flex h-full min-h-[280px] items-center justify-center rounded-lg border border-white/10 px-4 text-center font-mono text-white/60">
+      Address distribution is temporarily unavailable.
+    </div>
+  );
+}
+
 export default function S12_AddressDistribution() {
-  const [tiers, setTiers] = useState(FALLBACK_TIERS);
+  const [tiers, setTiers] = useState(PLACEHOLDER_TIERS);
   const [meta, setMeta] = useState({ updatedAt: '', updatedAtLocal: '', fetchedAt: '', fetchedAtLocal: '' });
 
-  useModuleData(fetchAddressDistribution, {
+  const { loading, error } = useModuleData(fetchAddressDistribution, {
     refreshMs: REFRESH_MS,
     transform: (payload) => {
       if (!Array.isArray(payload?.distribution)) return null;
@@ -113,6 +131,9 @@ export default function S12_AddressDistribution() {
       return payload;
     },
   });
+
+  const hasLiveTiers = tiers.some((tier) => Number.isFinite(tier.addresses));
+  const showUnavailable = Boolean(!loading && !hasLiveTiers && error);
 
   const sourceFooter = (
     <ModuleSourceFooter
@@ -132,112 +153,127 @@ export default function S12_AddressDistribution() {
       </div>
 
       <div className="min-h-0 flex-1 px-3 pb-4 sm:px-6 sm:pb-6">
-        <div className="hidden h-full min-h-0 flex-col lg:flex">
-          <div
-            className="flex flex-none rounded-t-lg border px-4 py-2 font-bold uppercase tracking-widest"
-            style={{
-              borderColor: 'var(--border-muted)',
-              backgroundColor: 'var(--bg-table)',
-              color: 'var(--btc-orange)',
-            }}
-          >
-            <div className="w-12" />
-            <div className="flex-1">Address Type</div>
-            <div className="w-44 text-right pr-2">BTC Balance</div>
-            <div className="w-40 text-right pr-2"># of Addresses</div>
-            <div className="w-40 text-right pr-2">Total BTC</div>
-            <div className="w-44 text-right pr-2">BTC %</div>
-          </div>
+        {showUnavailable ? (
+          <UnavailablePanel />
+        ) : (
+          <>
+            <div className="hidden h-full min-h-0 flex-col lg:flex">
+              <div
+                className="flex flex-none rounded-t-lg border px-4 py-2 font-bold uppercase tracking-widest"
+                style={{
+                  borderColor: 'var(--border-muted)',
+                  backgroundColor: 'var(--bg-table)',
+                  color: 'var(--btc-orange)',
+                }}
+              >
+                <div className="w-12" />
+                <div className="flex-1">Address Type</div>
+                <div className="w-44 text-right pr-2">BTC Balance</div>
+                <div className="w-40 text-right pr-2"># of Addresses</div>
+                <div className="w-40 text-right pr-2">Total BTC</div>
+                <div className="w-44 text-right pr-2">BTC %</div>
+              </div>
 
-          {tiers.map((tier, index) => (
-            <div
-              key={tier.name}
-              className="flex flex-1 items-center border-x border-b border-black/20 px-4"
-              style={{
-                backgroundColor: tier.bg,
-                borderColor: 'var(--border-muted)',
-                borderBottomLeftRadius: index === tiers.length - 1 ? 8 : 0,
-                borderBottomRightRadius: index === tiers.length - 1 ? 8 : 0,
-                minHeight: 0,
-              }}
-            >
-              <div className="w-12 leading-none">{tier.emoji}</div>
-              <div
-                className="flex-1 font-mono font-bold"
-                style={{ color: 'var(--row-text)', fontSize: 'var(--fs-label)' }}
-              >
-                {tier.name}
-              </div>
-              <div
-                className="w-44 text-right pr-2 font-mono"
-                style={{ color: 'var(--row-text)', fontSize: 'var(--fs-caption)' }}
-              >
-                {tier.range}
-              </div>
-              <div
-                className="w-40 text-right pr-2 font-mono font-bold"
-                style={{ color: 'var(--row-text)', fontSize: 'var(--fs-caption)' }}
-              >
-                {tier.addresses.toLocaleString()}
-              </div>
-              <div
-                className="w-40 text-right pr-2 font-mono"
-                style={{ color: 'var(--row-text)', fontSize: 'var(--fs-caption)' }}
-              >
-                {tier.totalBtc.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </div>
-              <div
-                className="w-44 text-right pr-2 font-mono font-bold"
-                style={{ color: 'var(--row-text)', fontSize: 'var(--fs-caption)' }}
-              >
-                {tier.pct.toFixed(2)}%{' '}
-                <span>({tier.cum.toFixed(2)}%)</span>
+              {tiers.map((tier, index) => (
+                <div
+                  key={tier.name}
+                  className="flex flex-1 items-center border-x border-b border-black/20 px-4"
+                  style={{
+                    backgroundColor: tier.bg,
+                    borderColor: 'var(--border-muted)',
+                    borderBottomLeftRadius: index === tiers.length - 1 ? 8 : 0,
+                    borderBottomRightRadius: index === tiers.length - 1 ? 8 : 0,
+                    minHeight: 0,
+                  }}
+                >
+                  <div className="w-12 leading-none">{tier.emoji}</div>
+                  <div
+                    className="flex-1 font-mono font-bold"
+                    style={{ color: 'var(--row-text)', fontSize: 'var(--fs-label)' }}
+                  >
+                    {tier.name}
+                  </div>
+                  <div
+                    className="w-44 text-right pr-2 font-mono"
+                    style={{ color: 'var(--row-text)', fontSize: 'var(--fs-caption)' }}
+                  >
+                    {tier.range}
+                  </div>
+                  <div
+                    className="w-40 text-right pr-2 font-mono font-bold"
+                    style={{ color: 'var(--row-text)', fontSize: 'var(--fs-caption)' }}
+                  >
+                    {Number.isFinite(tier.addresses) ? tier.addresses.toLocaleString() : <SkeletonText width={104} />}
+                  </div>
+                  <div
+                    className="w-40 text-right pr-2 font-mono"
+                    style={{ color: 'var(--row-text)', fontSize: 'var(--fs-caption)' }}
+                  >
+                    {formatBtc(tier.totalBtc) || <SkeletonText width={96} />}
+                  </div>
+                  <div
+                    className="w-44 text-right pr-2 font-mono font-bold"
+                    style={{ color: 'var(--row-text)', fontSize: 'var(--fs-caption)' }}
+                  >
+                    {Number.isFinite(tier.pct) && Number.isFinite(tier.cum) ? (
+                      <>
+                        {tier.pct.toFixed(2)}% <span>({tier.cum.toFixed(2)}%)</span>
+                      </>
+                    ) : (
+                      <SkeletonText width={112} />
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex h-full flex-col gap-2 overflow-y-auto lg:hidden">
+              {tiers.map((tier) => (
+                <article
+                  key={tier.name}
+                  className="rounded-lg border px-3 py-2"
+                  style={{
+                    backgroundColor: tier.bg,
+                    borderColor: 'var(--border-muted)',
+                  }}
+                >
+                  <div className="mb-2 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span>{tier.emoji}</span>
+                      <span className="font-mono font-bold" style={{ color: 'var(--row-text)', fontSize: 'var(--fs-label)' }}>
+                        {tier.name}
+                      </span>
+                    </div>
+                    <span className="font-mono" style={{ color: 'var(--btc-orange)', fontSize: 'var(--fs-caption)' }}>
+                      {tier.range}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-y-1 font-mono" style={{ fontSize: 'var(--fs-micro)' }}>
+                    <span style={{ color: 'var(--row-muted)' }}>Addresses</span>
+                    <span className="text-right" style={{ color: 'var(--row-text)' }}>
+                      {Number.isFinite(tier.addresses) ? tier.addresses.toLocaleString() : <SkeletonText width={82} height="0.9em" />}
+                    </span>
+                    <span style={{ color: 'var(--row-muted)' }}>Total BTC</span>
+                    <span className="text-right" style={{ color: 'var(--row-text)' }}>
+                      {formatBtc(tier.totalBtc) || <SkeletonText width={74} height="0.9em" />}
+                    </span>
+                    <span style={{ color: 'var(--row-muted)' }}>Share</span>
+                    <span className="text-right" style={{ color: 'var(--row-text)' }}>
+                      {Number.isFinite(tier.pct) && Number.isFinite(tier.cum)
+                        ? `${tier.pct.toFixed(2)}% (${tier.cum.toFixed(2)}%)`
+                        : <SkeletonText width={96} height="0.9em" />}
+                    </span>
+                  </div>
+                </article>
+              ))}
+
+              <div className="flex justify-end px-1 pb-4 pt-3">
+                {sourceFooter}
               </div>
             </div>
-          ))}
-        </div>
-
-        <div className="flex h-full flex-col gap-2 overflow-y-auto lg:hidden">
-          {tiers.map((tier) => (
-            <article
-              key={tier.name}
-              className="rounded-lg border px-3 py-2"
-              style={{
-                backgroundColor: tier.bg,
-                borderColor: 'var(--border-muted)',
-              }}
-            >
-              <div className="mb-2 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span>{tier.emoji}</span>
-                  <span className="font-mono font-bold" style={{ color: 'var(--row-text)', fontSize: 'var(--fs-label)' }}>
-                    {tier.name}
-                  </span>
-                </div>
-                <span className="font-mono" style={{ color: 'var(--btc-orange)', fontSize: 'var(--fs-caption)' }}>
-                  {tier.range}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-y-1 font-mono" style={{ fontSize: 'var(--fs-micro)' }}>
-                <span style={{ color: 'var(--row-muted)' }}>Addresses</span>
-                <span className="text-right" style={{ color: 'var(--row-text)' }}>{tier.addresses.toLocaleString()}</span>
-                <span style={{ color: 'var(--row-muted)' }}>Total BTC</span>
-                <span className="text-right" style={{ color: 'var(--row-text)' }}>
-                  {tier.totalBtc.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </span>
-                <span style={{ color: 'var(--row-muted)' }}>Share</span>
-                <span className="text-right" style={{ color: 'var(--row-text)' }}>
-                  {tier.pct.toFixed(2)}% ({tier.cum.toFixed(2)}%)
-                </span>
-              </div>
-            </article>
-          ))}
-
-          <div className="flex justify-end px-1 pb-4 pt-3">
-            {sourceFooter}
-          </div>
-        </div>
+          </>
+        )}
       </div>
 
       <div className="hidden lg:flex flex-none justify-end px-3 pb-6 pt-3 sm:px-4" style={{ paddingBottom: 'max(1.5rem, calc(var(--safe-bottom) + 0.75rem))' }}>

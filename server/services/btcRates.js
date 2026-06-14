@@ -1,6 +1,7 @@
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile, rename, writeFile } from 'node:fs/promises';
 import { cacheGetJson, cacheSetJson, withCacheLock } from '../core/runtimeCache.js';
 import { ensureRuntimeCacheDir, resolveRuntimeCacheFile } from '../core/runtimePaths.js';
+import { normalizeTimestamp, parseIsoDate } from '../shared/utils/timeUtils.js';
 
 const CACHE_FILE = resolveRuntimeCacheFile('btc_rates_cache.json');
 
@@ -56,16 +57,6 @@ async function fetchJsonWithTimeout(url, source) {
   } finally {
     clearTimeout(timeout);
   }
-}
-
-function normalizeTimestamp(date = new Date()) {
-  return date.toISOString().replace(/\.\d{3}Z$/, 'Z');
-}
-
-function parseIsoDate(value) {
-  const date = new Date(String(value || ''));
-  if (!Number.isFinite(date.getTime())) return null;
-  return date;
 }
 
 function sanitizeBtcUsd(value) {
@@ -188,6 +179,8 @@ function isValidRatesPayload(payload) {
     && typeof payload.next_update_at === 'string'
     && payload.rates
     && typeof payload.rates === 'object'
+    && Number.isFinite(Number(payload.btc_usd))
+    && Number(payload.btc_usd) > 0
   );
 }
 
@@ -231,7 +224,9 @@ async function readDiskCache() {
 async function writeDiskCache(payload) {
   try {
     await ensureRuntimeCacheDir();
-    await writeFile(CACHE_FILE, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+    const tmpFile = `${CACHE_FILE}.${process.pid}.tmp`;
+    await writeFile(tmpFile, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+    await rename(tmpFile, CACHE_FILE);
   } catch {
     /* ignore write errors in serverless/read-only environments */
   }
@@ -267,6 +262,7 @@ async function fetchSpotFromBinance(previousPayload) {
       change24h: Number.isFinite(fallbackChange) ? fallbackChange : null,
       sourceLabel: previousPayload.source_btc || 'cached_spot',
       sourceUrl: previousPayload.source_btc_url || 'https://api.binance.com',
+      isStale: true,
     };
   }
 
@@ -277,16 +273,12 @@ async function fetchSpotFromBinance(previousPayload) {
   throw new ExternalApiError('binance', 'Binance API unavailable');
 }
 
-function getSharedTtlSeconds(now = Date.now()) {
-  const next = now + SPOT_REFRESH_MS;
-  const ttlMs = Math.max(10_000, next - now + 10_000);
-  return Math.max(10, Math.floor(ttlMs / 1000));
+function getSharedTtlSeconds() {
+  return Math.max(10, Math.ceil((SPOT_REFRESH_MS + 10_000) / 1000));
 }
 
-function getFiatSharedTtlSeconds(now = Date.now()) {
-  const next = now + FIAT_REFRESH_MS;
-  const ttlMs = Math.max(10 * 60_000, next - now + 10 * 60_000);
-  return Math.max(600, Math.floor(ttlMs / 1000));
+function getFiatSharedTtlSeconds() {
+  return Math.max(600, Math.ceil((FIAT_REFRESH_MS + 10 * 60_000) / 1000));
 }
 
 function buildFiatPayload(rates, {
@@ -449,8 +441,12 @@ export async function updateBtcRates() {
 
   const now = Date.now();
   const payload = {
-    updated_at: normalizeTimestamp(new Date(now)),
+    updated_at: spot.isStale && basePayload?.updated_at
+      ? basePayload.updated_at
+      : normalizeTimestamp(new Date(now)),
     next_update_at: normalizeTimestamp(new Date(now + SPOT_REFRESH_MS)),
+    is_fallback: Boolean(spot.isStale),
+    fallback_note: spot.isStale ? 'Binance unavailable; serving last known spot price' : null,
     btc_usd: Number(spot.btcUsd.toFixed(2)),
     btc_change_24h_pct: Number.isFinite(spot.change24h) ? Number(spot.change24h.toFixed(3)) : null,
     source_btc: spot.sourceLabel,
@@ -466,7 +462,7 @@ export async function updateBtcRates() {
 
   memoryCache = payload;
   await writeDiskCache(payload);
-  await cacheSetJson(SHARED_CACHE_KEY, payload, { ttlSeconds: getSharedTtlSeconds(now) });
+  await cacheSetJson(SHARED_CACHE_KEY, payload, { ttlSeconds: getSharedTtlSeconds() });
   return payload;
 }
 

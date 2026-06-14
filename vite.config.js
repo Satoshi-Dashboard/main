@@ -21,14 +21,34 @@ export default defineConfig(({ mode }) => {
       minify: 'esbuild',
       cssCodeSplit: true,
       target: ['es2020', 'edge88', 'firefox78', 'chrome87', 'safari14'],
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            const normalizedId = id.replace(/\\/g, '/');
+            if (!normalizedId.includes('node_modules')) return undefined;
+
+            if (normalizedId.includes('/recharts/')) return 'vendor-recharts';
+            if (normalizedId.includes('/lightweight-charts/')) return 'vendor-lightweight-charts';
+            if (normalizedId.includes('/maplibre-gl/')) return 'vendor-maplibre';
+            if (normalizedId.includes('/leaflet/') || normalizedId.includes('/react-leaflet/')) return 'vendor-leaflet';
+
+            return undefined;
+          },
+        },
+      },
+    },
+    optimizeDeps: {
+      // Restrict dep crawl to main entry only — prevents scanning git worktrees
+      // under .claude/worktrees/ which have old files with removed dependencies.
+      entries: ['index.html'],
     },
     server: {
       host: true,
-      port: 5173,
-      strictPort: true,
+      port: process.env.PORT ? parseInt(process.env.PORT) : undefined,
       watch: {
         ignored: [
           '**/server/.runtime-cache/*.json',
+          '**/.claude/worktrees/**',
         ],
       },
       proxy: {

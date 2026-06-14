@@ -130,6 +130,7 @@ export default function AnimatedMetric({
   justify = 'start',
   align = 'baseline',
   animate = true,
+  disabled = false,
 }) {
   const config = buildMetricConfig({ value, variant, decimals, signed, prefix, suffix });
   const wrapperRef = useRef(null);
@@ -156,7 +157,9 @@ export default function AnimatedMetric({
     () => `${config?.prefix ?? ''}${formattedValue}${config?.suffix ?? ''}`,
     [config?.prefix, config?.suffix, formattedValue],
   );
-  const shouldAnimateCounter = Boolean(config && animate && !preferStaticResponsive);
+  const shouldAnimateCounter = Boolean(
+    config && animate && !disabled && !isResponsiveViewport && !preferStaticResponsive,
+  );
 
   useLayoutEffect(() => {
     if (!wrapperRef.current || typeof window === 'undefined') return undefined;

@@ -1,9 +1,8 @@
 // World Map Price Explorer — BTC price in currencies derived from Investing USD crosses
-// Globe uses Natural Earth 110m GeoJSON for pixel-accurate land shapes
-// Fallback to bounding-box mask if network unavailable
+// Globe uses MapLibre GL globe projection with currency capital markers
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { fetchJson } from '@/shared/lib/api.js';
+import maplibregl from 'maplibre-gl';
 import { fetchMultiCurrencyBtc } from '@/shared/services/priceApi.js';
 import AnimatedMetric from '@/shared/components/common/AnimatedMetric.jsx';
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery.js';
@@ -11,6 +10,9 @@ import { useModuleData } from '@/shared/hooks/useModuleData.js';
 import { ModuleShell, ModuleSourceFooter } from '@/shared/components/module/index.js';
 import { UI_COLORS } from '@/shared/constants/colors.js';
 import { formatMetaTimestamp } from '@/shared/utils/formatters.js';
+import MapLibreBase from '@/shared/map/MapLibreBase.jsx';
+import { GLOBE_DARK_STYLE_URL } from '@/shared/map/mapDarkStyle.js';
+import { CURRENCY_COORDS } from '@/shared/data/currencyCountryCoords.js';
 
 // ─── Currency data ──────────────────────────────────────────────────────────────
 const BASE_CURRENCY_META = [
@@ -48,10 +50,43 @@ const BASE_CURRENCY_META = [
 
 const EMPTY_CURRENCIES = BASE_CURRENCY_META.map(m => ({ ...m, price: null, change: null }));
 
-const BAND_CODES = ['JPY', 'INR', 'KRW', 'CNY', 'EUR', 'GBP', 'USD', 'RUB'];
 const REFRESH_MS = 30_000;
+const ROTATE_RESUME_MS = 6_000; // ms of user inactivity before auto-rotation resumes
+const ROTATE_DEG_PER_FRAME = 0.05; // axial spin speed (longitude pan per frame), ~react-globe.gl feel
 
 // UI_COLORS imported from @/shared/constants/colors.js
+
+/**
+ * 3-tier color scheme for currency markers based on 24h % change magnitude.
+ * Green: subtle → standard → vivid | Red: subtle → standard → vivid
+ */
+function getMarkerColor(change) {
+  if (!Number.isFinite(change)) {
+    return { border: 'rgba(180,205,255,0.20)', text: '#c8d8f8' };
+  }
+  const abs = Math.abs(change);
+  if (change > 0) {
+    if (abs >= 3) return { border: 'rgba(0,255,157,0.78)',   text: '#00ff9d' }; // vivid neon
+    if (abs >= 1) return { border: 'rgba(47,212,140,0.62)',  text: '#2FD48C' }; // standard
+    return               { border: 'rgba(90,176,144,0.42)',  text: '#7acbaa' }; // subtle sage
+  } else {
+    if (abs >= 3) return { border: 'rgba(255,40,40,0.78)',   text: '#ff3333' }; // vivid
+    if (abs >= 1) return { border: 'rgba(255,96,96,0.62)',   text: '#ff6060' }; // standard
+    return               { border: 'rgba(196,124,124,0.40)', text: '#c47c7c' }; // subtle rose
+  }
+}
+
+function fmtGlobePrice(price) {
+  if (!Number.isFinite(price)) return '--';
+  if (price >= 1_000_000) return (price / 1_000_000).toFixed(2) + 'M';
+  if (price >= 1_000)     return Math.round(price).toLocaleString('en-US');
+  return price.toFixed(2);
+}
+function fmtGlobeChange(change) {
+  if (!Number.isFinite(change)) return '--';
+  const sign = change > 0 ? '+' : '';
+  return `${sign}${change.toFixed(2)}%`;
+}
 
 function parseOverlayProviders(sourceLabel) {
   const src = String(sourceLabel || '').toUpperCase();
@@ -81,114 +116,7 @@ function getCurrencyName(code) {
   }
 }
 
-// ─── Land texture from GeoJSON ─────────────────────────────────────────────────
-const TEX_W = 2048, TEX_H = 1024;
-
-// Singleton promise — built once per page session, not per component mount
-let _landDotsPromise = null;
-
-// Draw GeoJSON land polygons onto an offscreen canvas → ImageData for fast lookup
-async function buildLandTexture() {
-  // Natural Earth 110m land polygons (public domain, ~60 KB)
-  // Use default browser cache — server sets Cache-Control: max-age=2592000 (30 days)
-  const payload = await fetchJson('/api/public/geo/land', { timeout: 10000 });
-  const geojson = payload?.data || payload;
-
-  const oc = document.createElement('canvas');
-  oc.width  = TEX_W;
-  oc.height = TEX_H;
-  const ctx = oc.getContext('2d');
-
-  ctx.fillStyle = '#000';
-  ctx.fillRect(0, 0, TEX_W, TEX_H);
-  ctx.fillStyle = '#fff';
-
-  // Equirectangular projection helpers
-  const lx = lon => ((lon + 180) / 360) * TEX_W;
-  const ly = lat => ((90  - lat)  / 180) * TEX_H;
-
-  for (const feature of geojson.features) {
-    const { type, coordinates } = feature.geometry;
-    // Support both Polygon and MultiPolygon
-    const polys = type === 'Polygon' ? [coordinates] : coordinates;
-    for (const poly of polys) {
-      for (const ring of poly) {
-        ctx.beginPath();
-        ring.forEach(([lo, la], i) => {
-          i === 0 ? ctx.moveTo(lx(lo), ly(la)) : ctx.lineTo(lx(lo), ly(la));
-        });
-        ctx.closePath();
-        ctx.fill();
-      }
-    }
-  }
-
-  return ctx.getImageData(0, 0, TEX_W, TEX_H);
-}
-
-// Fallback bounding-box land mask (used while loading or on network error)
-function isLandFallback(la, lo) {
-  let lon = ((lo % 360) + 540) % 360 - 180;
-  if (la > 10  && la < 72  && lon > -168 && lon < -52)  return true;
-  if (la > -56 && la < 13  && lon > -82  && lon < -34)  return true;
-  if (la > 36  && la < 71  && lon > -10  && lon < 35)   return true;
-  if (la > -35 && la < 38  && lon > -18  && lon < 52)   return true;
-  if (la > 10  && la < 75  && lon > 25   && lon < 140)  return true;
-  if (la > -11 && la < 28  && lon > 96   && lon < 141)  return true;
-  if (la > -44 && la < -10 && lon > 113  && lon < 154)  return true;
-  if (la > 60  && la < 84  && lon > -55  && lon < -16)  return true;
-  if (la > 30  && la < 46  && lon > 129  && lon < 146)  return true;
-  return false;
-}
-
-// Sample ImageData to check land (returns true if pixel is land/white)
-function sampleLand(imageData, latRad, lonRad) {
-  const lon = lonRad * 180 / Math.PI;
-  const lat = latRad * 180 / Math.PI;
-  const tx  = Math.round(((lon + 180) / 360) * (TEX_W - 1));
-  const ty  = Math.round(((90 - lat)  / 180) * (TEX_H - 1));
-  const cx  = Math.max(0, Math.min(TEX_W - 1, tx));
-  const cy  = Math.max(0, Math.min(TEX_H - 1, ty));
-  return imageData.data[(cy * TEX_W + cx) * 4] > 128;
-}
-
-// Build Fibonacci-distributed globe dots using a land-check function
-function buildDots(isLandFn, n = 4000) {
-  const PHI    = Math.PI * (3 - Math.sqrt(5));
-  const TWO_PI = 2 * Math.PI;
-  const dots   = [];
-  for (let i = 0; i < n; i++) {
-    const y     = 1 - (i / (n - 1)) * 2;
-    const theta = (PHI * i) % TWO_PI;
-    const lat   = Math.asin(Math.max(-1, Math.min(1, y)));
-    const lon   = theta > Math.PI ? theta - TWO_PI : theta;
-    if (isLandFn(lat, lon)) dots.push([lat, lon]);
-  }
-  return dots;
-}
-
-// Pre-build fallback dots synchronously (shown immediately on first paint)
-const FALLBACK_DOTS = buildDots(
-  (lat, lon) => isLandFallback(lat * 180 / Math.PI, lon * 180 / Math.PI)
-);
-
-// Fetch + build accurate dots once per session; reuse across mounts
-function getAccurateLandDots() {
-  if (!_landDotsPromise) {
-    _landDotsPromise = buildLandTexture()
-      .then(imageData => buildDots((lat, lon) => sampleLand(imageData, lat, lon), 5000))
-      .catch(() => FALLBACK_DOTS);
-  }
-  return _landDotsPromise;
-}
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function fmtPrice(price) {
-  if (!Number.isFinite(price)) return '--';
-  if (price >= 1_000_000) return (price / 1_000_000).toFixed(2) + 'M';
-  if (price >= 1_000)     return Math.round(price).toLocaleString('en-US');
-  return price.toFixed(2);
-}
 function CurrencyMetric({ value, className = '' }) {
   if (!Number.isFinite(value)) return '--';
   if (value >= 1_000_000) return <AnimatedMetric value={value} variant="compact" decimals={2} inline justify="end" align="center" className={className} />;
@@ -207,154 +135,6 @@ function formatPercentStatic(value) {
   if (!Number.isFinite(value)) return '--';
   const sign = value > 0 ? '+' : '';
   return `${sign}${value.toFixed(2)}%`;
-}
-
-// ─── Canvas renderer ──────────────────────────────────────────────────────────
-const VIEW_TILT = 0.30;
-
-function renderGlobe(canvas, elapsed, dots, bandData) {
-  const ctx = canvas.getContext('2d');
-  const W   = canvas.width;
-  const H   = canvas.height;
-
-  ctx.clearRect(0, 0, W, H);
-
-  const cx       = W * 0.44;
-  const cy       = H * 0.50;
-  const R        = Math.min(W * 0.33, H * 0.43);
-  const globeRot = elapsed * 0.00035;
-  const bandRot  = elapsed * 0.00055;
-
-  // ── Atmosphere ─────────────────────────────────────────────────────────
-  const atmGrd = ctx.createRadialGradient(cx, cy, R * 0.75, cx, cy, R * 1.38);
-  atmGrd.addColorStop(0, 'rgba(120,160,230,0.09)');
-  atmGrd.addColorStop(0.7, 'rgba(60,100,180,0.03)');
-  atmGrd.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = atmGrd;
-  ctx.beginPath();
-  ctx.arc(cx, cy, R * 1.38, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Outer ring
-  ctx.strokeStyle = 'rgba(180,205,255,0.15)';
-  ctx.lineWidth   = 1.5;
-  ctx.beginPath();
-  ctx.arc(cx, cy, R * 1.016, 0, Math.PI * 2);
-  ctx.stroke();
-
-  // ── Sphere background ──────────────────────────────────────────────────
-  const sphGrd = ctx.createRadialGradient(
-    cx - R * 0.22, cy - R * 0.22, R * 0.04, cx, cy, R
-  );
-  sphGrd.addColorStop(0,    'rgba(40,53,73,1)');
-  sphGrd.addColorStop(0.45, 'rgba(14,18,27,1)');
-  sphGrd.addColorStop(1,    'rgba(2,4,8,1)');
-  ctx.fillStyle = sphGrd;
-  ctx.beginPath();
-  ctx.arc(cx, cy, R, 0, Math.PI * 2);
-  ctx.fill();
-
-  // ── Grid lines (clipped to sphere) ─────────────────────────────────────
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(cx, cy, R * 0.998, 0, Math.PI * 2);
-  ctx.clip();
-
-  for (let latDeg = -60; latDeg <= 60; latDeg += 30) {
-    const latR   = latDeg * Math.PI / 180;
-    const screenY = cy - Math.sin(latR) * R * Math.cos(VIEW_TILT);
-    const xR     = Math.cos(latR) * R;
-    const yR     = xR * Math.sin(VIEW_TILT);
-    ctx.beginPath();
-    ctx.ellipse(cx, screenY, xR, Math.max(yR, 0.5), 0, 0, Math.PI * 2);
-    ctx.strokeStyle = latDeg === 0
-      ? 'rgba(160,185,255,0.13)'
-      : 'rgba(130,160,220,0.055)';
-    ctx.lineWidth = 0.6;
-    ctx.stroke();
-  }
-
-  for (let lonDeg = 0; lonDeg < 360; lonDeg += 30) {
-    const lonR  = lonDeg * Math.PI / 180 + globeRot;
-    const cosLon = Math.cos(lonR);
-    if (cosLon < 0) continue;
-    ctx.beginPath();
-    ctx.ellipse(cx, cy, Math.abs(Math.sin(lonR)) * R, R * Math.cos(VIEW_TILT), 0, 0, Math.PI * 2);
-    ctx.strokeStyle = `rgba(130,160,220,${cosLon * 0.065})`;
-    ctx.lineWidth   = 0.5;
-    ctx.stroke();
-  }
-
-  ctx.restore();
-
-  // ── Continent dots ─────────────────────────────────────────────────────
-  for (const [latR, lonR] of dots) {
-    const rLon = lonR + globeRot;
-    const x3   = Math.cos(latR) * Math.sin(rLon);
-    const y3   = Math.sin(latR);
-    const z3   = Math.cos(latR) * Math.cos(rLon);
-    if (z3 < -0.05) continue;
-
-    const y3v  = y3 * Math.cos(VIEW_TILT) - z3 * Math.sin(VIEW_TILT);
-    const z3v  = y3 * Math.sin(VIEW_TILT) + z3 * Math.cos(VIEW_TILT);
-    const alpha = Math.max(0, z3v) * 0.88 + 0.04;
-
-    ctx.beginPath();
-    ctx.arc(cx + x3 * R * 0.97, cy - y3v * R * 0.97, 1.4, 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(215,228,255,${alpha})`;
-    ctx.fill();
-  }
-
-  // ── Orbital currency band ──────────────────────────────────────────────
-  const orbitR  = R * 1.27;
-  const orbitTY = 0.24;
-
-  const panels = bandData.map((cur, i) => {
-    const angle = (i / bandData.length) * Math.PI * 2 + bandRot;
-    const x3    = Math.sin(angle) * orbitR;
-    const z3    = Math.cos(angle) * orbitR;
-    return {
-      cur, angle,
-      px: cx + x3,
-      py: cy + z3 * orbitTY,
-      depth: (z3 / orbitR + 1) / 2,
-    };
-  });
-
-  panels.sort((a, b) => a.depth - b.depth);
-
-  const PW = 92, PH = 30;
-  for (const { cur, angle, px, py, depth } of panels) {
-    const a = Math.max(0.12, depth);
-    ctx.save();
-    ctx.translate(px, py);
-    ctx.rotate(Math.cos(angle) * 0.10);
-
-    ctx.shadowColor = 'rgba(0,0,0,0.5)';
-    ctx.shadowBlur  = 5;
-    ctx.fillStyle   = `rgba(4,4,7,${a * 0.90})`;
-    ctx.strokeStyle = `rgba(200,215,240,${a * 0.28})`;
-    ctx.lineWidth   = 0.8;
-    ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(-PW / 2, -PH / 2, PW, PH, 5);
-    else ctx.rect(-PW / 2, -PH / 2, PW, PH);
-    ctx.fill();
-    ctx.stroke();
-    ctx.shadowBlur = 0;
-
-    ctx.fillStyle    = `rgba(255,255,255,${a})`;
-    ctx.font         = `bold 15px monospace`;
-    ctx.textAlign    = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(cur.code, -PW / 2 + 7, 0);
-
-    ctx.fillStyle = `rgba(195,215,255,${a * 0.85})`;
-    ctx.font      = `12px monospace`;
-    ctx.textAlign = 'right';
-    ctx.fillText(fmtPrice(cur.price), PW / 2 - 6, 0);
-
-    ctx.restore();
-  }
 }
 
 // ─── Ticker item ──────────────────────────────────────────────────────────────
@@ -381,15 +161,47 @@ function TickerItem({ code, change, useStaticMetrics = false }) {
   );
 }
 
+function TickerSkeleton() {
+  return (
+    <div className="flex items-center gap-4 px-3 py-1">
+      {Array.from({ length: 10 }).map((_, index) => (
+        <div key={index} className="flex items-center gap-2">
+          <div className="skeleton h-2 w-2 rounded-full" />
+          <div className="skeleton h-3 w-8 rounded" />
+          <div className="skeleton h-3 w-12 rounded" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function CurrencyListSkeleton() {
+  return (
+    <div className="space-y-0">
+      {Array.from({ length: 9 }).map((_, index) => (
+        <div key={index} className="flex min-h-[46px] items-center justify-between border-b border-[#141418] px-2.5 py-2">
+          <div className="flex items-center gap-2">
+            <div className="skeleton h-1.5 w-1.5 rounded-full" />
+            <div className="skeleton h-3 w-10 rounded" />
+          </div>
+          <div className="flex flex-col items-end gap-1.5">
+            <div className="skeleton h-3 w-24 rounded" />
+            <div className="skeleton h-2.5 w-14 rounded" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function S03_MultiCurrencyBoard() {
-  const canvasRef    = useRef(null);
-  const containerRef = useRef(null);
-  const rafRef       = useRef(null);
-  const startRef     = useRef(null);
-  const dotsRef      = useRef(FALLBACK_DOTS);     // start with fallback immediately
-  const bandDataRef  = useRef(EMPTY_CURRENCIES.filter(c => BAND_CODES.includes(c.code)));
-  const [search, setSearch]     = useState('');
+  const globeMapRef     = useRef(null);
+  const markersRef      = useRef([]);
+  const currenciesRef   = useRef([]);          // always-fresh prices for popup
+  const markerElsRef    = useRef({});          // code → DOM element (for live recoloring)
+  const [search, setSearch]                   = useState('');
+  const [selectedCurrency, setSelectedCurrency] = useState(null);
   const showDesktopOverlay = useMediaQuery('(min-width: 1024px)');
   const useStaticResponsiveMetrics = useMediaQuery('(max-width: 1023px)');
 
@@ -446,42 +258,169 @@ export default function S03_MultiCurrencyBoard() {
   const sourceLabel = priceData.sourceLabel;
   const lastUpdatedAt = priceData.lastUpdatedAt;
 
-  // Keep bandDataRef in sync with latest currencies for canvas rendering
+  // Keep currenciesRef in sync + recolor markers based on 24h change magnitude
   useEffect(() => {
-    bandDataRef.current = currencies.filter(c => BAND_CODES.includes(c.code));
+    currenciesRef.current = currencies;
+    currencies.forEach(({ code, change }) => {
+      const el = markerElsRef.current[code];
+      if (!el) return;
+      const { border, text } = getMarkerColor(change);
+      el.style.borderColor = border;
+      el.style.color = text;
+    });
   }, [currencies]);
 
-  // Load accurate GeoJSON land dots (singleton — fetched once per session)
+  // FlyTo selected currency capital on the globe
   useEffect(() => {
-    getAccurateLandDots().then(dots => { dotsRef.current = dots; });
-  }, []);
+    if (!selectedCurrency || !globeMapRef.current) return;
+    const coords = CURRENCY_COORDS[selectedCurrency];
+    if (!coords) return;
+    const map = globeMapRef.current;
+    // Pause axial spin during flyTo so the rAF loop doesn't fight flyTo's center.
+    map.__s03?.stop();
+    map.flyTo({ center: coords, zoom: 3, duration: 1500 });
+    const resume = setTimeout(() => map.__s03?.start(), 1600);
+    return () => clearTimeout(resume);
+  }, [selectedCurrency]);
 
-  // Canvas animation loop
-  useEffect(() => {
-    const canvas    = canvasRef.current;
-    const container = containerRef.current;
-    if (!canvas || !container) return;
+  // Globe ready — rotation with resume + currency markers with price popup
+  const handleGlobeReady = useCallback((map) => {
+    globeMapRef.current = map;
 
-    const resize = () => {
-      const r        = container.getBoundingClientRect();
-      canvas.width   = Math.floor(r.width);
-      canvas.height  = Math.floor(r.height);
+    // Keep the globe upright (no tilt) so the spin reads as a clean axial Earth rotation.
+    map.easeTo({ pitch: 0, bearing: 0, duration: 1200 });
+
+    // ── Auto-rotation with pause-and-resume ─────────────────────────────
+    let rafId = null;
+    let resumeTimer = null;
+
+    const stopRotation = () => {
+      if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
+      clearTimeout(resumeTimer);
     };
-    resize();
-    const ro = new ResizeObserver(resize);
-    ro.observe(container);
 
-    const loop = (ts) => {
-      if (!startRef.current) startRef.current = ts;
-      renderGlobe(canvas, ts - startRef.current, dotsRef.current, bandDataRef.current);
-      rafRef.current = requestAnimationFrame(loop);
+    const startRotation = () => {
+      if (rafId !== null) return; // already running
+      const tick = () => {
+        // Pan center longitude → clean west→east axial spin (like react-globe.gl autoRotate)
+        const c = map.getCenter();
+        map.setCenter([c.lng - ROTATE_DEG_PER_FRAME, c.lat]);
+        rafId = requestAnimationFrame(tick);
+      };
+      rafId = requestAnimationFrame(tick);
     };
-    rafRef.current = requestAnimationFrame(loop);
 
-    return () => {
-      cancelAnimationFrame(rafRef.current);
-      ro.disconnect();
+    // Expose control functions so the Reset button can call them
+    map.__s03 = { start: startRotation, stop: stopRotation };
+
+    const onUserInteraction = () => {
+      stopRotation();
+      resumeTimer = setTimeout(startRotation, ROTATE_RESUME_MS);
     };
+
+    map.on('mousedown', onUserInteraction);
+    map.on('dragstart', onUserInteraction);
+    map.on('touchstart', onUserInteraction);
+    // Clean up when MapLibre removes the map
+    map.on('remove', () => { stopRotation(); });
+    startRotation();
+
+    // ── Globe atmosphere — opaque dark back-hemisphere, no see-through ──
+    try {
+      map.setFog({
+        color: '#0d1117',
+        'high-color': '#080c12',
+        'horizon-blend': 0.06,
+        'space-color': '#000005',
+        'star-intensity': 0,
+      });
+    } catch { /* MapLibre version may not support fog — safe to ignore */ }
+
+    // ── Currency capital markers (one popup per marker) ──────────────────
+    markersRef.current.forEach(m => m.remove());
+    markersRef.current = [];
+    markerElsRef.current = {};
+
+    Object.entries(CURRENCY_COORDS).forEach(([code, coords]) => {
+      // Initial color: pick from currenciesRef if data already loaded
+      const cur0 = currenciesRef.current.find(c => c.code === code);
+      const { border: initBorder, text: initColor } = getMarkerColor(cur0?.change ?? null);
+
+      const el = document.createElement('div');
+      el.textContent = code;
+      el.setAttribute('style', [
+        'background:rgba(6,6,10,0.92)',
+        `border:1px solid ${initBorder}`,
+        'border-radius:4px',
+        `color:${initColor}`,
+        'font-family:monospace',
+        'font-size:10px',
+        'font-weight:700',
+        'padding:2px 7px',
+        'cursor:pointer',
+        'white-space:nowrap',
+        'pointer-events:auto',
+        'user-select:none',
+        'line-height:1.6',
+        'box-shadow:0 2px 8px rgba(0,0,0,0.85)',
+        'transition:border-color 0.18s,background 0.18s,color 0.18s',
+      ].join(';'));
+
+      markerElsRef.current[code] = el;   // register for live recoloring
+
+      el.addEventListener('mouseenter', () => {
+        el.style.background = 'rgba(18,28,56,0.97)';
+        el.style.borderColor = 'rgba(140,180,255,0.65)';
+        el.style.color = '#ffffff';
+      });
+      el.addEventListener('mouseleave', () => {
+        // Restore to current tier-color from ref (avoids stale closure)
+        const cur = currenciesRef.current.find(c => c.code === code);
+        const { border, text } = getMarkerColor(cur?.change ?? null);
+        el.style.background = 'rgba(6,6,10,0.92)';
+        el.style.borderColor = border;
+        el.style.color = text;
+      });
+
+      // One popup anchored to this marker — MapLibre handles toggle open/close
+      const popup = new maplibregl.Popup({
+        closeButton: true,
+        closeOnClick: true,
+        anchor: 'bottom',
+        offset: [0, -4],
+        maxWidth: '220px',
+        className: 's03-price-popup',
+      });
+
+      // Our listener fires first: update HTML → then MapLibre opens the popup
+      el.addEventListener('click', () => {
+        onUserInteraction();
+
+        const cur = currenciesRef.current.find(c => c.code === code);
+        const price = cur?.price;
+        const change = cur?.change;
+        const up = Number.isFinite(change) ? change >= 0 : null;
+        const changeColor = up === null ? 'rgba(255,255,255,0.38)' : (up ? '#2FD48C' : '#ff6060');
+        const changeArrow = up === null ? '' : (up ? '▲ ' : '▼ ');
+
+        popup.setHTML(`
+          <div style="font-family:monospace;line-height:1.4">
+            <div style="font-size:13px;font-weight:700;color:#e8f0ff;letter-spacing:0.04em">${code}</div>
+            <div style="font-size:10px;color:rgba(255,255,255,0.38);margin-bottom:7px">${cur?.name || ''}</div>
+            <div style="font-size:16px;font-weight:700;color:#fff">${fmtGlobePrice(price)}</div>
+            <div style="font-size:11px;margin-top:3px;color:${changeColor}">${changeArrow}${fmtGlobeChange(change)} (24h)</div>
+          </div>
+        `);
+
+        setSelectedCurrency(code);
+      });
+
+      const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
+        .setLngLat(coords)
+        .setPopup(popup)   // native toggle: click to open, click again / elsewhere to close
+        .addTo(map);
+      markersRef.current.push(marker);
+    });
   }, []);
 
   const filtered = currencies.filter(
@@ -491,6 +430,7 @@ export default function S03_MultiCurrencyBoard() {
   );
 
   const tickerItems = [...currencies, ...currencies];
+  const showCurrencySkeleton = isPriceLoading && !currencies.some((currency) => Number.isFinite(currency.price));
 
   return (
     <ModuleShell overflow="hidden">
@@ -505,33 +445,99 @@ export default function S03_MultiCurrencyBoard() {
             0%   { transform: translateX(0); }
             100% { transform: translateX(-50%); }
           }
+          /* Hide markers on the back hemisphere — prevents see-through ghost labels */
+          .maplibregl-marker-covered {
+            opacity: 0 !important;
+            pointer-events: none !important;
+            transition: opacity 0.2s !important;
+          }
+          /* Global base layer forces bg/shadow/padding/rounded with !important on
+             .maplibregl-popup-content — must re-assert with !important to win. */
+          .s03-price-popup .maplibregl-popup-content {
+            background: rgba(5,5,9,0.97) !important;
+            border: 1px solid rgba(160,190,255,0.18) !important;
+            border-radius: 7px !important;
+            padding: 10px 13px !important;
+            box-shadow: 0 6px 28px rgba(0,0,0,0.75) !important;
+            color: #fff;
+          }
+          .s03-price-popup .maplibregl-popup-tip {
+            display: block !important;
+            border-top-color: rgba(5,5,9,0.97) !important;
+          }
+          .s03-price-popup .maplibregl-popup-close-button {
+            color: rgba(255,255,255,0.35);
+            font-size: 15px;
+            padding: 3px 7px;
+            line-height: 1;
+          }
+          .s03-price-popup .maplibregl-popup-close-button:hover {
+            color: rgba(255,255,255,0.75);
+            background: transparent;
+          }
         `}</style>
-        <div style={{
-          display: 'inline-flex',
-          animation: 's03-ticker 75s linear infinite',
-          whiteSpace: 'nowrap',
-          opacity: isPriceLoading ? 0 : 1,
-          transition: 'opacity 0.4s ease',
-        }}>
+        {showCurrencySkeleton ? (
+          <TickerSkeleton />
+        ) : (
+          <div style={{
+            display: 'inline-flex',
+            animation: 's03-ticker 75s linear infinite',
+            whiteSpace: 'nowrap',
+          }}>
             {tickerItems.map((c, i) => (
-            <TickerItem key={i} code={c.code} change={c.change} useStaticMetrics={useStaticResponsiveMetrics} />
-          ))}
-        </div>
+              <TickerItem key={i} code={c.code} change={c.change} useStaticMetrics={useStaticResponsiveMetrics} />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ── Globe + Right panel ────────────────────────────────────────── */}
       <div className="min-h-0 flex flex-col lg:flex-1 lg:flex-row">
 
-        {/* Globe canvas */}
-        <div
-          ref={containerRef}
-          className="visual-canvas-surface relative h-[42vh] min-h-[240px] max-h-[420px] min-w-0 flex-none sm:h-[48vh] sm:min-h-[280px] sm:max-h-[500px] lg:h-auto lg:min-h-0 lg:max-h-none lg:flex-1"
-        >
-          <canvas
-            ref={canvasRef}
-            className="visual-canvas-surface"
-            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+        {/* Globe — MapLibre 3D */}
+        <div className="visual-canvas-surface relative h-[42vh] min-h-[240px] max-h-[420px] min-w-0 flex-none sm:h-[48vh] sm:min-h-[280px] sm:max-h-[500px] lg:h-auto lg:min-h-0 lg:max-h-none lg:flex-1">
+          <MapLibreBase
+            style={GLOBE_DARK_STYLE_URL}
+            projection="globe"
+            center={[10, 20]}
+            zoom={1.5}
+            minZoom={1}
+            maxZoom={8}
+            onMapReady={handleGlobeReady}
           />
+
+          {/* Reset globe orientation button */}
+          <button
+            title="Reset globe to north"
+            onClick={() => {
+              const map = globeMapRef.current;
+              if (!map) return;
+              map.__s03?.stop();
+              map.easeTo({ center: [10, 20], bearing: 0, pitch: 0, zoom: 1.5, duration: 800 });
+              setTimeout(() => map.__s03?.start(), 900);
+            }}
+            style={{
+              position: 'absolute',
+              bottom: 14,
+              right: 14,
+              zIndex: 1000,
+              background: 'rgba(8,8,12,0.85)',
+              border: '1px solid rgba(255,255,255,0.15)',
+              borderRadius: 6,
+              color: 'rgba(255,255,255,0.70)',
+              fontFamily: 'monospace',
+              fontSize: 11,
+              padding: '5px 10px',
+              cursor: 'pointer',
+              backdropFilter: 'blur(4px)',
+              transition: 'border-color 0.15s, color 0.15s',
+              lineHeight: 1.4,
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.30)'; e.currentTarget.style.color = 'rgba(255,255,255,0.90)'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; e.currentTarget.style.color = 'rgba(255,255,255,0.70)'; }}
+          >
+            ↺ Reset
+          </button>
 
           {showDesktopOverlay && (
             <ModuleSourceFooter
@@ -573,18 +579,26 @@ export default function S03_MultiCurrencyBoard() {
             style={{
               scrollbarWidth: 'thin', scrollbarColor: '#2a2a2a transparent',
               WebkitOverflowScrolling: 'touch',
-              opacity: isPriceLoading ? 0 : 1,
-              transition: 'opacity 0.4s ease',
             }}
           >
-            {filtered.map((c) => {
+            {showCurrencySkeleton ? (
+              <CurrencyListSkeleton />
+            ) : filtered.map((c) => {
               const hasChange = Number.isFinite(c.change);
               const up = hasChange ? c.change >= 0 : null;
+              const hasCoords = Boolean(CURRENCY_COORDS[c.code]);
               return (
-                <div key={c.code} style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '8px 10px', borderBottom: '1px solid #141418', minHeight: 46,
-                }}>
+                <div
+                  key={c.code}
+                  onClick={() => hasCoords && setSelectedCurrency(c.code)}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '8px 10px', borderBottom: '1px solid #141418', minHeight: 46,
+                    cursor: hasCoords ? 'pointer' : 'default',
+                    background: selectedCurrency === c.code ? 'rgba(60,80,140,0.18)' : 'transparent',
+                    transition: 'background 0.15s',
+                  }}
+                >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
                     <div style={{
                       width: 6, height: 6, borderRadius: '50%', flexShrink: 0,

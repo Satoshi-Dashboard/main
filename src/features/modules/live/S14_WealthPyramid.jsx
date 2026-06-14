@@ -30,6 +30,34 @@ function buildTiers(payload, prevTiers) {
   });
 }
 
+function SkeletonText({ width = 88, height = '1em' }) {
+  return <span className="skeleton inline-block rounded" style={{ width, height }} />;
+}
+
+function UnavailablePanel() {
+  return (
+    <div className="flex min-h-0 flex-1 items-center justify-center px-4 text-center font-mono text-white/60">
+      Wealth distribution is temporarily unavailable.
+    </div>
+  );
+}
+
+function PyramidSkeleton() {
+  return (
+    <div className="min-h-0 flex-1 px-8 pb-6 pt-2">
+      <div className="flex h-full flex-col items-center justify-center gap-2">
+        {Array.from({ length: TIER_TEMPLATE.length }).map((_, index) => (
+          <div
+            key={index}
+            className="skeleton h-12 rounded"
+            style={{ width: `${22 + index * 8}%`, maxWidth: 650 }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // SVG layout constants
 const VW = 1000;
 const VH = 700;
@@ -50,7 +78,7 @@ export default function S13_WealthPyramid() {
   const [meta, setMeta] = useState({ updatedAt: '', updatedAtLocal: '', fetchedAt: '', fetchedAtLocal: '' });
   const viewportWidth = useWindowWidth();
 
-  useModuleData(fetchAddressesRicher, {
+  const { loading, error } = useModuleData(fetchAddressesRicher, {
     refreshMs: REFRESH_MS,
     transform: (payload) => {
       setTiers((prev) => buildTiers(payload, prev));
@@ -67,6 +95,9 @@ export default function S13_WealthPyramid() {
   });
 
   const isCompact = viewportWidth < 768;
+  const hasLiveTiers = tiers.some((tier) => Number.isFinite(tier.addresses));
+  const showPyramidSkeleton = loading && !hasLiveTiers;
+  const showUnavailable = Boolean(!loading && !hasLiveTiers && error);
   const maxAddresses = Math.max(...tiers.map((tier) => (Number.isFinite(tier.addresses) ? tier.addresses : 0)), 1);
 
   return (
@@ -75,7 +106,9 @@ export default function S13_WealthPyramid() {
         <ModuleTitle>Bitcoin Wealth Distribution</ModuleTitle>
       </div>
 
-      {isCompact ? (
+      {showUnavailable ? (
+        <UnavailablePanel />
+      ) : isCompact ? (
         <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-3 pb-3 sm:px-4">
           {tiers.map((tier) => {
             const ratio = Number.isFinite(tier.addresses) ? Math.max(0.06, tier.addresses / maxAddresses) : 0.06;
@@ -84,7 +117,7 @@ export default function S13_WealthPyramid() {
                 <div className="mb-2 flex items-center justify-between gap-2">
                   <span className="font-mono font-bold" style={{ fontSize: 'var(--fs-label)', color: UI_COLORS.brand }}>{tier.threshold}</span>
                   <span className="font-mono text-white/75" style={{ fontSize: 'var(--fs-caption)' }}>
-                    {Number.isFinite(tier.addresses) ? tier.addresses.toLocaleString() : '—'} addresses
+                    {Number.isFinite(tier.addresses) ? `${tier.addresses.toLocaleString()} addresses` : <SkeletonText width={120} />}
                   </span>
                 </div>
                 <div className="h-2 w-full overflow-hidden rounded bg-white/10">
@@ -94,6 +127,8 @@ export default function S13_WealthPyramid() {
             );
           })}
         </div>
+      ) : showPyramidSkeleton ? (
+        <PyramidSkeleton />
       ) : (
         <div className="min-h-0 flex-1 items-center justify-center px-4 pb-4 md:flex">
           <svg

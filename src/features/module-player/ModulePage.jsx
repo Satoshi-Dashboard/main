@@ -24,6 +24,7 @@ import {
   SharedMetaBottomStrip,
   SharedMetaTopStrip,
 } from '@/features/module-player/components/SharedModuleMeta.jsx';
+import ModuleErrorBoundary from '@/shared/components/common/ModuleErrorBoundary.jsx';
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery.js';
 import { absoluteUrl, DEFAULT_OG_IMAGE, usePageSEO } from '@/shared/hooks/usePageSEO.js';
 import { trackModuleNavigation, trackModuleViewed, trackSeoNavigationClick } from '@/shared/lib/analytics.js';
@@ -227,26 +228,17 @@ export default function ModulePage({ forcedSlug = null }) {
   const navigate = useNavigate();
   const activeSlug = forcedSlug || slug;
 
-  // ── Async module initialization guard ────────────────────────────────────
-  const [ready, setReady] = useState(Boolean(MODULES));
-  useEffect(() => {
-    if (!ready) {
-      ensureModulesLoaded().then(() => setReady(true));
-    }
-  }, [ready]);
-
   const currentIndex = useMemo(() => {
-    if (!MODULES) return 0;
     const index = MODULES.findIndex((m) => m.slug === activeSlug);
     return index >= 0 ? index : 0;
-  }, [activeSlug, ready]);
+  }, [activeSlug]);
 
-  const module = (MODULES_BY_SLUG[activeSlug] || MODULES?.[currentIndex]) ?? null;
+  const module = (MODULES_BY_SLUG[activeSlug] || MODULES[currentIndex]) ?? null;
   const Component = module?.component ?? null;
-  const seo = useMemo(() => module ? getModuleSEO(module.slugBase) : { title: '', description: '', keywords: [] }, [module?.slugBase]);
+  const seo = useMemo(() => module ? getModuleSEO(module.slugBase) : { title: '', description: '', keywords: [] }, [module]);
   const canonicalPath = module?.code === FIRST_MODULE?.code ? '/' : `/module/${module?.slug ?? ''}`;
-  const isNoindexPreview = useMemo(() => module ? NOINDEX_PREVIEW_SLUGS.has(module.slugBase) : false, [module?.slugBase]);
-  const hasBlockingOverlay = useMemo(() => module ? BLOCKING_OVERLAY_SLUGS.has(module.slugBase) : false, [module?.slugBase]);
+  const isNoindexPreview = useMemo(() => module ? NOINDEX_PREVIEW_SLUGS.has(module.slugBase) : false, [module]);
+  const hasBlockingOverlay = useMemo(() => module ? BLOCKING_OVERLAY_SLUGS.has(module.slugBase) : false, [module]);
   const moduleSchema = useMemo(
     () => module ? ([
       {
@@ -277,7 +269,7 @@ export default function ModulePage({ forcedSlug = null }) {
         ],
       },
     ]) : [],
-    [canonicalPath, module?.title, seo.description, seo.title],
+    [canonicalPath, module, seo.description, seo.title],
   );
 
   usePageSEO({
@@ -554,7 +546,7 @@ export default function ModulePage({ forcedSlug = null }) {
     }
   }, [activeTrackSrc, isPlaying, marketAudioReady]);
 
-  if (!ready || !module || !FIRST_MODULE) {
+  if (!module || !FIRST_MODULE) {
     return <ModuleContentFallback title="Loading…" />;
   }
 
@@ -646,13 +638,17 @@ export default function ModulePage({ forcedSlug = null }) {
           )}
           <div className={`relative min-h-0 ${useResponsiveScroll ? 'min-h-full flex-none' : 'flex-1'}`}>
             {hasBlockingOverlay ? (
-              <Suspense fallback={<ModuleContentFallback title={module.title} />}>
-                <BlockedPreviewPoster title={module.title} onOpenDonate={() => setDonateOpen(true)} />
-              </Suspense>
+              <ModuleErrorBoundary key={module.slug}>
+                <Suspense fallback={<ModuleContentFallback title={module.title} />}>
+                  <BlockedPreviewPoster title={module.title} onOpenDonate={() => setDonateOpen(true)} />
+                </Suspense>
+              </ModuleErrorBoundary>
             ) : (
-              <Suspense fallback={<ModuleContentFallback title={module.title} />}>
-                <Component onOpenDonate={() => setDonateOpen(true)} />
-              </Suspense>
+              <ModuleErrorBoundary key={module.slug}>
+                <Suspense fallback={<ModuleContentFallback title={module.title} />}>
+                  <Component onOpenDonate={() => setDonateOpen(true)} />
+                </Suspense>
+              </ModuleErrorBoundary>
             )}
             {hasBlockingOverlay && (
               <div

@@ -253,11 +253,6 @@ textarea:focus-visible,
   forced-color-adjust: none;
 }
 
-.visual-map-surface .leaflet-container,
-.visual-map-surface .leaflet-pane,
-.visual-map-surface .leaflet-overlay-pane,
-.visual-map-surface .leaflet-tooltip,
-.visual-map-surface .leaflet-control-container,
 .visual-chart-surface svg,
 .visual-canvas-surface canvas,
 .visual-svg-surface svg {
@@ -265,10 +260,6 @@ textarea:focus-visible,
   forced-color-adjust: none;
   print-color-adjust: exact;
   -webkit-print-color-adjust: exact;
-}
-
-.visual-map-surface .leaflet-container {
-  background: #101010 !important;
 }
 
 @media (max-width: 1023px) {
@@ -292,5 +283,16 @@ textarea:focus-visible,
     width: 0 !important;
     height: 0 !important;
     display: none !important;
+  }
+}
+
+@layer base {
+  /* Reset default popup chrome so each module styles its own content div.
+     S03 styles its popup card directly (.s03-price-popup) and is excluded here. */
+  .maplibregl-popup:not(.s03-price-popup) .maplibregl-popup-content {
+    @apply bg-transparent! shadow-none! p-0! rounded-none!;
+  }
+  .maplibregl-popup:not(.s03-price-popup) .maplibregl-popup-tip {
+    @apply hidden!;
   }
 }
