@@ -14,7 +14,7 @@
     Satoshi Dashboard turns scattered Bitcoin metrics into a calmer, one-module-at-a-time experience. It combines live market and network modules, public editorial routes, a cache-aware API layer, and explicit source transparency instead of hiding refresh limits or fallback behavior.
   </p>
 </div>
-
+.
 <details>
   <summary>Table of Contents</summary>
   <ol>
