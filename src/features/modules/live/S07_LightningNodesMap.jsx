@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Info from 'lucide-react/dist/esm/icons/info';
 import {
   useCompactViewport,
@@ -16,9 +16,13 @@ import {
 import { fmt } from '@/shared/utils/formatters.js';
 import { UI_COLORS as SHARED_UI_COLORS } from '@/shared/constants/colors.js';
 import { ModuleShell } from '@/shared/components/module/index.js';
-import MapLibreBase from '@/shared/map/MapLibreBase.jsx';
-import { addChoroplethLayer } from '@/shared/map/choroplethUtils.js';
-import { CHOROPLETH_DARK_STYLE } from '@/shared/map/mapDarkStyle.js';
+import S07MapContainer from './S07MapContainer.jsx';
+import {
+  getFillColor,
+  getFillColorByPerCapita,
+  formatPerCapitaValue,
+  formatNextUpdateDelayMs,
+} from '@/features/modules/live/shared/mapColorUtils.js';
 
 const LIGHTNING_WORLD_ENDPOINT        = '/api/public/lightning/world';
 const LIGHTNING_CHANNELS_GEO_ENDPOINT = '/api/public/lightning/channels-geo';
@@ -78,7 +82,7 @@ function parseLightningNetworkData(payloadData) {
       ? row[6].trim()
       : String(row[6]?.en || row[6]?.['pt-BR'] || Object.values(row[6] || {})[0] || '').trim();
     const countryName = countryNameRaw || ISO_COUNTRY_NAMES[countryCode] || UNKNOWN_COUNTRY_LABEL;
-    if (!channels || capacity < 500_000) return;
+    // Show all nodes with valid coordinates (removed capacity filter)
     points.push({
       lat, lng, capacity, channels,
       alias:       String(row[3] || '').trim() || '—',
@@ -93,7 +97,7 @@ function parseLightningNetworkData(payloadData) {
 
 function getNetworkNodeMetricColor(node, metricType, scale, avgDistByPubkey) {
   const metricValue = getNetworkMetricValue(node, metricType, avgDistByPubkey);
-  return getColorByScale(metricValue, scale);
+  return getFillColorByPerCapita(metricValue, scale);
 }
 
 const BTC_FORMATTER = new Intl.NumberFormat('en-US', {
@@ -194,48 +198,10 @@ function computePerCapitaScale(maxVal, metricType) {
   ];
 }
 
-function getColorByScale(value, scale) {
-  const v = Number(value) || 0;
-  if (v <= 0) return '#141414';
-  return (scale.find((s) => v >= s.minVal) || {}).color || scale[scale.length - 1].color || '#141414';
-}
-
-function getDensityStepByCount(count) {
-  const v = Number(count) || 0;
-  return NODE_DENSITY_SCALE.find((s) => v >= s.minVal) || null;
-}
-function getFillColorNodes(count) {
-  const v = Number(count) || 0;
-  if (v <= 0) return '#141414';
-  return getDensityStepByCount(v)?.color || '#141414';
-}
-function getDensityLabel(count) {
-  return getDensityStepByCount(count)?.label || 'No data';
-}
-
-function formatPerCapitaValue(value, metricType) {
-  const n = Number(value);
-  if (metricType === 'capacity') {
-    if (!Number.isFinite(n) || n <= 0) return '0.00 BTC /M';
-    return `${BTC_FORMATTER.format(n)} BTC /M`;
-  }
-  if (!Number.isFinite(n) || n <= 0) return '0.0 /M';
-  return n >= 10 ? `${n.toFixed(1)} /M` : `${n.toFixed(2)} /M`;
-}
-
 function formatBtcFromSats(value) {
   const sats = Number(value);
   if (!Number.isFinite(sats) || sats <= 0) return '0 BTC';
   return `${BTC_FORMATTER.format(sats / 100_000_000)} BTC`;
-}
-
-function formatNextUpdateDelay(nextUpdateMs) {
-  if (!Number.isFinite(nextUpdateMs)) return 'N/A';
-  const diffMs = nextUpdateMs - Date.now();
-  if (diffMs <= 0) return 'now';
-  const minutes = Math.ceil(diffMs / 60_000);
-  if (minutes < 60) return `${minutes} min`;
-  return `${Math.ceil(minutes / 60)} h`;
 }
 
 function haversineKm(lat1, lng1, lat2, lng2) {
@@ -276,10 +242,6 @@ function parseLightningCountryCounts(payload) {
   return [...map.values()].sort((a, b) => b.nodes - a.nodes);
 }
 
-// MapLibre layer IDs
-const CHOROPLETH_LAYERS = ['s07-fill', 's07-fill-border'];
-const NETWORK_LAYERS    = ['s07-channel-lines', 's07-clusters', 's07-cluster-count', 's07-unclustered'];
-
 export default function S07_LightningNodesMap() {
   const [payload,              setPayload]              = useState(null);
   const [fallbackPayload,     setFallbackPayload]      = useState(null);
@@ -303,20 +265,6 @@ export default function S07_LightningNodesMap() {
   const [networkSortDir,       setNetworkSortDir]       = useState('desc');
   const [nowTs,                setNowTs]                = useState(() => Date.now());
 
-  // MapLibre refs
-  const mapRef     = useRef(null);
-  const layerRef   = useRef(null);  // choropleth { updateColors, destroy }
-  const tooltipRef = useRef(null);
-  const [mapReady, setMapReady] = useState(false);
-
-  // Closure refs — keep event handlers current without re-registering them
-  const isAbsoluteRef      = useRef(isAbsolute);
-  const metricTypeRef      = useRef(metricType);
-  const statsByCodeRef     = useRef({});
-  const perCapitaByCodeRef = useRef({});
-  const activeScaleRef     = useRef(NODE_DENSITY_SCALE);
-  const featureNameByCodeRef = useRef(new Map());
-
   const isCompactViewport = useCompactViewport();
   const { data: countriesGeo, loading: geoLoading, error: geoError } = useCountriesGeoJson();
   const { populationMap, popDataYear, popSource, popLastFetched } = useWorldBankPopulation();
@@ -333,6 +281,9 @@ export default function S07_LightningNodesMap() {
   useEffect(() => {
     if (layerMode === 'bubble' && metricType === 'nodes') {
       setMetricType('channels');
+    }
+    if (layerMode !== 'bubble' && metricType === 'dist') {
+      setMetricType('nodes');
     }
   }, [layerMode, metricType]);
 
@@ -403,13 +354,13 @@ export default function S07_LightningNodesMap() {
   }, []);
 
   useEffect(() => {
-    if (geoError) setError((prev) => prev || geoError);
-  }, [geoError]);
-
-  useEffect(() => {
     const timer = setInterval(() => setNowTs(Date.now()), 30_000);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    if (geoError) setError((prev) => prev || geoError);
+  }, [geoError]);
 
   // Fetch channel geo lines (network mode only)
   useEffect(() => {
@@ -440,13 +391,17 @@ export default function S07_LightningNodesMap() {
   }, [layerMode]);
 
   const nextUpdateDelay = useMemo(
-    () => formatNextUpdateDelay((payload?.fetched_at || nowTs) + REFRESH_INTERVAL_MS),
+    () => formatNextUpdateDelayMs((payload?.fetched_at || nowTs) + REFRESH_INTERVAL_MS),
     [payload?.fetched_at, nowTs],
   );
   const effectivePayload = payload || fallbackPayload;
   const sourceProviderLabel = effectivePayload?.source_provider || 'mempool.space';
   const showBreakdownPanel  = !isCompactViewport || isBreakdownExpanded;
   const showDensityLegend   = !isCompactViewport || isDensityExpanded;
+
+  const isUsingFallback = !payload && !!fallbackPayload;
+
+  const countryCounts = useMemo(() => parseLightningCountryCounts(effectivePayload?.data), [effectivePayload?.data]);
 
   const featureCodeByName = useMemo(() => {
     const map = new Map();
@@ -473,13 +428,6 @@ export default function S07_LightningNodesMap() {
     });
     return map;
   }, [countriesGeo]);
-
-  // Keep closure ref in sync
-  useEffect(() => { featureNameByCodeRef.current = featureNameByCode; }, [featureNameByCode]);
-
-  const isUsingFallback = !payload && !!fallbackPayload;
-
-  const countryCounts = useMemo(() => parseLightningCountryCounts(effectivePayload?.data), [effectivePayload?.data]);
 
   const resolvedCountryRows = useMemo(() => {
     return countryCounts.map((row) => {
@@ -630,11 +578,19 @@ export default function S07_LightningNodesMap() {
     });
   }, [layerMode, networkData.points, networkSortCol, networkSortDir, avgDistByPubkey]);
 
+  // Keep the latest list length in a ref so the progressive pump never reads
+  // a stale closure, and the reset effect can depend on the length only —
+  // payload refetches every 60 s create a new array identity with same data.
+  const sortedNetworkNodesLengthRef = useRef(0);
+  useEffect(() => {
+    sortedNetworkNodesLengthRef.current = sortedNetworkNodes.length;
+  }, [sortedNetworkNodes]);
+
   useEffect(() => {
     if (layerMode !== 'bubble') return undefined;
 
     setVisibleNetworkNodeCount(INITIAL_NETWORK_ROWS);
-    if (sortedNetworkNodes.length <= INITIAL_NETWORK_ROWS) return undefined;
+    if (sortedNetworkNodesLengthRef.current <= INITIAL_NETWORK_ROWS) return undefined;
 
     let cancelled = false;
     let timer = null;
@@ -643,8 +599,9 @@ export default function S07_LightningNodesMap() {
       timer = setTimeout(() => {
         if (cancelled) return;
         setVisibleNetworkNodeCount((current) => {
-          const next = Math.min(sortedNetworkNodes.length, current + NETWORK_ROWS_BATCH);
-          if (next < sortedNetworkNodes.length) pump();
+          const total = sortedNetworkNodesLengthRef.current;
+          const next = Math.min(total, current + NETWORK_ROWS_BATCH);
+          if (next < total) pump();
           return next;
         });
       }, NETWORK_ROWS_BATCH_DELAY_MS);
@@ -652,7 +609,7 @@ export default function S07_LightningNodesMap() {
 
     pump();
     return () => { cancelled = true; if (timer) clearTimeout(timer); };
-  }, [layerMode, sortedNetworkNodes, metricType, networkSortCol, networkSortDir]);
+  }, [layerMode, sortedNetworkNodes.length, networkSortCol, networkSortDir, metricType]);
 
   const visibleNetworkNodes = useMemo(
     () => sortedNetworkNodes.slice(0, visibleNetworkNodeCount),
@@ -692,347 +649,45 @@ export default function S07_LightningNodesMap() {
       .sort((a, b) => b.perCapitaActive - a.perCapitaActive);
   }, [resolvedCountryRows, isAbsolute, metricType, populationMap, perCapitaByCode]);
 
+  // ── Country hover tooltip (choropleth mode) — mirrors the S06 pattern ──
+  const tooltipRef = useRef(null);
+  const hoverDataRef = useRef({});
+  useEffect(() => {
+    hoverDataRef.current = { statsByCode, perCapitaByCode, isAbsolute, metricType, featureNameByCode };
+  }, [statsByCode, perCapitaByCode, isAbsolute, metricType, featureNameByCode]);
+
+  const handleHoverCountry = useCallback((code, evt) => {
+    const el = tooltipRef.current;
+    if (!el) return;
+    if (!code || !evt) {
+      el.style.display = 'none';
+      return;
+    }
+    const hover = hoverDataRef.current;
+    const name = hover.featureNameByCode?.get(code) || ISO_COUNTRY_NAMES[code] || code;
+    let valueLabel;
+    if (hover.isAbsolute) {
+      const val = getMetricRawValue(hover.statsByCode?.[code], hover.metricType);
+      valueLabel = formatMetricValue(val, hover.metricType);
+    } else {
+      const pc = hover.perCapitaByCode?.[code];
+      const pcVal = pc
+        ? (hover.metricType === 'nodes' ? pc.nodes : hover.metricType === 'channels' ? pc.channels : pc.capacity)
+        : 0;
+      valueLabel = formatPerCapitaValue(pcVal, hover.metricType);
+    }
+    el.textContent = `${name} (${code}): ${valueLabel} — ${METRIC_LABELS[hover.metricType] || ''}`;
+    el.style.display = 'block';
+    el.style.left = `${evt.offsetX + 14}px`;
+    el.style.top  = `${evt.offsetY - 10}px`;
+  }, []);
+
   const maxChannels        = Number(effectivePayload?.data?.maxChannels)  || 0;
   const maxLiquidity       = Number(effectivePayload?.data?.maxLiquidity) || 0;
   const avgChannelsPerNode = totals.nodes > 0 ? totals.channels / totals.nodes : 0;
   const hasCountryData     = countryCounts.length > 0;
   const isLoading          = (!hasCountryData && apiLoading && !fallbackPayload) || (!hasCountryData && geoLoading);
-  const isMapLoading       = (!effectivePayload && apiLoading && !fallbackPayload) || (!countriesGeo && geoLoading);
-
-  // ── Sync closure refs ──────────────────────────────────────────────────────
-  useEffect(() => { isAbsoluteRef.current = isAbsolute; }, [isAbsolute]);
-  useEffect(() => { metricTypeRef.current = metricType; }, [metricType]);
-  useEffect(() => { statsByCodeRef.current = statsByCode; }, [statsByCode]);
-  useEffect(() => { perCapitaByCodeRef.current = perCapitaByCode; }, [perCapitaByCode]);
-  useEffect(() => { activeScaleRef.current = activeScale; }, [activeScale]);
-
-  // ── Build colorMap for choropleth fill ────────────────────────────────────
-  const colorMap = useMemo(() => {
-    if (!countriesGeo?.features) return {};
-    const result = {};
-    countriesGeo.features.forEach((feature) => {
-      const code = getFeatureCountryCode(feature);
-      if (!code) return;
-      let color;
-      if (isAbsolute) {
-        const val = getMetricRawValue(statsByCode[code], metricType);
-        color = metricType === 'nodes' ? getFillColorNodes(val) : getColorByScale(val, activeScale);
-      } else {
-        const pc = perCapitaByCode[code];
-        if (!pc) { color = '#141414'; }
-        else {
-          const val = metricType === 'nodes' ? pc.nodes : metricType === 'channels' ? pc.channels : pc.capacity;
-          color = getColorByScale(val, activeScale);
-        }
-      }
-      if (color && color !== '#141414') result[code] = color;
-    });
-    return result;
-  }, [countriesGeo, statsByCode, perCapitaByCode, activeScale, isAbsolute, metricType]);
-
-  // ── Tooltip HTML builder (uses refs for freshness) ────────────────────────
-  const getTooltipHtml = useCallback((code) => {
-    const isAbs  = isAbsoluteRef.current;
-    const metric = metricTypeRef.current;
-    const scl    = activeScaleRef.current;
-    const stats  = statsByCodeRef.current[code] || { nodes: 0, channels: 0, capacity: 0 };
-    const pc     = perCapitaByCodeRef.current[code];
-    const name   = featureNameByCodeRef.current.get(code) || ISO_COUNTRY_NAMES[code] || code || '';
-    const display = code && code !== '-99' ? code : UNKNOWN_COUNTRY_LABEL;
-
-    if (!stats.nodes && !stats.channels && !stats.capacity && !pc) return '';
-
-    if (!isAbs) {
-      const pcVal = pc ? (metric === 'nodes' ? pc.nodes : metric === 'channels' ? pc.channels : pc.capacity) : null;
-      if (pcVal == null || pcVal <= 0) return `<b>${name}</b> (${display}): no per-capita data`;
-      const step = scl.find((s) => pcVal >= s.minVal);
-      return `<b>${name}</b> (${display})<br/>${formatPerCapitaValue(pcVal, metric)} — ${step?.label ?? 'Minimal'}`;
-    }
-    if (metric === 'nodes') {
-      return `<b>${name}</b> (${display})<br/>${fmt.num(stats.nodes)} nodes · ${fmt.num(stats.channels)} ch · ${formatBtcFromSats(stats.capacity)}<br/>${getDensityLabel(stats.nodes)}`;
-    }
-    if (metric === 'channels') {
-      const step = scl.find((s) => stats.channels >= s.minVal);
-      return `<b>${name}</b> (${display})<br/>${fmt.num(stats.channels)} channels · ${fmt.num(stats.nodes)} nodes<br/>${step?.label ?? 'Minimal'}`;
-    }
-    const step = scl.find((s) => stats.capacity >= s.minVal);
-    return `<b>${name}</b> (${display})<br/>${formatBtcFromSats(stats.capacity)} · ${fmt.num(stats.nodes)} nodes<br/>${step?.label ?? 'Minimal'}`;
-  }, []);
-
-  // ── MapLibre onMapReady — set up network sources + layers (hidden) ────────
-  const handleMapReady = useCallback((map) => {
-    mapRef.current = map;
-
-    // Fit to world bounds immediately so initial view always shows full globe
-    map.fitBounds([[-170, -65], [170, 75]], { padding: 10, duration: 0 });
-
-    // ── Channel lines source + layer ──
-    map.addSource('s07-channels', {
-      type: 'geojson',
-      data: { type: 'FeatureCollection', features: [] },
-    });
-    map.addLayer({
-      id: 's07-channel-lines',
-      type: 'line',
-      source: 's07-channels',
-      layout: { visibility: 'none' },
-      paint: {
-        'line-color': '#1d4ed8',
-        'line-width': 0.8,
-        'line-opacity': 0.25,
-        'line-dasharray': [2, 2],
-      },
-    });
-
-    // ── Node cluster source + layers ──
-    map.addSource('s07-nodes', {
-      type: 'geojson',
-      data: { type: 'FeatureCollection', features: [] },
-      cluster: true,
-      clusterRadius: 50,
-      clusterMaxZoom: 8,
-    });
-
-    // Cluster circles
-    map.addLayer({
-      id: 's07-clusters',
-      type: 'circle',
-      source: 's07-nodes',
-      filter: ['has', 'point_count'],
-      layout: { visibility: 'none' },
-      paint: {
-        'circle-color': [
-          'step', ['get', 'point_count'],
-          '#bfdbfe', 10,
-          '#60a5fa', 50,
-          '#1e40af',
-        ],
-        'circle-radius': [
-          'step', ['get', 'point_count'],
-          16, 10,
-          22, 50,
-          28,
-        ],
-        'circle-opacity': 0.85,
-        'circle-stroke-color': 'rgba(255,255,255,0.18)',
-        'circle-stroke-width': 1,
-      },
-    });
-
-    // Cluster count labels
-    map.addLayer({
-      id: 's07-cluster-count',
-      type: 'symbol',
-      source: 's07-nodes',
-      filter: ['has', 'point_count'],
-      layout: {
-        visibility: 'none',
-        'text-field': '{point_count_abbreviated}',
-        'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
-        'text-size': 12,
-      },
-      paint: { 'text-color': '#ffffff' },
-    });
-
-    // Unclustered individual node points
-    map.addLayer({
-      id: 's07-unclustered',
-      type: 'circle',
-      source: 's07-nodes',
-      filter: ['!', ['has', 'point_count']],
-      layout: { visibility: 'none' },
-      paint: {
-        'circle-color': '#3b82f6',
-        'circle-radius': 4,
-        'circle-opacity': 0.9,
-        'circle-stroke-color': 'rgba(255,255,255,0.3)',
-        'circle-stroke-width': 0.5,
-      },
-    });
-
-    // Shared popup instance for cluster + node clicks
-    const nodePopup = new maplibregl.Popup({
-      closeButton: true,
-      closeOnClick: true,
-      className: 's07-popup',
-      maxWidth: '280px',
-    });
-
-    // Click cluster → show popup with count + zoom to expand
-    map.on('click', 's07-clusters', (e) => {
-      const features = map.queryRenderedFeatures(e.point, { layers: ['s07-clusters'] });
-      if (!features.length) return;
-      const clusterId = features[0].properties.cluster_id;
-      const pointCount = features[0].properties.point_count;
-      const coords = features[0].geometry.coordinates.slice();
-
-      nodePopup
-        .setLngLat(coords)
-        .setHTML(
-          `<div style="font-family:monospace;font-size:11px;padding:4px 2px">` +
-          `<div style="color:#fff;font-weight:bold;font-size:13px">${pointCount} nodes</div>` +
-          `<div style="color:rgba(255,255,255,0.5);margin-top:4px">Click to expand cluster</div>` +
-          `</div>`
-        )
-        .addTo(map);
-
-      map.getSource('s07-nodes')
-        .getClusterExpansionZoom(clusterId)
-        .then((zoom) => { map.easeTo({ center: coords, zoom }); })
-        .catch(() => {});
-    });
-
-    map.on('mouseenter', 's07-clusters', () => { map.getCanvas().style.cursor = 'pointer'; });
-    map.on('mouseleave', 's07-clusters', () => { map.getCanvas().style.cursor = ''; });
-
-    // Unclustered hover → tooltip (floating, follows cursor)
-    map.on('mousemove', 's07-unclustered', (e) => {
-      map.getCanvas().style.cursor = 'pointer';
-      const props = e.features?.[0]?.properties;
-      if (!props || !tooltipRef.current) return;
-      const btc = (Number(props.capacity) / 1e8).toFixed(2);
-      tooltipRef.current.innerHTML =
-        `<span style="color:#fff;font-weight:bold">${props.alias || '—'}</span>` +
-        ` <span style="color:rgba(255,255,255,0.4)">(${props.countryCode || '?'})</span><br/>` +
-        `<span style="color:#3BA3FF">${props.channels} ch</span>` +
-        ` · <span style="color:#FF80AA">${btc} BTC</span>`;
-      tooltipRef.current.style.display = 'block';
-      tooltipRef.current.style.left = `${e.originalEvent.offsetX + 14}px`;
-      tooltipRef.current.style.top  = `${e.originalEvent.offsetY - 10}px`;
-    });
-    map.on('mouseleave', 's07-unclustered', () => {
-      map.getCanvas().style.cursor = '';
-      if (tooltipRef.current) tooltipRef.current.style.display = 'none';
-    });
-
-    // Click unclustered → popup with node details + select row in panel
-    map.on('click', 's07-unclustered', (e) => {
-      const feature = e.features?.[0];
-      if (!feature) return;
-      const props = feature.properties;
-      const btc = (Number(props.capacity) / 1e8).toFixed(4);
-      const pubkeyShort = props.pubkey ? `${props.pubkey.substring(0, 16)}…` : '—';
-
-      nodePopup
-        .setLngLat(feature.geometry.coordinates.slice())
-        .setHTML(
-          `<div style="font-family:monospace;font-size:11px;padding:4px 2px;min-width:160px">` +
-          `<div style="color:#fff;font-weight:bold;font-size:12px;margin-bottom:6px">${props.alias || 'Unknown'}</div>` +
-          `<div style="color:rgba(255,255,255,0.6)">${props.countryCode || '?'}</div>` +
-          `<div style="margin-top:4px"><span style="color:#3BA3FF">${props.channels ?? '—'}</span> channels</div>` +
-          `<div><span style="color:#FF80AA">${btc} BTC</span> capacity</div>` +
-          `<div style="color:rgba(255,255,255,0.3);margin-top:6px;font-size:10px">${pubkeyShort}</div>` +
-          `</div>`
-        )
-        .addTo(map);
-
-      if (props?.pubkey) setSelectedPubkey((prev) => (prev === props.pubkey ? null : props.pubkey));
-    });
-
-    // Store popup ref so layer toggle can close it
-    map.__s07NodePopup = nodePopup;
-
-    setMapReady(true);
-  }, []); // stable — no reactive deps needed
-
-  // ── Init choropleth layer when geo data + map are ready ───────────────────
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!mapReady || !map || !countriesGeo) return;
-
-    layerRef.current?.destroy();
-
-    const controls = addChoroplethLayer(map, {
-      geojson:       countriesGeo,
-      colorMap,
-      sourceId:      's07-countries',
-      layerId:       's07-fill',
-      tooltipEl:     tooltipRef.current,
-      getTooltipHtml,
-    });
-    layerRef.current = controls;
-
-    // Match current layerMode visibility
-    const vis = layerMode === 'choropleth' ? 'visible' : 'none';
-    if (map.getLayer('s07-fill'))        map.setLayoutProperty('s07-fill',        'visibility', vis);
-    if (map.getLayer('s07-fill-border')) map.setLayoutProperty('s07-fill-border', 'visibility', vis);
-
-    return () => { controls.destroy(); layerRef.current = null; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mapReady, countriesGeo]);
-
-  // ── Update choropleth colors when metric/mode changes ─────────────────────
-  useEffect(() => {
-    if (!mapReady) return;
-    layerRef.current?.updateColors(colorMap);
-  }, [colorMap, mapReady]);
-
-  // ── Toggle choropleth ↔ network layers visibility ─────────────────────────
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!mapReady || !map) return;
-
-    if (tooltipRef.current) tooltipRef.current.style.display = 'none';
-    map.__s07NodePopup?.remove();
-
-    const isChoropleth = layerMode === 'choropleth';
-    CHOROPLETH_LAYERS.forEach((id) => {
-      if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', isChoropleth ? 'visible' : 'none');
-    });
-    NETWORK_LAYERS.forEach((id) => {
-      if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', isChoropleth ? 'none' : 'visible');
-    });
-  }, [mapReady, layerMode]);
-
-  // ── Update node cluster source data ──────────────────────────────────────
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!mapReady || !map) return;
-    const src = map.getSource('s07-nodes');
-    if (!src) return;
-    src.setData({
-      type: 'FeatureCollection',
-      features: networkData.points.map((pt) => ({
-        type: 'Feature',
-        geometry: { type: 'Point', coordinates: [pt.lng, pt.lat] },
-        properties: {
-          alias:       pt.alias,
-          capacity:    pt.capacity,
-          channels:    pt.channels,
-          pubkey:      pt.pubkey,
-          countryName: pt.countryName,
-          countryCode: pt.countryCode,
-        },
-      })),
-    });
-  }, [mapReady, networkData.points]);
-
-  // ── Update channel lines source data ─────────────────────────────────────
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!mapReady || !map) return;
-    const src = map.getSource('s07-channels');
-    if (!src) return;
-    src.setData({
-      type: 'FeatureCollection',
-      features: channelsGeoLines.map((line) => ({
-        type: 'Feature',
-        geometry: { type: 'LineString', coordinates: [[line.lng1, line.lat1], [line.lng2, line.lat2]] },
-        properties: { pub1: line.pub1, pub2: line.pub2 },
-      })),
-    });
-  }, [mapReady, channelsGeoLines]);
-
-  // ── Toggle channel lines visibility ──────────────────────────────────────
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!mapReady || !map || layerMode !== 'bubble') return;
-    if (map.getLayer('s07-channel-lines')) {
-      const show = showAllConnectionLines && canRenderAllConnectionLines;
-      map.setLayoutProperty('s07-channel-lines', 'visibility', show ? 'visible' : 'none');
-    }
-  }, [mapReady, layerMode, showAllConnectionLines, canRenderAllConnectionLines]);
-
+  const isMapLoading       = (!effectivePayload && apiLoading) || (!countriesGeo && geoLoading);
   // Legend title
   const legendTitle = layerMode === 'bubble'
     ? metricType === 'capacity'
@@ -1049,53 +704,36 @@ export default function S07_LightningNodesMap() {
   return (
     <ModuleShell className="lg:flex-row">
 
-      {/* ══ MAP SURFACE ══════════════════════════════════════════════════════ */}
+      {/* ══ MAP SURFACE (blank canvas) ═══════════════════════════════════════ */}
       <div className="visual-map-surface relative h-[50dvh] min-h-[280px] min-w-0 flex-none sm:min-h-[320px] lg:h-auto lg:min-h-0 lg:flex-1">
-        {isMapLoading ? (
+
+        {/* Floating HTML tooltip (country hover, choropleth mode) */}
+        <div
+          ref={tooltipRef}
+          style={{ display: 'none', position: 'absolute', pointerEvents: 'none', zIndex: 1002 }}
+          className="rounded border border-white/15 bg-[#080808]/95 px-3 py-1.5 font-mono text-[12px] text-white/80 shadow-lg backdrop-blur-sm"
+        />
+
+        {geoLoading || !countriesGeo ? (
           <div className="h-full w-full p-6">
             <div className="skeleton h-full w-full rounded-md" />
           </div>
         ) : (
-          <div className="relative h-full w-full">
-            {/* Floating tooltip — shared by choropleth hover + network hover */}
-            <div
-              ref={tooltipRef}
-              style={{
-                position: 'absolute',
-                pointerEvents: 'none',
-                zIndex: 600,
-                display: 'none',
-                background: 'rgba(8,8,14,0.93)',
-                border: '1px solid rgba(255,255,255,0.14)',
-                borderRadius: '5px',
-                padding: '7px 11px',
-                fontFamily: 'monospace',
-                fontSize: '12px',
-                color: 'rgba(255,255,255,0.88)',
-                whiteSpace: 'nowrap',
-                lineHeight: '1.6',
-                boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
-              }}
-            />
-            <MapLibreBase
-              style={CHOROPLETH_DARK_STYLE}
-              center={[10, 20]}
-              zoom={2}
-              minZoom={1}
-              maxZoom={8}
-              onMapReady={handleMapReady}
-            />
-            {!countryCounts.length && (
-              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                <div className="max-w-[520px] rounded border border-white/10 bg-[#0d0d0d]/85 px-4 py-4 font-mono text-[12px] text-white/70 backdrop-blur-sm">
-                  <div>No Lightning Network country data available yet.</div>
-                  <div className="mt-2 text-white/45">
-                    Next update: {nextUpdateDelay === 'N/A' ? 'N/A' : nextUpdateDelay === 'now' ? 'now' : `in ${nextUpdateDelay}`}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+          <S07MapContainer
+            layerMode={layerMode}
+            countriesGeo={countriesGeo}
+            statsByCode={statsByCode}
+            perCapitaByCode={perCapitaByCode}
+            isAbsolute={isAbsolute}
+            metricType={metricType}
+            activeScale={activeScale}
+            networkData={networkData}
+            channelsGeoLines={channelsGeoLines}
+            showConnectionLines={showAllConnectionLines && canRenderAllConnectionLines}
+            selectedPubkey={selectedPubkey}
+            onSelectNode={setSelectedPubkey}
+            onHoverCountry={handleHoverCountry}
+          />
         )}
 
         {/* ── Bottom badge ── */}
@@ -1472,12 +1110,12 @@ export default function S07_LightningNodesMap() {
                 let dotColor, valueLabel;
                 if (isAbsolute) {
                   const val = getMetricRawValue(stats, metricType);
-                  dotColor   = metricType === 'nodes' ? getFillColorNodes(val) : getColorByScale(val, activeScale);
+                  dotColor   = metricType === 'nodes' ? getFillColor(val, NODE_DENSITY_SCALE) : getFillColorByPerCapita(val, activeScale);
                   valueLabel = formatMetricValue(val, metricType);
                 } else {
                   const pc     = perCapitaByCode[code];
                   const pcVal  = pc ? (metricType === 'nodes' ? pc.nodes : metricType === 'channels' ? pc.channels : pc.capacity) : 0;
-                  dotColor   = getColorByScale(pcVal, activeScale);
+                  dotColor   = getFillColorByPerCapita(pcVal, activeScale);
                   valueLabel = formatPerCapitaValue(pcVal, metricType);
                 }
                 return (
@@ -1582,3 +1220,5 @@ export default function S07_LightningNodesMap() {
     </ModuleShell>
   );
 }
+
+

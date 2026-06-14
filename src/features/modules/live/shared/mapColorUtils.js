@@ -48,7 +48,7 @@ export function getFillColor(count, densityScale, emptyColor = '#141414') {
 
   // Support both minNodes, minBusinesses, and generic min field names
   for (const step of densityScale) {
-    const threshold = step.minNodes ?? step.minBusinesses ?? step.min ?? 0;
+    const threshold = step.minNodes ?? step.minBusinesses ?? step.min ?? step.minVal ?? 0;
     if (value >= threshold) return step.color;
   }
   return emptyColor;
@@ -79,10 +79,22 @@ export function getFillColorByPerCapita(perCapita, scale, emptyColor = '#141414'
 export function getDensityStepByCount(count, densityScale) {
   const value = Number(count) || 0;
   for (const step of densityScale) {
-    const threshold = step.minNodes ?? step.minBusinesses ?? step.min ?? 0;
+    const threshold = step.minNodes ?? step.minBusinesses ?? step.min ?? step.minVal ?? 0;
     if (value >= threshold) return step;
   }
   return null;
+}
+
+/**
+ * Get the density label for a given absolute count.
+ *
+ * @param {number}   count        Absolute count.
+ * @param {object[]} densityScale Density scale array.
+ * @returns {string} Label string.
+ */
+export function getDensityLabel(count, densityScale) {
+  const step = getDensityStepByCount(count, densityScale);
+  return step?.label || 'No data';
 }
 
 /**
@@ -91,8 +103,13 @@ export function getDensityStepByCount(count, densityScale) {
  * @param {number} value Per-capita value.
  * @returns {string} Formatted string.
  */
-export function formatPerCapitaValue(value) {
+export function formatPerCapitaValue(value, metricType = null) {
   const numericValue = Number(value);
+  if (metricType === 'capacity') {
+    if (!Number.isFinite(numericValue) || numericValue <= 0) return '0.00 BTC /M';
+    const formatted = numericValue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    return `${formatted} BTC /M`;
+  }
   if (!Number.isFinite(numericValue) || numericValue <= 0) return '0.0 /M';
   return numericValue >= 10 ? `${numericValue.toFixed(1)} /M` : `${numericValue.toFixed(2)} /M`;
 }
@@ -101,15 +118,33 @@ export function formatPerCapitaValue(value) {
  * Format a next-update ISO timestamp into a human-friendly delay string.
  *
  * @param {string} nextUpdateIso ISO timestamp of the next scheduled update.
- * @returns {string} e.g., "~5m", "~2h", "soon", or a fallback.
+ * @returns {string} e.g., "~5m", "~2h", "now", or "N/A".
  */
 export function formatNextUpdateDelay(nextUpdateIso) {
-  if (!nextUpdateIso) return '';
+  if (!nextUpdateIso) return 'N/A';
   const diff = new Date(nextUpdateIso).getTime() - Date.now();
-  if (diff <= 0) return 'soon';
+  if (!Number.isFinite(diff)) return 'N/A';
+  if (diff <= 0) return 'now';
   const mins = Math.round(diff / 60_000);
-  if (mins < 1) return 'soon';
+  if (mins < 1) return 'now';
   if (mins < 60) return `~${mins}m`;
   const hours = Math.round(mins / 60);
   return `~${hours}h`;
 }
+
+/**
+ * Format a next-update millisecond timestamp into a human-friendly delay string.
+ *
+ * @param {number} nextUpdateMs Millisecond timestamp of the next scheduled update.
+ * @returns {string} e.g., "5 min", "2 h", "now", or "N/A".
+ */
+export function formatNextUpdateDelayMs(nextUpdateMs) {
+  if (!Number.isFinite(nextUpdateMs)) return 'N/A';
+  const diffMs = nextUpdateMs - Date.now();
+  if (diffMs <= 0) return 'now';
+  const minutes = Math.ceil(diffMs / 60_000);
+  if (minutes < 60) return `${minutes} min`;
+  return `${Math.ceil(minutes / 60)} h`;
+}
+
+

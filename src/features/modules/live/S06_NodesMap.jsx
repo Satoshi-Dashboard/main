@@ -5,9 +5,12 @@ import {
   useCountriesGeoJson,
 } from '@/features/modules/live/shared/worldMapHooks.js';
 import {
-  computePerCapitaScale as sharedComputePerCapitaScale,
-  getFillColorByPerCapita as sharedGetFillColorByPerCapita,
+  computePerCapitaScale,
+  getFillColorByPerCapita,
   formatPerCapitaValue,
+  getFillColor,
+  getDensityLabel,
+  formatNextUpdateDelay,
 } from '@/features/modules/live/shared/mapColorUtils.js';
 import { useWorldBankPopulation } from '@/shared/hooks/useWorldBankPopulation.js';
 import {
@@ -57,24 +60,6 @@ const NODE_PERCAPITA_SCALE = [
 
 const NODE_COLORS = ['#FF6A00', '#FF8C1A', '#FFAA33', '#FFC266', '#FFD9A0'];
 
-function computePerCapitaScale(maxVal) {
-  return sharedComputePerCapitaScale(maxVal, NODE_PERCAPITA_SCALE, NODE_COLORS);
-}
-function getFillColorByPerCapita(perCapita, scale) {
-  return sharedGetFillColorByPerCapita(perCapita, scale || NODE_PERCAPITA_SCALE);
-}
-function getDensityStepByCount(count) {
-  const value = Number(count) || 0;
-  return NODE_DENSITY_SCALE.find((step) => value >= step.minNodes) || null;
-}
-function getFillColor(count) {
-  const value = Number(count) || 0;
-  if (value <= 0) return '#141414';
-  return getDensityStepByCount(value)?.color || '#141414';
-}
-function getDensityLabel(count) {
-  return getDensityStepByCount(count)?.label || 'No data';
-}
 function parseCountryCounts(payload) {
   if (Array.isArray(payload?.country_counts)) {
     return payload.country_counts
@@ -100,15 +85,6 @@ function parseCountryCounts(payload) {
     .map(([country_code, nodes]) => ({ country_code, country_name: '', nodes }))
     .sort((a, b) => b.nodes - a.nodes);
 }
-function formatNextUpdateDelay(nextUpdateIso) {
-  const next = new Date(String(nextUpdateIso || ''));
-  if (!Number.isFinite(next.getTime())) return 'N/A';
-  const diffMs = next.getTime() - Date.now();
-  if (diffMs <= 0) return 'now';
-  const minutes = Math.ceil(diffMs / 60_000);
-  if (minutes < 60) return `${minutes} min`;
-  return `${Math.ceil(minutes / 60)} h`;
-}
 function formatPct(value) {
   if (!Number.isFinite(Number(value))) return '0.00%';
   return `${Number(value).toFixed(2)}%`;
@@ -118,8 +94,6 @@ function isTorCyberspaceRow(label) {
 }
 
 export default function S06_NodesMap() {
-  const [payload, setPayload] = useState(null);
-  const [error, setError] = useState(null);
   const [isBreakdownExpanded, setIsBreakdownExpanded] = useState(false);
   const [isMetaExpanded, setIsMetaExpanded] = useState(false);
   const [isDensityExpanded, setIsDensityExpanded] = useState(false);
@@ -145,14 +119,13 @@ export default function S06_NodesMap() {
     return res.json();
   };
 
-  useModuleData(fetchBitnodes, {
+  const { data: payload, error: fetchError } = useModuleData(fetchBitnodes, {
     refreshMs: 600_000,
-    transform: (json) => { setPayload(json); setError(null); return json; },
     keepPreviousOnError: true,
   });
 
   const cacheLoading  = !payload;
-  const combinedError = error || geoError;
+  const combinedError = (fetchError ? 'Could not load Bitnodes data.' : null) || geoError;
   const isPending     = payload?.status === 'pending' || !payload?.data;
   const isFallback    = Boolean(payload?.is_fallback);
   const nextUpdateDelay     = useMemo(() => formatNextUpdateDelay(payload?.next_update), [payload?.next_update]);
@@ -225,9 +198,8 @@ export default function S06_NodesMap() {
     return map;
   }, [resolvedCountryRows, countsByCode, populationMap]);
 
-  const maxCount    = useMemo(() => (countryCounts.length ? Math.max(...countryCounts.map((x) => x.nodes)) : 0), [countryCounts]);
   const maxPerCapita = useMemo(() => { const v = Object.values(perCapitaByCode); return v.length ? Math.max(...v) : 0; }, [perCapitaByCode]);
-  const activePerCapitaScale = useMemo(() => computePerCapitaScale(maxPerCapita), [maxPerCapita]);
+  const activePerCapitaScale = useMemo(() => computePerCapitaScale(maxPerCapita, NODE_PERCAPITA_SCALE, NODE_COLORS), [maxPerCapita]);
 
   const displayRows = useMemo(() => {
     if (viewMode === 'country') return resolvedCountryRows;
@@ -254,7 +226,7 @@ export default function S06_NodesMap() {
     if (viewMode === 'perCapita') {
       Object.entries(perCapitaByCode).forEach(([code, pc]) => { map[code] = getFillColorByPerCapita(pc, activePerCapitaScale); });
     } else {
-      Object.entries(countsByCode).forEach(([code, n]) => { map[code] = getFillColor(n); });
+      Object.entries(countsByCode).forEach(([code, n]) => { map[code] = getFillColor(n, NODE_DENSITY_SCALE); });
     }
     return map;
   }, [viewMode, countsByCode, perCapitaByCode, activePerCapitaScale]);
@@ -268,7 +240,7 @@ export default function S06_NodesMap() {
       const step = scaleRef.current.find((s) => pc >= s.minVal);
       return `<span class="font-mono text-[12px] text-white/80">${name} (${code}): ${formatPerCapitaValue(pc)} — ${step?.label ?? 'Trace'}</span>`;
     }
-    return `<span class="font-mono text-[12px] text-white/80">${name} (${code}): ${fmt.num(count)} nodes — ${getDensityLabel(count)}</span>`;
+    return `<span class="font-mono text-[12px] text-white/80">${name} (${code}): ${fmt.num(count)} nodes — ${getDensityLabel(count, NODE_DENSITY_SCALE)}</span>`;
   };
 
   // Init choropleth when map + geo + data ready
@@ -472,7 +444,7 @@ export default function S06_NodesMap() {
                   ? UI_COLORS.tor
                   : viewMode === 'perCapita' && item.perCapita != null
                     ? getFillColorByPerCapita(item.perCapita, activePerCapitaScale)
-                    : getFillColor(item.nodes);
+                    : getFillColor(item.nodes, NODE_DENSITY_SCALE);
                 const valueLabel = viewMode === 'perCapita' && item.perCapita != null
                   ? formatPerCapitaValue(item.perCapita)
                   : fmt.num(item.nodes);

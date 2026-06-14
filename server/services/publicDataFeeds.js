@@ -1,16 +1,72 @@
-import http from 'node:http';
-import net from 'node:net';
 import { cacheGetJson, cacheSetJson, withCacheLock } from '../core/runtimeCache.js';
-import { SocksProxyAgent } from 'socks-proxy-agent';
 import { getBtcRates } from './btcRates.js';
+import {
+  fetchJsonWithTimeout,
+  fetchTextWithTimeout,
+  hasTorBitcoinRpcConfig,
+  buildBitcoinRpcUrl,
+  isLocalTcpPortReachable,
+  _callBitcoinRpcOverTor,
+  fetchBtcMapCountryAreaForPlace,
+  fetchBtcMapPlacesPage,
+  fetchAllBtcMapPlaces,
+  normalizeBtcMapPlace,
+  fetchBinanceCloseAtFromBase,
+  fetchBinanceCloseAt,
+} from '../shared/utils/fetchUtils.js';
 import fs from 'node:fs';
 import path from 'node:path';
+import {
+  SUPABASE_PROJECT_URL,
+  getSupabaseFunctionHeaders,
+  fetchSupabaseEdgeFunctionJson,
+} from '../shared/adapters/supabaseAdapter.js';
+import {
+  _patchFranceOverseas,
+  aggregateBtcMapBusinessesByCountry,
+  getBtcMapPlaceCountryResolutionMap,
+  saveBtcMapPlaceCountryResolutionMap,
+  resolveBtcMapFallbackCountries,
+} from '../shared/utils/geoUtils.js';
+import { normalizeTimestamp, parseIsoDate } from '../shared/utils/timeUtils.js';
+import {
+  normalizeOfficialMempoolUsage,
+  estimateBitcoinCirculatingSupply,
+  buildS15GoldSnapshot,
+  toChartPoint,
+  validateArray,
+  validateObject,
+  validateS15GoldPayload,
+  validateCountryBusinessPayload,
+  validateUsNationalDebtSeries,
+  validateUsPopulationEstimate,
+  validateJohoeHistoryPayload,
+  validateJohoeLatestPayload,
+  normalizeJohoeHistoryResponse,
+  normalizeJohoeLatestResponse,
+  isJohoeSourceFresh,
+  assertFreshJohoeHistoryPayload,
+  assertFreshJohoeLatestPayload,
+  stripJohoeBandMeta,
+  buildJohoeViewPoint,
+  buildJohoeCompactPoints,
+  downsampleJohoeCompactPoints,
+  normalizeDebtToPennyRows,
+  normalizeUsPopulationEstimate,
+  buildUsNationalDebtSnapshot,
+  parseBigMacUsd,
+  candlesNeeded,
+  historyFeedKey,
+  US_NATIONAL_DEBT_SERIES_PAGE_SIZE,
+  ACS_POPULATION_MIN_YEAR,
+  BTC_GENESIS_TS,
+  BTC_CURRENT_HALVING_REWARD,
+  JOHOE_BTC_QUEUE_BUCKET_BOUNDARIES,
+  JOHOE_BTC_QUEUE_GROUPS,
+} from '../shared/utils/normalizeUtils.js';
+import { SatoshiBaseError, PublicFeedError } from '../shared/errors/SatoshiBaseError.js';
 
-const FETCH_TIMEOUT_MS = 12_000;
 const DAY_MS = 86_400_000;
-const US_NATIONAL_DEBT_SERIES_PAGE_SIZE = 40;
-const US_NATIONAL_DEBT_RATE_WINDOW = 30;
-const ACS_POPULATION_MIN_YEAR = 2020;
 const BTCMAP_PLACE_COUNTRY_CACHE_KEY = 'public:btcmap:place-country-map';
 const BTCMAP_PLACE_COUNTRY_CACHE_TTL_SECONDS = 90 * 24 * 60 * 60;
 const BTCMAP_MAX_FALLBACK_AREA_LOOKUPS = 120;
@@ -22,13 +78,7 @@ const BINANCE_KLINES_BASE_URLS = [
   'https://api.binance.us/api/v3/klines',
 ];
 const SCRAPER_BASE_URL = String(process.env.SCRAPER_BASE_URL || 'https://api.zatobox.io').trim();
-const SUPABASE_PROJECT_URL = String(process.env.SUPABASE_PROJECT_URL || process.env.SUPABASE_URL || '').trim().replace(/\/$/, '');
 const SUPABASE_EDGE_FUNCTIONS_BASE_URL = SUPABASE_PROJECT_URL ? `${SUPABASE_PROJECT_URL}/functions/v1` : '';
-const SUPABASE_FUNCTIONS_JWT = String(
-  process.env.SUPABASE_FUNCTIONS_JWT
-  || process.env.SUPABASE_ANON_KEY
-  || '',
-).trim();
 const S15_GOLD_SCRAPER_PATH = '/api/scrape/companiesmarketcap-gold';
 const S04_KNOT_API_URL = String(process.env.KNOT_API_URL || 'https://knotapi.zatobox.io/api/v1/init-data').trim();
 const S04_MEMPOOL_SPACE_USAGE_SCRAPER_PATH = '/api/scrape/mempool-space-memory-usage';
@@ -38,38 +88,6 @@ const JOHOE_BTC_QUEUE_HISTORY_PATH = '/api/scrape/johoe-btc-queue/history';
 const JOHOE_BTC_QUEUE_LATEST_PATH = '/api/scrape/johoe-btc-queue/latest';
 const JOHOE_BTC_QUEUE_HISTORY_FUNCTION = 'johoe-btc-queue-history';
 const JOHOE_BTC_QUEUE_LATEST_FUNCTION = 'johoe-btc-queue-latest';
-const BITCOIN_RPC_ONION = String(process.env.BITCOIN_RPC_ONION || '').trim();
-const BITCOIN_RPC_PORT = String(process.env.BITCOIN_RPC_PORT || '').trim();
-const BITCOIN_RPC_USER = String(process.env.BITCOIN_RPC_USER || '').trim();
-const BITCOIN_RPC_PASS = String(process.env.BITCOIN_RPC_PASS || '').trim();
-const BITCOIN_TOR_SOCKS_PORT = String(process.env.BITCOIN_TOR_SOCKS_PORT || '').trim();
-const BTC_GENESIS_TS = Date.UTC(2009, 0, 3, 18, 15, 5);
-const BTC_HALVING_INTERVAL_BLOCKS = 210_000;
-const BTC_TARGET_BLOCK_INTERVAL_MS = 10 * 60 * 1000;
-const BTC_MAX_SUPPLY = 21_000_000;
-const BTC_CURRENT_HALVING_REWARD = 3.125;
-const JOHOE_BTC_QUEUE_BUCKET_BOUNDARIES = [
-  0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1,
-  1.2, 1.4, 1.7, 2, 2.5, 3, 4, 5, 6, 7,
-  8, 10, 12, 14, 17, 20, 25, 30, 40, 50,
-  60, 70, 80, 100, 120, 140, 170, 200, 250, 300,
-  400, 500, 600, 700, 800, 1000, 1200, 1400, 1700, 2000,
-  2500, 3000, 4000, 5000, 6000, 7000, 8000, 10000,
-];
-const JOHOE_BTC_QUEUE_GROUPS = [
-  { key: 'fee_0_1', minFee: 0, maxFee: 1, bucketStart: 0, bucketEnd: 9, color: '#535154' },
-  { key: 'fee_1_2', minFee: 1, maxFee: 2, bucketStart: 9, bucketEnd: 13, color: '#2C4B86' },
-  { key: 'fee_2_3', minFee: 2, maxFee: 3, bucketStart: 13, bucketEnd: 15, color: '#2F73C7' },
-  { key: 'fee_3_5', minFee: 3, maxFee: 5, bucketStart: 15, bucketEnd: 17, color: '#3EA1FF' },
-  { key: 'fee_5_10', minFee: 5, maxFee: 10, bucketStart: 17, bucketEnd: 21, color: '#20C997' },
-  { key: 'fee_10_20', minFee: 10, maxFee: 20, bucketStart: 21, bucketEnd: 25, color: '#63D471' },
-  { key: 'fee_20_50', minFee: 20, maxFee: 50, bucketStart: 25, bucketEnd: 29, color: '#C8D84F' },
-  { key: 'fee_50_100', minFee: 50, maxFee: 100, bucketStart: 29, bucketEnd: 33, color: '#F0BD45' },
-  { key: 'fee_100_200', minFee: 100, maxFee: 200, bucketStart: 33, bucketEnd: 37, color: '#F28A2E' },
-  { key: 'fee_200_500', minFee: 200, maxFee: 500, bucketStart: 37, bucketEnd: 41, color: '#E35D37' },
-  { key: 'fee_500_1000', minFee: 500, maxFee: 1000, bucketStart: 41, bucketEnd: 45, color: '#C93A3A' },
-  { key: 'fee_1000_plus', minFee: 1000, maxFee: null, bucketStart: 45, bucketEnd: JOHOE_BTC_QUEUE_BUCKET_BOUNDARIES.length, color: '#6B1014' },
-];
 const JOHOE_BTC_QUEUE_CONFIG = {
   range: '24h',
   historyFeedKey: 'johoeBtcQueueHistory24h',
@@ -78,11 +96,9 @@ const JOHOE_BTC_QUEUE_CONFIG = {
   fallbackTtlSeconds: 120,
   bootstrapPointBudget: 180,
 };
-const JOHOE_BTC_QUEUE_MAX_SOURCE_AGE_MS = 3 * 60_000;
 
 const memCache = new Map();
 const composedCache = new Map();
-const BITCOIN_TOR_PROXY_URL = BITCOIN_TOR_SOCKS_PORT ? `socks5h://127.0.0.1:${BITCOIN_TOR_SOCKS_PORT}` : '';
 const S15_COMPOSED_CACHE_KEY = 'public:s15:btc-vs-gold:composed';
 const S15_COMPOSED_LOCK_KEY = 'public:s15:btc-vs-gold:composed:refresh';
 const US_DEBT_COMPOSED_CACHE_KEY = 'public:us-national-debt:composed';
@@ -460,23 +476,6 @@ const HISTORY_PERIODS = [
   { key: '3y', unit: 'years', value: 3 },
 ];
 
-export class PublicFeedError extends Error {
-  constructor(message) {
-    super(message);
-    this.name = 'PublicFeedError';
-  }
-}
-
-function normalizeTimestamp(date = new Date()) {
-  return date.toISOString().replace(/\.\d{3}Z$/, 'Z');
-}
-
-function parseIsoDate(value) {
-  const date = new Date(String(value || ''));
-  if (!Number.isFinite(date.getTime())) return null;
-  return date;
-}
-
 function isFreshPayload(payload, nowMs = Date.now()) {
   const next = parseIsoDate(payload?.next_update_at);
   if (!next) return false;
@@ -519,835 +518,25 @@ function getFeedTtlSeconds(feedDef) {
   return Math.max(60, Math.floor(ttlMs / 1000));
 }
 
-async function fetchJsonWithTimeout(url, {
-  timeoutMs = FETCH_TIMEOUT_MS,
-  headers,
-} = {}) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const response = await fetch(url, {
-      signal: controller.signal,
-      headers: {
-        Accept: 'application/json',
-        ...headers,
-      },
-    });
-
-    if (!response.ok) {
-      throw new PublicFeedError(`Upstream HTTP ${response.status}`);
-    }
-
-    return await response.json();
-  } catch (error) {
-    if (error?.name === 'AbortError') {
-      throw new PublicFeedError('Upstream request timeout');
-    }
-    if (error instanceof PublicFeedError) throw error;
-    throw new PublicFeedError(error instanceof Error ? error.message : String(error));
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-async function fetchTextWithTimeout(url, {
-  timeoutMs = FETCH_TIMEOUT_MS,
-  headers,
-} = {}) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const response = await fetch(url, {
-      signal: controller.signal,
-      headers: {
-        Accept: 'text/plain, text/csv, text/html;q=0.9, */*;q=0.5',
-        ...headers,
-      },
-    });
-
-    if (!response.ok) {
-      throw new PublicFeedError(`Upstream HTTP ${response.status}`);
-    }
-
-    return await response.text();
-  } catch (error) {
-    if (error?.name === 'AbortError') {
-      throw new PublicFeedError('Upstream request timeout');
-    }
-    if (error instanceof PublicFeedError) throw error;
-    throw new PublicFeedError(error instanceof Error ? error.message : String(error));
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-function hasTorBitcoinRpcConfig() {
-  return Boolean(
-    BITCOIN_RPC_ONION
-      && BITCOIN_RPC_PORT
-      && BITCOIN_RPC_USER
-      && BITCOIN_RPC_PASS
-      && BITCOIN_TOR_PROXY_URL,
-  );
-}
-
-function buildBitcoinRpcUrl() {
-  if (!hasTorBitcoinRpcConfig()) return null;
-
-  const baseUrl = /^https?:\/\//i.test(BITCOIN_RPC_ONION)
-    ? BITCOIN_RPC_ONION
-    : `http://${BITCOIN_RPC_ONION}`;
-
-  const url = new URL(baseUrl);
-  if (!url.port) {
-    url.port = BITCOIN_RPC_PORT;
-  }
-  if (!url.pathname || url.pathname === '/') {
-    url.pathname = '/';
-  }
-  return url;
-}
-
-async function isLocalTcpPortReachable(port, host = '127.0.0.1', timeoutMs = 600) {
-  const numericPort = Number(port);
-  if (!Number.isInteger(numericPort) || numericPort <= 0) return false;
-
-  return await new Promise((resolve) => {
-    const socket = net.createConnection({ host, port: numericPort });
-
-    const cleanup = () => {
-      socket.removeAllListeners();
-      socket.setTimeout(0);
-    };
-
-    const finish = (result, destroySocket = false) => {
-      cleanup();
-      if (destroySocket && !socket.destroyed) {
-        socket.destroy();
-      }
-      resolve(result);
-    };
-
-    socket.setTimeout(timeoutMs);
-    socket.once('connect', () => finish(true, true));
-    socket.once('timeout', () => finish(false, true));
-    socket.once('error', () => {
-      cleanup();
-      resolve(false);
-    });
-  });
-}
-
-async function _callBitcoinRpcOverTor(method, params = []) {
-  const rpcUrl = buildBitcoinRpcUrl();
-  if (!rpcUrl) {
-    throw new PublicFeedError('Bitcoin Tor RPC is not configured');
-  }
-
-  const torReady = await isLocalTcpPortReachable(BITCOIN_TOR_SOCKS_PORT);
-  if (!torReady) {
-    throw new PublicFeedError('Bitcoin Tor SOCKS port is unavailable');
-  }
-
-  const bitcoinTorAgent = new SocksProxyAgent(BITCOIN_TOR_PROXY_URL);
-  const payload = JSON.stringify({ jsonrpc: '1.0', id: method, method, params });
-
-  return await new Promise((resolve, reject) => {
-    const request = http.request(rpcUrl, {
-      method: 'POST',
-      agent: bitcoinTorAgent,
-      headers: {
-        'Content-Type': 'text/plain',
-        'Content-Length': Buffer.byteLength(payload),
-        Authorization: `Basic ${Buffer.from(`${BITCOIN_RPC_USER}:${BITCOIN_RPC_PASS}`).toString('base64')}`,
-      },
-    }, (response) => {
-      let raw = '';
-      response.setEncoding('utf8');
-      response.on('data', (chunk) => {
-        raw += chunk;
-      });
-      response.on('end', () => {
-        if ((response.statusCode || 500) >= 400) {
-          reject(new PublicFeedError(`Bitcoin RPC HTTP ${response.statusCode}`));
-          return;
-        }
-
-        try {
-          const json = JSON.parse(raw);
-          if (json?.error) {
-            reject(new PublicFeedError(`Bitcoin RPC ${json.error.message || json.error.code || 'error'}`));
-            return;
-          }
-          resolve(json?.result ?? null);
-        } catch (error) {
-          reject(new PublicFeedError(error instanceof Error ? error.message : String(error)));
-        }
-      });
-    });
-
-    request.setTimeout(FETCH_TIMEOUT_MS, () => {
-      request.destroy(new PublicFeedError('Bitcoin RPC request timeout'));
-    });
-    request.on('error', (error) => {
-      reject(error instanceof PublicFeedError ? error : new PublicFeedError(error instanceof Error ? error.message : String(error)));
-    });
-    request.write(payload);
-    request.end();
-  });
-}
-
-function parseSuffixedUsdNumber(value) {
-  const match = String(value || '').trim().match(/^\$?\s*([\d.,]+)\s*([TMBK])?$/i);
-  if (!match) return null;
-
-  const amount = Number(String(match[1]).replace(/,/g, ''));
-  if (!Number.isFinite(amount)) return null;
-
-  const suffix = String(match[2] || '').toUpperCase();
-  const multiplier = suffix === 'T'
-    ? 1e12
-    : suffix === 'B'
-      ? 1e9
-      : suffix === 'M'
-        ? 1e6
-        : suffix === 'K'
-          ? 1e3
-          : 1;
-
-  return amount * multiplier;
-}
-
-function parsePercentValue(value) {
-  const parsed = Number(String(value || '').replace(/[%+,\s]/g, ''));
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-function firstFiniteNumber(...values) {
-  for (const value of values) {
-    if (Number.isFinite(value)) return value;
-  }
-  return null;
-}
-
-function sizeUnitToBytes(unit) {
-  const normalized = String(unit || '').trim().toUpperCase();
-  if (!normalized || normalized === 'B' || normalized.startsWith('BYTE')) return 1;
-  if (normalized === 'KB') return 1e3;
-  if (normalized === 'MB') return 1e6;
-  if (normalized === 'GB') return 1e9;
-  if (normalized === 'TB') return 1e12;
-  return null;
-}
-
-function parseSizedValueToBytes(value, defaultUnit = '') {
-  if (value == null) return null;
-
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    const fallbackMultiplier = sizeUnitToBytes(defaultUnit);
-    return fallbackMultiplier ? value * fallbackMultiplier : value;
-  }
-
-  const match = String(value).trim().match(/([\d.,]+)\s*(TB|GB|MB|KB|B|BYTES?)?/i);
-  if (!match) return null;
-
-  const amount = Number(String(match[1]).replace(/,/g, ''));
-  if (!Number.isFinite(amount)) return null;
-
-  const unitMultiplier = sizeUnitToBytes(match[2] || defaultUnit);
-  return unitMultiplier ? amount * unitMultiplier : amount;
-}
-
-function parseMemoryUsagePairText(value) {
-  if (typeof value !== 'string') return null;
-
-  const match = value.match(/([\d.,]+)\s*(TB|GB|MB|KB|B)?\s*(?:\/|of)\s*([\d.,]+)\s*(TB|GB|MB|KB|B)?/i);
-  if (!match) return null;
-
-  const usageUnit = match[2] || match[4] || 'MB';
-  const maxUnit = match[4] || usageUnit;
-  const usageBytes = parseSizedValueToBytes(`${match[1]} ${usageUnit}`);
-  const maxBytes = parseSizedValueToBytes(`${match[3]} ${maxUnit}`);
-
-  if (!Number.isFinite(usageBytes) || !Number.isFinite(maxBytes)) return null;
-
-  return {
-    usageBytes,
-    maxBytes,
-    label: value.trim(),
-  };
-}
-
-function normalizeOfficialMempoolUsage(raw) {
-  const data = raw?.data ?? raw?.mempoolInfo ?? raw;
-
-  const textPair = [
-    data?.label,
-    data?.memory_usage_label,
-    data?.memoryUsageLabel,
-    data?.summary,
-    data?.text,
-    data?.value,
-  ]
-    .map(parseMemoryUsagePairText)
-    .find(Boolean) || null;
-
-  let usageBytes = firstFiniteNumber(
-    parseSizedValueToBytes(data?.usage_bytes, 'B'),
-    parseSizedValueToBytes(data?.usageBytes, 'B'),
-    parseSizedValueToBytes(data?.memory_usage_bytes, 'B'),
-    parseSizedValueToBytes(data?.memoryUsageBytes, 'B'),
-    parseSizedValueToBytes(data?.used_bytes, 'B'),
-    parseSizedValueToBytes(data?.usedBytes, 'B'),
-    parseSizedValueToBytes(data?.usage),
-    parseSizedValueToBytes(data?.used),
-    parseSizedValueToBytes(data?.memory_usage),
-    parseSizedValueToBytes(data?.memoryUsage),
-    parseSizedValueToBytes(data?.current),
-    textPair?.usageBytes ?? null,
-  );
-
-  let maxBytes = firstFiniteNumber(
-    parseSizedValueToBytes(data?.maxmempool_bytes, 'B'),
-    parseSizedValueToBytes(data?.maxMempoolBytes, 'B'),
-    parseSizedValueToBytes(data?.max_bytes, 'B'),
-    parseSizedValueToBytes(data?.maxBytes, 'B'),
-    parseSizedValueToBytes(data?.limit_bytes, 'B'),
-    parseSizedValueToBytes(data?.limitBytes, 'B'),
-    parseSizedValueToBytes(data?.maxmempool),
-    parseSizedValueToBytes(data?.maxMempool),
-    parseSizedValueToBytes(data?.max),
-    parseSizedValueToBytes(data?.limit),
-    parseSizedValueToBytes(data?.memory_limit),
-    parseSizedValueToBytes(data?.memoryLimit),
-    parseSizedValueToBytes(data?.capacity),
-    textPair?.maxBytes ?? null,
-  );
-
-  if (Number.isFinite(usageBytes) && Number.isFinite(maxBytes) && usageBytes <= 10_000 && maxBytes <= 10_000) {
-    usageBytes *= 1e6;
-    maxBytes *= 1e6;
-  }
-
-  return {
-    usage: usageBytes,
-    maxmempool: maxBytes,
-    label: textPair?.label || null,
-    cached_at: raw?._meta?.cachedAt ?? null,
-    scraper_name: raw?._meta?.scraper ?? null,
-  };
-}
-
-function estimateBitcoinCirculatingSupply(ts) {
-  const targetTs = Number(ts);
-  if (!Number.isFinite(targetTs) || targetTs <= BTC_GENESIS_TS) return 0;
-
-  let remainingBlocks = Math.floor((targetTs - BTC_GENESIS_TS) / BTC_TARGET_BLOCK_INTERVAL_MS);
-  let reward = 50;
-  let era = 0;
-  let total = 0;
-
-  while (remainingBlocks > 0 && reward > 0) {
-    const eraBlocks = Math.min(remainingBlocks, BTC_HALVING_INTERVAL_BLOCKS);
-    total += eraBlocks * reward;
-    remainingBlocks -= eraBlocks;
-    era += 1;
-    reward = 50 / (2 ** era);
-  }
-
-  return Math.min(BTC_MAX_SUPPLY, total);
-}
-
-function buildS15GoldSnapshot(raw) {
-  const marketCapUsd = parseSuffixedUsdNumber(raw?.marketCap);
-  const priceUsdPerOunce = parseSuffixedUsdNumber(raw?.price);
-  const marketCapTrillions = Number.isFinite(marketCapUsd) ? Number((marketCapUsd / 1e12).toFixed(2)) : null;
-
-  return {
-    id: String(raw?.id || 'GOLD').toUpperCase(),
-    market_cap_usd: marketCapUsd,
-    market_cap_trillions: marketCapTrillions,
-    price_usd_per_ounce: priceUsdPerOunce,
-    change_today_pct: parsePercentValue(raw?.changeTodayPct),
-    source: String(raw?.source || 'companiesmarketcap.com'),
-    page_url: typeof raw?.url === 'string' ? raw.url : 'https://companiesmarketcap.com/gold/marketcap/',
-    assets_url: typeof raw?.assetsUrl === 'string' ? raw.assetsUrl : 'https://companiesmarketcap.com/assets-by-market-cap/',
-    scraper_cached_at: typeof raw?._meta?.cachedAt === 'string' ? raw._meta.cachedAt : null,
-    scraper_name: typeof raw?._meta?.scraper === 'string' ? raw._meta.scraper : null,
-  };
-}
-
-function toChartPoint(ts, price) {
-  return {
-    ts,
-    price,
-    date: new Date(ts)
-      .toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' })
-      .replace('/', '.'),
-  };
-}
-
-function validateArray(value) {
-  return Array.isArray(value) && value.length > 0;
-}
-
-function validateObject(value) {
-  return Boolean(value && typeof value === 'object');
-}
-
-function validateS15GoldPayload(value) {
-  return Boolean(
-    value
-      && typeof value === 'object'
-      && Number.isFinite(value.market_cap_usd)
-      && value.market_cap_usd > 0
-      && Number.isFinite(value.market_cap_trillions)
-      && value.market_cap_trillions > 0,
-  );
-}
-
-function validateCountryBusinessPayload(value) {
-  return validateObject(value) && Array.isArray(value.country_counts);
-}
-
-function validateUsNationalDebtSeries(value) {
-  return Array.isArray(value)
-    && value.length >= 2
-    && value.every((row) => row?.record_date && Number.isFinite(Number(row?.total_debt)));
-}
-
-function validateUsPopulationEstimate(value) {
-  return validateObject(value) && Number.isFinite(Number(value.population));
-}
-
-function normalizeNumericBucketArray(value) {
-  if (!Array.isArray(value) || value.length !== JOHOE_BTC_QUEUE_BUCKET_BOUNDARIES.length) {
-    return null;
-  }
-
-  const normalized = value.map((item) => Number(item));
-  return normalized.every((item) => Number.isFinite(item) && item >= 0) ? normalized : null;
-}
-
-function sumBucketSlice(buckets, start, end) {
-  if (!Array.isArray(buckets)) return null;
-  let total = 0;
-  for (let index = start; index < end; index += 1) {
-    const value = Number(buckets[index]);
-    if (!Number.isFinite(value)) return null;
-    total += value;
-  }
-  return total;
-}
-
-function toFiniteNumberOrNull(value) {
-  const numericValue = Number(value);
-  return Number.isFinite(numericValue) ? numericValue : null;
-}
-
-function buildJohoeGroupedBands(point) {
-  return JOHOE_BTC_QUEUE_GROUPS.map((band) => ({
-    key: band.key,
-    label: band.maxFee == null ? `${band.minFee}+` : `${band.minFee}-${band.maxFee}`,
-    longLabel: band.maxFee == null ? `${band.minFee}+ sat/vB` : `${band.minFee}-${band.maxFee} sat/vB`,
-    minFee: band.minFee,
-    maxFee: band.maxFee,
-    color: band.color,
-    count: sumBucketSlice(point.countBuckets, band.bucketStart, band.bucketEnd),
-    weight: sumBucketSlice(point.weightBuckets, band.bucketStart, band.bucketEnd),
-    fee: sumBucketSlice(point.feeBuckets, band.bucketStart, band.bucketEnd),
-  }));
-}
-
-function normalizeJohoePoint(rawPoint, { preferLatestKeys = false } = {}) {
-  const timestampSeconds = Number(rawPoint?.snapshotTsUnix ?? rawPoint?.timestamp);
-  const snapshotTs = typeof rawPoint?.snapshotTs === 'string'
-    ? rawPoint.snapshotTs
-    : (typeof rawPoint?.date === 'string' ? rawPoint.date : null);
-  const fetchedAt = typeof rawPoint?.fetchedAt === 'string'
-    ? rawPoint.fetchedAt
-    : (typeof rawPoint?.fetched_at === 'string' ? rawPoint.fetched_at : null);
-  const ts = Number.isFinite(timestampSeconds)
-    ? timestampSeconds * 1000
-    : (snapshotTs ? Date.parse(snapshotTs) : null);
-  const countBuckets = normalizeNumericBucketArray(rawPoint?.countBuckets);
-  const weightBuckets = normalizeNumericBucketArray(rawPoint?.weightBuckets);
-  const feeBuckets = normalizeNumericBucketArray(rawPoint?.feeBuckets);
-
-  if (!Number.isFinite(ts) || !countBuckets || !weightBuckets || !feeBuckets) {
-    return null;
-  }
-
-  const sumCount = sumBucketSlice(countBuckets, 0, countBuckets.length);
-  const sumWeight = sumBucketSlice(weightBuckets, 0, weightBuckets.length);
-  const sumFee = sumBucketSlice(feeBuckets, 0, feeBuckets.length);
-
-  const countTotal = preferLatestKeys
-    ? (toFiniteNumberOrNull(rawPoint?.latest?.count) ?? toFiniteNumberOrNull(rawPoint?.count) ?? toFiniteNumberOrNull(rawPoint?.countTotal) ?? sumCount)
-    : (toFiniteNumberOrNull(rawPoint?.countTotal) ?? toFiniteNumberOrNull(rawPoint?.count) ?? toFiniteNumberOrNull(rawPoint?.latest?.count) ?? sumCount);
-  const weightTotal = preferLatestKeys
-    ? (toFiniteNumberOrNull(rawPoint?.latest?.weight) ?? toFiniteNumberOrNull(rawPoint?.weight) ?? toFiniteNumberOrNull(rawPoint?.weightTotal) ?? sumWeight)
-    : (toFiniteNumberOrNull(rawPoint?.weightTotal) ?? toFiniteNumberOrNull(rawPoint?.weight) ?? toFiniteNumberOrNull(rawPoint?.latest?.weight) ?? sumWeight);
-  const feeTotal = preferLatestKeys
-    ? (toFiniteNumberOrNull(rawPoint?.latest?.fee) ?? toFiniteNumberOrNull(rawPoint?.fee) ?? toFiniteNumberOrNull(rawPoint?.feeTotal) ?? sumFee)
-    : (toFiniteNumberOrNull(rawPoint?.feeTotal) ?? toFiniteNumberOrNull(rawPoint?.fee) ?? toFiniteNumberOrNull(rawPoint?.latest?.fee) ?? sumFee);
-
-  if (
-    !Number.isFinite(countTotal)
-    || !Number.isFinite(weightTotal)
-    || !Number.isFinite(feeTotal)
-  ) {
-    return null;
-  }
-
-  return {
-    ts,
-    snapshotTsUnix: Number.isFinite(timestampSeconds) ? timestampSeconds : Math.floor(ts / 1000),
-    snapshotTs: snapshotTs ?? new Date(ts).toISOString(),
-    fetchedAt,
-    date: snapshotTs ?? new Date(ts).toISOString(),
-    countTotal,
-    weightTotal,
-    feeTotal,
-    countBuckets,
-    weightBuckets,
-    feeBuckets,
-    groupedBands: buildJohoeGroupedBands({ countBuckets, weightBuckets, feeBuckets }),
-  };
-}
-
-function validateJohoeHistoryPayload(value) {
-  return Boolean(
-    value
-      && typeof value === 'object'
-      && Array.isArray(value.points)
-      && value.points.length > 0
-      && value.points.every((point) => normalizeJohoePoint(point) !== null),
-  );
-}
-
-function validateJohoeLatestPayload(value) {
-  return normalizeJohoePoint(value, { preferLatestKeys: true, preferTotalKeys: false }) !== null;
-}
-
-function normalizeJohoeHistoryResponse(raw, range) {
-  const points = Array.isArray(raw?.points) ? raw.points.map((point) => normalizeJohoePoint(point)).filter(Boolean) : [];
-  return {
-    range,
-    label: typeof raw?.dataset?.label === 'string' ? raw.dataset.label : range,
-    resolution: typeof raw?.dataset?.resolution === 'string' ? raw.dataset.resolution : null,
-    rolling: Boolean(raw?.dataset?.rolling),
-    pointCount: points.length,
-    points,
-    meta: {
-      source: typeof raw?.source === 'string' ? raw.source : 'johoe',
-      provider: typeof raw?.provider === 'string' ? raw.provider : 'api.zatobox.io',
-      network: typeof raw?.network === 'string' ? raw.network : 'btc',
-      pollIntervalMs: toFiniteNumberOrNull(raw?._meta?.pollIntervalMs),
-      cachedAt: typeof raw?._meta?.cachedAt === 'string' ? raw._meta.cachedAt : null,
-      lastSuccessfulSyncAt: typeof raw?._meta?.lastSuccessfulSyncAt === 'string' ? raw._meta.lastSuccessfulSyncAt : null,
-      stale: Boolean(raw?._meta?.stale),
-    },
-  };
-}
-
-function normalizeJohoeLatestResponse(raw) {
-  const latestPoint = normalizeJohoePoint(raw, { preferLatestKeys: true, preferTotalKeys: false });
-  if (!latestPoint) return null;
-
-  return {
-    ...latestPoint,
-    meta: {
-      source: typeof raw?.source === 'string' ? raw.source : 'johoe',
-      provider: typeof raw?.provider === 'string' ? raw.provider : 'api.zatobox.io',
-      network: typeof raw?.network === 'string' ? raw.network : 'btc',
-      sourceRange: typeof raw?.sourceRange === 'string' ? raw.sourceRange : null,
-      resolution: typeof raw?._meta?.resolution === 'string' ? raw._meta.resolution : null,
-      pollIntervalMs: toFiniteNumberOrNull(raw?._meta?.pollIntervalMs),
-      cachedAt: typeof raw?._meta?.cachedAt === 'string' ? raw._meta.cachedAt : null,
-      lastSuccessfulSyncAt: typeof raw?._meta?.lastSuccessfulSyncAt === 'string' ? raw._meta.lastSuccessfulSyncAt : null,
-      stale: Boolean(raw?._meta?.stale),
-    },
-  };
-}
-
-function getJohoePointAgeMs(point, nowMs = Date.now()) {
-  const snapshotMs = Number(point?.ts);
-  if (!Number.isFinite(snapshotMs)) return null;
-  return Math.max(0, nowMs - snapshotMs);
-}
-
-function getJohoeHistoryAgeMs(payload, nowMs = Date.now()) {
-  const latestPoint = Array.isArray(payload?.points) ? payload.points.at(-1) : null;
-  return getJohoePointAgeMs(latestPoint, nowMs);
-}
-
-function isJohoeSourceFresh(ageMs) {
-  return Number.isFinite(ageMs) && ageMs <= JOHOE_BTC_QUEUE_MAX_SOURCE_AGE_MS;
-}
-
-function assertFreshJohoeHistoryPayload(payload, providerLabel) {
-  const ageMs = getJohoeHistoryAgeMs(payload);
-  if (!isJohoeSourceFresh(ageMs)) {
-    throw new PublicFeedError(`Johoe BTC queue history (24h) from ${providerLabel} is stale`);
-  }
-  return payload;
-}
-
-function assertFreshJohoeLatestPayload(payload, providerLabel) {
-  const ageMs = getJohoePointAgeMs(payload);
-  if (!isJohoeSourceFresh(ageMs)) {
-    throw new PublicFeedError(`Johoe BTC queue latest from ${providerLabel} is stale`);
-  }
-  return payload;
-}
-
-function stripJohoeBandMeta(band) {
-  return {
-    key: band.key,
-    label: band.maxFee == null ? `${band.minFee}+` : `${band.minFee}-${band.maxFee}`,
-    longLabel: band.maxFee == null ? `${band.minFee}+ sat/vB` : `${band.minFee}-${band.maxFee} sat/vB`,
-    minFee: band.minFee,
-    maxFee: band.maxFee,
-    color: band.color,
-  };
-}
-
-function buildJohoeViewPoint(point) {
-  return {
-    ts: point.ts,
-    snapshot_ts_unix: point.snapshotTsUnix,
-    snapshot_ts: point.snapshotTs,
-    fetched_at: point.fetchedAt,
-    totals: {
-      count: point.countTotal,
-      weight: point.weightTotal,
-      fee: point.feeTotal,
-    },
-    series: {
-      count: point.groupedBands.map((band) => band.count),
-      weight: point.groupedBands.map((band) => band.weight),
-      fee: point.groupedBands.map((band) => band.fee),
-    },
-  };
-}
-
-function buildJohoeCompactPoints(points) {
-  const pointCount = points.length;
-  const timestamps = new Array(pointCount);
-  const snapshotTs = new Array(pointCount);
-  const fetchedAt = new Array(pointCount);
-  const totals = {
-    count: new Array(pointCount),
-    weight: new Array(pointCount),
-    fee: new Array(pointCount),
-  };
-  const series = {
-    count: JOHOE_BTC_QUEUE_GROUPS.map(() => new Array(pointCount)),
-    weight: JOHOE_BTC_QUEUE_GROUPS.map(() => new Array(pointCount)),
-    fee: JOHOE_BTC_QUEUE_GROUPS.map(() => new Array(pointCount)),
-  };
-
-  points.forEach((point, pointIndex) => {
-    timestamps[pointIndex] = point.ts;
-    snapshotTs[pointIndex] = point.snapshot_ts ?? null;
-    fetchedAt[pointIndex] = point.fetched_at ?? null;
-    totals.count[pointIndex] = point.totals.count;
-    totals.weight[pointIndex] = point.totals.weight;
-    totals.fee[pointIndex] = point.totals.fee;
-
-    point.series.count.forEach((value, bandIndex) => {
-      series.count[bandIndex][pointIndex] = value;
-    });
-    point.series.weight.forEach((value, bandIndex) => {
-      series.weight[bandIndex][pointIndex] = value;
-    });
-    point.series.fee.forEach((value, bandIndex) => {
-      series.fee[bandIndex][pointIndex] = value;
-    });
-  });
-
-  return {
-    point_count: pointCount,
-    ts: timestamps,
-    snapshot_ts: snapshotTs,
-    fetched_at: fetchedAt,
-    totals,
-    series,
-  };
-}
-
-function downsampleJohoeCompactPoints(pointsMatrix, maxPoints) {
-  const pointCount = Number(pointsMatrix?.point_count || pointsMatrix?.ts?.length || 0);
-  if (!Number.isFinite(maxPoints) || maxPoints <= 0 || pointCount <= maxPoints) {
-    return pointsMatrix;
-  }
-
-  const lastIndex = pointCount - 1;
-  const sampledIndexes = new Set([0, lastIndex]);
-  const step = (pointCount - 1) / Math.max(1, maxPoints - 1);
-
-  for (let sampleIndex = 1; sampleIndex < maxPoints - 1; sampleIndex += 1) {
-    sampledIndexes.add(Math.round(sampleIndex * step));
-  }
-
-  const indexes = [...sampledIndexes].sort((a, b) => a - b);
-  const pick = (values) => indexes.map((index) => values[index]);
-
-  return {
-    point_count: indexes.length,
-    ts: pick(pointsMatrix.ts || []),
-    totals: {
-      count: pick(pointsMatrix?.totals?.count || []),
-      weight: pick(pointsMatrix?.totals?.weight || []),
-      fee: pick(pointsMatrix?.totals?.fee || []),
-    },
-    series: {
-      count: (pointsMatrix?.series?.count || []).map(pick),
-      weight: (pointsMatrix?.series?.weight || []).map(pick),
-      fee: (pointsMatrix?.series?.fee || []).map(pick),
-    },
-  };
-}
-
-function toUtcDayMs(value) {
-  const date = new Date(`${String(value || '').slice(0, 10)}T00:00:00Z`);
-  if (!Number.isFinite(date.getTime())) return null;
-  return date.getTime();
-}
-
-function normalizeDebtToPennyRows(payload) {
-  const rows = Array.isArray(payload?.data) ? payload.data : [];
-  return rows
-    .map((row) => {
-      const recordDate = String(row?.record_date || '').slice(0, 10);
-      const totalDebt = Number(row?.tot_pub_debt_out_amt);
-      const debtHeldPublic = Number(row?.debt_held_public_amt);
-      const intragovHoldings = Number(row?.intragov_hold_amt);
-
-      if (!recordDate || !Number.isFinite(totalDebt) || totalDebt <= 0) {
-        return null;
-      }
-
-      return {
-        record_date: recordDate,
-        total_debt: totalDebt,
-        debt_held_public: Number.isFinite(debtHeldPublic) ? debtHeldPublic : null,
-        intragovernmental_holdings: Number.isFinite(intragovHoldings) ? intragovHoldings : null,
-      };
-    })
-    .filter(Boolean);
-}
-
-function normalizeUsPopulationEstimate(payload, year) {
-  const row = Array.isArray(payload?.[1]) ? payload[1] : null;
-  const geography = String(row?.[0] || 'United States').trim() || 'United States';
-  const population = Number(row?.[1]);
-
-  if (!Number.isFinite(population) || population <= 0) {
-    return null;
-  }
-
-  return {
-    geography,
-    population: Math.round(population),
-    dataset_year: year,
-    dataset: `ACS 1-Year ${year}`,
-    series: 'B01003_001E',
-  };
-}
-
-function computeUsNationalDebtRates(series) {
-  const ordered = [...series].sort((a, b) => String(a.record_date).localeCompare(String(b.record_date)));
-  const latest = ordered.at(-1) || null;
-  const previous = ordered.at(-2) || null;
-  const trailingWindow = ordered.slice(-Math.min(US_NATIONAL_DEBT_RATE_WINDOW, ordered.length));
-  const earliest = trailingWindow[0] || null;
-  const latestMs = toUtcDayMs(latest?.record_date);
-  const earliestMs = toUtcDayMs(earliest?.record_date);
-  const previousMs = toUtcDayMs(previous?.record_date);
-
-  let ratePerSecond = null;
-  if (latest && earliest && Number.isFinite(latestMs) && Number.isFinite(earliestMs) && latestMs > earliestMs) {
-    ratePerSecond = (Number(latest.total_debt) - Number(earliest.total_debt)) / ((latestMs - earliestMs) / 1000);
-  }
-
-  if ((!Number.isFinite(ratePerSecond) || ratePerSecond === null) && latest && previous && Number.isFinite(latestMs) && Number.isFinite(previousMs) && latestMs > previousMs) {
-    ratePerSecond = (Number(latest.total_debt) - Number(previous.total_debt)) / ((latestMs - previousMs) / 1000);
-  }
-
-  const safeRatePerSecond = Number.isFinite(ratePerSecond) ? ratePerSecond : 0;
-
-  return {
-    latest,
-    previous,
-    windowStart: earliest?.record_date || latest?.record_date || null,
-    windowEnd: latest?.record_date || null,
-    windowObservations: trailingWindow.length,
-    ratePerSecond: safeRatePerSecond,
-    ratePerMinute: safeRatePerSecond * 60,
-    ratePerHour: safeRatePerSecond * 60 * 60,
-    ratePerDay: safeRatePerSecond * 60 * 60 * 24,
-    ratePerWeek: safeRatePerSecond * 60 * 60 * 24 * 7,
-    ratePerYear: safeRatePerSecond * 60 * 60 * 24 * 365,
-  };
-}
-
-function buildUsNationalDebtSnapshot(series, populationEstimate, projectionBaseAt) {
-  const rates = computeUsNationalDebtRates(series);
-  const totalDebt = Number(rates.latest?.total_debt);
-  const debtHeldPublic = Number(rates.latest?.debt_held_public);
-  const intragovernmentalHoldings = Number(rates.latest?.intragovernmental_holdings);
-  const population = Number(populationEstimate?.population);
-  const debtPerPerson = Number.isFinite(totalDebt) && Number.isFinite(population) && population > 0
-    ? totalDebt / population
-    : null;
-  const latestOfficialDelta = rates.previous
-    ? Number(rates.latest.total_debt) - Number(rates.previous.total_debt)
-    : null;
-
-  if (!Number.isFinite(totalDebt) || totalDebt <= 0) {
-    throw new PublicFeedError('U.S. national debt payload is incomplete');
-  }
-
-  return {
-    total_debt: totalDebt,
-    debt_held_public: Number.isFinite(debtHeldPublic) ? debtHeldPublic : null,
-    intragovernmental_holdings: Number.isFinite(intragovernmentalHoldings) ? intragovernmentalHoldings : null,
-    official_record_date: rates.latest?.record_date || null,
-    previous_record_date: rates.previous?.record_date || null,
-    latest_official_delta: Number.isFinite(latestOfficialDelta) ? latestOfficialDelta : null,
-    projection_base_at: projectionBaseAt,
-    interpolation_window_start: rates.windowStart,
-    interpolation_window_end: rates.windowEnd,
-    interpolation_window_observations: rates.windowObservations,
-    population: Number.isFinite(population) ? population : null,
-    population_dataset_year: populationEstimate?.dataset_year || null,
-    population_dataset: populationEstimate?.dataset || null,
-    population_series: populationEstimate?.series || null,
-    debt_per_person: Number.isFinite(debtPerPerson) ? debtPerPerson : null,
-    debt_per_taxpayer: null,
-    debt_per_adult: null,
-    rate_per_second: rates.ratePerSecond,
-    rate_per_minute: rates.ratePerMinute,
-    rate_per_hour: rates.ratePerHour,
-    rate_per_day: rates.ratePerDay,
-    rate_per_week: rates.ratePerWeek,
-    rate_per_year: rates.ratePerYear,
-    methodology: {
-      interpolation: `Projected real-time interpolation from the trailing ${rates.windowObservations} official Treasury observations.`,
-      population_basis: populationEstimate?.dataset
-        ? `${populationEstimate.dataset} table ${populationEstimate.series}`
-        : null,
-      official_series: 'Debt to the Penny',
-    },
-  };
-}
-
 function getDef(feedKey) {
   const feed = FEED_DEFS[feedKey];
-  if (!feed) throw new PublicFeedError(`Unknown feed: ${feedKey}`);
-  return feed;
+  if (feed) return feed;
+  // Derive a definition for valid days/interval combinations without a static entry
+  // (e.g. ?days=7 with the default '1d' interval builds binanceHistory_7_1d).
+  const dynamicHistory = feedKey.match(/^binanceHistory_(\d+)_(5m|15m|30m|1h|1d)$/);
+  if (dynamicHistory) {
+    return {
+      cacheKey: `public:binance:btc-history:${dynamicHistory[1]}:${dynamicHistory[2]}`,
+      lockKey: `public:binance:btc-history:${dynamicHistory[1]}:${dynamicHistory[2]}:refresh`,
+      refreshMs: 5 * 60_000,
+      sourceProvider: 'binance',
+      sourceUrl: `https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=${dynamicHistory[2]}`,
+      hardMinuteLimit: 1200,
+      safeMinuteBudget: 4,
+      safeDailyBudget: 5760,
+    };
+  }
+  throw new PublicFeedError(`Unknown feed: ${feedKey}`);
 }
 
 async function refreshFeed(feedKey, fetchData) {
@@ -1524,801 +713,11 @@ function getPeriodStartMs(period) {
   return getUtcDayStartMs(date);
 }
 
-function getFeatureCountryCode(feature) {
-  const primary = String(feature?.properties?.ISO_A2 || feature?.properties?.iso_a2 || feature?.properties?.['ISO3166-1-Alpha-2'] || '').toUpperCase();
-  const fallback = String(feature?.properties?.ISO_A2_EH || feature?.properties?.ADM0_A3_US || '').toUpperCase();
-  if (/^[A-Z]{2}$/.test(primary)) return primary;
-  if (/^[A-Z]{2}$/.test(fallback)) return fallback;
-  return primary || fallback;
-}
-
-function getFeatureCountryName(feature, idx) {
-  return String(
-    feature?.properties?.ADMIN
-    || feature?.properties?.NAME
-    || feature?.properties?.name
-    || `Country ${idx + 1}`,
-  ).trim();
-}
-
-function createBbox() {
-  return {
-    minLon: Infinity,
-    minLat: Infinity,
-    maxLon: -Infinity,
-    maxLat: -Infinity,
-  };
-}
-
-function updateBbox(bbox, lon, lat) {
-  bbox.minLon = Math.min(bbox.minLon, lon);
-  bbox.minLat = Math.min(bbox.minLat, lat);
-  bbox.maxLon = Math.max(bbox.maxLon, lon);
-  bbox.maxLat = Math.max(bbox.maxLat, lat);
-}
-
-function computeRingBbox(ring) {
-  const bbox = createBbox();
-  ring.forEach((point) => {
-    const lon = Number(point?.[0]);
-    const lat = Number(point?.[1]);
-    if (!Number.isFinite(lon) || !Number.isFinite(lat)) return;
-    updateBbox(bbox, lon, lat);
-  });
-  return bbox;
-}
-
-function bboxContainsPoint(bbox, lon, lat) {
-  return lon >= bbox.minLon && lon <= bbox.maxLon && lat >= bbox.minLat && lat <= bbox.maxLat;
-}
-
-function normalizeRing(ring) {
-  if (!Array.isArray(ring) || ring.length < 4) return null;
-  const normalized = ring
-    .map((point) => {
-      const lon = Number(point?.[0]);
-      const lat = Number(point?.[1]);
-      if (!Number.isFinite(lon) || !Number.isFinite(lat)) return null;
-      return [lon, lat];
-    })
-    .filter(Boolean);
-
-  if (normalized.length < 4) return null;
-
-  const bbox = computeRingBbox(normalized);
-  return {
-    points: normalized,
-    bbox,
-    centroid: getPolygonCentroid(normalized, bbox),
-    planarArea: getRingPlanarArea(normalized),
-  };
-}
-
-function getRingPlanarArea(points) {
-  if (!Array.isArray(points) || points.length < 4) return 0;
-  let area = 0;
-  for (let i = 0, j = points.length - 1; i < points.length; j = i, i += 1) {
-    const [xi, yi] = points[i];
-    const [xj, yj] = points[j];
-    area += (xj * yi) - (xi * yj);
-  }
-  return Math.abs(area / 2);
-}
-
-function getPolygonCentroid(points, fallbackBbox = null) {
-  if (!Array.isArray(points) || points.length < 4) {
-    const bbox = fallbackBbox || createBbox();
-    return {
-      lon: (bbox.minLon + bbox.maxLon) / 2,
-      lat: (bbox.minLat + bbox.maxLat) / 2,
-    };
-  }
-
-  let areaTwice = 0;
-  let centroidLon = 0;
-  let centroidLat = 0;
-
-  for (let i = 0, j = points.length - 1; i < points.length; j = i, i += 1) {
-    const [xi, yi] = points[i];
-    const [xj, yj] = points[j];
-    const factor = (xj * yi) - (xi * yj);
-    areaTwice += factor;
-    centroidLon += (xj + xi) * factor;
-    centroidLat += (yj + yi) * factor;
-  }
-
-  if (Math.abs(areaTwice) < 1e-9) {
-    const bbox = fallbackBbox || computeRingBbox(points);
-    return {
-      lon: (bbox.minLon + bbox.maxLon) / 2,
-      lat: (bbox.minLat + bbox.maxLat) / 2,
-    };
-  }
-
-  return {
-    lon: centroidLon / (3 * areaTwice),
-    lat: centroidLat / (3 * areaTwice),
-  };
-}
-
-function normalizePolygonSet(coordinates) {
-  if (!Array.isArray(coordinates) || !coordinates.length) return null;
-  const rings = coordinates.map(normalizeRing).filter(Boolean);
-  if (!rings.length) return null;
-
-  const bbox = createBbox();
-  rings.forEach((ring) => {
-    updateBbox(bbox, ring.bbox.minLon, ring.bbox.minLat);
-    updateBbox(bbox, ring.bbox.maxLon, ring.bbox.maxLat);
-  });
-
-  const outerRing = rings[0];
-  return {
-    bbox,
-    rings,
-    centroid: outerRing?.centroid || getPolygonCentroid([], bbox),
-    planarArea: Math.max(outerRing?.planarArea || 0, 0),
-  };
-}
-
-function haversineKm(lat1, lon1, lat2, lon2) {
-  const toRad = (value) => (value * Math.PI) / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-  const a = (Math.sin(dLat / 2) ** 2)
-    + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * (Math.sin(dLon / 2) ** 2);
-  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-function buildCountryGeometryIndex(geoJson) {
-  const features = Array.isArray(geoJson?.features) ? geoJson.features : [];
-  return features
-    .map((feature, idx) => {
-      const geometry = feature?.geometry;
-      const code = getFeatureCountryCode(feature);
-      const name = getFeatureCountryName(feature, idx);
-      if (!code || !geometry) return null;
-
-      const polygonSets = [];
-      if (geometry.type === 'Polygon') {
-        const polygon = normalizePolygonSet(geometry.coordinates);
-        if (polygon) polygonSets.push(polygon);
-      } else if (geometry.type === 'MultiPolygon') {
-        geometry.coordinates.forEach((polygonCoords) => {
-          const polygon = normalizePolygonSet(polygonCoords);
-          if (polygon) polygonSets.push(polygon);
-        });
-      }
-
-      if (!polygonSets.length) return null;
-
-      const bbox = createBbox();
-      polygonSets.forEach((polygon) => {
-        updateBbox(bbox, polygon.bbox.minLon, polygon.bbox.minLat);
-        updateBbox(bbox, polygon.bbox.maxLon, polygon.bbox.maxLat);
-      });
-
-      return {
-        code,
-        name,
-        bbox,
-        polygons: polygonSets,
-        centroid: getPolygonCentroid([], bbox),
-      };
-    })
-    .filter(Boolean);
-}
-
-function isPointOnSegment(lon, lat, lon1, lat1, lon2, lat2) {
-  const cross = (lat - lat1) * (lon2 - lon1) - (lon - lon1) * (lat2 - lat1);
-  if (Math.abs(cross) > 1e-10) return false;
-
-  const dot = (lon - lon1) * (lon2 - lon1) + (lat - lat1) * (lat2 - lat1);
-  if (dot < 0) return false;
-
-  const squaredLength = ((lon2 - lon1) ** 2) + ((lat2 - lat1) ** 2);
-  return dot <= squaredLength;
-}
-
-function pointInRing(lon, lat, ring) {
-  if (!bboxContainsPoint(ring.bbox, lon, lat)) return false;
-
-  let inside = false;
-  const points = ring.points;
-
-  for (let i = 0, j = points.length - 1; i < points.length; j = i, i += 1) {
-    const [xi, yi] = points[i];
-    const [xj, yj] = points[j];
-
-    if (isPointOnSegment(lon, lat, xi, yi, xj, yj)) {
-      return true;
-    }
-
-    const intersects = ((yi > lat) !== (yj > lat))
-      && (lon < ((xj - xi) * (lat - yi)) / ((yj - yi) || Number.EPSILON) + xi);
-
-    if (intersects) inside = !inside;
-  }
-
-  return inside;
-}
-
-function pointInPolygon(lon, lat, polygon) {
-  if (!bboxContainsPoint(polygon.bbox, lon, lat)) return false;
-  const [outerRing, ...holes] = polygon.rings;
-  if (!outerRing || !pointInRing(lon, lat, outerRing)) return false;
-  return !holes.some((hole) => pointInRing(lon, lat, hole));
-}
-
-function bboxArea(bbox) {
-  if (!bbox) return Infinity;
-  const width = Math.max(0, bbox.maxLon - bbox.minLon);
-  const height = Math.max(0, bbox.maxLat - bbox.minLat);
-  return width * height;
-}
-
-function locateCountryCandidates(countryIndex, lon, lat) {
-  const matches = [];
-  for (const country of countryIndex) {
-    if (!bboxContainsPoint(country.bbox, lon, lat)) continue;
-
-    for (const polygon of country.polygons) {
-      if (!pointInPolygon(lon, lat, polygon)) continue;
-      matches.push({
-        country_code: country.code,
-        country_name: country.name,
-        polygon_bbox_area: bboxArea(polygon.bbox),
-        polygon_planar_area: polygon.planarArea || bboxArea(polygon.bbox),
-        centroid_distance_km: haversineKm(lat, lon, polygon.centroid.lat, polygon.centroid.lon),
-      });
-      break;
-    }
-  }
-
-  matches.sort((a, b) => {
-    if (a.centroid_distance_km !== b.centroid_distance_km) {
-      return a.centroid_distance_km - b.centroid_distance_km;
-    }
-    if (a.polygon_planar_area !== b.polygon_planar_area) {
-      return a.polygon_planar_area - b.polygon_planar_area;
-    }
-    return a.polygon_bbox_area - b.polygon_bbox_area;
-  });
-
-  return matches;
-}
-
-function getResolutionConfidence(matches) {
-  if (!matches.length) return 'none';
-  if (matches.length === 1) return 'high';
-
-  const [best, second] = matches;
-  const bestDistance = Math.max(best.centroid_distance_km, 0.0001);
-  const secondDistance = Math.max(second.centroid_distance_km, 0.0001);
-  const distanceRatio = secondDistance / bestDistance;
-  const areaRatio = Math.max(second.polygon_planar_area || 0.0001, 0.0001) / Math.max(best.polygon_planar_area || 0.0001, 0.0001);
-
-  if (distanceRatio >= 3 || areaRatio >= 8) return 'high';
-  if (distanceRatio >= 1.5 || areaRatio >= 3) return 'medium';
-  return 'low';
-}
-
-function normalizeBtcMapCountryAreaResponse(value) {
-  if (!Array.isArray(value)) return null;
-  const row = value.find((item) => String(item?.tags?.type || '').toLowerCase() === 'country') || value[0];
-  const code = String(row?.tags?.iso_a2 || '').toUpperCase();
-  const name = String(row?.tags?.name || '').trim();
-  if (!/^[A-Z]{2}$/.test(code) || !name) return null;
-  return {
-    country_code: code,
-    country_name: name,
-    area_id: Number(row?.id) || null,
-    resolved_at: normalizeTimestamp(),
-  };
-}
-
-async function fetchBtcMapCountryAreaForPlace(placeId) {
-  const payload = await fetchJsonWithTimeout(`https://api.btcmap.org/v4/places/${placeId}/areas?type=country`);
-  return normalizeBtcMapCountryAreaResponse(payload);
-}
-
-function normalizePlaceCountryResolutionMap(value) {
-  const rawEntries = value?.entries;
-  if (!rawEntries || typeof rawEntries !== 'object') {
-    return {
-      updated_at: null,
-      entries: {},
-    };
-  }
-
-  const entries = Object.fromEntries(
-    Object.entries(rawEntries)
-      .filter(([, row]) => row?.country_code && row?.country_name)
-      .map(([placeId, row]) => [String(placeId), {
-        country_code: String(row.country_code || '').toUpperCase(),
-        country_name: String(row.country_name || '').trim(),
-        area_id: Number(row.area_id) || null,
-        resolved_at: row.resolved_at ? String(row.resolved_at) : null,
-      }]),
-  );
-
-  return {
-    updated_at: value?.updated_at ? String(value.updated_at) : null,
-    entries,
-  };
-}
-
-async function getBtcMapPlaceCountryResolutionMap() {
-  const fromMemory = memCache.get(BTCMAP_PLACE_COUNTRY_CACHE_KEY);
-  if (fromMemory?.entries) return normalizePlaceCountryResolutionMap(fromMemory);
-
-  const shared = await cacheGetJson(BTCMAP_PLACE_COUNTRY_CACHE_KEY);
-  const normalized = normalizePlaceCountryResolutionMap(shared);
-  memCache.set(BTCMAP_PLACE_COUNTRY_CACHE_KEY, normalized);
-  return normalized;
-}
-
-async function saveBtcMapPlaceCountryResolutionMap(mapPayload) {
-  const normalized = normalizePlaceCountryResolutionMap(mapPayload);
-  normalized.updated_at = normalizeTimestamp();
-  memCache.set(BTCMAP_PLACE_COUNTRY_CACHE_KEY, normalized);
-  await cacheSetJson(BTCMAP_PLACE_COUNTRY_CACHE_KEY, normalized, { ttlSeconds: BTCMAP_PLACE_COUNTRY_CACHE_TTL_SECONDS });
-  return normalized;
-}
-
-async function mapWithConcurrency(items, concurrency, mapper) {
-  const results = new Array(items.length);
-  let cursor = 0;
-
-  async function worker() {
-    while (cursor < items.length) {
-      const currentIndex = cursor;
-      cursor += 1;
-      results[currentIndex] = await mapper(items[currentIndex], currentIndex);
-    }
-  }
-
-  const workers = Array.from({ length: Math.min(concurrency, items.length) }, () => worker());
-  await Promise.all(workers);
-  return results;
-}
-
-async function resolveBtcMapFallbackCountries(candidates, cachedResolutionMap) {
-  const resolvedMap = new Map();
-  candidates.forEach((candidate) => {
-    const cached = cachedResolutionMap.entries[String(candidate.place.id)];
-    if (cached?.country_code && cached?.country_name) {
-      resolvedMap.set(candidate.place.id, cached);
-    }
-  });
-
-  const missingCandidates = candidates.filter((candidate) => !resolvedMap.has(candidate.place.id));
-  if (!missingCandidates.length) {
-    return {
-      resolvedMap,
-      updatedResolutionMap: cachedResolutionMap,
-      cache_hits: resolvedMap.size,
-      cache_misses: 0,
-      new_entries: 0,
-    };
-  }
-
-  const fallbackRows = await mapWithConcurrency(
-    missingCandidates,
-    BTCMAP_AREA_LOOKUP_CONCURRENCY,
-    async (candidate) => {
-      try {
-        const resolved = await fetchBtcMapCountryAreaForPlace(candidate.place.id);
-        return resolved ? [candidate.place.id, resolved] : null;
-      } catch {
-        return null;
-      }
-    },
-  );
-
-  const newEntries = fallbackRows.filter(Boolean);
-  newEntries.forEach(([placeId, resolved]) => {
-    resolvedMap.set(placeId, resolved);
-    cachedResolutionMap.entries[String(placeId)] = resolved;
-  });
-
-  const updatedResolutionMap = newEntries.length
-    ? await saveBtcMapPlaceCountryResolutionMap(cachedResolutionMap)
-    : cachedResolutionMap;
-
-  return {
-    resolvedMap,
-    updatedResolutionMap,
-    cache_hits: candidates.length - missingCandidates.length,
-    cache_misses: missingCandidates.length,
-    new_entries: newEntries.length,
-  };
-}
-
-function buildCountryAccumulator(map, countryCode, countryName) {
-  return map.get(countryCode) || {
-    country_code: countryCode,
-    country_name: countryName,
-    businesses: 0,
-    verified_businesses: 0,
-  };
-}
-
-function addCountryAggregate(map, countryCode, countryName, verified) {
-  const existing = buildCountryAccumulator(map, countryCode, countryName);
-  existing.businesses += 1;
-  if (verified) existing.verified_businesses += 1;
-  map.set(countryCode, existing);
-}
-
-function buildBtcMapCountryDiagnostics(places, precomputedMatches, fallbackMap, fallbackStats, resolutionMap) {
-  const diagnostics = {
-    zero_match_places: 0,
-    exact_match_places: 0,
-    ambiguous_match_places: 0,
-    low_confidence_places: 0,
-    fallback_candidates: 0,
-    fallback_hits: 0,
-    fallback_misses: 0,
-    exact_country_cache_size: Object.keys(resolutionMap?.entries || {}).length,
-    exact_country_cache_hits: fallbackStats?.cache_hits || 0,
-    exact_country_cache_misses: fallbackStats?.cache_misses || 0,
-    exact_country_cache_new_entries: fallbackStats?.new_entries || 0,
-    overlapping_country_pairs: {},
-    sample_ambiguous_places: [],
-    sample_unmatched_places: [],
-  };
-
-  places.forEach((place, index) => {
-    const matches = precomputedMatches[index] || [];
-    const confidence = getResolutionConfidence(matches);
-    if (!matches.length) diagnostics.zero_match_places += 1;
-    if (matches.length === 1) diagnostics.exact_match_places += 1;
-    if (matches.length > 1) diagnostics.ambiguous_match_places += 1;
-    if (confidence === 'low') diagnostics.low_confidence_places += 1;
-
-    const needsFallback = !matches.length || confidence === 'low';
-    if (needsFallback) diagnostics.fallback_candidates += 1;
-    if (needsFallback && fallbackMap.has(place.id)) diagnostics.fallback_hits += 1;
-    if (needsFallback && !fallbackMap.has(place.id)) diagnostics.fallback_misses += 1;
-
-    if (matches.length > 1) {
-      const pairKey = matches.slice(0, 3).map((row) => row.country_code).join(' > ');
-      diagnostics.overlapping_country_pairs[pairKey] = (diagnostics.overlapping_country_pairs[pairKey] || 0) + 1;
-      if (diagnostics.sample_ambiguous_places.length < 20) {
-        diagnostics.sample_ambiguous_places.push({
-          id: place.id,
-          name: place.name || `Place ${place.id}`,
-          lat: place.lat,
-          lon: place.lon,
-          confidence,
-          candidates: matches.slice(0, 3).map((row) => ({
-            country_code: row.country_code,
-            country_name: row.country_name,
-            centroid_distance_km: Number(row.centroid_distance_km.toFixed(2)),
-          })),
-          fallback_country_code: fallbackMap.get(place.id)?.country_code || null,
-        });
-      }
-    }
-
-    if (!matches.length && diagnostics.sample_unmatched_places.length < 20) {
-      diagnostics.sample_unmatched_places.push({
-        id: place.id,
-        name: place.name || `Place ${place.id}`,
-        lat: place.lat,
-        lon: place.lon,
-        fallback_country_code: fallbackMap.get(place.id)?.country_code || null,
-      });
-    }
-  });
-
-  diagnostics.top_overlaps = Object.entries(diagnostics.overlapping_country_pairs)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 15)
-    .map(([pair, count]) => ({ pair, count }));
-  delete diagnostics.overlapping_country_pairs;
-
-  return diagnostics;
-}
-
-function getCandidateDistanceMargin(matches) {
-  if (!matches.length) return -1;
-  if (matches.length === 1) return Number.POSITIVE_INFINITY;
-  return matches[1].centroid_distance_km - matches[0].centroid_distance_km;
-}
-
-function buildFallbackCandidateQueue(places, precomputedMatches) {
-  const allCandidates = places
-    .map((place, index) => {
-      const matches = precomputedMatches[index] || [];
-      const confidence = getResolutionConfidence(matches);
-      const needsFallback = !matches.length || confidence === 'low';
-      if (!needsFallback) return null;
-      return {
-        place,
-        matches,
-        confidence,
-        top_country_code: matches[0]?.country_code || null,
-        distance_margin_km: getCandidateDistanceMargin(matches),
-      };
-    })
-    .filter(Boolean)
-    .sort((a, b) => {
-      const aUnmatched = a.matches.length === 0 ? 0 : 1;
-      const bUnmatched = b.matches.length === 0 ? 0 : 1;
-      if (aUnmatched !== bUnmatched) return aUnmatched - bUnmatched;
-      if (a.distance_margin_km !== b.distance_margin_km) return a.distance_margin_km - b.distance_margin_km;
-      return b.matches.length - a.matches.length;
-    });
-
-  const queue = [];
-  const coveredCodes = new Set();
-
-  allCandidates.forEach((candidate) => {
-    if (candidate.top_country_code && !coveredCodes.has(candidate.top_country_code) && queue.length < BTCMAP_MAX_FALLBACK_AREA_LOOKUPS) {
-      queue.push(candidate);
-      coveredCodes.add(candidate.top_country_code);
-    }
-  });
-
-  for (const candidate of allCandidates) {
-    if (queue.length >= BTCMAP_MAX_FALLBACK_AREA_LOOKUPS) break;
-    if (queue.some((row) => row.place.id === candidate.place.id)) continue;
-    queue.push(candidate);
-  }
-
-  return queue;
-}
-
-function normalizeBtcMapPlace(row) {
-  const id = Number(row?.id);
-  const lat = Number(row?.lat);
-  const lon = Number(row?.lon);
-  if (!Number.isFinite(id) || !Number.isFinite(lat) || !Number.isFinite(lon)) return null;
-
-  return {
-    id,
-    lat,
-    lon,
-    name: String(row?.name || '').trim(),
-    verified_at: row?.verified_at ? String(row.verified_at) : null,
-    updated_at: row?.updated_at ? String(row.updated_at) : null,
-  };
-}
-
-async function fetchBtcMapPlacesPage(updatedSince, limit) {
-  const params = new URLSearchParams({
-    fields: 'id,lat,lon,name,verified_at,updated_at',
-    updated_since: updatedSince,
-    limit: String(limit),
-  });
-
-  return fetchJsonWithTimeout(`https://api.btcmap.org/v4/places?${params.toString()}`);
-}
-
-async function fetchAllBtcMapPlaces() {
-  const limit = 5000;
-  const maxPages = 20;
-  const seenIds = new Set();
-  const places = [];
-  let cursor = '1970-01-01T00:00:00Z';
-
-  for (let page = 0; page < maxPages; page += 1) {
-    const batch = await fetchBtcMapPlacesPage(cursor, limit);
-    if (!Array.isArray(batch) || batch.length === 0) break;
-
-    let addedCount = 0;
-    batch.forEach((row) => {
-      const place = normalizeBtcMapPlace(row);
-      if (!place || seenIds.has(place.id)) return;
-      seenIds.add(place.id);
-      places.push(place);
-      addedCount += 1;
-    });
-
-    if (batch.length < limit) break;
-
-    const lastUpdatedAt = String(batch[batch.length - 1]?.updated_at || '');
-    if (!lastUpdatedAt || addedCount === 0) break;
-    cursor = lastUpdatedAt;
-  }
-
-  return places;
-}
-
-async function aggregateBtcMapBusinessesByCountry(places, countriesGeoJson) {
-  const countryIndex = buildCountryGeometryIndex(countriesGeoJson);
-  const countryMap = new Map();
-  let matchedBusinesses = 0;
-  let verifiedBusinesses = 0;
-  let unmatchedBusinesses = 0;
-  let latestUpdatedAt = null;
-
-  const precomputedMatches = places.map((place) => locateCountryCandidates(countryIndex, place.lon, place.lat));
-  const fallbackCandidates = buildFallbackCandidateQueue(places, precomputedMatches);
-  const cachedResolutionMap = await getBtcMapPlaceCountryResolutionMap();
-  const fallbackResolution = await resolveBtcMapFallbackCountries(fallbackCandidates, cachedResolutionMap);
-  const fallbackMap = fallbackResolution.resolvedMap;
-
-  places.forEach((place, index) => {
-    const matches = precomputedMatches[index];
-    const fallback = fallbackMap.get(place.id) || null;
-    const country = fallback || matches[0] || null;
-    const verified = Boolean(place.verified_at);
-    const updatedAtMs = Date.parse(place.updated_at || '');
-    if (Number.isFinite(updatedAtMs)) {
-      latestUpdatedAt = latestUpdatedAt == null ? updatedAtMs : Math.max(latestUpdatedAt, updatedAtMs);
-    }
-
-    if (!country) {
-      unmatchedBusinesses += 1;
-      return;
-    }
-
-    matchedBusinesses += 1;
-    if (verified) verifiedBusinesses += 1;
-
-    addCountryAggregate(
-      countryMap,
-      country.country_code || country.code,
-      country.country_name || country.name,
-      verified,
-    );
-  });
-
-  const countryCounts = [...countryMap.values()].sort((a, b) => b.businesses - a.businesses);
-  const countryLeader = countryCounts[0] || null;
-  const diagnostics = buildBtcMapCountryDiagnostics(
-    places,
-    precomputedMatches,
-    fallbackMap,
-    fallbackResolution,
-    fallbackResolution.updatedResolutionMap,
-  );
-
-  return {
-    summary: {
-      total_places: places.length,
-      matched_places: matchedBusinesses,
-      unmatched_places: unmatchedBusinesses,
-      verified_places: verifiedBusinesses,
-      countries_covered: countryCounts.length,
-      leader_country_code: countryLeader?.country_code || null,
-      leader_country_name: countryLeader?.country_name || null,
-      leader_businesses: countryLeader?.businesses || 0,
-      latest_place_update_at: latestUpdatedAt ? normalizeTimestamp(new Date(latestUpdatedAt)) : null,
-      resolution_method: 'polygon-perimeter + selective btcmap country-area fallback',
-    },
-    diagnostics,
-    country_counts: countryCounts,
-  };
-}
-
-async function fetchBinanceCloseAtFromBase(base, startTimeMs) {
-  const exactParams = new URLSearchParams({
-    symbol: 'BTCUSDT',
-    interval: '1d',
-    startTime: String(startTimeMs),
-    endTime: String(startTimeMs + DAY_MS),
-    limit: '1',
-  });
-
-  const exact = await fetchJsonWithTimeout(`${base}?${exactParams.toString()}`);
-  const exactClose = Number(exact?.[0]?.[4]);
-  if (Number.isFinite(exactClose) && exactClose > 0) {
-    return exactClose;
-  }
-
-  const fallbackParams = new URLSearchParams({
-    symbol: 'BTCUSDT',
-    interval: '1d',
-    startTime: String(startTimeMs),
-    limit: '1',
-  });
-  const fallback = await fetchJsonWithTimeout(`${base}?${fallbackParams.toString()}`);
-  const close = Number(fallback?.[0]?.[4]);
-  if (!Number.isFinite(close) || close <= 0) {
-    throw new PublicFeedError('Invalid Binance close value');
-  }
-  return close;
-}
-
-async function fetchBinanceCloseAt(startTimeMs) {
-  let lastError = null;
-
-  for (const base of BINANCE_KLINES_BASE_URLS) {
-    try {
-      return await fetchBinanceCloseAtFromBase(base, startTimeMs);
-    } catch (error) {
-      lastError = error;
-    }
-  }
-
-  if (lastError instanceof PublicFeedError) {
-    throw lastError;
-  }
-
-  throw new PublicFeedError('Binance klines unavailable');
-}
-
-function parseCsvLine(line) {
-  const out = [];
-  let current = '';
-  let inQuotes = false;
-
-  for (let i = 0; i < line.length; i += 1) {
-    const char = line[i];
-    if (char === '"') {
-      if (inQuotes && line[i + 1] === '"') {
-        current += '"';
-        i += 1;
-      } else {
-        inQuotes = !inQuotes;
-      }
-      continue;
-    }
-
-    if (char === ',' && !inQuotes) {
-      out.push(current);
-      current = '';
-      continue;
-    }
-
-    current += char;
-  }
-
-  out.push(current);
-  return out;
-}
-
-function parseBigMacUsd(csvText) {
-  const lines = String(csvText || '').split(/\r?\n/).filter(Boolean);
-  if (lines.length < 2) {
-    throw new PublicFeedError('Big Mac CSV is empty');
-  }
-
-  const header = parseCsvLine(lines[0]);
-  const isoIndex = header.indexOf('iso_a3');
-  const dateIndex = header.indexOf('date');
-  const priceIndex = header.indexOf('dollar_price');
-  if (isoIndex < 0 || dateIndex < 0 || priceIndex < 0) {
-    throw new PublicFeedError('Big Mac CSV columns missing');
-  }
-
-  let latest = null;
-  for (let i = 1; i < lines.length; i += 1) {
-    const row = parseCsvLine(lines[i]);
-    if (row[isoIndex] !== 'USA') continue;
-
-    const price = Number(row[priceIndex]);
-    const date = new Date(row[dateIndex]);
-    if (!Number.isFinite(price) || price <= 0) continue;
-    if (!Number.isFinite(date.getTime())) continue;
-
-    if (!latest || date > latest.date) {
-      latest = {
-        price,
-        date,
-      };
-    }
-  }
-
-  if (!latest) {
-    throw new PublicFeedError('Big Mac USA row missing');
-  }
-
-  return {
-    usd: latest.price,
-    as_of: latest.date.toISOString().slice(0, 10),
-  };
-}
-
 export async function getMempoolOverviewPayload() {
   return getFeed(
     'mempoolOverview',
     async () => {
-      const [difficulty, fees, hashrate, mempool, fearGreed, heightText] = await Promise.all([
+      const results = await Promise.allSettled([
         fetchJsonWithTimeout('https://mempool.space/api/v1/difficulty-adjustment'),
         // Primary: zatobox (granular decimals via WebSocket), Fallback: mempool.space
         fetchJsonWithTimeout(`${SCRAPER_BASE_URL}${S04_MEMPOOL_SPACE_TRANSACTION_FEES_SCRAPER_PATH}`, { timeoutMs: 8_000 })
@@ -2330,13 +729,20 @@ export async function getMempoolOverviewPayload() {
           headers: { Accept: 'text/plain' },
         }),
       ]);
+      const [difficulty, fees, hashrate, mempool, fearGreed, heightText] = results
+        .map((result) => (result.status === 'fulfilled' ? result.value : null));
+
+      // Core mempool.space feeds are required; secondary sources degrade to null.
+      if (!difficulty || !mempool) {
+        throw new PublicFeedError('mempool.space core feeds unavailable');
+      }
 
       return {
         difficulty,
         fees,
         hashrate,
         mempool,
-        block_height: Number(heightText),
+        block_height: Number(heightText) || null,
         fear_greed: fearGreed,
       };
     },
@@ -2443,32 +849,6 @@ export async function getMempoolUnconfirmedTransactionsPayload() {
     },
     validateObject,
   );
-}
-
-function getSupabaseFunctionHeaders() {
-  if (!SUPABASE_PROJECT_URL) {
-    throw new PublicFeedError('SUPABASE_PROJECT_URL is required for internal BTC queue functions');
-  }
-
-  if (!SUPABASE_FUNCTIONS_JWT) {
-    throw new PublicFeedError('SUPABASE_FUNCTIONS_JWT or SUPABASE_ANON_KEY is required for internal BTC queue functions');
-  }
-
-  return {
-    Authorization: `Bearer ${SUPABASE_FUNCTIONS_JWT}`,
-  };
-}
-
-async function fetchSupabaseEdgeFunctionJson(functionName, { searchParams, timeoutMs } = {}) {
-  const url = new URL(`${SUPABASE_EDGE_FUNCTIONS_BASE_URL}/${functionName}`);
-  if (searchParams) {
-    url.search = new URLSearchParams(searchParams).toString();
-  }
-
-  return fetchJsonWithTimeout(url.toString(), {
-    timeoutMs,
-    headers: getSupabaseFunctionHeaders(),
-  });
 }
 
 async function getJohoeBtcQueueHistoryRawPayload() {
@@ -2665,35 +1045,6 @@ export async function getFearGreedPayload({ limit = 31 } = {}) {
   );
 }
 
-// Filter out non-European polygons from France's MultiPolygon feature.
-// Natural Earth includes French Guiana, Martinique, Réunion, etc. as part of
-// France's geometry, causing those overseas territories to be labelled "France"
-// on the map. We keep only polygons whose centroid falls within Europe bounds.
-function _polygonCentroid(ring) {
-  let sumLon = 0, sumLat = 0;
-  for (const [lon, lat] of ring) { sumLon += lon; sumLat += lat; }
-  return [sumLon / ring.length, sumLat / ring.length];
-}
-function _patchFranceOverseas(geoJson) {
-  if (!Array.isArray(geoJson?.features)) return geoJson;
-  return {
-    ...geoJson,
-    features: geoJson.features.map((feature) => {
-      const iso2eh = String(feature?.properties?.ISO_A2_EH || '').toUpperCase();
-      const admin  = String(feature?.properties?.ADMIN || '').toLowerCase();
-      if (iso2eh !== 'FR' && admin !== 'france') return feature;
-      const geom = feature.geometry;
-      if (geom?.type !== 'MultiPolygon') return feature;
-      const european = geom.coordinates.filter((poly) => {
-        const [lon, lat] = _polygonCentroid(poly[0]);
-        return lon > -15 && lon < 20 && lat > 35 && lat < 56;
-      });
-      if (european.length === 0) return feature; // safety — keep all if nothing matched
-      return { ...feature, geometry: { ...geom, coordinates: european } };
-    }),
-  };
-}
-
 export async function getCountriesGeoPayload() {
   return getFeed(
     'geoCountries',
@@ -2759,7 +1110,34 @@ export async function getBtcMapBusinessesByCountryPayload() {
       ).catch(() => {});
 
       const countriesGeo = countriesGeoPayload?.data || countriesGeoPayload;
-      return aggregateBtcMapBusinessesByCountry(places, countriesGeo);
+      const getResolutionMap = () => getBtcMapPlaceCountryResolutionMap({
+        memCache,
+        cacheGetJson,
+        cacheKey: BTCMAP_PLACE_COUNTRY_CACHE_KEY,
+      });
+
+      const saveResolutionMap = (mapPayload) => saveBtcMapPlaceCountryResolutionMap(mapPayload, {
+        memCache,
+        cacheSetJson,
+        cacheKey: BTCMAP_PLACE_COUNTRY_CACHE_KEY,
+        cacheTtlSeconds: BTCMAP_PLACE_COUNTRY_CACHE_TTL_SECONDS,
+      });
+
+      const resolveFallback = (candidates, cachedResolutionMap) => resolveBtcMapFallbackCountries(
+        candidates,
+        cachedResolutionMap,
+        {
+          fetchBtcMapCountryAreaForPlace,
+          saveBtcMapPlaceCountryResolutionMap: saveResolutionMap,
+          areaLookupConcurrency: BTCMAP_AREA_LOOKUP_CONCURRENCY,
+        },
+      );
+
+      return aggregateBtcMapBusinessesByCountry(places, countriesGeo, {
+        getBtcMapPlaceCountryResolutionMap: getResolutionMap,
+        resolveBtcMapFallbackCountries: resolveFallback,
+        maxFallbackLookups: BTCMAP_MAX_FALLBACK_AREA_LOOKUPS,
+      });
     },
     validateCountryBusinessPayload,
   );
@@ -2901,18 +1279,6 @@ export async function getS15BtcVsGoldMarketCapPayload() {
 
 const VALID_HISTORY_INTERVALS = new Set(['5m', '15m', '30m', '1h', '1d']);
 const BINANCE_MAX_CANDLES = 1000;
-
-function candlesNeeded(interval, days) {
-  if (interval === '5m')  return days * 288;
-  if (interval === '15m') return days * 96;
-  if (interval === '30m') return days * 48;
-  if (interval === '1h')  return days * 24;
-  return days;
-}
-
-function historyFeedKey(days, interval) {
-  return `binanceHistory_${days}_${interval}`;
-}
 
 export async function getBinanceBtcHistoryPayload({ days: rawDays = 365, interval: rawInterval = '1d' } = {}) {
   const isMax = String(rawDays).toLowerCase() === 'max';
@@ -3129,6 +1495,22 @@ export async function getS21BigMacSatsPayload() {
   );
 }
 
+// Static pre-Binance history is read at most once per process; null = not loaded yet.
+let s18StaticBtcHistory = null;
+
+function loadS18StaticBtcHistory() {
+  if (s18StaticBtcHistory) return s18StaticBtcHistory;
+  try {
+    const content = fs.readFileSync(path.join(process.cwd(), 'server', 'data', 'btc_historical_static.json'), 'utf8');
+    const parsed = JSON.parse(content);
+    s18StaticBtcHistory = parsed.data || [];
+  } catch (err) {
+    console.warn('[getS18BtcCyclesPayload] Could not read static BTC history', err);
+    s18StaticBtcHistory = [];
+  }
+  return s18StaticBtcHistory;
+}
+
 export async function getS18BtcCyclesPayload() {
   return getComposedPayload({
     cacheKey: 'public:s18:btc-cycles:composed',
@@ -3142,15 +1524,8 @@ export async function getS18BtcCyclesPayload() {
       ]);
       const binancePoints = Array.isArray(binancePayload?.data) ? binancePayload.data : [];
       
-      let staticData = [];
-      try {
-        const content = fs.readFileSync(path.join(process.cwd(), 'server', 'data', 'btc_historical_static.json'), 'utf8');
-        const parsed = JSON.parse(content);
-        staticData = parsed.data || [];
-      } catch (err) {
-        console.warn('[getS18BtcCyclesPayload] Could not read static BTC history', err);
-      }
-      
+      const staticData = loadS18StaticBtcHistory();
+
       const combined = [];
       staticData.forEach(pt => {
         combined.push({

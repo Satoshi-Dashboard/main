@@ -21,9 +21,12 @@ const DAY_MS = 86_400_000;
 
 // ── Error ────────────────────────────────────────────────────────────────────
 
-export class S17ApiError extends Error {
-  constructor(msg) { super(msg); this.name = 'S17ApiError'; }
-}
+import { ExternalApiError } from '../../shared/errors/SatoshiBaseError.js';
+import { withCacheLock } from '../../core/runtimeCache.js';
+
+export class S17ApiError extends ExternalApiError {}
+
+const SHARED_LOCK_KEY = 's17:house-price:refresh';
 
 // ── Zatobox (FRED) helpers ──────────────────────────────────────────────────
 
@@ -37,12 +40,14 @@ async function fetchFredFromZatobox() {
   if (!res.ok) throw new S17ApiError(`Zatobox ${res.status}`);
   const json = await res.json();
 
-  // Expected format: { observations: [{date, value}, ...] }
+  // Expected format: { observations: [{date, value}, ...] } — FRED delivers value as string
   const obs = json.observations ?? [];
-  return obs
-    .filter(o => o.value !== '.' && o.value != null && Number.isFinite(o.value))
+  const parsed = obs
+    .filter(o => o.value !== '.' && o.value != null && Number.isFinite(Number(o.value)))
     .map(o => ({ date: o.date, value: Number(o.value) }))
     .sort((a, b) => a.date.localeCompare(b.date));
+  if (parsed.length < 2) throw new S17ApiError('FRED MSPUS returned insufficient observations');
+  return parsed;
 }
 
 // ── Binance helpers ─────────────────────────────────────────────────────────
@@ -284,6 +289,28 @@ export async function getS17HousePricePayload() {
 }
 
 export async function refreshS17HousePriceCache() {
+  // Shared lock keeps concurrent expirations from stampeding FRED + Binance pagination.
+  const refreshed = await withCacheLock(
+    SHARED_LOCK_KEY,
+    async () => rebuildS17HousePriceCache(),
+    { ttlSeconds: 60, waitMs: 3500, pollMs: 120 },
+  ).catch(() => null);
+
+  if (refreshed) return refreshed;
+
+  if (_cache) {
+    return {
+      ..._cache.payload,
+      is_fallback: true,
+      fallback_note: 'Serving stale house price payload while shared refresh completes',
+      stale_age_ms: Date.now() - _cache.fetched_at_ms,
+    };
+  }
+
+  return rebuildS17HousePriceCache();
+}
+
+async function rebuildS17HousePriceCache() {
   let fredObs, btcMap;
 
   try {
@@ -303,6 +330,8 @@ export async function refreshS17HousePriceCache() {
     }
     throw err;
   }
+
+  if (!fredObs.length) throw new S17ApiError('FRED observations empty');
 
   const latest = fredObs[fredObs.length - 1];
   const monthlyUsd = interpolateFredMonthly(fredObs);

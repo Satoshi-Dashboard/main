@@ -55,10 +55,18 @@ async function remoteCommand(args) {
   }
 }
 
+function sweepExpiredLocalCache() {
+  const now = Date.now();
+  for (const [key, entry] of localCache) {
+    if (entry.expiresAt && now > entry.expiresAt) localCache.delete(key);
+  }
+}
+
 function setLocalCache(key, value, ttlSeconds) {
   const expiresAt = Number.isFinite(ttlSeconds)
     ? Date.now() + (Math.max(1, ttlSeconds) * 1000)
     : null;
+  if (localCache.size > 500) sweepExpiredLocalCache();
   localCache.set(key, { value, expiresAt });
 }
 
@@ -114,9 +122,12 @@ export async function cacheGetJson(key) {
   if (!remote.ok || typeof remote.result !== 'string') return null;
 
   const remoteTtl = await remoteCommand(['TTL', namespaced]);
-  if (remoteTtl.ok) {
-    setLocalCache(namespaced, remote.result, normalizeRemoteTtlSeconds(remoteTtl.result));
+  const remoteTtlSeconds = normalizeRemoteTtlSeconds(remoteTtl.result);
+  if (remoteTtl.ok && remoteTtlSeconds !== null) {
+    setLocalCache(namespaced, remote.result, remoteTtlSeconds);
   }
+  // If TTL is -2/-1 or the command failed, skip local caching rather than pin
+  // a value with no expiry.
 
   try {
     return JSON.parse(remote.result);

@@ -52,6 +52,7 @@ const EMPTY_CURRENCIES = BASE_CURRENCY_META.map(m => ({ ...m, price: null, chang
 
 const REFRESH_MS = 30_000;
 const ROTATE_RESUME_MS = 6_000; // ms of user inactivity before auto-rotation resumes
+const ROTATE_DEG_PER_FRAME = 0.05; // axial spin speed (longitude pan per frame), ~react-globe.gl feel
 
 // UI_COLORS imported from @/shared/constants/colors.js
 
@@ -274,15 +275,20 @@ export default function S03_MultiCurrencyBoard() {
     if (!selectedCurrency || !globeMapRef.current) return;
     const coords = CURRENCY_COORDS[selectedCurrency];
     if (!coords) return;
-    globeMapRef.current.flyTo({ center: coords, zoom: 3, duration: 1500 });
+    const map = globeMapRef.current;
+    // Pause axial spin during flyTo so the rAF loop doesn't fight flyTo's center.
+    map.__s03?.stop();
+    map.flyTo({ center: coords, zoom: 3, duration: 1500 });
+    const resume = setTimeout(() => map.__s03?.start(), 1600);
+    return () => clearTimeout(resume);
   }, [selectedCurrency]);
 
   // Globe ready — rotation with resume + currency markers with price popup
   const handleGlobeReady = useCallback((map) => {
     globeMapRef.current = map;
 
-    // Set initial tilt so bearing-based rotation looks like a 3D Earth spin
-    map.easeTo({ pitch: 22, duration: 1200 });
+    // Keep the globe upright (no tilt) so the spin reads as a clean axial Earth rotation.
+    map.easeTo({ pitch: 0, bearing: 0, duration: 1200 });
 
     // ── Auto-rotation with pause-and-resume ─────────────────────────────
     let rafId = null;
@@ -296,8 +302,9 @@ export default function S03_MultiCurrencyBoard() {
     const startRotation = () => {
       if (rafId !== null) return; // already running
       const tick = () => {
-        // Decrement bearing → right-to-left Earth-like spin (pitch gives 3D perspective)
-        map.rotateTo((map.getBearing() - 0.06) % 360, { duration: 0 });
+        // Pan center longitude → clean west→east axial spin (like react-globe.gl autoRotate)
+        const c = map.getCenter();
+        map.setCenter([c.lng - ROTATE_DEG_PER_FRAME, c.lat]);
         rafId = requestAnimationFrame(tick);
       };
       rafId = requestAnimationFrame(tick);
@@ -327,7 +334,7 @@ export default function S03_MultiCurrencyBoard() {
         'space-color': '#000005',
         'star-intensity': 0,
       });
-    } catch (_) { /* MapLibre version may not support fog — safe to ignore */ }
+    } catch { /* MapLibre version may not support fog — safe to ignore */ }
 
     // ── Currency capital markers (one popup per marker) ──────────────────
     markersRef.current.forEach(m => m.remove());
@@ -444,16 +451,19 @@ export default function S03_MultiCurrencyBoard() {
             pointer-events: none !important;
             transition: opacity 0.2s !important;
           }
+          /* Global base layer forces bg/shadow/padding/rounded with !important on
+             .maplibregl-popup-content — must re-assert with !important to win. */
           .s03-price-popup .maplibregl-popup-content {
-            background: rgba(5,5,9,0.97);
-            border: 1px solid rgba(160,190,255,0.18);
-            border-radius: 7px;
-            padding: 10px 13px;
-            box-shadow: 0 6px 28px rgba(0,0,0,0.75);
+            background: rgba(5,5,9,0.97) !important;
+            border: 1px solid rgba(160,190,255,0.18) !important;
+            border-radius: 7px !important;
+            padding: 10px 13px !important;
+            box-shadow: 0 6px 28px rgba(0,0,0,0.75) !important;
             color: #fff;
           }
-          .s03-price-popup.maplibregl-popup-anchor-bottom .maplibregl-popup-tip {
-            border-top-color: rgba(5,5,9,0.97);
+          .s03-price-popup .maplibregl-popup-tip {
+            display: block !important;
+            border-top-color: rgba(5,5,9,0.97) !important;
           }
           .s03-price-popup .maplibregl-popup-close-button {
             color: rgba(255,255,255,0.35);
@@ -503,7 +513,7 @@ export default function S03_MultiCurrencyBoard() {
               const map = globeMapRef.current;
               if (!map) return;
               map.__s03?.stop();
-              map.easeTo({ center: [10, 20], bearing: 0, pitch: 22, zoom: 1.5, duration: 800 });
+              map.easeTo({ center: [10, 20], bearing: 0, pitch: 0, zoom: 1.5, duration: 800 });
               setTimeout(() => map.__s03?.start(), 900);
             }}
             style={{

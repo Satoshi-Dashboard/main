@@ -21,7 +21,6 @@ export const MAP_BORDER_COLOR = '#2a2a3e';
  */
 export const CHOROPLETH_DARK_STYLE = {
   version: 8,
-  glyphs: 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf',
   sources: {},
   layers: [
     {
@@ -52,7 +51,15 @@ export const GLOBE_DARK_STYLE_URL = 'https://basemaps.cartocdn.com/gl/dark-matte
  * @returns {Array} MapLibre expression array.
  */
 export function buildColorMatchExpression(colorMap, defaultColor = MAP_LAND_COLOR) {
-  // ['match', ['get', 'ISO_A2'], 'US', '#FF6A00', 'DE', '#FF8C1A', ..., defaultColor]
+  // ['match', key, 'US', '#FF6A00', 'DE', '#FF8C1A', ..., defaultColor]
   const pairs = Object.entries(colorMap).flatMap(([code, color]) => [code, color]);
-  return ['match', ['get', 'ISO_A2'], ...pairs, defaultColor];
+  // A 'match' expression with zero label/output pairs is invalid in MapLibre.
+  if (!pairs.length) return defaultColor;
+  // Natural Earth marks some countries (France, Norway) with ISO_A2 '-99';
+  // the real code lives in ISO_A2_EH — fall back to it.
+  const key = ['coalesce',
+    ['case', ['==', ['get', 'ISO_A2'], '-99'], ['get', 'ISO_A2_EH'], ['get', 'ISO_A2']],
+    ''];
+  return ['match', key, ...pairs, defaultColor];
 }
+

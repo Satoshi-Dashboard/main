@@ -58,16 +58,14 @@ export default function MapLibreBase({
     map.on('load', () => {
       // Auto-rotation for globe mode
       if (autoRotate) {
-        let rafId;
         const rotate = () => {
           map.rotateTo((map.getBearing() - 0.08) % 360, { duration: 0 });
-          rafId = requestAnimationFrame(rotate);
+          map._autoRotateRafId = requestAnimationFrame(rotate);
         };
-        rafId = requestAnimationFrame(rotate);
+        map._autoRotateRafId = requestAnimationFrame(rotate);
         // Stop rotation on user interaction
-        map.once('mousedown', () => cancelAnimationFrame(rafId));
-        map.once('touchstart', () => cancelAnimationFrame(rafId));
-        map._autoRotateRafId = rafId;
+        map.once('mousedown', () => cancelAnimationFrame(map._autoRotateRafId));
+        map.once('touchstart', () => cancelAnimationFrame(map._autoRotateRafId));
       }
 
       onMapReady?.(map);

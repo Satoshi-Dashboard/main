@@ -66,12 +66,14 @@ export function addChoroplethLayer(map, {
   });
 
   // --- Hover tooltip ---
-  let tooltipVisible = false;
+  let onMove = null;
+  let onLeave = null;
 
   if (tooltipEl && getTooltipHtml) {
-    map.on('mousemove', layerId, (e) => {
+    onMove = (e) => {
       map.getCanvas().style.cursor = 'pointer';
-      const code = e.features?.[0]?.properties?.ISO_A2 || '';
+      const props = e.features?.[0]?.properties || {};
+      const code = (props.ISO_A2 && props.ISO_A2 !== '-99' ? props.ISO_A2 : props.ISO_A2_EH) || '';
       const html = getTooltipHtml(code);
       if (!html) return;
 
@@ -79,14 +81,15 @@ export function addChoroplethLayer(map, {
       tooltipEl.style.display = 'block';
       tooltipEl.style.left = `${e.originalEvent.offsetX + 14}px`;
       tooltipEl.style.top  = `${e.originalEvent.offsetY - 10}px`;
-      tooltipVisible = true;
-    });
+    };
 
-    map.on('mouseleave', layerId, () => {
+    onLeave = () => {
       map.getCanvas().style.cursor = '';
       tooltipEl.style.display = 'none';
-      tooltipVisible = false;
-    });
+    };
+
+    map.on('mousemove', layerId, onMove);
+    map.on('mouseleave', layerId, onLeave);
   }
 
   // --- Updater: call when view mode / data changes ---
@@ -99,6 +102,8 @@ export function addChoroplethLayer(map, {
   }
 
   function destroy() {
+    if (onMove)  map.off('mousemove', layerId, onMove);
+    if (onLeave) map.off('mouseleave', layerId, onLeave);
     if (map.getLayer(borderLayerId)) map.removeLayer(borderLayerId);
     if (map.getLayer(layerId))       map.removeLayer(layerId);
     if (map.getSource(sourceId))     map.removeSource(sourceId);

@@ -14,7 +14,7 @@ import {
   formatNextUpdateDelay,
 } from '@/features/modules/live/shared/mapColorUtils.js';
 import { useWorldBankPopulation } from '@/shared/hooks/useWorldBankPopulation.js';
-import { ISO_COUNTRY_NAMES, getFeatureCountryCode, getFeatureCountryName } from '@/shared/lib/geoCountryUtils.js';
+import { ISO_COUNTRY_NAMES } from '@/shared/lib/geoCountryUtils.js';
 import { fmt } from '@/shared/utils/formatters.js';
 import { useModuleData } from '@/shared/hooks/useModuleData.js';
 import MapLibreBase from '@/shared/map/MapLibreBase.jsx';
@@ -126,7 +126,6 @@ export default function S08_BtcMapBusinessesMap() {
 
   const summary      = payload?.data?.summary || {};
   const countsByCode = useMemo(() => Object.fromEntries(countryCounts.map((r) => [r.country_code, r])), [countryCounts]);
-  const maxCount     = useMemo(() => (countryCounts.length ? Math.max(...countryCounts.map((r) => r.businesses)) : 0), [countryCounts]);
 
   const perCapitaByCode = useMemo(() => {
     const map = {};
@@ -287,6 +286,11 @@ export default function S08_BtcMapBusinessesMap() {
           },
         });
 
+        // Business names come from OpenStreetMap (publicly editable) and Popup.setHTML
+        // renders raw HTML, so anything interpolated must be escaped.
+        const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => (
+          { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+        ));
         const popup = new maplibregl.Popup({ closeButton: true, closeOnClick: true, maxWidth: '240px', className: 's08-biz-popup' });
         markerPopupRef.current = popup;
 
@@ -296,7 +300,7 @@ export default function S08_BtcMapBusinessesMap() {
           const coords = feat.geometry.coordinates.slice();
           const count = feat.properties.point_count;
           popup.setLngLat(coords)
-            .setHTML(`<div style="font-family:monospace;font-size:12px;color:#fff;padding:4px 2px"><strong>${count}</strong> businesses nearby<br/><span style="color:rgba(255,255,255,0.5);font-size:10px">Click to expand</span></div>`)
+            .setHTML(`<div style="font-family:monospace;font-size:12px;color:#fff;padding:4px 2px"><strong>${Number(count) || 0}</strong> businesses nearby<br/><span style="color:rgba(255,255,255,0.5);font-size:10px">Click to expand</span></div>`)
             .addTo(map);
           map.getSource(SOURCE).getClusterExpansionZoom(feat.properties.cluster_id)
             .then(zoom => map.easeTo({ center: coords, zoom }))
@@ -309,7 +313,7 @@ export default function S08_BtcMapBusinessesMap() {
           const coords = feat.geometry.coordinates.slice();
           const { name } = feat.properties;
           popup.setLngLat(coords)
-            .setHTML(`<div style="font-family:monospace;font-size:12px;color:#fff;padding:4px 2px"><strong>${name || 'Unnamed'}</strong></div>`)
+            .setHTML(`<div style="font-family:monospace;font-size:12px;color:#fff;padding:4px 2px"><strong>${escapeHtml(name) || 'Unnamed'}</strong></div>`)
             .addTo(map);
         });
 
@@ -322,7 +326,6 @@ export default function S08_BtcMapBusinessesMap() {
       .finally(() => setMarkersFetching(false));
 
     return removeLayers;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showMarkers, mapReady]);
 
   const displayRows = useMemo(() => {

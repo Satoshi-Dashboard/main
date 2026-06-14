@@ -44,6 +44,7 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       host: true,
+      port: process.env.PORT ? parseInt(process.env.PORT) : undefined,
       watch: {
         ignored: [
           '**/server/.runtime-cache/*.json',

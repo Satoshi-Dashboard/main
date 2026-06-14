@@ -24,6 +24,7 @@ import {
   SharedMetaBottomStrip,
   SharedMetaTopStrip,
 } from '@/features/module-player/components/SharedModuleMeta.jsx';
+import ModuleErrorBoundary from '@/shared/components/common/ModuleErrorBoundary.jsx';
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery.js';
 import { absoluteUrl, DEFAULT_OG_IMAGE, usePageSEO } from '@/shared/hooks/usePageSEO.js';
 import { trackModuleNavigation, trackModuleViewed, trackSeoNavigationClick } from '@/shared/lib/analytics.js';
@@ -638,13 +639,17 @@ export default function ModulePage({ forcedSlug = null }) {
           )}
           <div className={`relative min-h-0 ${useResponsiveScroll ? 'min-h-full flex-none' : 'flex-1'}`}>
             {hasBlockingOverlay ? (
-              <Suspense fallback={<ModuleContentFallback title={module.title} />}>
-                <BlockedPreviewPoster title={module.title} onOpenDonate={() => setDonateOpen(true)} />
-              </Suspense>
+              <ModuleErrorBoundary key={module.slug}>
+                <Suspense fallback={<ModuleContentFallback title={module.title} />}>
+                  <BlockedPreviewPoster title={module.title} onOpenDonate={() => setDonateOpen(true)} />
+                </Suspense>
+              </ModuleErrorBoundary>
             ) : (
-              <Suspense fallback={<ModuleContentFallback title={module.title} />}>
-                <Component onOpenDonate={() => setDonateOpen(true)} />
-              </Suspense>
+              <ModuleErrorBoundary key={module.slug}>
+                <Suspense fallback={<ModuleContentFallback title={module.title} />}>
+                  <Component onOpenDonate={() => setDonateOpen(true)} />
+                </Suspense>
+              </ModuleErrorBoundary>
             )}
             {hasBlockingOverlay && (
               <div

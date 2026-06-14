@@ -8,6 +8,7 @@ import {
   SEO_BLOG_PATH,
   SEO_HUB_PATH,
 } from '@/features/seo/content/seoRoutes.js';
+import ModuleErrorBoundary from '@/shared/components/common/ModuleErrorBoundary.jsx';
 
 const ModulePage = lazy(() => import('@/features/module-player/ModulePage.jsx'));
 const SeoLandingPage = lazy(loadSeoLandingPage);
@@ -43,7 +44,11 @@ function SeoRouteFallback() {
 }
 
 function LazyRoute({ children }) {
-  return <Suspense fallback={<SeoRouteFallback />}>{children}</Suspense>;
+  return (
+    <ModuleErrorBoundary>
+      <Suspense fallback={<SeoRouteFallback />}>{children}</Suspense>
+    </ModuleErrorBoundary>
+  );
 }
 
 function LegacyBlogRedirect() {
