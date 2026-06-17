@@ -3,22 +3,15 @@ import { getBtcRates } from './btcRates.js';
 import {
   fetchJsonWithTimeout,
   fetchTextWithTimeout,
-  hasTorBitcoinRpcConfig,
-  buildBitcoinRpcUrl,
-  isLocalTcpPortReachable,
   _callBitcoinRpcOverTor,
   fetchBtcMapCountryAreaForPlace,
-  fetchBtcMapPlacesPage,
   fetchAllBtcMapPlaces,
-  normalizeBtcMapPlace,
-  fetchBinanceCloseAtFromBase,
   fetchBinanceCloseAt,
 } from '../shared/utils/fetchUtils.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
   SUPABASE_PROJECT_URL,
-  getSupabaseFunctionHeaders,
   fetchSupabaseEdgeFunctionJson,
 } from '../shared/adapters/supabaseAdapter.js';
 import {

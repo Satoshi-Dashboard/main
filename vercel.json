@@ -1,5 +1,8 @@
 {
+  "buildCommand": "npm run build",
   "devCommand": "npm run build && npm run preview:vercel-local -- --port $PORT",
+  "framework": "vite",
+  "outputDirectory": "dist",
   "regions": ["fra1"],
   "functions": {
     "api/index.js": {

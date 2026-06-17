@@ -560,9 +560,6 @@ const LIVE_PEG_REFRESH_MS = 120_000;
 export default function S10_StablecoinPegHealth() {
   const [coins,   setCoins]   = useState([]);
   const [error, setError] = useState(null);
-  const [lastUpdatedAt, setLastUpdatedAt] = useState(null);
-  const [nextUpdateAt, setNextUpdateAt] = useState(null);
-  const [listSource, setListSource] = useState('coingecko');
   const [livePricesBySymbol, setLivePricesBySymbol] = useState({});
   const [liveUpdatedAt, setLiveUpdatedAt] = useState(null);
   const sparkCache = useRef({});
@@ -593,9 +590,6 @@ export default function S10_StablecoinPegHealth() {
       }
       const filtered = WHITELIST.map(sym => bySymbol[sym]).filter(Boolean);
       setCoins(filtered);
-      setLastUpdatedAt(payload?.updated_at || new Date().toISOString());
-      setNextUpdateAt(payload?.next_update_at || null);
-      setListSource(payload?.source_provider || 'coingecko');
       setError(filtered.length ? null : 'Stablecoin data is temporarily unavailable.');
       return payload;
     },

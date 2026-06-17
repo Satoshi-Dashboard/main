@@ -1492,6 +1492,7 @@ function MapClusterLayer(
   return null;
 }
 
+/* eslint-disable react-refresh/only-export-components */
 export {
   Map,
   useMap,

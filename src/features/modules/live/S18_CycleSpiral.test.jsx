@@ -1,7 +1,7 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import S18_CycleSpiral from './S18_CycleSpiral';
+import S18_CycleSpiral from './S19_CycleSpiral';
 
 const MOCK_WAYPOINTS = [
   { ts: Date.UTC(2020, 4, 11), price: 8800 },

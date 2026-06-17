@@ -503,9 +503,10 @@ export async function refreshBitnodesCache() {
 
           // If scraper has API data, use it directly
           if (scraperData?.apiData?.sorted_asns) {
-            const snapshotBreakdown = scraperData.snapshotData
-              ? computeBreakdownFromBitnodesSnapshot(scraperData.snapshotData)
-              : null;
+            const snapshotBreakdown = scraperData.protocolBreakdown
+              || (scraperData.snapshotData
+                ? computeBreakdownFromBitnodesSnapshot(scraperData.snapshotData)
+                : null);
             const payload = buildBitnodesPayload(scraperData.apiData, snapshotBreakdown, now);
             await writeCachePayload(payload);
             return payload;

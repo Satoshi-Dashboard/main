@@ -38,8 +38,8 @@ const UI_COLORS = {
 };
 
 const PROVIDER_LINKS = {
-  bitnodes: 'https://bitnodes.io',
-  bitnodes_scrape: 'https://bitnodes.io/nodes/',
+  bitnodes: 'https://bitnodes.es/index.php',
+  bitnodes_scrape: 'https://bitnodes.es/index.php',
 };
 
 const NODE_DENSITY_SCALE = [
@@ -131,7 +131,7 @@ export default function S06_NodesMap() {
   const nextUpdateDelay     = useMemo(() => formatNextUpdateDelay(payload?.next_update), [payload?.next_update]);
   const sourceProvider      = String(payload?.source_provider || '').toLowerCase();
   const sourceProviderLabel = sourceProvider === 'bitnodes_scrape' ? 'bitnodes (scrape)' : (payload?.source_provider || 'N/A');
-  const sourceProviderUrl   = PROVIDER_LINKS[sourceProvider] || 'https://bitnodes.io';
+  const sourceProviderUrl   = PROVIDER_LINKS[sourceProvider] || 'https://bitnodes.es/index.php';
   const fallbackNote        = String(payload?.fallback_note || 'Fallback active: Bitnodes API is unavailable. Showing Bitnodes countries modal snapshot from the website.');
 
   const countryCounts    = useMemo(() => parseCountryCounts(payload), [payload]);

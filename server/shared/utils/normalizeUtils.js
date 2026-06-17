@@ -40,7 +40,8 @@ export const JOHOE_BTC_QUEUE_GROUPS = [
 
 export const JOHOE_BTC_QUEUE_MAX_SOURCE_AGE_MS = 3 * 60_000;
 
-import { normalizeTimestamp, parseIsoDate } from './timeUtils.js';
+import { normalizeTimestamp } from './timeUtils.js';
+import { PublicFeedError } from '../errors/SatoshiBaseError.js';
 
 export function parseSuffixedUsdNumber(value) {
   const match = String(value || '').trim().match(/^\$?\s*([\d.,]+)\s*([TMBK])?$/i);

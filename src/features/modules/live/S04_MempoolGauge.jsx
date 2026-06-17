@@ -193,8 +193,6 @@ function MempoolPanel({
   unavailableLabel,
   stats,
   footerTiles,
-  footerSourceComponent,
-  hideSourceOnDesktop = false,
 }) {
   const hasGaugeData = usageBytes != null && maxBytes != null && maxBytes > 0;
 
