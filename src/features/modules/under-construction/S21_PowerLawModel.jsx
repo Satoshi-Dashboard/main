@@ -113,7 +113,7 @@ const Y_TICKS = [1, 10, 100, 1000, 10000, 100000, 1000000, 10000000];
 const Y_LABELS = ['$1', '$10', '$100', '$1K', '$10K', '$100K', '$1M', '$10M'];
 const X_TICKS = [2010, 2012, 2014, 2016, 2018, 2020, 2022, 2024, 2026, 2028];
 
-export default function S19_PowerLawModel() {
+export default function S21_PowerLawModel() {
   return (
     <div className="flex h-full w-full flex-col bg-[#111111]">
       {/* Header */}

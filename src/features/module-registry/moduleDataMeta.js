@@ -186,6 +186,7 @@ const MODULE_DATA_META = {
     ],
     refreshMinutes: 15,
     responsiveScroll: true,
+    desktopScroll: true,
     showSharedStripOnResponsive: false,
     showTitleInStrip: false,
   },

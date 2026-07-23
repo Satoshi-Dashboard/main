@@ -1,5 +1,5 @@
 /**
- * S18: Bitcoin Halving Cycle Spiral
+ * S20: Bitcoin Halving Cycle Spiral
  * Replicates giocaizzi visualization with live Binance API data
  *
  * Architecture:
@@ -226,7 +226,7 @@ function CycleSpiralSkeleton() {
 // MAIN COMPONENT
 // ============================================================================
 
-export default function S18_CycleSpiral() {
+export default function S20_CycleSpiral() {
   // Data fetching from Binance
   const { waypoints, loading, error, latestPrice } = useBinanceHistoricalBTC(300000);
 

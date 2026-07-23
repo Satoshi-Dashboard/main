@@ -12,7 +12,7 @@ const S02_PriceChart = lazyWithPreload(() => import('@/features/modules/live/S02
 const S03_MultiCurrencyBoard = lazyWithPreload(() => import('@/features/modules/live/S03_MultiCurrencyBoard'));
 const S04_MempoolGauge = lazyWithPreload(() => import('@/features/modules/live/S04_MempoolGauge'));
 const S05_LongTermTrend = lazyWithPreload(() => import('@/features/modules/live/S05_LongTermTrend'));
-const S06_BtcQueue = lazyWithPreload(() => import('@/features/modules/live/S32_BtcQueue'));
+const S06_BtcQueue = lazyWithPreload(() => import('@/features/modules/live/S06_BtcQueue'));
 const S07_NodesMap = lazyWithPreload(() => import('@/features/modules/live/S07_NodesMap'));
 const S08_LightningNodesMap = lazyWithPreload(() => import('@/features/modules/live/S08_LightningNodesMap'));
 const S09_BtcMapBusinessesMap = lazyWithPreload(() => import('@/features/modules/live/S09_BtcMapBusinessesMap'));
@@ -25,18 +25,19 @@ const S15_GlobalAssetsTreemap = lazyWithPreload(() => import('@/features/modules
 const S16_BTCvsGold = lazyWithPreload(() => import('@/features/modules/live/S16_BTCvsGold'));
 const S17_MayerMultiple = lazyWithPreload(() => import('@/features/modules/live/S17_MayerMultiple'));
 const S18_PricePerformance = lazyWithPreload(() => import('@/features/modules/live/S18_PricePerformance'));
-const S19_CycleSpiral = lazyWithPreload(() => import('@/features/modules/live/S19_CycleSpiral'));
-const S20_PowerLawModel = lazyWithPreload(() => import('@/features/modules/under-construction/S20_PowerLawModel'));
-const S21_StockToFlow = lazyWithPreload(() => import('@/features/modules/under-construction/S21_StockToFlow'));
-const S22_SeasonalityHeatmap = lazyWithPreload(() => import('@/features/modules/under-construction/S23_SeasonalityHeatmap'));
-const S23_BigMacIndex = lazyWithPreload(() => import('@/features/modules/under-construction/S24_BigMacIndex'));
-const S24_NetworkActivity = lazyWithPreload(() => import('@/features/modules/under-construction/S25_NetworkActivity'));
-const S25_LogRegression = lazyWithPreload(() => import('@/features/modules/under-construction/S26_LogRegression'));
-const S26_MVRVScore = lazyWithPreload(() => import('@/features/modules/under-construction/S27_MVRVScore'));
-const S27_GoogleTrends = lazyWithPreload(() => import('@/features/modules/under-construction/S28_GoogleTrends'));
-const S28_BTCDominance = lazyWithPreload(() => import('@/features/modules/under-construction/S29_BTCDominance'));
-const S29_UTXODistribution = lazyWithPreload(() => import('@/features/modules/under-construction/S30_UTXODistribution'));
-const S30_USNationalDebt = lazyWithPreload(() => import('@/features/modules/live/S31_USNationalDebt'));
+const S19_BigMacIndex = lazyWithPreload(() => import('@/features/modules/under-construction/S19_BigMacIndex'));
+const S20_CycleSpiral = lazyWithPreload(() => import('@/features/modules/live/S20_CycleSpiral'));
+const S21_PowerLawModel = lazyWithPreload(() => import('@/features/modules/under-construction/S21_PowerLawModel'));
+const S22_StockToFlow = lazyWithPreload(() => import('@/features/modules/under-construction/S22_StockToFlow'));
+const S23_SeasonalityHeatmap = lazyWithPreload(() => import('@/features/modules/under-construction/S23_SeasonalityHeatmap'));
+const S24_NetworkActivity = lazyWithPreload(() => import('@/features/modules/under-construction/S24_NetworkActivity'));
+const S25_LogRegression = lazyWithPreload(() => import('@/features/modules/under-construction/S25_LogRegression'));
+const S26_MVRVScore = lazyWithPreload(() => import('@/features/modules/under-construction/S26_MVRVScore'));
+const S27_GoogleTrends = lazyWithPreload(() => import('@/features/modules/under-construction/S27_GoogleTrends'));
+const S28_BTCDominance = lazyWithPreload(() => import('@/features/modules/under-construction/S28_BTCDominance'));
+const S29_UTXODistribution = lazyWithPreload(() => import('@/features/modules/under-construction/S29_UTXODistribution'));
+const S30_USNationalDebt = lazyWithPreload(() => import('@/features/modules/live/S30_USNationalDebt'));
+const S31_ThankYouSatoshi = lazyWithPreload(() => import('@/features/modules/live/S31_ThankYouSatoshi'));
 
 const MODULE_DEFS = [
   { slugBase: 'bitcoin-price-market-overview', title: 'Bitcoin Overview', component: S01_BitcoinOverview },
@@ -57,11 +58,11 @@ const MODULE_DEFS = [
   { slugBase: 'bitcoin-vs-gold-chart', title: 'BTC vs Gold', component: S16_BTCvsGold },
   { slugBase: 'bitcoin-mayer-multiple', title: 'Mayer Multiple', component: S17_MayerMultiple },
   { slugBase: 'bitcoin-price-performance', title: 'US Median Home Price in ₿', component: S18_PricePerformance },
-  { slugBase: 'bitcoin-halving-cycle-spiral', title: 'Cycle Spiral', component: S19_CycleSpiral },
-  { slugBase: 'bitcoin-power-law-model', title: 'Power Law Model', component: S20_PowerLawModel },
-  { slugBase: 'bitcoin-stock-to-flow-model', title: 'Stock to Flow', component: S21_StockToFlow },
-  { slugBase: 'bitcoin-seasonality-heatmap', title: 'Seasonality', component: S22_SeasonalityHeatmap },
-  { slugBase: 'bitcoin-big-mac-index', title: 'Big Mac Index', component: S23_BigMacIndex },
+  { slugBase: 'bitcoin-big-mac-index', title: 'Big Mac Index', component: S19_BigMacIndex },
+  { slugBase: 'bitcoin-halving-cycle-spiral', title: 'Cycle Spiral', component: S20_CycleSpiral },
+  { slugBase: 'bitcoin-power-law-model', title: 'Power Law Model', component: S21_PowerLawModel },
+  { slugBase: 'bitcoin-stock-to-flow-model', title: 'Stock to Flow', component: S22_StockToFlow },
+  { slugBase: 'bitcoin-seasonality-heatmap', title: 'Seasonality', component: S23_SeasonalityHeatmap },
   { slugBase: 'bitcoin-network-activity', title: 'Network Activity', component: S24_NetworkActivity },
   { slugBase: 'bitcoin-log-regression-channel', title: 'Log Regression', component: S25_LogRegression },
   { slugBase: 'bitcoin-mvrv-score', title: 'MVRV Score', component: S26_MVRVScore },
@@ -69,6 +70,7 @@ const MODULE_DEFS = [
   { slugBase: 'bitcoin-dominance-chart', title: 'BTC Dominance', component: S28_BTCDominance },
   { slugBase: 'bitcoin-utxo-distribution', title: 'UTXO Distribution', component: S29_UTXODistribution },
   { slugBase: 'us-national-debt-live-counter', title: 'U.S. National Debt', component: S30_USNationalDebt },
+  { slugBase: 'satoshi-nakamoto-bitcoin-whitepaper', title: 'Thank You Satoshi', component: S31_ThankYouSatoshi },
 ];
 
 const toCode = (index) => `S${String(index + 1).padStart(2, '0')}`;

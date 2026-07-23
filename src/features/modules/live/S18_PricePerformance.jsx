@@ -52,7 +52,7 @@ function CardsView({ points, liveHomeInBtc, loading, btcError, change24h }) {
   }, [points, currentSats]);
 
   return (
-    <div style={{ flex: '1 1 0', minHeight: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', overflowY: 'auto', padding: '0.5rem 0 0.75rem' }}>
+    <div style={{ flex: '1 1 0', minHeight: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'safe center', overflowY: 'auto', padding: '0.5rem 0 0.75rem' }}>
       {/* Hero */}
       <div style={{ fontSize: 'clamp(2.5rem,8vw,4rem)', lineHeight: 1, marginBottom: '0.4rem' }}>🏠</div>
 
@@ -79,7 +79,7 @@ function CardsView({ points, liveHomeInBtc, loading, btcError, change24h }) {
       {/* Cards grid */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(3, 1fr)',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
         gap: '0.65rem',
         width: '100%',
         maxWidth: 780,
@@ -272,7 +272,7 @@ function SkeletonChart() {
   );
 }
 
-export default function S17_PricePerformance() {
+export default function S18_PricePerformance() {
   const fetchSpot = useCallback(() => fetchBtcSpot().then(s => s ? { usd: s.usd, change24h: s.change24h } : null), []);
   const fetchHouse = useCallback(() => fetchJson('/api/s17/house-price'), []);
 

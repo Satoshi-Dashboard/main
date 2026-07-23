@@ -162,7 +162,7 @@ function WarningPanel({ title, description }) {
   );
 }
 
-export default function S16_MayerMultiple() {
+export default function S17_MayerMultiple() {
   const [activeLabel, setActiveLabel] = useState('1Y');
   const [hoverData, setHoverData] = useState(null);
   const [showZones, setShowZones] = useState(false);

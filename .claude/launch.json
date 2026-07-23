@@ -6,9 +6,7 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev:ui"],
       "port": 5175,
-      "env": {
-        "PORT": "5175"
-      }
+      "autoPort": true
     }
   ]
 }

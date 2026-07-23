@@ -51,6 +51,10 @@ export default function ModuleDonateModal({
 
   const showBTC = activeTab === 'btc';
   const showLightning = activeTab === 'lightning' && lightningAddress;
+  const showFiat = activeTab === 'fiat';
+
+  const PAYPAL_URL = 'https://paypal.me/KhunsaUwU';
+  const KOFI_URL = 'https://ko-fi.com/ikhunsa';
 
   return (
     <div
@@ -62,7 +66,7 @@ export default function ModuleDonateModal({
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label="Bitcoin donation options"
+        aria-label="Donation options"
       >
         <div
           className="text-center font-mono"
@@ -72,22 +76,22 @@ export default function ModuleDonateModal({
         </div>
 
         {/* Switcher Tabs */}
-        {lightningAddress && (
-          <div className="mt-4 flex gap-2 rounded-lg border border-white/10 bg-white/5 p-1">
-            <button
-              type="button"
-              onClick={() => setActiveTab('btc')}
-              className="flex-1 rounded px-3 py-2 font-mono transition-all"
-              style={{
-                fontSize: 'var(--fs-caption)',
-                backgroundColor: showBTC ? 'rgba(247,147,26,0.2)' : 'transparent',
-                color: showBTC ? 'var(--accent-bitcoin)' : 'rgba(255,255,255,0.5)',
-                borderColor: showBTC ? 'rgba(247,147,26,0.4)' : 'transparent',
-                borderWidth: showBTC ? '1px' : '0px',
-              }}
-            >
-              ₿ Bitcoin
-            </button>
+        <div className="mt-4 flex gap-2 rounded-lg border border-white/10 bg-white/5 p-1">
+          <button
+            type="button"
+            onClick={() => setActiveTab('btc')}
+            className="flex-1 rounded px-3 py-2 font-mono transition-all"
+            style={{
+              fontSize: 'var(--fs-caption)',
+              backgroundColor: showBTC ? 'rgba(247,147,26,0.2)' : 'transparent',
+              color: showBTC ? 'var(--accent-bitcoin)' : 'rgba(255,255,255,0.5)',
+              borderColor: showBTC ? 'rgba(247,147,26,0.4)' : 'transparent',
+              borderWidth: showBTC ? '1px' : '0px',
+            }}
+          >
+            ₿ Bitcoin
+          </button>
+          {lightningAddress && (
             <button
               type="button"
               onClick={() => setActiveTab('lightning')}
@@ -102,8 +106,22 @@ export default function ModuleDonateModal({
             >
               ⚡ Lightning
             </button>
-          </div>
-        )}
+          )}
+          <button
+            type="button"
+            onClick={() => setActiveTab('fiat')}
+            className="flex-1 rounded px-3 py-2 font-mono transition-all"
+            style={{
+              fontSize: 'var(--fs-caption)',
+              backgroundColor: showFiat ? 'rgba(0,216,151,0.15)' : 'transparent',
+              color: showFiat ? 'var(--accent-green)' : 'rgba(255,255,255,0.5)',
+              borderColor: showFiat ? 'rgba(0,216,151,0.4)' : 'transparent',
+              borderWidth: showFiat ? '1px' : '0px',
+            }}
+          >
+            $ Fiat
+          </button>
+        </div>
 
         {/* Bitcoin on-chain */}
         {showBTC && (
@@ -171,6 +189,43 @@ export default function ModuleDonateModal({
               )}
             </button>
           </>
+        )}
+
+        {/* Fiat */}
+        {showFiat && (
+          <div className="mt-4 flex flex-col gap-3">
+            <div className="text-center font-mono text-white/65" style={{ fontSize: 'var(--fs-caption)' }}>
+              Donate with card or PayPal balance
+            </div>
+            <a
+              href={PAYPAL_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex w-full items-center justify-center gap-2 rounded border px-3 py-2.5 text-center font-mono transition-colors hover:brightness-125"
+              style={{
+                fontSize: 'var(--fs-caption)',
+                borderColor: 'rgba(0,112,186,0.4)',
+                background: 'rgba(0,112,186,0.1)',
+                color: '#4FA8E0',
+              }}
+            >
+              <span aria-hidden="true">💳</span> PayPal
+            </a>
+            <a
+              href={KOFI_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex w-full items-center justify-center gap-2 rounded border px-3 py-2.5 text-center font-mono transition-colors hover:brightness-125"
+              style={{
+                fontSize: 'var(--fs-caption)',
+                borderColor: 'rgba(255,94,91,0.4)',
+                background: 'rgba(255,94,91,0.1)',
+                color: '#FF8583',
+              }}
+            >
+              <span aria-hidden="true">☕</span> Ko-fi
+            </a>
+          </div>
         )}
 
         <button

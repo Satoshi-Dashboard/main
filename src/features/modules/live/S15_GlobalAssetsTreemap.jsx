@@ -190,7 +190,7 @@ function AssetCard({ asset }) {
 }
 
 /* ── Main component ───────────────────────────────────────────── */
-export default function S14_GlobalAssetsTreemap() {
+export default function S15_GlobalAssetsTreemap() {
   const fetchAssets = useCallback(() => fetchJson('/api/s14/global-assets'), []);
 
   const { data: payload, loading: isLoading, error: fetchError } = useModuleData(fetchAssets, {

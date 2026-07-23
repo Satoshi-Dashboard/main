@@ -110,7 +110,7 @@ function UnavailablePanel() {
   );
 }
 
-export default function S12_AddressDistribution() {
+export default function S13_AddressDistribution() {
   const [tiers, setTiers] = useState(PLACEHOLDER_TIERS);
   const [meta, setMeta] = useState({ updatedAt: '', updatedAtLocal: '', fetchedAt: '', fetchedAtLocal: '' });
 

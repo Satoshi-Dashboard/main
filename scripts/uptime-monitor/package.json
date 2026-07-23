@@ -1,0 +1,10 @@
+{
+  "name": "uptime-monitor",
+  "private": true,
+  "type": "module",
+  "version": "1.0.0",
+  "description": "Monitors umbrel.local and satoshidashboard Knots node data, toasts on death.",
+  "dependencies": {
+    "node-notifier": "^10.0.1"
+  }
+}

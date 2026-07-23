@@ -56,7 +56,7 @@ function cellText(v) {
   return (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
 }
 
-export default function S22_SeasonalityHeatmap() {
+export default function S23_SeasonalityHeatmap() {
   return (
     <div className="flex h-full w-full flex-col bg-[#111111]">
       {/* Title */}

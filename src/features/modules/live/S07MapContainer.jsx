@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Map,
-  MapControls,
   MapPopup,
   MapClusterLayer,
   useMap,
@@ -279,8 +278,6 @@ export default function S07MapContainer({
         maxZoom={14}
         theme="dark"
       >
-        <MapControls />
-
         {/* Choropleth Layer */}
         {isChoropleth && countriesGeo && (
           <ChoroplethLayer

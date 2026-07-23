@@ -237,7 +237,7 @@ function ErrorPanel({ onRetry }) {
   );
 }
 
-export default function S32_BtcQueue() {
+export default function S06_BtcQueue() {
   const activeRange = '24h';
   const [activeMetric, setActiveMetric] = useState('count');
   const [hoverIndex, setHoverIndex] = useState(null);

@@ -557,7 +557,7 @@ function CoinCard({ coin, idx, sparkCache, onVisible }) {
 const LIST_REFRESH_MS = 120_000;
 const LIVE_PEG_REFRESH_MS = 120_000;
 
-export default function S10_StablecoinPegHealth() {
+export default function S11_StablecoinPegHealth() {
   const [coins,   setCoins]   = useState([]);
   const [error, setError] = useState(null);
   const [livePricesBySymbol, setLivePricesBySymbol] = useState({});

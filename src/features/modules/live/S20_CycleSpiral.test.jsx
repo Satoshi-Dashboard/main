@@ -1,7 +1,7 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import S18_CycleSpiral from './S19_CycleSpiral';
+import S20_CycleSpiral from './S20_CycleSpiral';
 
 const MOCK_WAYPOINTS = [
   { ts: Date.UTC(2020, 4, 11), price: 8800 },
@@ -42,7 +42,7 @@ function readTransform(element) {
 }
 
 async function renderSpiral() {
-  render(<S18_CycleSpiral />);
+  render(<S20_CycleSpiral />);
   const area = await screen.findByTestId('cycle-spiral-interaction-area');
 
   await waitFor(() => {
@@ -52,7 +52,7 @@ async function renderSpiral() {
   return area;
 }
 
-describe('S18_CycleSpiral interactions', () => {
+describe('S20_CycleSpiral interactions', () => {
   it('updates zoom scale and transform on wheel input', async () => {
     const area = await renderSpiral();
 

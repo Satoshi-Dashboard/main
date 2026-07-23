@@ -73,7 +73,7 @@ function hw(y) {
   return MIN_HW + (MAX_HW - MIN_HW) * (y - PY_TOP) / (PY_BOT - PY_TOP);
 }
 
-export default function S13_WealthPyramid() {
+export default function S14_WealthPyramid() {
   const [tiers, setTiers] = useState(() => TIER_TEMPLATE.map((tier) => ({ ...tier, addresses: null })));
   const [meta, setMeta] = useState({ updatedAt: '', updatedAtLocal: '', fetchedAt: '', fetchedAtLocal: '' });
   const viewportWidth = useWindowWidth();

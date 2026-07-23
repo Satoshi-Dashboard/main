@@ -93,7 +93,7 @@ function isTorCyberspaceRow(label) {
   return String(label || '').toLowerCase().includes('tor cyberspace');
 }
 
-export default function S06_NodesMap() {
+export default function S07_NodesMap() {
   const [isBreakdownExpanded, setIsBreakdownExpanded] = useState(false);
   const [isMetaExpanded, setIsMetaExpanded] = useState(false);
   const [isDensityExpanded, setIsDensityExpanded] = useState(false);

@@ -71,7 +71,7 @@ function resolveCountryLabel(code, name) {
   return `${resolvedName} (${code})`;
 }
 
-export default function S08_BtcMapBusinessesMap() {
+export default function S09_BtcMapBusinessesMap() {
   const [payload, setPayload] = useState(null);
   const [error, setError] = useState(null);
   const [isBreakdownExpanded, setIsBreakdownExpanded] = useState(false);

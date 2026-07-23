@@ -307,7 +307,7 @@ function MetricPlaceholder({ label, message = 'Unavailable', color = 'rgba(255,2
 }
 
 // ── Main module ───────────────────────────────────────────────────────────────
-export default function S15_BTCvsGold() {
+export default function S16_BTCvsGold() {
   const [activeLabel, setActiveLabel] = useState('1Y');
   const [hoverData, setHoverData]   = useState(null);
   const [showGold, setShowGold]     = useState(true);

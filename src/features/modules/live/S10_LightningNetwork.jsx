@@ -61,7 +61,7 @@ function SatGrid({ sats }) {
   );
 }
 
-export default function S09_LightningNetwork() {
+export default function S10_LightningNetwork() {
   const [data, setData] = useState({ price: null, change: null });
 
   useModuleData(fetchBtcSpot, {

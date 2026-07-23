@@ -242,7 +242,7 @@ function parseLightningCountryCounts(payload) {
   return [...map.values()].sort((a, b) => b.nodes - a.nodes);
 }
 
-export default function S07_LightningNodesMap() {
+export default function S08_LightningNodesMap() {
   const [payload,              setPayload]              = useState(null);
   const [fallbackPayload,     setFallbackPayload]      = useState(null);
   const [apiLoading,           setApiLoading]           = useState(true);

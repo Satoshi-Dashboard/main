@@ -122,7 +122,7 @@ function Bubble({ label, value }) {
   );
 }
 
-export default function S11_FearGreedIndex() {
+export default function S12_FearGreedIndex() {
   const [data, setData] = useState(EMPTY_DATA);
   const viewportWidth = useWindowWidth();
 

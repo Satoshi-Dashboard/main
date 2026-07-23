@@ -71,6 +71,7 @@ const BINANCE_KLINES_BASE_URLS = [
   'https://api.binance.us/api/v3/klines',
 ];
 const SCRAPER_BASE_URL = String(process.env.SCRAPER_BASE_URL || 'https://api.zatobox.io').trim();
+const CENSUS_API_KEY = String(process.env.CENSUS_API_KEY || '').trim();
 const SUPABASE_EDGE_FUNCTIONS_BASE_URL = SUPABASE_PROJECT_URL ? `${SUPABASE_PROJECT_URL}/functions/v1` : '';
 const S15_GOLD_SCRAPER_PATH = '/api/scrape/companiesmarketcap-gold';
 const S04_KNOT_API_URL = String(process.env.KNOT_API_URL || 'https://knotapi.zatobox.io/api/v1/init-data').trim();
@@ -1371,7 +1372,9 @@ async function getUsPopulationEstimatePayload() {
 
       for (let year = currentYear - 1; year >= ACS_POPULATION_MIN_YEAR; year -= 1) {
         try {
-          const payload = await fetchJsonWithTimeout(`https://api.census.gov/data/${year}/acs/acs1?get=NAME,B01003_001E&for=us:1`);
+          const censusParams = new URLSearchParams({ get: 'NAME,B01003_001E', for: 'us:1' });
+          if (CENSUS_API_KEY) censusParams.set('key', CENSUS_API_KEY);
+          const payload = await fetchJsonWithTimeout(`https://api.census.gov/data/${year}/acs/acs1?${censusParams.toString()}`);
           const normalized = normalizeUsPopulationEstimate(payload, year);
           if (validateUsPopulationEstimate(normalized)) {
             return normalized;

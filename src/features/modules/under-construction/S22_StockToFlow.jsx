@@ -102,7 +102,7 @@ const CURRENT_SF  = 135;
 const CURRENT_P   = 84000;
 const MODEL_NOW   = modelP(CURRENT_SF);
 
-export default function S20_StockToFlow() {
+export default function S22_StockToFlow() {
   const devPct = +((CURRENT_P - MODEL_NOW) / MODEL_NOW * 100).toFixed(1);
   const up = devPct >= 0;
 
