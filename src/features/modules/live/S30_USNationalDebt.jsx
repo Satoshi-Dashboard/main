@@ -262,9 +262,9 @@ export default function S30_USNationalDebt() {
   }
 
   return (
-    <div className="relative flex min-h-full w-full overflow-visible bg-[var(--bg-primary)] lg:h-full lg:overflow-hidden">
-      <div className="relative mx-auto flex min-h-full w-full max-w-[1720px] flex-col px-4 py-4 sm:px-5 sm:py-5 lg:h-full lg:px-10 lg:py-6 xl:px-12 2xl:px-16 2xl:py-7">
-        <div className="mx-auto flex w-full max-w-[1520px] flex-col items-center gap-4 text-center sm:gap-5 lg:h-full lg:flex-1 lg:justify-between lg:gap-0">
+    <div className="relative flex min-h-full w-full overflow-visible bg-[var(--bg-primary)]">
+      <div className="relative mx-auto flex min-h-full w-full max-w-[1720px] flex-col px-4 py-4 sm:px-5 sm:py-5 lg:px-10 lg:py-6 xl:px-12 2xl:px-16 2xl:py-7">
+        <div className="mx-auto flex w-full max-w-[1520px] flex-col items-center gap-4 text-center sm:gap-5 lg:flex-1 lg:justify-between lg:gap-0">
           <header className="flex w-full max-w-[980px] flex-col items-center gap-4 max-md:gap-3">
             <div className="flex flex-wrap items-center justify-center gap-3">
               <span

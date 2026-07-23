@@ -1,6 +1,7 @@
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile, rename, writeFile } from 'node:fs/promises';
 import { cacheDelete, cacheGetJson, cacheSetJson, withCacheLock } from '../../core/runtimeCache.js';
 import { ensureRuntimeCacheDir, resolveRuntimeCacheFile } from '../../core/runtimePaths.js';
+import { parseIsoDate } from '../../shared/utils/timeUtils.js';
 
 const CACHE_FILE = resolveRuntimeCacheFile('bitnodes_cache.json');
 const BITNODES_URL = 'https://bitnodes.io/api/v1/snapshots/latest/?field=sorted_asns';
@@ -23,12 +24,6 @@ const scrapeRateState = globalThis.__SATOSHI_BITNODES_SCRAPE_RATE_STATE__ || {
 
 if (!globalThis.__SATOSHI_BITNODES_SCRAPE_RATE_STATE__) {
   globalThis.__SATOSHI_BITNODES_SCRAPE_RATE_STATE__ = scrapeRateState;
-}
-
-function parseIsoDate(value) {
-  const date = new Date(String(value || ''));
-  if (!Number.isFinite(date.getTime())) return null;
-  return date;
 }
 
 function formatWaitCompact(waitMs) {
@@ -409,7 +404,9 @@ async function writeCachePayload(payload) {
 
   try {
     await ensureRuntimeCacheDir();
-    await writeFile(CACHE_FILE, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+    const tmpFile = `${CACHE_FILE}.${process.pid}.tmp`;
+    await writeFile(tmpFile, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+    await rename(tmpFile, CACHE_FILE);
   } catch {
     /* keep runtime payload even if filesystem is not writable */
   }
@@ -506,9 +503,10 @@ export async function refreshBitnodesCache() {
 
           // If scraper has API data, use it directly
           if (scraperData?.apiData?.sorted_asns) {
-            const snapshotBreakdown = scraperData.snapshotData
-              ? computeBreakdownFromBitnodesSnapshot(scraperData.snapshotData)
-              : null;
+            const snapshotBreakdown = scraperData.protocolBreakdown
+              || (scraperData.snapshotData
+                ? computeBreakdownFromBitnodesSnapshot(scraperData.snapshotData)
+                : null);
             const payload = buildBitnodesPayload(scraperData.apiData, snapshotBreakdown, now);
             await writeCachePayload(payload);
             return payload;

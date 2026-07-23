@@ -1,0 +1,29 @@
+manifestVersion: 1
+id: satoshi-dashboard
+category: bitcoin
+name: Satoshi Dashboard
+version: "1.0.0"
+tagline: Real-time Bitcoin analytics dashboard
+description: >-
+  Satoshi Dashboard is a comprehensive, real-time Bitcoin analytics dashboard
+  featuring live price tracking, mempool visualization, cycle analysis,
+  Lightning Network stats, BTC vs Gold comparison, housing analytics,
+  and more. Designed for bitcoiners who want a single view of the
+  Bitcoin ecosystem.
+releaseNotes: >-
+  Initial release with Docker and Umbrel support.
+developer: LiberDev
+website: ""
+dependencies: []
+repo: "https://github.com/Satoshi-Dashboard/main"
+support: "https://github.com/Satoshi-Dashboard/main/issues"
+port: 8787
+gallery:
+  - 1.jpg
+  - 2.jpg
+  - 3.jpg
+path: ""
+defaultUsername: ""
+defaultPassword: ""
+submitter: LiberDev
+submission: ""

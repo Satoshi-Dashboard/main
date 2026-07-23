@@ -109,11 +109,6 @@ const MODULE_SEO = {
     description: 'Study the Bitcoin Stock-to-Flow model with actual BTC price overlay to understand scarcity-driven cycle analysis after each halving.',
     keywords: ['bitcoin stock to flow', 'bitcoin s2f', 'stock to flow model', 'bitcoin scarcity model'],
   },
-  'bitcoin-big-mac-sats-tracker': {
-    title: 'Big Mac Sats Tracker - Bitcoin Purchasing Power',
-    description: 'See how many satoshis are needed to buy a Big Mac today and compare Bitcoin purchasing power against historical price changes.',
-    keywords: ['big mac sats tracker', 'bitcoin purchasing power', 'sats value', 'bitcoin real world purchasing power'],
-  },
   'bitcoin-seasonality-heatmap': {
     title: 'Bitcoin Seasonality Heatmap - Monthly Returns',
     description: 'Review Bitcoin monthly return patterns in a seasonality heatmap to spot stronger and weaker months across historical cycles.',
@@ -158,11 +153,6 @@ const MODULE_SEO = {
     title: 'U.S. National Debt Live Counter - Real-Time Tracker',
     description: 'Monitor the U.S. national debt with a real-time counter, debt-per-person estimate, and rate-of-increase cards powered by public data.',
     keywords: ['us national debt live counter', 'national debt tracker', 'debt per person', 'real time debt counter'],
-  },
-  'satoshi-nakamoto-bitcoin-whitepaper': {
-    title: 'Satoshi Nakamoto & Bitcoin Whitepaper - Tribute Page',
-    description: 'Visit a tribute page to Satoshi Nakamoto with context on the Bitcoin whitepaper, the project mission, and the roots of the dashboard.',
-    keywords: ['satoshi nakamoto', 'bitcoin whitepaper', 'thank you satoshi', 'bitcoin origins'],
   },
 };
 

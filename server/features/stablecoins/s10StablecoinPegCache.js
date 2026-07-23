@@ -1,4 +1,5 @@
 import { cacheGetJson, cacheSetJson, withCacheLock } from '../../core/runtimeCache.js';
+import { ExternalApiError } from '../../shared/errors/SatoshiBaseError.js';
 
 const LIST_URL = 'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&category=stablecoins&order=market_cap_desc&per_page=250&page=1';
 const DETAIL_URL = (id) => `https://api.coingecko.com/api/v3/coins/${encodeURIComponent(id)}/market_chart?vs_currency=usd&days=14&interval=daily`;
@@ -18,15 +19,20 @@ const LIVE_CACHE_KEY = 's08:stablecoins:live-prices';
 const LIVE_LOCK_KEY = 's08:stablecoins:live-prices:refresh';
 
 const detailMemory = new Map();
+const DETAIL_MEMORY_MAX_ENTRIES = 200;
+
+function setDetailMemory(id, payload) {
+  detailMemory.delete(id);
+  detailMemory.set(id, payload);
+  while (detailMemory.size > DETAIL_MEMORY_MAX_ENTRIES) {
+    // Maps preserve insertion order, so the first key is the oldest entry.
+    detailMemory.delete(detailMemory.keys().next().value);
+  }
+}
 let listMemory = null;
 let livePriceMemory = null;
 
-class S10StablecoinError extends Error {
-  constructor(message) {
-    super(message);
-    this.name = 'S10StablecoinError';
-  }
-}
+class S10StablecoinError extends ExternalApiError {}
 
 function normalizeTimestamp(date = new Date()) {
   return date.toISOString().replace(/\.\d{3}Z$/, 'Z');
@@ -200,14 +206,15 @@ function normalizeCoinGeckoDetail(data) {
       const marketCap = Number(row?.[1]);
       if (!Number.isFinite(ts) || !Number.isFinite(marketCap) || marketCap <= 0) return null;
 
+      // Drop the point when no finite positive price exists for the timestamp;
+      // raw marketCap is a different unit and would distort the supply series.
       const price = Number(priceByTimestamp.get(ts));
-      const derivedSupply = Number.isFinite(price) && price > 0 ? marketCap / price : null;
-      const peggedUSD = Number.isFinite(derivedSupply) && derivedSupply > 0 ? derivedSupply : marketCap;
+      if (!Number.isFinite(price) || price <= 0) return null;
 
       return {
         date: Math.floor(ts / 1000),
         circulating: {
-          peggedUSD,
+          peggedUSD: marketCap / price,
         },
       };
     })
@@ -423,15 +430,20 @@ async function refreshDetail(id) {
     throw new S10StablecoinError('Invalid CoinGecko detail payload');
   }
   const payload = buildDetailPayload(id, normalizeCoinGeckoDetail(data));
-  detailMemory.set(String(id), payload);
+  setDetailMemory(String(id), payload);
   await cacheSetJson(`s08:stablecoin:detail:${id}`, payload, { ttlSeconds: 600 });
   return payload;
 }
 
 export async function getS10StablecoinDetail(id) {
-  const stableId = String(id || '').trim();
+  const stableId = String(id || '').trim().toLowerCase();
   if (!stableId) {
     throw new S10StablecoinError('Missing stablecoin id');
+  }
+  // CoinGecko ids are lowercase slugs; rejecting anything else keeps arbitrary
+  // client input from growing detailMemory and the shared cache without bound.
+  if (!/^[a-z0-9-]{1,64}$/.test(stableId)) {
+    throw new S10StablecoinError('Invalid stablecoin id');
   }
 
   const fromMemory = detailMemory.get(stableId);
@@ -440,7 +452,7 @@ export async function getS10StablecoinDetail(id) {
   if (!fromMemory) {
     const shared = await cacheGetJson(`s08:stablecoin:detail:${stableId}`);
     if (shared && typeof shared === 'object') {
-      detailMemory.set(stableId, shared);
+      setDetailMemory(stableId, shared);
     }
   }
 
@@ -454,7 +466,7 @@ export async function getS10StablecoinDetail(id) {
   ).catch(() => null);
 
   if (refreshed && typeof refreshed === 'object' && refreshed.data) {
-    detailMemory.set(stableId, refreshed);
+    setDetailMemory(stableId, refreshed);
     return refreshed;
   }
 

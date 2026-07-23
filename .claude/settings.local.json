@@ -47,7 +47,8 @@
       "Read(//c/Users/liber/Downloads/satoshi-scraper/**)",
       "Bash(node -e \"const fs=require\\(''fs''\\); const d=JSON.parse\\(fs.readFileSync\\(''cache/johoe-btc-queue-latest.json'',''utf8''\\)\\); console.log\\(''scrapedAt:'', d.scrapedAt\\); console.log\\(''nextRunAt:'', d.nextRunAt\\); const data=d.data; console.log\\(''data keys:'', data ? Object.keys\\(data\\).slice\\(0,10\\) : ''null''\\);\")",
       "Bash(tasklist)",
-      "Bash(ls -la *.json)"
+      "Bash(ls -la *.json)",
+      "Bash(cmd /c \"netstat -ano | findstr :8787 | findstr LISTENING\")"
     ]
   }
 }

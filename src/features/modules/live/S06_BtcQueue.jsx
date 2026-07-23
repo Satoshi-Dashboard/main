@@ -879,13 +879,6 @@ export default function S06_BtcQueue() {
           ) : (
             <>
               <div
-                className="font-mono font-bold lg:hidden"
-                style={{ color: 'var(--accent-bitcoin)', fontSize: 'var(--fs-subtitle)' }}
-              >
-                BTC Queue
-              </div>
-
-              <div
                 className="mt-2 flex max-w-full items-baseline font-mono font-bold tabular-nums leading-none text-white"
                 style={{ fontSize: 'clamp(1.45rem, 5.2vw, 2.9rem)' }}
               >

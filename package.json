@@ -25,11 +25,13 @@
     "@tailwindcss/vite": "^4.2.1",
     "@vercel/analytics": "^1.5.0",
     "@vercel/speed-insights": "^1.2.0",
+    "compression": "^1.8.0",
     "express": "^4.21.2",
     "express-rate-limit": "^8.3.1",
     "leaflet": "^1.9.4",
     "lightweight-charts": "^5.1.0",
     "lucide-react": "^0.576.0",
+    "maplibre-gl": "^5.24.0",
     "qrcode": "^1.5.4",
     "react": "^19.2.0",
     "react-animated-counter": "^1.8.4",
@@ -38,6 +40,7 @@
     "react-router-dom": "^7.13.1",
     "recharts": "^3.7.0",
     "socks-proxy-agent": "^8.0.5",
+    "tailwind-merge": "^3.5.0",
     "tailwindcss": "^4.2.1"
   },
   "devDependencies": {
@@ -58,5 +61,10 @@
     "supertest": "^7.2.2",
     "vite": "^7.3.1",
     "vitest": "^3.2.4"
+  },
+  "overrides": {
+    "esbuild": "^0.28.1",
+    "tmp": "^0.2.6",
+    "uuid": "^11.1.1"
   }
 }

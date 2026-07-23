@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1A1A2E"/>
+      <stop offset="100%" stop-color="#16213E"/>
+    </linearGradient>
+    <linearGradient id="orangeGlow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F7931A"/>
+      <stop offset="100%" stop-color="#E8820E"/>
+    </linearGradient>
+    <linearGradient id="chartLine" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#F7931A" stop-opacity="0.4"/>
+      <stop offset="50%" stop-color="#F7931A" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#F7931A"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="256" height="256" fill="url(#bg)"/>
+
+  <!-- Subtle grid lines for dashboard feel -->
+  <g stroke="#F7931A" stroke-opacity="0.06" stroke-width="0.75">
+    <line x1="0" y1="180" x2="256" y2="180"/>
+    <line x1="0" y1="200" x2="256" y2="200"/>
+    <line x1="0" y1="220" x2="256" y2="220"/>
+  </g>
+
+  <!-- Mini bar chart at bottom -->
+  <g fill="#F7931A" opacity="0.15">
+    <rect x="28"  y="206" width="10" height="22" rx="1.5"/>
+    <rect x="44"  y="198" width="10" height="30" rx="1.5"/>
+    <rect x="60"  y="210" width="10" height="18" rx="1.5"/>
+    <rect x="76"  y="194" width="10" height="34" rx="1.5"/>
+    <rect x="92"  y="202" width="10" height="26" rx="1.5"/>
+    <rect x="108" y="190" width="10" height="38" rx="1.5"/>
+    <rect x="124" y="196" width="10" height="32" rx="1.5"/>
+    <rect x="140" y="186" width="10" height="42" rx="1.5"/>
+    <rect x="156" y="192" width="10" height="36" rx="1.5"/>
+    <rect x="172" y="182" width="10" height="46" rx="1.5"/>
+    <rect x="188" y="188" width="10" height="40" rx="1.5"/>
+    <rect x="204" y="176" width="10" height="52" rx="1.5"/>
+  </g>
+  <!-- Highlighted last bar -->
+  <rect x="220" y="170" width="10" height="58" rx="1.5" fill="#F7931A" opacity="0.35"/>
+
+  <!-- Rising trend line across bars -->
+  <polyline
+    points="33,210 49,202 65,214 81,198 97,206 113,194 129,200 145,190 161,196 177,186 193,192 209,180 225,174"
+    fill="none"
+    stroke="url(#chartLine)"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    filter="url(#glow)"
+  />
+
+  <!-- Bitcoin circle -->
+  <circle cx="128" cy="100" r="62" fill="url(#orangeGlow)"/>
+  <circle cx="128" cy="100" r="56" fill="url(#bg)"/>
+  <circle cx="128" cy="100" r="52" fill="url(#orangeGlow)"/>
+
+  <!-- Bitcoin "B" symbol -->
+  <g fill="url(#bg)">
+    <!-- Vertical strokes extending above and below -->
+    <rect x="117" y="64" width="6" height="14" rx="2"/>
+    <rect x="131" y="64" width="6" height="14" rx="2"/>
+    <rect x="117" y="122" width="6" height="14" rx="2"/>
+    <rect x="131" y="122" width="6" height="14" rx="2"/>
+
+    <!-- Main B shape -->
+    <path d="
+      M112,78
+      h22
+      c10,0 16,5 16,13
+      c0,6 -3,10 -8,12
+      c6,2 10,7 10,14
+      c0,9 -7,14 -17,14
+      h-23
+      z
+      M121,86
+      v10
+      h12
+      c5,0 8,-2 8,-5
+      c0,-3 -3,-5 -8,-5
+      z
+      M121,104
+      v12
+      h13
+      c6,0 9,-2.5 9,-6
+      c0,-3.5 -3,-6 -9,-6
+      z
+    " fill-rule="evenodd"/>
+  </g>
+
+  <!-- Small dot accent on trend line end -->
+  <circle cx="225" cy="174" r="3.5" fill="#F7931A" filter="url(#glow)"/>
+</svg>

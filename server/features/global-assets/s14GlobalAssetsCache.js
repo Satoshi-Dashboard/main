@@ -1,4 +1,6 @@
 import { cacheGetJson, cacheSetJson, withCacheLock } from '../../core/runtimeCache.js';
+import { ExternalApiError } from '../../shared/errors/SatoshiBaseError.js';
+import { normalizeTimestamp, parseIsoDate } from '../../shared/utils/timeUtils.js';
 
 const SOURCE_URL = 'https://newhedge.io/bitcoin/global-asset-values';
 const SOURCE_FETCH_URL = 'https://r.jina.ai/http://newhedge.io/bitcoin/global-asset-values';
@@ -13,22 +15,7 @@ const SHARED_LOCK_KEY = 's13:global-assets:newhedge:refresh';
 
 let memoryCache = null;
 
-class S14GlobalAssetsError extends Error {
-  constructor(message) {
-    super(message);
-    this.name = 'S14GlobalAssetsError';
-  }
-}
-
-function normalizeTimestamp(date = new Date()) {
-  return date.toISOString().replace(/\.\d{3}Z$/, 'Z');
-}
-
-function parseIsoDate(value) {
-  const date = new Date(String(value || ''));
-  if (!Number.isFinite(date.getTime())) return null;
-  return date;
-}
+class S14GlobalAssetsError extends ExternalApiError {}
 
 function decodeEntities(value) {
   return String(value || '')

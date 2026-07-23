@@ -193,8 +193,6 @@ function MempoolPanel({
   unavailableLabel,
   stats,
   footerTiles,
-  footerSourceComponent,
-  hideSourceOnDesktop = false,
 }) {
   const hasGaugeData = usageBytes != null && maxBytes != null && maxBytes > 0;
 
@@ -229,10 +227,6 @@ function MempoolPanel({
         {footerTiles.map((tile) => (
           <BottomTile key={tile.label} {...tile} loading={loading} />
         ))}
-      </div>
-
-      <div className={`flex-shrink-0 pb-1${hideSourceOnDesktop ? ' sm:invisible' : ''}`}>
-        {footerSourceComponent}
       </div>
     </div>
   );
@@ -305,7 +299,7 @@ export default function S04_MempoolGauge() {
       return;
     }
     try {
-      setDynamicProviders(officialIsFallback ? PROVIDERS_MEMPOOL : PROVIDERS_ZATOBOX);
+      setDynamicProviders(PROVIDERS_MEMPOOL);
     } catch (error) {
       console.error('Failed to set dynamic providers:', error);
     }
@@ -427,7 +421,7 @@ export default function S04_MempoolGauge() {
           footerTiles={officialFooterTiles}
           footerSourceComponent={
             <ModuleSourceFooter
-              providers={officialIsFallback === null ? [...PROVIDERS_ZATOBOX, ...PROVIDERS_MEMPOOL] : officialIsFallback ? PROVIDERS_MEMPOOL : PROVIDERS_ZATOBOX}
+              providers={PROVIDERS_MEMPOOL}
               refreshLabel="~30s"
               align="center"
               className="text-white/20"

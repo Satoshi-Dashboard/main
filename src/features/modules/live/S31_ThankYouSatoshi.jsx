@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
-import Copy from 'lucide-react/dist/esm/icons/copy';
+import Heart from 'lucide-react/dist/esm/icons/heart';
 import Github from 'lucide-react/dist/esm/icons/github';
-import BitcoinDonationQr from '@/shared/components/common/BitcoinDonationQr.jsx';
+import Linkedin from 'lucide-react/dist/esm/icons/linkedin';
 import { ModuleShell } from '@/shared/components/module/index.js';
 
-const DONATION_ADDRESS = 'BC1QC2GD3YN8DTLMZG4UW786MFN085WE69F60V4R6F';
 const THANKS_FONT_STACK = "'SF Pro Display', 'Helvetica Neue', Arial, sans-serif";
 
 const THANK_YOU_MESSAGES = [
@@ -49,35 +48,9 @@ const PRINCIPLES = [
 const GENESIS_HASH = '000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f';
 const WHITEPAPER = 'A purely peer-to-peer electronic cash system would allow online payments to be sent directly from one party to another without going through a financial institution.';
 
-export default function S31_ThankYouSatoshi() {
-  const [copied, setCopied] = useState(false);
+export default function S31_ThankYouSatoshi({ onOpenDonate }) {
   const [thanksIndex, setThanksIndex] = useState(0);
   const [thanksVisible, setThanksVisible] = useState(true);
-
-  const onCopyAddress = async () => {
-    try {
-      await navigator.clipboard.writeText(DONATION_ADDRESS);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1400);
-    } catch {
-      try {
-        const textArea = document.createElement('textarea');
-        textArea.value = DONATION_ADDRESS;
-        textArea.style.position = 'fixed';
-        textArea.style.left = '-9999px';
-        textArea.style.top = '0';
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-        const successful = document.execCommand('copy');
-        document.body.removeChild(textArea);
-        if (successful) {
-          setCopied(true);
-          setTimeout(() => setCopied(false), 1400);
-        }
-      } catch { /* ignore */ }
-    }
-  };
 
   useEffect(() => {
     let switchTimer = null;
@@ -208,44 +181,20 @@ export default function S31_ThankYouSatoshi() {
                 If this website is useful to you consider donating to this wallet.
               </p>
 
-              <div className="mt-3.5 flex flex-col gap-2.5 sm:flex-row sm:items-start">
-                <button
-                  type="button"
-                  onClick={onCopyAddress}
-                  className="group/addr relative min-w-0 flex-1 cursor-pointer overflow-hidden rounded border px-3 py-2 pr-10 text-left font-mono transition-all"
-                  style={{
-                    fontSize: 'var(--fs-micro)',
-                    borderColor: copied ? 'rgba(0,216,151,0.55)' : 'rgba(255,255,255,0.1)',
-                    background: copied ? 'rgba(0,216,151,0.08)' : 'transparent',
-                    color: copied ? 'var(--accent-green)' : '#fff',
-                     height: '44px',
-                  }}
-                  title="Click to copy"
-                >
-                  <span className="block break-all leading-4">{DONATION_ADDRESS}</span>
-                  <span
-                    className="absolute inset-0 flex items-center justify-center bg-[#111111]/90 opacity-0 transition-opacity group-hover/addr:opacity-100"
-                    style={{ fontSize: 'var(--fs-micro)' }}
-                  >
-                    <Copy size={14} className="mr-1.5" />
-                    <span>Click to copy</span>
-                  </span>
-                  <span
-                    className="absolute right-2 top-1/2 -translate-y-1/2 font-mono"
-                    style={{
-                      fontSize: 'var(--fs-tag)',
-                      color: copied ? 'var(--accent-green)' : 'var(--text-primary)',
-                      opacity: copied ? 1 : 0.6,
-                    }}
-                  >
-                    {copied ? 'Copied' : <Copy size={12} />}
-                  </span>
-                </button>
-
-                <div className="flex shrink-0 flex-col items-center self-center sm:self-start">
-                  <BitcoinDonationQr value={DONATION_ADDRESS} size={104} />
-                </div>
-              </div>
+              <button
+                type="button"
+                onClick={onOpenDonate}
+                className="mt-3.5 flex w-full items-center justify-center gap-2 rounded font-mono font-black tracking-[0.1em] transition hover:opacity-80"
+                style={{
+                  fontSize: 'var(--fs-caption)',
+                  background: 'var(--accent-warning)',
+                  color: '#111111',
+                  height: '44px',
+                }}
+              >
+                <Heart size={14} fill="#111111" />
+                DONATE
+              </button>
 
               {/* GitHub links */}
               <div className="mt-2.5 flex flex-col gap-2">
@@ -268,6 +217,16 @@ export default function S31_ThankYouSatoshi() {
                 >
                   <Github size={14} />
                   <span>Project supporters</span>
+                </a>
+                <a
+                  href="https://www.linkedin.com/in/ikhunsa/"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-2 font-mono transition-opacity hover:opacity-80"
+                  style={{ color: 'var(--text-secondary)', fontSize: 'var(--fs-caption)' }}
+                >
+                  <Linkedin size={14} />
+                  <span>linkedin.com/in/ikhunsa</span>
                 </a>
               </div>
             </article>

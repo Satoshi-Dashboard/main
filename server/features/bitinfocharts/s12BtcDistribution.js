@@ -1,4 +1,4 @@
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile, rename, writeFile } from 'node:fs/promises';
 import { cacheGetJson, cacheSetJson, withCacheLock } from '../../core/runtimeCache.js';
 import { ensureRuntimeCacheDir, resolveRuntimeCacheFile } from '../../core/runtimePaths.js';
 import { getBitinfochartsHtmlPayload } from '../../services/bitinfochartsShared.js';
@@ -23,7 +23,11 @@ function decodeEntities(value) {
 }
 
 function stripHtml(value) {
-  return decodeEntities(String(value || '').replace(/<[^>]*>/g, ''))
+  // Decode entities BEFORE stripping tags so encoded markup (&lt;img...&gt;)
+  // cannot survive as live HTML; drop any leftover angle brackets defensively.
+  return decodeEntities(String(value || ''))
+    .replace(/<[^>]*>/g, '')
+    .replace(/[<>]/g, '')
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -166,8 +170,8 @@ function stalePayload(payload, reason) {
   if (!isValidPayload(payload)) return null;
   return {
     ...payload,
-    isFallback: true,
-    fallbackNote: reason,
+    is_fallback: true,
+    fallback_note: reason,
   };
 }
 
@@ -184,7 +188,9 @@ async function readCacheFile() {
 async function writeCacheFile(payload) {
   try {
     await ensureRuntimeCacheDir();
-    await writeFile(CACHE_FILE, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+    const tmpFile = `${CACHE_FILE}.${process.pid}.tmp`;
+    await writeFile(tmpFile, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+    await rename(tmpFile, CACHE_FILE);
   } catch {
     /* ignore write errors in read-only/serverless environments */
   }
@@ -203,8 +209,8 @@ export async function updateBtcDistributionCache() {
     updatedAt,
     fetchedAt,
     nextUpdateAt,
-    isFallback: false,
-    fallbackNote: null,
+    is_fallback: false,
+    fallback_note: null,
     distribution,
   };
 
@@ -237,7 +243,7 @@ export async function getS12BtcDistributionPayload() {
     SHARED_LOCK_KEY,
     async () => updateBtcDistributionCache(),
     { ttlSeconds: 20, waitMs: 3500, pollMs: 120 },
-  );
+  ).catch(() => null);
 
   if (isValidPayload(refreshed)) {
     return refreshed;
@@ -271,8 +277,8 @@ export async function getS12BtcDistributionStatus() {
     updatedAt: payload.updatedAt,
     fetchedAt: payload.fetchedAt,
     nextUpdateAt: payload.nextUpdateAt,
-    isFallback: Boolean(payload.isFallback),
-    fallbackNote: payload.fallbackNote || null,
+    is_fallback: Boolean(payload.is_fallback),
+    fallback_note: payload.fallback_note || null,
     rows: payload.distribution.length,
   };
 }

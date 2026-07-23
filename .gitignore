@@ -22,11 +22,16 @@ btc_rates_cache.json
 btc_distribution_cache.json
 btc_addresses_richer_cache.json
 visitor_counter.json
+scripts/uptime-monitor/state.json
+scripts/uptime-monitor/run-monitor.cmd
 server/.runtime-cache/
 server/data/
 
 # Editor directories and files
 .vscode/*
+
+# Git worktrees
+.claude/worktrees/
 !.vscode/extensions.json
 .idea
 .DS_Store

@@ -153,7 +153,7 @@ export async function getBitinfochartsHtmlPayload() {
     SHARED_HTML_LOCK_KEY,
     async () => refreshBitinfochartsHtml(),
     { ttlSeconds: 20, waitMs: 3500, pollMs: 120 },
-  );
+  ).catch(() => null);
 
   if (isValidHtmlPayload(refreshed)) {
     return refreshed;

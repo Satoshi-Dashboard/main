@@ -1,51 +1,40 @@
-import { randomUUID } from 'node:crypto';
+import { randomUUID, timingSafeEqual } from 'node:crypto';
 import compression from 'compression';
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 import { cacheGetJson, cacheSetJson } from './core/runtimeCache.js';
-import { ExternalApiError, getBtcRates, updateBtcRates } from './services/btcRates.js';
 import {
+  ExternalApiError,
+  getBtcRates,
+  updateBtcRates,
   getBitnodesPayload,
   pendingResponse,
   refreshBitnodesCache,
-} from './features/bitnodes/bitnodesCache.js';
-import {
   getS12BtcDistributionPayload,
   getS12BtcDistributionStatus,
   updateBtcDistributionCache,
-} from './features/bitinfocharts/s12BtcDistribution.js';
-import {
   getS13AddressesRicherPayload,
   getS13AddressesRicherStatus,
   updateS13AddressesRicherCache,
-} from './features/bitinfocharts/s13AddressesRicher.js';
-import {
   getS03MultiCurrencyPayload,
   getS03MultiCurrencyStatus,
   refreshS03MultiCurrencyPayload,
   S03ScrapeError,
-} from './features/multi-currency/s03MultiCurrencyScraper.js';
-import {
   getS10StablecoinDetail,
   getS10StablecoinList,
   getS10StablecoinLivePrices,
   S10StablecoinError,
-} from './features/stablecoins/s10StablecoinPegCache.js';
-import {
   getS14GlobalAssetsPayload,
   getS14GlobalAssetsStatus,
   refreshS14GlobalAssetsPayload,
   S14GlobalAssetsError,
-} from './features/global-assets/s14GlobalAssetsCache.js';
-import {
   S17ApiError,
   getS17HousePricePayload,
   getS17HousePriceStatus,
   refreshS17HousePriceCache,
-} from './features/fred/s17HousePrice.js';
-import {
   getBinanceBtcHistoryPayload,
   getBtcMapBusinessesByCountryPayload,
+  getBtcMapBusinessesPayload,
   getCountriesGeoPayload,
   getFearGreedPayload,
   getLandGeoPayload,
@@ -62,7 +51,7 @@ import {
   getS21BigMacSatsPayload,
   getUsNationalDebtPayload,
   PublicFeedError,
-} from './services/publicDataFeeds.js';
+} from './shared/serviceRegistry.js';
 
 const REFRESH_API_TOKEN = String(process.env.REFRESH_API_TOKEN || '');
 const REQUEST_ID_HEADER = 'x-request-id';
@@ -205,8 +194,8 @@ function sendBtcError(res, error) {
 }
 
 function sendS03Error(res, error) {
-  if (error instanceof S03ScrapeError) {
-    res.status(502).json({ error: error.message });
+  if (error instanceof S03ScrapeError || error instanceof ExternalApiError) {
+    res.status(502).json({ error: 'Upstream data source unavailable' });
     return;
   }
   res.status(500).json({ error: 'Internal server error' });
@@ -214,7 +203,7 @@ function sendS03Error(res, error) {
 
 function sendS10Error(res, error) {
   if (error instanceof S10StablecoinError) {
-    res.status(502).json({ error: error.message });
+    res.status(502).json({ error: 'Upstream data source unavailable' });
     return;
   }
   res.status(500).json({ error: 'Internal server error' });
@@ -222,7 +211,7 @@ function sendS10Error(res, error) {
 
 function sendS14Error(res, error) {
   if (error instanceof S14GlobalAssetsError) {
-    res.status(502).json({ error: error.message });
+    res.status(502).json({ error: 'Upstream data source unavailable' });
     return;
   }
   res.status(500).json({ error: 'Internal server error' });
@@ -230,15 +219,26 @@ function sendS14Error(res, error) {
 
 function sendPublicFeedError(res, error) {
   if (error instanceof PublicFeedError) {
-    res.status(502).json({ error: error.message });
+    res.status(502).json({ error: 'Upstream data source unavailable' });
     return;
   }
   res.status(500).json({ error: 'Internal server error' });
 }
 
+function safeTokenEqual(candidate, expected) {
+  const candidateBuffer = Buffer.from(String(candidate));
+  const expectedBuffer = Buffer.from(String(expected));
+  if (candidateBuffer.length !== expectedBuffer.length) {
+    return false;
+  }
+  return timingSafeEqual(candidateBuffer, expectedBuffer);
+}
+
 function requireRefreshToken(req, res, next) {
   if (!REFRESH_API_TOKEN) {
-    if (!isLoopbackRequest(req)) {
+    // The loopback shortcut is a dev convenience only: behind a reverse proxy
+    // every request arrives from 127.0.0.1, so it must never apply in production.
+    if (process.env.NODE_ENV === 'production' || !isLoopbackRequest(req)) {
       res.status(403).json({ error: 'Refresh endpoints require REFRESH_API_TOKEN outside localhost' });
       return;
     }
@@ -251,7 +251,7 @@ function requireRefreshToken(req, res, next) {
   const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
   const token = String(tokenFromHeader || bearerToken || '');
 
-  if (token !== REFRESH_API_TOKEN) {
+  if (!safeTokenEqual(token, REFRESH_API_TOKEN)) {
     res.status(401).json({ error: 'Unauthorized refresh request' });
     return;
   }
@@ -265,7 +265,7 @@ export function createApp() {
   app.disable('x-powered-by');
   app.set('trust proxy', getTrustProxySetting());
   app.use(compression({ threshold: 1024 }));
-  app.use(express.json({ limit: '8kb' }));
+  app.use(express.json({ limit: '1mb' }));
   app.use((req, res, next) => {
     req.requestId = getRequestId(req);
     res.set(REQUEST_ID_HEADER, req.requestId);
@@ -276,6 +276,9 @@ export function createApp() {
     res.set('X-Content-Type-Options', 'nosniff');
     res.set('X-Frame-Options', 'DENY');
     res.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    if (req.secure || req.headers['x-forwarded-proto'] === 'https') {
+      res.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains');
+    }
     next();
   });
   app.use('/api', generalApiRateLimiter);
@@ -614,6 +617,16 @@ export function createApp() {
     }
   }));
 
+  app.get('/api/public/btcmap/businesses', asyncRoute(async (_req, res) => {
+    setDataCacheHeaders(res, { sMaxAge: 3600, swr: 21600 });
+    try {
+      const payload = await getBtcMapBusinessesPayload();
+      res.json(payload);
+    } catch (error) {
+      sendPublicFeedError(res, error);
+    }
+  }));
+
   app.get('/api/s15/btc-vs-gold-market-cap', asyncRoute(async (_req, res) => {
     setDataCacheHeaders(res, { sMaxAge: 120, swr: 600 });
     try {
@@ -672,8 +685,8 @@ export function createApp() {
       const payload = await getS12BtcDistributionPayload();
       res.json(payload);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      res.status(502).json({ error: `BitInfoCharts unavailable: ${message}` });
+      logInternalError(_req, error);
+      res.status(502).json({ error: 'BitInfoCharts unavailable' });
     }
   };
 
@@ -685,8 +698,8 @@ export function createApp() {
       const status = await getS12BtcDistributionStatus();
       res.json(status);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      res.status(502).json({ error: `BitInfoCharts unavailable: ${message}` });
+      logInternalError(_req, error);
+      res.status(502).json({ error: 'BitInfoCharts unavailable' });
     }
   };
 
@@ -703,8 +716,8 @@ export function createApp() {
         rows: payload.distribution.length,
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      res.status(502).json({ error: `BitInfoCharts unavailable: ${message}` });
+      logInternalError(_req, error);
+      res.status(502).json({ error: 'BitInfoCharts unavailable' });
     }
   };
 
@@ -716,8 +729,8 @@ export function createApp() {
       const payload = await getS13AddressesRicherPayload();
       res.json(payload);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      res.status(502).json({ error: `BitInfoCharts unavailable: ${message}` });
+      logInternalError(_req, error);
+      res.status(502).json({ error: 'BitInfoCharts unavailable' });
     }
   };
 
@@ -729,8 +742,8 @@ export function createApp() {
       const status = await getS13AddressesRicherStatus();
       res.json(status);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      res.status(502).json({ error: `BitInfoCharts unavailable: ${message}` });
+      logInternalError(_req, error);
+      res.status(502).json({ error: 'BitInfoCharts unavailable' });
     }
   };
 
@@ -747,8 +760,8 @@ export function createApp() {
         rows: payload.richerThan.length,
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      res.status(502).json({ error: `BitInfoCharts unavailable: ${message}` });
+      logInternalError(_req, error);
+      res.status(502).json({ error: 'BitInfoCharts unavailable' });
     }
   };
 
@@ -758,7 +771,7 @@ export function createApp() {
 
   function sendS17Error(res, error) {
     if (error instanceof S17ApiError) {
-      res.status(502).json({ error: error.message });
+      res.status(502).json({ error: 'Upstream data source unavailable' });
       return;
     }
     res.status(500).json({ error: 'Internal server error' });
@@ -813,13 +826,16 @@ export function createApp() {
         is_fallback: Boolean(payload.is_fallback),
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      res.status(502).json({ error: `Bitnodes unavailable: ${message}` });
+      logInternalError(_req, error);
+      res.status(502).json({ error: 'Bitnodes unavailable' });
     }
   }));
 
   // ── Cache warm-up on startup ──────────────────────────────────────────────
-  if (process.env.NODE_ENV !== 'test') {
+  // Global guard keeps repeated createApp() calls (tests, serverless cold
+  // starts) from scheduling the upstream warm-up fetches more than once.
+  if (process.env.NODE_ENV !== 'test' && !globalThis.__SATOSHI_WARMUP_SCHEDULED__) {
+    globalThis.__SATOSHI_WARMUP_SCHEDULED__ = true;
     const scheduleWarmup = (label, delayMs, task) => {
       setTimeout(() => {
         Promise.resolve()
@@ -877,13 +893,18 @@ export function createApp() {
   app.post('/api/public/lightning/fallback', refreshApiRateLimiter, requireRefreshToken, asyncRoute(async (req, res) => {
     setNoStoreHeaders(res);
     const payload = req.body;
-    if (!payload || !payload.data) {
+    if (!payload || typeof payload !== 'object' || !payload.data || typeof payload.data !== 'object') {
       res.status(400).json({ error: 'Invalid payload' });
       return;
     }
+    const sourceProvider = typeof payload.source_provider === 'string' ? payload.source_provider.slice(0, 100) : 'mempool.space';
+    const updatedAtRaw = payload.updated_at || payload.fetched_at;
+    const updatedAt = typeof updatedAtRaw === 'string' && Number.isFinite(Date.parse(updatedAtRaw))
+      ? updatedAtRaw
+      : new Date().toISOString();
     const cacheData = {
-      source_provider: payload.source_provider || 'mempool.space',
-      updated_at: payload.updated_at || payload.fetched_at || new Date().toISOString(),
+      source_provider: sourceProvider,
+      updated_at: updatedAt,
       data: payload.data,
     };
     await cacheSetJson(LIGHTNING_FALLBACK_CACHE_KEY, cacheData, { ttlSeconds: LIGHTNING_FALLBACK_CACHE_TTL_SECONDS });

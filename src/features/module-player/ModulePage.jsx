@@ -24,6 +24,7 @@ import {
   SharedMetaBottomStrip,
   SharedMetaTopStrip,
 } from '@/features/module-player/components/SharedModuleMeta.jsx';
+import ModuleErrorBoundary from '@/shared/components/common/ModuleErrorBoundary.jsx';
 import { useMediaQuery } from '@/shared/hooks/useMediaQuery.js';
 import { absoluteUrl, DEFAULT_OG_IMAGE, usePageSEO } from '@/shared/hooks/usePageSEO.js';
 import { trackModuleNavigation, trackModuleViewed, trackSeoNavigationClick } from '@/shared/lib/analytics.js';
@@ -61,10 +62,10 @@ const MARKET_AUDIO_THEMES = {
 };
 
 const DONATION_ADDRESS = 'BC1QC2GD3YN8DTLMZG4UW786MFN085WE69F60V4R6F';
+const LIGHTNING_ADDRESS = 'Khunsa@coinos.io';
 const NOINDEX_PREVIEW_SLUGS = new Set([
   'bitcoin-power-law-model',
   'bitcoin-stock-to-flow-model',
-  'bitcoin-big-mac-sats-tracker',
   'bitcoin-seasonality-heatmap',
   'bitcoin-big-mac-index',
   'bitcoin-network-activity',
@@ -78,9 +79,7 @@ const NOINDEX_PREVIEW_SLUGS = new Set([
 const BLOCKING_OVERLAY_SLUGS = new Set([
   'bitcoin-power-law-model',
   'bitcoin-stock-to-flow-model',
-  'bitcoin-big-mac-sats-tracker',
   'bitcoin-seasonality-heatmap',
-  'bitcoin-big-mac-index',
   'bitcoin-network-activity',
   'bitcoin-log-regression-channel',
   'bitcoin-mvrv-score',
@@ -298,7 +297,7 @@ export default function ModulePage({ forcedSlug = null }) {
     () => (MODULES || []).reduce((max, item) => {
       const n = Number(String(item.code || '').match(/\d+/)?.[0] || 0);
       return Number.isFinite(n) ? Math.max(max, n) : max;
-    }, 32),
+    }, 0),
     [],
   );
 
@@ -358,6 +357,7 @@ export default function ModulePage({ forcedSlug = null }) {
   const showTopMeta = showSharedMeta && !useAbsoluteSharedMetaCard && !hideSharedMetaOnDesktop;
   const showBottomMeta = showSharedMeta && isResponsiveViewport;
   const useResponsiveScroll = isResponsiveViewport && (showBottomMeta || moduleMeta?.responsiveScroll === true);
+  const useDesktopScroll = moduleMeta?.desktopScroll === true;
   const metaLastAt = new Date(metaLastAtMs);
   const stripTitle = moduleMeta?.showTitleInStrip === false ? '' : (moduleMeta?.stripTitle || module?.title || '');
 
@@ -615,7 +615,7 @@ export default function ModulePage({ forcedSlug = null }) {
       <div className="h-full w-full pb-[68px] sm:pb-16 lg:pb-10" style={{ paddingTop: 'calc(3.5rem + var(--safe-top))', paddingBottom: 'calc(4.25rem + var(--safe-bottom))' }}>
         <div
           ref={contentScrollRef}
-          className={`scrollbar-hidden-mobile relative flex h-full min-h-0 flex-col ${useResponsiveScroll ? 'overflow-y-auto' : 'overflow-hidden'} lg:overflow-hidden`}
+          className={`scrollbar-hidden-mobile relative flex h-full min-h-0 flex-col ${useResponsiveScroll ? 'overflow-y-auto' : 'overflow-hidden'} ${useDesktopScroll ? 'lg:overflow-y-auto' : 'lg:overflow-hidden'}`}
         >
           {showAbsoluteMetaCard && (
             <SharedMetaAbsoluteCard
@@ -638,13 +638,17 @@ export default function ModulePage({ forcedSlug = null }) {
           )}
           <div className={`relative min-h-0 ${useResponsiveScroll ? 'min-h-full flex-none' : 'flex-1'}`}>
             {hasBlockingOverlay ? (
-              <Suspense fallback={<ModuleContentFallback title={module.title} />}>
-                <BlockedPreviewPoster title={module.title} onOpenDonate={() => setDonateOpen(true)} />
-              </Suspense>
+              <ModuleErrorBoundary key={module.slug}>
+                <Suspense fallback={<ModuleContentFallback title={module.title} />}>
+                  <BlockedPreviewPoster title={module.title} onOpenDonate={() => setDonateOpen(true)} />
+                </Suspense>
+              </ModuleErrorBoundary>
             ) : (
-              <Suspense fallback={<ModuleContentFallback title={module.title} />}>
-                <Component onOpenDonate={() => setDonateOpen(true)} />
-              </Suspense>
+              <ModuleErrorBoundary key={module.slug}>
+                <Suspense fallback={<ModuleContentFallback title={module.title} />}>
+                  <Component onOpenDonate={() => setDonateOpen(true)} />
+                </Suspense>
+              </ModuleErrorBoundary>
             )}
             {hasBlockingOverlay && (
               <div
@@ -767,6 +771,7 @@ export default function ModulePage({ forcedSlug = null }) {
           <ModuleDonateModal
             donateCopied={donateCopied}
             donationAddress={DONATION_ADDRESS}
+            lightningAddress={LIGHTNING_ADDRESS}
             onClose={() => setDonateOpen(false)}
             onCopyDonation={onCopyDonation}
           />
