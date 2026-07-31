@@ -4,11 +4,11 @@
     "type": "split",
     "children": [
       {
-        "id": "a0139c4e5dd31ee5",
+        "id": "5f766bc0dfcb34be",
         "type": "tabs",
         "children": [
           {
-            "id": "90d940426e4c26e7",
+            "id": "0075e3430a93bb19",
             "type": "leaf",
             "state": {
               "type": "graph",
@@ -90,7 +90,6 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "Reglas de color.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -100,7 +99,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Enlaces entrantes de Reglas de color"
+              "title": "Enlaces entrantes"
             }
           },
           {
@@ -165,8 +164,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 300,
-    "collapsed": true
+    "width": 300
   },
   "left-ribbon": {
     "hiddenItems": {
@@ -179,12 +177,16 @@
       "bases:Crear nueva base": false
     }
   },
-  "active": "90d940426e4c26e7",
+  "active": "0075e3430a93bb19",
   "lastOpenFiles": [
     "Sin título.canvas",
-    "Reglas de color.md",
     "Reglas de texto.md",
     "Reglas tamano reponsive web.md",
-    "Sin nombre"
+    "Reglas de color.md",
+    "Sin nombre",
+    "Sin título.md",
+    "2026-04-01.md",
+    "codex-frontend-refactor-skill/SKILL.md",
+    "Reglas cosas en pantalla.md"
   ]
 }

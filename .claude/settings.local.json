@@ -64,5 +64,10 @@
     "projectStructure": "README.md",
     "sourceStructure": "src/README.md",
     "memoryIndex": ".claude/memory/MEMORY.md"
+  },
+  "permissions": {
+    "allow": [
+      "mcp__Claude_Preview__preview_start"
+    ]
   }
 }

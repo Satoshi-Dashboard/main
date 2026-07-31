@@ -1,50 +1,29 @@
-import js from '@eslint/js';
-import ts from '@typescript-eslint/eslint-plugin';
-import tsParser from '@typescript-eslint/parser';
-import svelte from 'eslint-plugin-svelte';
-import svelteParser from 'svelte-eslint-parser';
+import js from '@eslint/js'
+import globals from 'globals'
+import reactHooks from 'eslint-plugin-react-hooks'
+import reactRefresh from 'eslint-plugin-react-refresh'
+import { defineConfig, globalIgnores } from 'eslint/config'
 
-export default [
-	js.configs.recommended,
-	{
-		ignores: ['build', 'dist', '.svelte-kit', 'node_modules']
-	},
-	{
-		files: ['**/*.ts'],
-		languageOptions: {
-			parser: tsParser,
-			parserOptions: {
-				sourceType: 'module',
-				ecmaVersion: 2020
-			}
-		},
-		plugins: {
-			'@typescript-eslint': ts
-		},
-		rules: {
-			...ts.configs.recommended.rules,
-			'@typescript-eslint/no-unused-vars': [
-				'error',
-				{ argsIgnorePattern: '^_', varsIgnorePattern: '^_' }
-			]
-		}
-	},
-	{
-		files: ['**/*.svelte'],
-		languageOptions: {
-			parser: svelteParser,
-			parserOptions: {
-				parser: tsParser,
-				sourceType: 'module',
-				ecmaVersion: 2020
-			}
-		},
-		plugins: {
-			svelte
-		},
-		rules: {
-			...svelte.configs.recommended.rules,
-			'svelte/valid-compile': 'error'
-		}
-	}
-];
+export default defineConfig([
+  globalIgnores(['dist/**', '.logs/**', 'server/.runtime-cache/**']),
+  {
+    files: ['**/*.{js,jsx}'],
+    extends: [
+      js.configs.recommended,
+      reactHooks.configs.flat.recommended,
+      reactRefresh.configs.vite,
+    ],
+    languageOptions: {
+      ecmaVersion: 2020,
+      globals: { ...globals.browser, ...globals.node },
+      parserOptions: {
+        ecmaVersion: 'latest',
+        ecmaFeatures: { jsx: true },
+        sourceType: 'module',
+      },
+    },
+    rules: {
+      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+    },
+  },
+])
