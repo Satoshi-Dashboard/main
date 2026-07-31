@@ -253,6 +253,22 @@
       "destination": "/@fs/$1"
     },
     {
+      "source": "/landingpage",
+      "destination": "/landingpage/index.html"
+    },
+    {
+      "source": "/landingpage/blog",
+      "destination": "/landingpage/blog/index.html"
+    },
+    {
+      "source": "/landingpage/blog/(live-bitcoin-price-dashboard|bitcoin-nodes-map-monitor|free-bitcoin-analysis-tools|bitcoin-point-of-sale-dashboard)",
+      "destination": "/landingpage/blog/$1/index.html"
+    },
+    {
+      "source": "/module/(s02-bitcoin-price-chart-live|s03-bitcoin-price-multi-currency|s04-bitcoin-mempool-fees|s05-bitcoin-mempool-trend|s06-bitcoin-nodes-world-map|s07-lightning-nodes-world-map|s08-bitcoin-merchant-map|s09-lightning-network-stats|s10-stablecoin-peg-tracker|s11-bitcoin-fear-greed-index|s12-bitcoin-address-distribution|s13-bitcoin-wealth-pyramid|s14-bitcoin-vs-global-assets|s15-bitcoin-vs-gold-chart|s16-bitcoin-mayer-multiple|s17-bitcoin-price-performance|s18-bitcoin-halving-cycle-spiral|s30-us-national-debt-live-counter|s31-satoshi-nakamoto-bitcoin-whitepaper)",
+      "destination": "/module/$1/index.html"
+    },
+    {
       "source": "/module/(.*)",
       "destination": "/index.html"
     },

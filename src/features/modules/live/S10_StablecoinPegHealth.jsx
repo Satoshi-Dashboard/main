@@ -313,7 +313,7 @@ function CoinLogo({ coinName, symbol, apiImage, size = 36 }) {
     <img
       key={srcIdx}
       src={sources[srcIdx]}
-      alt={symbol}
+      alt={`${symbol} logo`}
       loading="lazy"
       className="flex-shrink-0 rounded-full object-cover"
       style={{ width: size, height: size, background: '#1e1e1e' }}

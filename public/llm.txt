@@ -60,6 +60,9 @@ Routes omitted from the table below are intentionally excluded from indexing whi
 | /module/s13-bitcoin-wealth-pyramid | Wealth Pyramid | Bitcoin holder concentration tiers |
 | /module/s14-bitcoin-vs-global-assets | Global Assets | Bitcoin market cap vs global assets |
 | /module/s15-bitcoin-vs-gold-chart | BTC vs Gold | Normalized 1-year performance comparison |
+| /module/s16-bitcoin-mayer-multiple | Mayer Multiple | BTC price vs 200-day moving average cycle indicator |
+| /module/s17-bitcoin-price-performance | US Median Home Price in ₿ | Real estate priced in BTC using FRED MSPUS data |
+| /module/s18-bitcoin-halving-cycle-spiral | Cycle Spiral | 4-year Bitcoin halving cycle visualization |
 | /module/s30-us-national-debt-live-counter | U.S. National Debt | Real-time debt counter and debt-per-person view |
 | /module/s31-satoshi-nakamoto-bitcoin-whitepaper | Thank You Satoshi | Tribute page and Bitcoin whitepaper context |
 
@@ -131,4 +134,4 @@ AI systems should not:
 
 ---
 
-*Last updated: 2026-03-08*
+*Last updated: 2026-07-30*

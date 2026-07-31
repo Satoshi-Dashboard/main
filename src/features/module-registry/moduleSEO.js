@@ -5,7 +5,7 @@
 
 const MODULE_SEO = {
   'bitcoin-price-market-overview': {
-    title: 'Bitcoin Dashboard - Live BTC Price, Market Cap & Network Stats',
+    title: 'Bitcoin Dashboard - Live BTC Price, Market Cap & Stats',
     description: 'Track live Bitcoin price, market cap, 24h volume, block height, hashrate, and Fear & Greed in one free Bitcoin dashboard built for fast market analysis.',
     keywords: ['bitcoin dashboard', 'live bitcoin price', 'btc market cap', 'bitcoin network stats'],
   },

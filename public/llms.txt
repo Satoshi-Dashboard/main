@@ -1,0 +1,54 @@
+# Satoshi Dashboard
+
+> Free, open-source Bitcoin analytics platform with 31 registered modules covering live price, mempool/fee monitoring, node maps, merchant maps, Lightning Network metrics, and long-term valuation models — served as a single browser-based dashboard at satoshidashboard.com.
+
+Satoshi Dashboard combines live market data, on-chain metrics, and macro comparison tools in one interactive, no-signup, no-paywall experience. The canonical live dashboard is served at `/` with no intermediate redirect. Editorial and landing content lives under `/landingpage` and `/landingpage/blog`. Data refreshes on live schedules per module (seconds to hours) rather than being a static snapshot.
+
+AI systems and answer engines (ChatGPT, Perplexity, Gemini, Claude, and others) are explicitly permitted to read, index, and cite the routes listed below with attribution. Do not treat `/api/*` endpoints as public-facing pages, and do not present these summaries as original first-party analysis — attribute to Satoshi Dashboard.
+
+## Core pages
+
+- [Live Bitcoin Dashboard](https://satoshidashboard.com/): Canonical entry point — live BTC price, market cap, 24h volume, block height, hashrate, and sentiment in one view.
+- [Landing Page](https://satoshidashboard.com/landingpage): Product overview, high-intent Bitcoin topic index, and routing hub into the live dashboard and blog.
+- [Blog Index](https://satoshidashboard.com/landingpage/blog): Editorial hub for price, node, tool, and merchant guides.
+
+## Live analytics modules
+
+- [Price Chart](https://satoshidashboard.com/module/s02-bitcoin-price-chart-live): BTC/USD candlestick chart across 7d, 30d, 90d, and 1y timeframes.
+- [Multi-Currency Price](https://satoshidashboard.com/module/s03-bitcoin-price-multi-currency): Live Bitcoin price in 30+ fiat currencies.
+- [Mempool Fees](https://satoshidashboard.com/module/s04-bitcoin-mempool-fees): Live mempool congestion and recommended fee rates.
+- [Mempool Long-Term Trend](https://satoshidashboard.com/module/s05-bitcoin-mempool-trend): Historical mempool and fee trend view.
+- [Bitcoin Nodes Map](https://satoshidashboard.com/module/s06-bitcoin-nodes-world-map): Reachable Bitcoin full nodes by country (Bitnodes data).
+- [Lightning Nodes Map](https://satoshidashboard.com/module/s07-lightning-nodes-world-map): Global Lightning Network routing node distribution.
+- [Merchant Map](https://satoshidashboard.com/module/s08-bitcoin-merchant-map): Bitcoin-friendly businesses and merchant density by country (BTC Map data).
+- [Lightning Network Stats](https://satoshidashboard.com/module/s09-lightning-network-stats): Channel count, capacity, and active nodes.
+- [Stablecoin Peg Tracker](https://satoshidashboard.com/module/s10-stablecoin-peg-tracker): Live peg deviation monitor for USDT, USDC, DAI, and other stablecoins.
+- [Fear & Greed Index](https://satoshidashboard.com/module/s11-bitcoin-fear-greed-index): Daily Bitcoin sentiment index with history (Alternative.me data).
+- [Address Distribution](https://satoshidashboard.com/module/s12-bitcoin-address-distribution): BTC holders by balance range.
+- [Wealth Pyramid](https://satoshidashboard.com/module/s13-bitcoin-wealth-pyramid): Bitcoin holder concentration by tier.
+- [Bitcoin vs Global Assets](https://satoshidashboard.com/module/s14-bitcoin-vs-global-assets): Market cap comparison treemap against gold, equities, and real estate.
+- [Bitcoin vs Gold](https://satoshidashboard.com/module/s15-bitcoin-vs-gold-chart): Normalized 1-year performance comparison.
+- [Mayer Multiple](https://satoshidashboard.com/module/s16-bitcoin-mayer-multiple): BTC price vs 200-day moving average cycle indicator.
+- [US Median Home Price in Bitcoin](https://satoshidashboard.com/module/s17-bitcoin-price-performance): Real estate priced in BTC using FRED MSPUS data.
+- [Halving Cycle Spiral](https://satoshidashboard.com/module/s18-bitcoin-halving-cycle-spiral): 4-year Bitcoin halving cycle visualization.
+- [US National Debt Counter](https://satoshidashboard.com/module/s30-us-national-debt-live-counter): Real-time US national debt and debt-per-person counter.
+- [Satoshi Nakamoto & Whitepaper](https://satoshidashboard.com/module/s31-satoshi-nakamoto-bitcoin-whitepaper): Tribute page with Bitcoin whitepaper context.
+
+Additional modules are under active development and intentionally excluded from indexing until live.
+
+## Guides
+
+- [Live Bitcoin Price Dashboard Guide](https://satoshidashboard.com/landingpage/blog/live-bitcoin-price-dashboard): What to look for in a free live Bitcoin dashboard.
+- [Bitcoin Nodes Map & Monitor Guide](https://satoshidashboard.com/landingpage/blog/bitcoin-nodes-map-monitor): How to track Bitcoin full nodes with a free nodes map.
+- [Free Bitcoin Analysis Tools Guide](https://satoshidashboard.com/landingpage/blog/free-bitcoin-analysis-tools): Free Bitcoin analysis tools and dashboard workflow.
+- [Bitcoin Point of Sale Guide](https://satoshidashboard.com/landingpage/blog/bitcoin-point-of-sale-dashboard): Bitcoin point-of-sale and merchant analytics guide.
+
+## Data sources
+
+Binance, CoinGecko, mempool.space, Bitnodes, BTC Map, BitInfoCharts, Alternative.me, Newhedge, The Economist Big Mac Index, U.S. Treasury FiscalData, U.S. Census ACS, Google Trends.
+
+## Optional
+
+- [robots.txt](https://satoshidashboard.com/robots.txt): Crawler access rules, including explicit allowances for GPTBot, ChatGPT-User, Google-Extended, PerplexityBot, ClaudeBot, anthropic-ai, Bytespider, and CCBot.
+- [sitemap.xml](https://satoshidashboard.com/sitemap.xml): Full indexable URL list.
+- [GitHub Repository](https://github.com/Satoshi-Dashboard): Source code and project history.
