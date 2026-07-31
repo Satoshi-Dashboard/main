@@ -316,6 +316,7 @@ export const BLOG_POSTS = [
         subheading: 'The minimum market checklist',
         subparagraphs: [
           'Watch the root dashboard for the headline read, open the price chart for structure, and use the mempool module when you need to understand transaction urgency. Then layer in Fear & Greed to avoid reading short-term momentum in isolation.',
+          "Bitcoin's mempool, tracked in real time by mempool.space, can hold anywhere from under a thousand to several tens of thousands of unconfirmed transactions depending on network conditions, which is why a sudden jump in that queue is a more reliable urgency signal than the price candle alone. Alternative.me's Crypto Fear & Greed Index runs on a fixed 0-100 scale, with readings below roughly 25 classified as extreme fear and above roughly 75 as extreme greed, giving a stable reference frame for judging whether today's sentiment reading is actually unusual or just normal noise.",
         ],
         bullets: [
           'Price level and direction',
@@ -369,6 +370,7 @@ export const BLOG_POSTS = [
         paragraphs: [
           'Node count is not just a vanity metric. It points to the resilience of the network, the spread of infrastructure, and the ability of different regions to validate Bitcoin independently. When people ask how many Bitcoin nodes exist, they are often really asking whether the network is healthy and decentralized.',
           'That makes node pages strong SEO assets because the informational query has clear follow-up intent. Users want the count, but then they want the map, the country split, and the explanation of what the number means.',
+          'Bitnodes, which has crawled the Bitcoin peer-to-peer network since 2013, has typically counted somewhere in the range of 10,000 to 20,000 reachable full nodes at any given time in recent years, a figure that excludes many additional nodes running behind Tor, VPNs, or firewalls that never respond to a crawl. Each of those full nodes independently re-verifies the same consensus rules, including the fixed 21 million BTC supply cap and the roughly 10-minute average block interval, without trusting any third party, which is why a rising or falling reachable-node count is treated as a direct proxy for how distributed that validation work really is.',
         ],
       },
       {
@@ -409,7 +411,7 @@ export const BLOG_POSTS = [
   {
     slug: 'free-bitcoin-analysis-tools',
     title: 'Free Bitcoin Analysis Tools: Dashboard, Mempool, Sentiment and On-Chain Metrics',
-    metaTitle: 'Free Bitcoin Analysis Tools | Dashboard, Mempool and On-Chain',
+    metaTitle: 'Free Bitcoin Analysis Tools | Dashboard, Mempool, On-Chain',
     metaDescription: 'A practical stack of free Bitcoin analysis tools covering live price, mempool, nodes, sentiment, Lightning, and on-chain metrics in one workflow.',
     excerpt: 'A guide for users who want a lean BTC research stack without paying for a general crypto terminal.',
     publishedDate: '2026-03-08',
@@ -427,6 +429,7 @@ export const BLOG_POSTS = [
         heading: 'The five tool categories most Bitcoin users actually need',
         paragraphs: [
           'A practical Bitcoin stack starts with live market awareness, then adds transaction pressure, infrastructure, adoption, and cycle context. Anything beyond that is useful only if the user has a very specific strategy or business case.',
+          "Bitcoin's block interval averages roughly ten minutes by protocol design, and mempool.space and similar fee estimators use that baseline to translate mempool backlog into expected confirmation times. Alternative.me's Crypto Fear & Greed Index scores sentiment on a fixed 0-100 scale, with readings below 25 classified as Extreme Fear and above 75 as Extreme Greed.",
         ],
         bullets: [
           'Live price and market overview',
@@ -487,6 +490,7 @@ export const BLOG_POSTS = [
         heading: 'What merchants should watch before they put up a Bitcoin accepted sign',
         paragraphs: [
           'The goal is not perfect forecasting. It is operational awareness. If fees are spiking, on-chain checkout may be a poor customer experience. If Lightning infrastructure is healthy, small-ticket payments become more practical. If price is extremely volatile, staff training and conversion policy matter even more.',
+          "Bitcoin blocks are produced roughly every 10 minutes by protocol design, so on-chain payments typically need one or more confirmations before settlement is final — a wait time mempool.space's fee estimator factors into its priority, standard, and low-fee recommendations. Per Bitnodes, the network has consistently had somewhere in the range of 10,000 to 20,000 reachable full nodes in recent years, the distributed validation infrastructure that both on-chain settlement and Lightning routing ultimately depend on.",
         ],
         bullets: [
           'Live BTC price and short-term volatility',
