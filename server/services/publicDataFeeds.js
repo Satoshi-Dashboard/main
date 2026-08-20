@@ -70,11 +70,11 @@ const BINANCE_KLINES_BASE_URLS = [
   'https://api.binance.com/api/v3/klines',
   'https://api.binance.us/api/v3/klines',
 ];
-const SCRAPER_BASE_URL = String(process.env.SCRAPER_BASE_URL || 'https://api.zatobox.io').trim();
+const SCRAPER_BASE_URL = String(process.env.SCRAPER_BASE_URL || 'https://api.satoshidashboard.com').trim();
 const CENSUS_API_KEY = String(process.env.CENSUS_API_KEY || '').trim();
 const SUPABASE_EDGE_FUNCTIONS_BASE_URL = SUPABASE_PROJECT_URL ? `${SUPABASE_PROJECT_URL}/functions/v1` : '';
 const S15_GOLD_SCRAPER_PATH = '/api/scrape/companiesmarketcap-gold';
-const S04_KNOT_API_URL = String(process.env.KNOT_API_URL || 'https://knotapi.zatobox.io/api/v1/init-data').trim();
+const S04_KNOT_API_URL = String(process.env.KNOT_API_URL || 'https://api.satoshidashboard.com/api/v1/init-data').trim();
 const S04_MEMPOOL_SPACE_USAGE_SCRAPER_PATH = '/api/scrape/mempool-space-memory-usage';
 const S04_MEMPOOL_SPACE_TRANSACTION_FEES_SCRAPER_PATH = '/api/scrape/mempool-space-transaction-fees';
 const S04_MEMPOOL_SPACE_UNCONFIRMED_TRANSACTIONS_SCRAPER_PATH = '/api/scrape/mempool-space-unconfirmed-transactions';
@@ -230,7 +230,7 @@ const FEED_DEFS = {
     cacheKey: 'public:mempool:node',
     lockKey: 'public:mempool:node:refresh',
     refreshMs: 5_000,
-    sourceProvider: 'knotapi.zatobox.io',
+    sourceProvider: 'api.satoshidashboard.com',
     sourceUrl: S04_KNOT_API_URL,
     safeMinuteBudget: 12,
     safeDailyBudget: 17_280,

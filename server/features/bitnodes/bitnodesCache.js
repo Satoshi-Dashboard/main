@@ -13,7 +13,7 @@ const FETCH_TIMEOUT_MS = 15_000;
 const SHARED_CACHE_KEY = 'bitnodes-cache';
 const SHARED_LOCK_KEY = 'bitnodes-cache-refresh';
 const BITNODES_SCRAPE_MIN_INTERVAL_MS = 10 * 60 * 1000;
-const SCRAPER_BASE_URL = String(process.env.SCRAPER_BASE_URL || 'https://api.zatobox.io').trim();
+const SCRAPER_BASE_URL = String(process.env.SCRAPER_BASE_URL || 'https://api.satoshidashboard.com').trim();
 
 let memoryCache = null;
 

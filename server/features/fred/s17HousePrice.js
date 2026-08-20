@@ -13,7 +13,7 @@
  *   Binance      → BTCUSDT 1d klines
  */
 
-const ZATOBOX_FRED_URL = 'https://api.zatobox.io/api/fred/mspus';
+const ZATOBOX_FRED_URL = 'https://api.satoshidashboard.com/api/fred/mspus';
 const BINANCE_KLINES   = 'https://api.binance.com/api/v3/klines';
 const SOURCE_URL        = 'https://fred.stlouisfed.org/series/MSPUS';
 

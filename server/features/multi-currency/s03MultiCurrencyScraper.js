@@ -3,7 +3,7 @@ import { getBtcRates } from '../../services/btcRates.js';
 import { ExternalApiError } from '../../shared/errors/SatoshiBaseError.js';
 
 const SOURCE_URL = 'https://www.investing.com/currencies/single-currency-crosses?currency=usd';
-const SCRAPER_BASE_URL = String(process.env.SCRAPER_BASE_URL || 'https://api.zatobox.io').trim();
+const SCRAPER_BASE_URL = String(process.env.SCRAPER_BASE_URL || 'https://api.satoshidashboard.com').trim();
 
 const FETCH_TIMEOUT_MS = 12_000;
 const REFRESH_INTERVAL_MS = 30_000;

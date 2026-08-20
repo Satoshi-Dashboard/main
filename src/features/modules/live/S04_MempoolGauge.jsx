@@ -10,7 +10,7 @@ import {
   fetchMempoolOverviewBundle,
 } from '@/shared/services/mempoolApi.js';
 
-const PROVIDERS_ZATOBOX = [{ name: 'zatobox.io', url: 'https://api.zatobox.io' }];
+const PROVIDERS_ZATOBOX = [{ name: 'satoshidashboard.com', url: 'https://api.satoshidashboard.com' }];
 const PROVIDERS_MEMPOOL = [{ name: 'mempool.space', url: 'https://mempool.space' }];
 
 const UI_COLORS = {

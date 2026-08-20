@@ -3,7 +3,7 @@ import { cacheGetJson, cacheSetJson, withCacheLock } from '../core/runtimeCache.
 const SOURCE_URL = 'https://bitinfocharts.com/top-100-richest-bitcoin-addresses.html';
 const SOURCE_NAME = 'bitinfocharts.com';
 const FETCH_TIMEOUT_MS = 15_000;
-const SCRAPER_BASE_URL = String(process.env.SCRAPER_BASE_URL || 'https://api.zatobox.io').trim();
+const SCRAPER_BASE_URL = String(process.env.SCRAPER_BASE_URL || 'https://api.satoshidashboard.com').trim();
 const NEXT_UPDATE_MS = 30 * 60 * 1000;
 const SHARED_HTML_CACHE_KEY = 'bitinfocharts-richlist-html';
 const SHARED_HTML_LOCK_KEY = 'bitinfocharts-richlist-html-refresh';

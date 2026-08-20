@@ -387,7 +387,7 @@ export function normalizeJohoeHistoryResponse(raw, range) {
     points,
     meta: {
       source: typeof raw?.source === 'string' ? raw.source : 'johoe',
-      provider: typeof raw?.provider === 'string' ? raw.provider : 'api.zatobox.io',
+      provider: typeof raw?.provider === 'string' ? raw.provider : 'api.satoshidashboard.com',
       network: typeof raw?.network === 'string' ? raw.network : 'btc',
       pollIntervalMs: toFiniteNumberOrNull(raw?._meta?.pollIntervalMs),
       cachedAt: typeof raw?._meta?.cachedAt === 'string' ? raw._meta.cachedAt : null,
@@ -405,7 +405,7 @@ export function normalizeJohoeLatestResponse(raw) {
     ...latestPoint,
     meta: {
       source: typeof raw?.source === 'string' ? raw.source : 'johoe',
-      provider: typeof raw?.provider === 'string' ? raw.provider : 'api.zatobox.io',
+      provider: typeof raw?.provider === 'string' ? raw.provider : 'api.satoshidashboard.com',
       network: typeof raw?.network === 'string' ? raw.network : 'btc',
       sourceRange: typeof raw?.sourceRange === 'string' ? raw.sourceRange : null,
       resolution: typeof raw?._meta?.resolution === 'string' ? raw._meta.resolution : null,

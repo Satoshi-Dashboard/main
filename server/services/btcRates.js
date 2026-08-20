@@ -10,7 +10,7 @@ const BINANCE_BTC_24H_URLS = [
   'https://api.binance.us/api/v3/ticker/24hr?symbol=BTCUSDT',
 ];
 const INVESTING_USD_CROSSES_URL = 'https://www.investing.com/currencies/single-currency-crosses?currency=usd';
-const SCRAPER_BASE_URL = String(process.env.SCRAPER_BASE_URL || 'https://api.zatobox.io').trim();
+const SCRAPER_BASE_URL = String(process.env.SCRAPER_BASE_URL || 'https://api.satoshidashboard.com').trim();
 
 const FETCH_TIMEOUT_MS = 10_000;
 

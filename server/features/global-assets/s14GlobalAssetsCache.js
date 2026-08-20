@@ -8,7 +8,7 @@ const SNAPSHOT_TITLE = 'Latest Global Asset Values snapshot';
 
 const FETCH_TIMEOUT_MS = 15_000;
 const REFRESH_INTERVAL_MS = 60 * 60_000;
-const SCRAPER_BASE_URL = String(process.env.SCRAPER_BASE_URL || 'https://api.zatobox.io').trim();
+const SCRAPER_BASE_URL = String(process.env.SCRAPER_BASE_URL || 'https://api.satoshidashboard.com').trim();
 
 const SHARED_CACHE_KEY = 's13:global-assets:newhedge';
 const SHARED_LOCK_KEY = 's13:global-assets:newhedge:refresh';
