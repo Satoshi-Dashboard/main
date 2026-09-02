@@ -2,6 +2,24 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { SEO_BLOG_PATH, SEO_HUB_PATH } from '@/features/seo/content/seoRoutes.js';
 
+const UMAMI_HOST = import.meta.env.VITE_UMAMI_HOST || 'https://umami.tiklivetts.es';
+const UMAMI_WEBSITE_ID =
+  import.meta.env.VITE_UMAMI_WEBSITE_ID || 'e8febf2d-d4cd-470a-96dc-6efc9633569c';
+
+function loadUmami() {
+  if (typeof document === 'undefined' || !UMAMI_WEBSITE_ID) return;
+  if (document.querySelector('script[data-umami-injected]')) return;
+
+  [`${UMAMI_HOST}/script.js`, `${UMAMI_HOST}/recorder.js`].forEach((src) => {
+    const script = document.createElement('script');
+    script.src = src;
+    script.defer = true;
+    script.setAttribute('data-website-id', UMAMI_WEBSITE_ID);
+    script.setAttribute('data-umami-injected', '');
+    document.head.appendChild(script);
+  });
+}
+
 function getSpeedInsightsRouteLabel(pathname) {
   if (pathname === '/') return '/';
   if (pathname === SEO_HUB_PATH) return '/landingpage';
@@ -42,6 +60,7 @@ export default function DeferredTelemetry() {
       ])
         .then(([analyticsModule, speedModule]) => {
           if (cancelled) return;
+          loadUmami();
           setComponents({
             analytics: analyticsModule.Analytics,
             speedInsights: speedModule.SpeedInsights,
