@@ -9,7 +9,7 @@
     "dev": "concurrently -k \"npm:dev:api\" \"npm:dev:ui\"",
     "dev:ui": "vite",
     "dev:api": "node --env-file-if-exists=.env server/index.js",
-    "build": "vite build",
+    "build": "vite build && node scripts/prerender-seo.js",
     "check:security": "node scripts/check-security.js",
     "lint": "eslint .",
     "preview": "vite preview",
@@ -19,6 +19,8 @@
     "lhci:sitemap": "node scripts/gsc-sitemap.js",
     "lhci:inspect": "node scripts/gsc-inspect.js",
     "pagespeed": "node scripts/pagespeed.js",
+    "seo:audit": "node scripts/seo-audit-local.js",
+    "seo:fix": "node scripts/seo-fix-safe.js",
     "test": "vitest run"
   },
   "dependencies": {

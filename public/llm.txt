@@ -50,16 +50,20 @@ Routes omitted from the table below are intentionally excluded from indexing whi
 | /module/s03-bitcoin-price-multi-currency | Multi-Currency | Bitcoin price in 30+ fiat currencies |
 | /module/s04-bitcoin-mempool-fees | Mempool Gauge | Live mempool congestion and fee rates |
 | /module/s05-bitcoin-mempool-trend | Long-Term Trend | Historical mempool and fee trend view |
-| /module/s06-bitcoin-nodes-world-map | Nodes Map | Reachable Bitcoin full nodes by country |
-| /module/s07-lightning-nodes-world-map | Lightning Nodes Map | Global Lightning routing node distribution |
-| /module/s08-bitcoin-merchant-map | BTC Map Business Density | Bitcoin-friendly businesses and merchant density by country |
-| /module/s09-lightning-network-stats | Lightning Network | Channels, capacity, and nodes |
-| /module/s10-stablecoin-peg-tracker | Stablecoin Peg Health | Live peg deviation monitor for major stablecoins |
-| /module/s11-bitcoin-fear-greed-index | Fear & Greed | Bitcoin sentiment index with history |
-| /module/s12-bitcoin-address-distribution | Address Distribution | BTC holders by balance range |
-| /module/s13-bitcoin-wealth-pyramid | Wealth Pyramid | Bitcoin holder concentration tiers |
-| /module/s14-bitcoin-vs-global-assets | Global Assets | Bitcoin market cap vs global assets |
-| /module/s15-bitcoin-vs-gold-chart | BTC vs Gold | Normalized 1-year performance comparison |
+| /module/s06-bitcoin-mempool-queue-v2 | BTC Queue | Stacked mempool fee bands, queue weight, and 24h transaction history |
+| /module/s07-bitcoin-nodes-world-map | Nodes Map | Reachable Bitcoin full nodes by country |
+| /module/s08-lightning-nodes-world-map | Lightning Nodes Map | Global Lightning routing node distribution |
+| /module/s09-bitcoin-merchant-map | BTC Map Business Density | Bitcoin-friendly businesses and merchant density by country |
+| /module/s10-lightning-network-stats | Lightning Network | Channels, capacity, and nodes |
+| /module/s11-stablecoin-peg-tracker | Stablecoin Peg Health | Live peg deviation monitor for major stablecoins |
+| /module/s12-bitcoin-fear-greed-index | Fear & Greed | Bitcoin sentiment index with history |
+| /module/s13-bitcoin-address-distribution | Address Distribution | BTC holders by balance range |
+| /module/s14-bitcoin-wealth-pyramid | Wealth Pyramid | Bitcoin holder concentration tiers |
+| /module/s15-bitcoin-vs-global-assets | Global Assets | Bitcoin market cap vs global assets |
+| /module/s16-bitcoin-vs-gold-chart | BTC vs Gold | Normalized 1-year performance comparison |
+| /module/s17-bitcoin-mayer-multiple | Mayer Multiple | BTC price vs 200-day moving average cycle indicator |
+| /module/s18-bitcoin-price-performance | US Median Home Price in ₿ | Real estate priced in BTC using FRED MSPUS data |
+| /module/s20-bitcoin-halving-cycle-spiral | Cycle Spiral | 4-year Bitcoin halving cycle visualization |
 | /module/s30-us-national-debt-live-counter | U.S. National Debt | Real-time debt counter and debt-per-person view |
 | /module/s31-satoshi-nakamoto-bitcoin-whitepaper | Thank You Satoshi | Tribute page and Bitcoin whitepaper context |
 
@@ -131,4 +135,4 @@ AI systems should not:
 
 ---
 
-*Last updated: 2026-03-08*
+*Last updated: 2026-07-30*
